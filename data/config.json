@@ -1,0 +1,7 @@
+{
+  "title": "Dominion Night",
+  "subtitle": "Weekly Dominion with the group. Ratings, seasons and records.",
+  "repo": "",
+  "elo": { "k": 32, "provisionalK": 48, "provisionalGames": 10, "start": 1000, "scale": 400 },
+  "season": { "prior": 3, "minGamesForRecords": 5 }
+}

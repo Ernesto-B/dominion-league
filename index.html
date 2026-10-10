@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dominion Night</title>
+<meta name="description" content="Ratings, seasons and records for our weekly Dominion night.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect x=%277%27 y=%273%27 width=%2718%27 height=%2726%27 rx=%273%27 fill=%27%231D6B50%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="#/" id="brand">Dominion Night</a>
+    <nav id="nav" aria-label="Sections">
+      <a href="#/" data-r="home">Rankings</a>
+      <a href="#/season" data-r="season">Season</a>
+      <a href="#/players" data-r="players">Players</a>
+      <a href="#/h2h" data-r="h2h">Head to head</a>
+      <a href="#/records" data-r="records">Records</a>
+      <a href="#/games" data-r="games">Games</a>
+      <a href="#/add" data-r="add">Add a game</a>
+      <a href="#/admin" data-r="admin">Admin</a>
+    </nav>
+    <span id="navuser"></span>
+  </div>
+</header>
+<main id="main" tabindex="-1"><p class="loading">Loading the standings…</p></main>
+<footer class="foot"><span id="foot"></span></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

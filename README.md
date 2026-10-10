@@ -1,0 +1,94 @@
+# Dominion Night
+
+A website for our Dominion league: Elo rankings, seasons, head-to-head, records and a full game log. It's still a static site with no build step and no server of its own — the page does all the maths in the visitor's browser — but the roster and the game log now live in [Supabase](https://supabase.com) (a hosted Postgres database) instead of a CSV file, and the whole site requires signing in.
+
+- **Everyone gets their own account.** No anonymous visitors — names and results aren't exposed to scrapers or randoms who stumble onto the URL.
+- **Only the admin can add, edit or delete games**, from a page on the site itself.
+- **Friend groups**: if you run more than one group of friends who never play each other, each group gets its own rankings, seasons, head-to-head and records, on one site.
+
+## Publish on GitHub Pages (one time)
+
+1. Create a new repository on GitHub (public, since free Pages needs that) and upload everything in this folder, keeping the `data`, `js`, `icons` and `supabase` folders. **Do not** upload a `.env` file or anything containing your Supabase service-role key — see the setup below.
+2. Open Settings, then Pages. Under "Build and deployment" choose "Deploy from a branch", pick `main` and `/ (root)`, and save.
+3. After a minute the site is live at `https://YOUR-NAME.github.io/REPO-NAME/`.
+
+## One-time Supabase setup
+
+The site needs a free [Supabase](https://supabase.com) project for accounts and game data.
+
+1. Create a Supabase project. Under Project Settings → API, copy the **Project URL** and the **anon / publishable key** into `js/supabase-config.js` (both are safe to commit — they're meant to be public; real security comes from the database policies, not from hiding them).
+2. Open the SQL editor and run everything in `supabase/schema.sql`. This creates the `players`, `games`, `game_results`, `groups` and `seasons` tables, turns on Row Level Security, and adds the admin-only functions the site calls to add/edit/delete games.
+3. Under Authentication → Providers → Email, you can leave "Confirm email" on — the migration script below confirms each account directly through the Admin API, so players never need a real inbox.
+4. Run the one-time migration script from your own computer (not from the browser):
+   ```
+   SUPABASE_URL=https://xxxx.supabase.co \
+   SUPABASE_SERVICE_ROLE_KEY=paste-it-here-only-for-this-one-command \
+   node scripts/migrate.mjs
+   ```
+   This creates a login for everyone listed in the `PLAYERS` array at the top of `scripts/migrate.mjs` (edit that list first — names, friend group, and which one is the admin), gives them the preset password `dominion`, seeds the starting friend group and season (edit the `GROUPS`/`SEASONS` arrays in the same file if yours differ), and imports the rows already in `data/games.csv`. The **service-role key** (Project Settings → API) bypasses all security — use it for this one local command and nowhere else. Never commit it, never put it in `js/`, never paste it in a chat.
+5. Tell everyone their name and the preset password. The site forces a real password on first sign-in.
+
+Once this is done, `data/games.csv` is no longer read by the live site — it only matters for the one-time import above.
+
+## Players and accounts
+
+Signing in asks for a **name and password**, not an email — under the hood each player has a fixed, internal-only login address derived from their name, but nobody needs to know or type it.
+
+Everyone starts with the password `dominion`. The site won't let anyone past that first sign-in without choosing a real password — if you ever see the "Set a password" screen, that's why.
+
+**Adding a brand-new player later:** create their account in the Supabase dashboard (Authentication → Users → Add user, with `email_confirm` checked and password `dominion`), then add a row for them in the `players` table (Table Editor) with their name and `group_id`. They'll show up in the "Add a game" picker and the rankings as soon as they've played something.
+
+Only the admin (`is_admin = true` in the `players` table) sees the "Add a game" link and can add, edit or delete games. Everyone else is read-only.
+
+## Seasons and groups: the Admin page
+
+Seasons and friend groups are managed from the **Admin** page on the site (admin only) — not by editing a file. `data/config.json` only holds things that essentially never change: title/subtitle, Elo constants, and rank tiers (below).
+
+**Groups**: type a name and save; the id shown underneath (auto-generated, e.g. "Group B" → `group-b`) is what you'll type into a new player's `group_id` when adding their row in the Supabase `players` table. If you only ever have one group of friends, you can ignore groups entirely — the site behaves as one combined league until a second one exists.
+
+**Seasons**: pick the group, name, start date, length in weeks, target games, qualify % (0 to 1, e.g. `0.6` for 60%), playoff spots, and — once decided — the champion, from a dropdown of that group's players (no more typos matching a name by hand). A game belongs to the season whose dates contain its date (start through start + weeks); games needed to qualify = target games × qualify %, rounded up. Two groups can run their own seasons at the same time.
+
+With more than one group, every page grows a small pill switcher to flip between groups. Rankings, season standings, head-to-head and records are all scored **within a group only** — a player's Elo is still one continuous number (it's not reset per group), but the ladder, standings, and "who's ahead of whom" are never compared across groups that don't play each other. If a game's players ever do span two groups, it still counts for everyone's Elo, but a banner on the site will note that it isn't included in either group's standings or records, since neither group's table should take credit for it.
+
+`elo` in `config.json` holds K, the provisional K and window, the start rating and the scale. `season.prior` is the season-score smoothing (3 means three imaginary average games) — these are the rare-change settings still worth a conscious file edit rather than a casual web form, since changing them recomputes every historical Elo.
+
+## Rank titles and icons
+
+Every player has a title from their current Elo: Peasant, Knight, Lord, Duke, Emperor. Everyone starts at 1000 as a Peasant and climbs. The icons are the PNG files in `icons/`; replace any of them with your own square PNG of the same name (`peasant.png`, `knight.png`, `lord.png`, `duke.png`, `emperor.png`). The little trophy (`champion.svg`) marks players who have won a season; it isn't a rank.
+
+Defaults: Peasant under 1040, Knight 1040, Lord 1090, Duke 1150, Emperor 1225. To change names or cut-offs, add a `tiers` list to `data/config.json`. The first tier's `min` is `null`, and each `id` needs a matching `icons/<id>.png` (or give an `icon` path):
+
+```json
+"tiers": [
+  { "id": "peasant", "name": "Peasant", "min": null },
+  { "id": "knight",  "name": "Knight",  "min": 1040 },
+  { "id": "emperor", "name": "Emperor", "min": 1225 }
+]
+```
+
+## What's on each page
+
+- **Rankings:** Elo ladder with title icons, last night's results with the Elo change per player, the tier key, rating history, and the current season's top five.
+- **Season:** week-of-season progress, standings with qualification and playoff seeds, and the season's games.
+- **Players:** title and progress to the next one, season titles, top-half finishes, last places, longest run without a win, nemesis and favourite victim, rating history, record against each opponent, every result.
+- **Head to head, Records, Games:** the matrix; league and single-game records (biggest Elo swing, longest game, highest score); the full log with season, type and player filters. Admins get Edit/Delete links on each row of the Games page.
+- **Add a game** (admin only): pick who played and in what order, fill in the optional details, and save — it writes straight to the database. The same page shows each player's expected score and the Elo at stake ("Before you play"), which is handy for balancing seating.
+- **Admin** (admin only): add friend groups, and add/edit seasons — see above.
+- Click any table heading to sort by that column.
+
+## How the numbers work
+
+- **Elo**: each table is treated as head-to-head matchups; change = K ÷ (players − 1) × sum of (actual − expected). K is 48 for a player's first 10 rated games, then 32.
+- **Season score** = (points + prior × 0.5) ÷ (games + prior), where points run from 1 for a win to 0 for last, so table size doesn't matter and ties split.
+- The calculation code is in `js/engine.js` and was checked against the league spreadsheet on randomized multi-season data (Elo, standings, seeds, head-to-head, streaks and attendance all matched).
+
+## Preview on your computer
+
+Browsers block data loading from `file://`, so run `python3 -m http.server` in this folder and open http://localhost:8000. You'll still need a real Supabase project set up as above — the site has no offline/demo mode, since it's login-gated by design.
+
+## Good to know
+
+- Only the admin can change game data, seasons or groups; everyone else can view once signed in, and nobody can view anything signed out.
+- The static files (`index.html`, `js/`, `data/config.json`) are still technically public on GitHub Pages the way any static site is — but they contain no player names or results. All of that lives behind Supabase's Row Level Security and requires a real session to read.
+- The only outside requests are Google Fonts and Supabase; the page works without Google Fonts, but it does need Supabase to do anything at all.
+- GitHub Pages can take up to ten minutes to refresh the static files after a commit, and your browser may cache for a moment — reload if you don't see a change. Game data itself updates immediately, since it's never cached in the repo.
