@@ -53,6 +53,13 @@
     const slug = SET_ICONS[name];
     return slug ? `<img class="tier seticon" src="icons/sets/${slug}.png" width="${size}" height="${size}" alt="${esc(name)}" title="${esc(name)}">` : '';
   };
+  // statTile(): a .stat tile with an optional leading category icon. Tiles
+  // built without one (icon = null/undefined) render byte-for-byte like the
+  // plain .stat tiles used everywhere else on the site (Season/Records/Admin),
+  // since .stat-body has no styling of its own — it's a no-op wrapper then.
+  function statTile(iconSrc, big, label) {
+    return `<div class="stat${iconSrc ? ' has-icon' : ''}">${iconSrc ? `<img class="staticon" src="${iconSrc}" alt="">` : ''}<div class="stat-body"><b>${big}</b><span>${label}</span></div></div>`;
+  }
   const tierOf = n => { const p = D && D.byName && D.byName[n]; return p && p.tier; };
   const nameIcon = (n, size) => { const t = tierOf(n); return t ? icon(t.icon, size || 18, t.name + ' tier') : ''; };
   const link = n => {
@@ -185,6 +192,11 @@
         tr.classList.toggle('open', !det.hidden);
       });
     });
+    root.querySelectorAll('a[data-edit]').forEach(a => {
+      a.addEventListener('click', e => { e.preventDefault(); openAddModal(+a.dataset.edit); });
+    });
+    const addBtn = root.querySelector('#gAddBtn');
+    addBtn && addBtn.addEventListener('click', () => openAddModal(null));
   }
 
   /* ---------- pages ---------- */
@@ -238,7 +250,7 @@
     const tables = st.games.filter(g => g.n >= 2).length;
     return `<div class="recap"><div class="recapchamp">${icon('champion', 56, '')}<div><span class="slabel">Season champion</span><h3>${s.champion ? link(s.champion) : 'Not decided'}</h3></div></div>
       <div class="stats">
-      ${riser ? `<div class="stat"><b class="${riser.eloChange > 0.5 ? 'up-t' : riser.eloChange < -0.5 ? 'down-t' : ''}">${sgn(riser.eloChange)}</b><span>biggest riser: ${esc(riser.name)}</span></div>` : ''}
+      ${riser ? `<div class="stat has-icon"><img class="staticon" src="icons/stats/elo.png" alt=""><div class="stat-body"><b class="${riser.eloChange > 0.5 ? 'up-t' : riser.eloChange < -0.5 ? 'down-t' : ''}">${sgn(riser.eloChange)}</b><span>biggest riser: ${esc(riser.name)}</span></div></div>` : ''}
       ${best ? `<div class="stat"><b>${pc(best.winPct)}</b><span>best record: ${esc(best.name)}</span></div>` : ''}
       <div class="stat"><b>${tables}</b><span>tables played</span></div>
       </div></div>`;
@@ -288,16 +300,18 @@
     const mostSet = setEntries.length ? setEntries.reduce((a, b) => b[1] > a[1] ? b : a) : null;
     const leastSet = setEntries.length > 1 ? setEntries.reduce((a, b) => b[1] < a[1] ? b : a) : null;
     h += `<div class="stats">
-      <div class="stat"><b>${f0(p.elo)}</b><span>Elo${p.rank ? ', rank ' + p.rank : ''}</span></div>
-      <div class="stat"><b>${f0(p.peak)}</b><span>peak Elo</span></div>
-      <div class="stat"><b>${p.rated}</b><span>rated games${p.status === 'Provisional' ? ' (provisional)' : ''}</span></div>
-      <div class="stat"><b>${p.wins}</b><span>wins (${pc(p.winPct)})</span></div>
-      <div class="stat"><b>${f2(p.avgPts)}</b><span>avg points, 0 to 1</span></div>
-      <div class="stat"><b>${p.streak}</b><span>win streak (best ${p.bestStreak})</span></div>
-      <div class="stat"><b>${p.titles ? icon('champion', 26, '') + ' ' : ''}${p.titles}</b><span>season title${p.titles === 1 ? '' : 's'}</span></div>
-      <div class="stat"><b>${pc(p.topHalf)}</b><span>top-half finishes</span></div><div class="stat"><b>${p.lasts}</b><span>outright last places</span></div><div class="stat"><b>${p.bestDry}</b><span>longest run without a win</span></div>
-      ${mostSet ? `<div class="stat"><b>${setIcon(mostSet[0], 30) || esc(mostSet[0])}</b><span>most-played set: ${esc(mostSet[0])} (${mostSet[1]})</span></div>` : ''}
-      ${leastSet ? `<div class="stat"><b>${setIcon(leastSet[0], 30) || esc(leastSet[0])}</b><span>least-played set: ${esc(leastSet[0])} (${leastSet[1]})</span></div>` : ''}
+      ${statTile('icons/stats/elo.png', f0(p.elo), 'Elo' + (p.rank ? ', rank ' + p.rank : ''))}
+      ${statTile('icons/stats/peak-elo.png', f0(p.peak), 'peak Elo')}
+      ${statTile('icons/stats/rated-games.png', p.rated, 'rated games' + (p.status === 'Provisional' ? ' (provisional)' : ''))}
+      ${statTile('icons/stats/wins.png', p.wins, `wins (${pc(p.winPct)})`)}
+      ${statTile('icons/stats/average-points.png', f2(p.avgPts), 'avg points, 0 to 1')}
+      ${statTile('icons/stats/win-streak.png', p.streak, `win streak (best ${p.bestStreak})`)}
+      ${statTile(p.titles ? 'icons/champion.png' : null, p.titles, 'season title' + (p.titles === 1 ? '' : 's'))}
+      ${statTile('icons/stats/top-half-finishes.png', pc(p.topHalf), 'top-half finishes')}
+      ${statTile('icons/stats/last-place-finishes.png', p.lasts, 'outright last places')}
+      ${statTile('icons/stats/longest-without-win.png', p.bestDry, 'longest run without a win')}
+      ${mostSet ? statTile('icons/stats/most-played-set.png', mostSet[1], `most-played: ${setIcon(mostSet[0], 16)} ${esc(mostSet[0])}`) : ''}
+      ${leastSet ? statTile(null, leastSet[1], `least-played: ${setIcon(leastSet[0], 16)} ${esc(leastSet[0])}`) : ''}
       </div>`;
     const dec = hh.players.filter(o => o !== p.name).map(o => ({ o, w: hh.ahead[p.name][o], l: hh.ahead[o][p.name] })).filter(x => x.w + x.l >= 3);
     const nem = dec.filter(x => x.l > x.w).sort((a, b) => b.l / (b.w + b.l) - a.l / (a.w + a.l) || b.l - a.l)[0];
@@ -332,13 +346,13 @@
 
   function pageRecords(gid) {
     const R = D.recordsFor(gid), O = R.overview;
-    const rec = (label, x, fmt) => `<tr><td class="l">${label}</td><td class="name">${x ? link(x.name) : '—'}</td><td><b>${x ? fmt(x.value) : ''}</b></td></tr>`;
+    const rec = (label, x, fmt, iconSrc) => `<tr><td class="l">${iconSrc ? `<img class="staticon sm" src="${iconSrc}" alt=""> ` : ''}${label}</td><td class="name">${x ? link(x.name) : '—'}</td><td><b>${x ? fmt(x.value) : ''}</b></td></tr>`;
     let h = `<h1>Records</h1><p class="lede">Everything the league has produced so far.</p>${groupSwitcher('records', gid)}${banner()}`;
     h += `<div class="stats"><div class="stat"><b>${O.tables}</b><span>tables logged</span></div><div class="stat"><b>${O.nights}</b><span>game nights</span></div><div class="stat"><b>${O.playersRated}</b><span>rated players</span></div>
       <div class="stat"><b>${O.avgTable ? f1(O.avgTable) : '—'}</b><span>players per table</span></div><div class="stat"><b>${O.avgMinutes ? f0(O.avgMinutes) : '—'}</b><span>avg minutes</span></div><div class="stat"><b>${O.avgVP ? f1(O.avgVP) : '—'}</b><span>avg winning VP</span></div></div>`;
     h += `<div class="grid2"><div><h2>Player records</h2><div class="tablewrap"><table><thead><tr><th class="l">Record</th><th class="l">Holder</th><th>Value</th></tr></thead><tbody>
-      ${rec('Current Elo leader', R.leader, f0)}${rec('Highest Elo ever', R.peak, f0)}${rec('Most rated games', R.mostGames, f0)}${rec('Most wins', R.mostWins, f0)}
-      ${rec('Best win % (min ' + D.S.minGamesForRecords + ' games)', R.bestWinPct, pc)}${rec('Best average points (min ' + D.S.minGamesForRecords + ' games)', R.bestAvgPts, f2)}${rec('Longest win streak', R.bestStreak, f0)}${rec('Most season titles', R.mostTitles, f0)}
+      ${rec('Current Elo leader', R.leader, f0, 'icons/stats/elo.png')}${rec('Highest Elo ever', R.peak, f0, 'icons/stats/peak-elo.png')}${rec('Most rated games', R.mostGames, f0, 'icons/stats/rated-games.png')}${rec('Most wins', R.mostWins, f0, 'icons/stats/wins.png')}
+      ${rec('Best win % (min ' + D.S.minGamesForRecords + ' games)', R.bestWinPct, pc)}${rec('Best average points (min ' + D.S.minGamesForRecords + ' games)', R.bestAvgPts, f2, 'icons/stats/average-points.png')}${rec('Longest win streak', R.bestStreak, f0, 'icons/stats/win-streak.png')}${rec('Most season titles', R.mostTitles, f0, 'icons/champion.png')}
       </tbody></table></div></div>`;
     const cnt = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     h += `<div><h2>Table sizes</h2><div class="tablewrap"><table><thead><tr><th class="l">Players at the table</th><th>Tables</th></tr></thead><tbody>${Object.entries(R.tableSizes).map(([k, v]) => `<tr><td class="l">${k}</td><td>${v}</td></tr>`).join('') || '<tr><td colspan="2" class="l">None yet</td></tr>'}</tbody></table></div></div></div>`;
@@ -362,29 +376,32 @@
     return names.map((n, i) => (i ? (g.places[n] === g.places[names[i - 1]] ? ' = ' : ' > ') : '') + nameIcon(n, 16) + (i === 0 || g.places[n] === 1 ? `<b>${esc(n)}</b>` : esc(n))).join('');
   }
   function gameDetail(g) {
+    const sgn3 = x => (x > 0.0005 ? '+' : x < -0.0005 ? '−' : '') + f3(Math.abs(x));
     const rows = g.names.slice().sort((a, b) => g.places[a] - g.places[b]).map(n => {
       const elo = g.elo && g.elo[n];
       const score = g.score && g.score[n];
       const vp = g.playerVP && g.playerVP[n];
       const d = elo ? elo.after - elo.before : null;
+      const sd = score ? score.after - score.before : null;
       return `<tr><td class="name">${link(n)}</td>
         <td>${elo ? f0(elo.before) + ' → ' + f0(elo.after) : '—'}</td>
         <td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${d != null ? sgn(d) : ''}</td>
         <td>${score ? f3(score.before) + ' → ' + f3(score.after) : '—'}</td>
+        <td class="${sd > 0.0005 ? 'up-t' : sd < -0.0005 ? 'down-t' : ''}">${sd != null ? sgn3(sd) : ''}</td>
         <td>${vp != null ? vp : '—'}</td></tr>`;
     }).join('');
-    return `<div class="tablewrap"><table class="plain"><thead><tr><th class="l">Player</th><th>Elo</th><th>Change</th><th>Season score</th><th>VP</th></tr></thead><tbody>${rows}</tbody></table></div>${g.notes ? `<p class="note">${esc(g.notes)}</p>` : ''}`;
+    return `<div class="tablewrap"><table class="plain"><thead><tr><th class="l">Player</th><th>Elo</th><th>Change</th><th>Season score</th><th>Change</th><th>VP</th></tr></thead><tbody>${rows}</tbody></table></div>${g.notes ? `<p class="note">${esc(g.notes)}</p>` : ''}`;
   }
   function gamesTable(list, canEdit) {
     const cols = canEdit ? 9 : 8;
-    return `<div class="tablewrap"><table><thead><tr><th></th><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>VP</th><th>Min</th><th class="l">Notes</th>${canEdit ? '<th></th>' : ''}</tr></thead><tbody>${list.map(g => `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td class="l">${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 22) || esc(s)).join(' ')}</td><td>${g.vp ?? ''}</td><td>${g.minutes ?? ''}</td><td class="wrap">${esc(g.notes)}</td>${canEdit ? `<td><a href="${hashFor('add', curGid, 'edit/' + g.line)}" onclick="event.stopPropagation()">Edit</a></td>` : ''}</tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="${cols}">${gameDetail(g)}</td></tr>`).join('')}</tbody></table></div>`;
+    return `<div class="tablewrap"><table><thead><tr><th></th><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>VP</th><th>Min</th><th class="l">Notes</th>${canEdit ? '<th></th>' : ''}</tr></thead><tbody>${list.map(g => `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td class="l">${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 22) || esc(s)).join(' ')}</td><td>${g.vp ?? ''}</td><td>${g.minutes ?? ''}</td><td class="wrap">${esc(g.notes)}</td>${canEdit ? `<td><a href="#" data-edit="${g.line}" onclick="event.stopPropagation()">Edit</a></td>` : ''}</tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="${cols}">${gameDetail(g)}</td></tr>`).join('')}</tbody></table></div>`;
   }
   const gf = { season: 'all', type: 'all', player: 'all' };
   function pageGames(gid) {
     let list = D.games.filter(g => (!gid || g.names.every(n => D.groupOf(n) === gid)) &&
       (gf.season === 'all' || String(g.season) === gf.season) && (gf.type === 'all' || g.type === gf.type) && (gf.player === 'all' || g.places[gf.player] != null)).slice().reverse();
     const canEdit = !!(me && me.is_admin);
-    return `<div class="head"><div><h1>Games</h1><p class="lede">Every table we've logged, newest first. Winners in bold.</p></div></div>${groupSwitcher('games', gid)}${banner()}
+    return `<div class="head"><div><h1>Games</h1><p class="lede">Every table we've logged, newest first. Winners in bold.</p></div>${canEdit ? '<button id="gAddBtn" class="iconbtn" type="button"><img src="icons/nav/add-a-game.png" alt="Add a game"></button>' : ''}</div>${groupSwitcher('games', gid)}${banner()}
       <div class="controls"><label class="f">Season <select id="gfs">${seasonOptions(gf.season, true, gid)}</select></label>
       <label class="f">Type <select id="gft">${['all', 'Regular', 'Playoff', 'Friendly'].map(t => `<option value="${t}"${gf.type === t ? ' selected' : ''}>${t === 'all' ? 'All types' : t}</option>`).join('')}</select></label>
       <label class="f">Player <select id="gfp"><option value="all">Everyone</option>${D.players.filter(p => !gid || D.groupOf(p.name) === gid).map(p => `<option${gf.player === p.name ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
@@ -414,16 +431,12 @@
       sets: g.sets.slice(), vp: Object.assign({}, g.playerVP), minutes: g.minutes || '', notes: g.notes, editId,
     };
   }
-  function pageAdd(gid, arg) {
-    if (!me || !me.is_admin) return `<h1>Add a game</h1>${groupSwitcher('add', gid)}<p class="empty">Only the admin can add or edit games.</p>`;
-    const m = /^edit\/(\d+)$/.exec(arg || '');
-    const editId = m ? +m[1] : null;
-    if (editId !== bs.editId) { if (editId == null) bs = blankBS(); else loadGameIntoBuilder(editId); }
+  function addFormHTML() {
     const roster = D.roster.slice().sort((a, b) => a.localeCompare(b));
-    let h = `<h1>${bs.editId ? 'Edit game' : 'Add a game'}</h1><p class="lede">${bs.editId ? 'Change the details and save.' : 'Pick who played, in finishing order, and save.'}</p>
-    <div class="builder"><div class="controls"><label class="f">Date <input type="date" id="bd" value="${esc(bs.date)}"></label>
+    return `<h2 style="margin-top:0">${bs.editId ? 'Edit game' : 'Add a game'}</h2><p class="lede">${bs.editId ? 'Change the details and save.' : 'Pick who played, in finishing order, and save.'}</p>
+      <div class="controls"><label class="f">Date <input type="date" id="bd" value="${esc(bs.date)}"></label>
       <label class="f">Type <select id="bty">${['', 'Playoff', 'Friendly'].map(t => `<option value="${t}"${bs.type === t ? ' selected' : ''}>${t || 'Regular'}</option>`).join('')}</select></label></div>
-      <p class="meta">1. Click the players in the order they finished, winner first.</p><div class="pills" id="bpick">${roster.map(n => `<a href="${hashFor('add', gid, bs.editId ? 'edit/' + bs.editId : '')}" data-n="${esc(n)}" ${bs.picked.includes(n) ? 'aria-current="true"' : ''}>${nameIcon(n, 18)}${esc(n)}</a>`).join('')}</div>
+      <p class="meta">1. Click the players in the order they finished, winner first.</p><div class="pills" id="bpick">${roster.map(n => `<a href="#" data-n="${esc(n)}" ${bs.picked.includes(n) ? 'aria-current="true"' : ''}>${nameIcon(n, 18)}${esc(n)}</a>`).join('')}</div>
       <p class="meta">2. Tick "tied" if a player finished level with the one above, and fill in VP if you tracked it.</p>
       <ol class="order" id="border">${bs.picked.map((n, i) => `<li><span class="nm">${i + 1}. ${esc(n)}</span><button class="ghost" data-up="${i}" type="button" aria-label="Move ${esc(n)} up"${i === 0 ? ' disabled' : ''}>↑</button><button class="ghost" data-dn="${i}" type="button" aria-label="Move ${esc(n)} down"${i === bs.picked.length - 1 ? ' disabled' : ''}>↓</button><label class="f">VP <input type="text" data-vp="${esc(n)}" size="3" value="${esc(bs.vp[n] ?? '')}"></label>${i ? `<label class="f"><input type="checkbox" data-tie="${esc(n)}"${bs.tie[n] ? ' checked' : ''}> tied with above</label>` : ''}</li>`).join('') || '<li class="meta">No players chosen yet.</li>'}</ol>
       ${previewBlock()}
@@ -433,13 +446,37 @@
       <label class="f">Notes <input type="text" id="bn" size="50" value="${esc(bs.notes)}"></label>
       <div class="controls" style="margin-top:14px">
       <button id="bsave" type="button">${bs.editId ? 'Save changes' : 'Save game'}</button>
-      ${bs.editId ? `<button id="bdel" class="ghost" type="button">Delete game</button><a class="btn ghost" href="${hashFor('add', gid)}">Cancel</a>` : ''}
-      <span class="meta" id="bmsg" role="status"></span></div></div>
+      ${bs.editId ? '<button id="bdel" class="ghost" type="button">Delete game</button><button id="bcancel" class="ghost" type="button">Cancel</button>' : ''}
+      <span class="meta" id="bmsg" role="status"></span></div>
     <p class="note" style="margin-top:20px">Manage seasons and friend groups from the <a href="#/admin">Admin page</a>. To add a brand-new player, create their Supabase account first (see README), then they'll show up in the picker above.</p>`;
-    return h;
+  }
+  function modalEscHandler(e) { if (e.key === 'Escape') closeAddModal(); }
+  function closeAddModal() {
+    const root = $('#modalRoot');
+    if (root) root.innerHTML = '';
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', modalEscHandler);
+  }
+  function renderAddModal() {
+    const root = $('#modalRoot');
+    if (!root) return;
+    root.innerHTML = `<div class="modal-overlay" id="modalOverlay"><div class="modal-box" tabindex="-1">
+      <button class="modal-close" id="modalClose" type="button" aria-label="Close">×</button>
+      ${addFormHTML()}</div></div>`;
+    document.body.style.overflow = 'hidden';
+    wireAdd();
+    $('#modalClose').addEventListener('click', closeAddModal);
+    $('#modalOverlay').addEventListener('click', e => { if (e.target.id === 'modalOverlay') closeAddModal(); });
+    document.addEventListener('keydown', modalEscHandler);
+    const box = $('.modal-box'); if (box) box.focus();
+  }
+  function openAddModal(editId) {
+    if (!me || !me.is_admin) return;
+    if (editId == null) bs = blankBS(); else loadGameIntoBuilder(editId);
+    renderAddModal();
   }
   function wireAdd() {
-    const rer = () => render();
+    const rer = () => renderAddModal();
     const bind = (id, k) => { const el = $(id); el && el.addEventListener('input', () => { bs[k] = el.value; }); };
     bind('#bd', 'date'); bind('#bty', 'type'); bind('#bm', 'minutes'); bind('#bn', 'notes');
     const pick = $('#bpick');
@@ -489,9 +526,8 @@
         : await sb.rpc('add_game', args);
       save.disabled = false;
       if (error) { msg(error.message); return; }
-      const gid = curGid;
       bs = blankBS();
-      location.hash = hashFor('games', gid);
+      closeAddModal();
       await boot();
     });
     const del = $('#bdel');
@@ -499,11 +535,12 @@
       if (!confirm('Delete this game? This cannot be undone.')) return;
       const { error } = await sb.rpc('delete_game', { p_game_id: bs.editId });
       if (error) { msg(error.message); return; }
-      const gid = curGid;
       bs = blankBS();
-      location.hash = hashFor('games', gid);
+      closeAddModal();
       await boot();
     });
+    const cancel = $('#bcancel');
+    cancel && cancel.addEventListener('click', () => { bs = blankBS(); closeAddModal(); });
   }
 
   /* ---------- admin: groups and seasons ---------- */
@@ -752,7 +789,8 @@
     const gid = multi ? (parts[1] || (D.groups[0] && D.groups[0].id)) : null;
     const arg = (multi ? parts.slice(2) : parts.slice(1)).join('/');
     curGid = gid;
-    const pages = { home: pageHome, season: pageSeason, players: pagePlayers, h2h: pageH2H, records: pageRecords, games: pageGames, add: pageAdd, admin: pageAdmin };
+    closeAddModal();
+    const pages = { home: pageHome, season: pageSeason, players: pagePlayers, h2h: pageH2H, records: pageRecords, games: pageGames, admin: pageAdmin };
     const fn = pages[route] || pageHome;
     main.innerHTML = fn(gid, arg);
     makeSortable(main);
@@ -761,7 +799,6 @@
     document.title = (route === 'home' ? '' : route.charAt(0).toUpperCase() + route.slice(1) + ' · ') + (cfg.title || 'Dominion Night');
     if (route === 'home' || route === 'players') wireHighlight(main);
     if (route === 'players') wireTierPopup(main);
-    if (route === 'add') wireAdd();
     if (route === 'admin') wireAdmin();
     const hs = $('#h2hsel'); if (hs) hs.addEventListener('change', () => { location.hash = hashFor('h2h', curGid, hs.value); });
     [['#gfs', 'season'], ['#gft', 'type'], ['#gfp', 'player']].forEach(([id, k]) => { const el = $(id); if (el) el.addEventListener('change', () => { gf[k] = el.value; render(); const again = $(id); if (again) again.focus(); }); });
@@ -772,10 +809,8 @@
   function setNavVisible(show) {
     $('#nav').style.display = show ? '' : 'none';
     const isAdmin = show && me && me.is_admin;
-    ['add', 'admin'].forEach(r => {
-      const el = document.querySelector(`#nav a[data-r="${r}"]`);
-      if (el) el.style.display = isAdmin ? '' : 'none';
-    });
+    const adminLink = document.querySelector('#nav a[data-r="admin"]');
+    if (adminLink) adminLink.style.display = isAdmin ? '' : 'none';
     const nu = $('#navuser');
     if (nu) {
       nu.innerHTML = show && me ? `<span>${esc(me.name)}</span><a href="#" id="logoutLink">Log out</a>` : '';
