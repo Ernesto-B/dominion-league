@@ -159,6 +159,23 @@
       el.addEventListener('focusin', () => set(el.dataset.p));
     });
   }
+  function wireTierPopup(root) {
+    const wrap = root.querySelector('.tierbarwrap');
+    const pop = wrap && wrap.querySelector('.tierpopup');
+    if (!wrap || !pop) return;
+    const move = e => {
+      const pad = 16;
+      pop.style.transform = 'none';
+      let x = e.clientX + pad, y = e.clientY + pad;
+      const pw = pop.offsetWidth, ph = pop.offsetHeight;
+      if (x + pw > window.innerWidth - 8) x = e.clientX - pw - pad;
+      if (y + ph > window.innerHeight - 8) y = e.clientY - ph - pad;
+      pop.style.left = x + 'px';
+      pop.style.top = y + 'px';
+    };
+    wrap.addEventListener('mousemove', move);
+    wrap.addEventListener('mouseenter', move);
+  }
 
   /* ---------- pages ---------- */
   function pageHome(gid) {
@@ -255,6 +272,11 @@
     let h = `<div class="head"><div class="who">${p.tier ? icon(p.tier.icon, 72, p.tier.name + ' tier') : ''}<div><h1>${esc(p.name)}</h1>${p.tier ? `<p class="lede">${esc(p.tier.name)} tier${p.nextTier ? `, ${p.nextTier.need} Elo to ${esc(p.nextTier.tier.name)}` : ', top tier'}${p.peakTier && p.peakTier.id !== p.tier.id ? `. Best ever: ${esc(p.peakTier.name)}.` : ''}</p>` : ''}</div></div><div class="pills" aria-label="Choose a player">${all.map(x => `<a href="${hashFor('players', gid, encodeURIComponent(x.name))}" ${x.name === p.name ? 'aria-current="true"' : ''}>${nameIcon(x.name, 18)}${esc(x.name)}</a>`).join('')}</div></div>${groupSwitcher('players', gid)}${tierProgressBar(p)}${banner()}`;
     if (!p.rated) return h + '<p class="empty">No rated games yet.</p>';
     const hh = D.h2h(null, gid);
+    const setCounts = {};
+    D.games.forEach(g => { if (g.places[p.name] != null) g.sets.forEach(s => { setCounts[s] = (setCounts[s] || 0) + 1; }); });
+    const setEntries = Object.entries(setCounts);
+    const mostSet = setEntries.length ? setEntries.reduce((a, b) => b[1] > a[1] ? b : a) : null;
+    const leastSet = setEntries.length > 1 ? setEntries.reduce((a, b) => b[1] < a[1] ? b : a) : null;
     h += `<div class="stats">
       <div class="stat"><b>${f0(p.elo)}</b><span>Elo${p.rank ? ', rank ' + p.rank : ''}</span></div>
       <div class="stat"><b>${f0(p.peak)}</b><span>peak Elo</span></div>
@@ -263,7 +285,10 @@
       <div class="stat"><b>${f2(p.avgPts)}</b><span>avg points, 0 to 1</span></div>
       <div class="stat"><b>${p.streak}</b><span>win streak (best ${p.bestStreak})</span></div>
       <div class="stat"><b>${p.titles ? icon('champion', 26, '') + ' ' : ''}${p.titles}</b><span>season title${p.titles === 1 ? '' : 's'}</span></div>
-      <div class="stat"><b>${pc(p.topHalf)}</b><span>top-half finishes</span></div><div class="stat"><b>${p.lasts}</b><span>outright last places</span></div><div class="stat"><b>${p.bestDry}</b><span>longest run without a win</span></div></div>`;
+      <div class="stat"><b>${pc(p.topHalf)}</b><span>top-half finishes</span></div><div class="stat"><b>${p.lasts}</b><span>outright last places</span></div><div class="stat"><b>${p.bestDry}</b><span>longest run without a win</span></div>
+      ${mostSet ? `<div class="stat"><b>${setIcon(mostSet[0], 30) || esc(mostSet[0])}</b><span>most-played set: ${esc(mostSet[0])} (${mostSet[1]})</span></div>` : ''}
+      ${leastSet ? `<div class="stat"><b>${setIcon(leastSet[0], 30) || esc(leastSet[0])}</b><span>least-played set: ${esc(leastSet[0])} (${leastSet[1]})</span></div>` : ''}
+      </div>`;
     const dec = hh.players.filter(o => o !== p.name).map(o => ({ o, w: hh.ahead[p.name][o], l: hh.ahead[o][p.name] })).filter(x => x.w + x.l >= 3);
     const nem = dec.filter(x => x.l > x.w).sort((a, b) => b.l / (b.w + b.l) - a.l / (a.w + a.l) || b.l - a.l)[0];
     const vic = dec.filter(x => x.w > x.l).sort((a, b) => b.w / (b.w + b.l) - a.w / (a.w + a.l) || b.w - a.w)[0];
@@ -699,6 +724,7 @@
     document.querySelectorAll('#nav a').forEach(a => { if (a.dataset.r === (pages[route] ? route : 'home')) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     document.title = (route === 'home' ? '' : route.charAt(0).toUpperCase() + route.slice(1) + ' · ') + (cfg.title || 'Dominion Night');
     if (route === 'home' || route === 'players') wireHighlight(main);
+    if (route === 'players') wireTierPopup(main);
     if (route === 'add') wireAdd();
     if (route === 'admin') wireAdmin();
     const hs = $('#h2hsel'); if (hs) hs.addEventListener('change', () => { location.hash = hashFor('h2h', curGid, hs.value); });
