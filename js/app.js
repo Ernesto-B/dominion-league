@@ -470,14 +470,26 @@
       champion_player_id: s.champion ? (playerIdByName.get(s.champion) || '') : '', notes: s.notes || '',
     };
   }
+  const blankPlayerForm = () => ({ name: '', group_id: '' });
+  let pform = blankPlayerForm();
   function pageAdmin(gid, arg) {
     if (!me || !me.is_admin) return '<h1>Admin</h1><p class="empty">Only the admin can manage groups and seasons.</p>';
     const m = /^season\/edit\/(\d+)$/.exec(arg || '');
     const editId = m ? +m[1] : null;
     if (editId !== sform.editId) { if (editId == null) sform = blankSeasonForm(); else loadSeasonIntoForm(editId); }
     if (!sform.editId && !sform.group_id && D.groups.length) sform.group_id = D.groups[0].id;
+    if (!pform.group_id && D.groups.length) pform.group_id = D.groups[0].id;
 
     let h = '<h1>Admin</h1><p class="lede">Manage friend groups and seasons.</p>';
+
+    h += '<h2>Players</h2>';
+    h += D.groups.length
+      ? `<div class="builder"><div class="controls">
+        <label class="f">New player's name <input type="text" id="pfName" value="${esc(pform.name)}"></label>
+        <label class="f">Group <select id="pfGroup">${D.groups.map(g => `<option value="${esc(g.id)}"${pform.group_id === g.id ? ' selected' : ''}>${esc(g.name)}</option>`).join('')}</select></label>
+        <button id="pfSave" type="button">Add player</button><span class="meta" id="pfMsg" role="status"></span></div>
+        <p class="note">Creates their account with the preset password <code>dominion</code> — tell them their name and that password, and they'll set a real one on first sign-in.</p></div>`
+      : '<p class="empty">Create a group below first.</p>';
 
     h += '<h2>Groups</h2>';
     h += D.groups.length
@@ -515,6 +527,35 @@
     return h;
   }
   function wireAdmin() {
+    const pName = $('#pfName');
+    pName && pName.addEventListener('input', () => { pform.name = pName.value; });
+    const pGroup = $('#pfGroup');
+    pGroup && pGroup.addEventListener('change', () => { pform.group_id = pGroup.value; });
+    const pMsg = t => { const el = $('#pfMsg'); if (el) el.textContent = t; };
+    const pSave = $('#pfSave');
+    pSave && pSave.addEventListener('click', async () => {
+      const name = (pform.name || '').trim();
+      if (!name) { pMsg('Type a name first.'); return; }
+      if (!pform.group_id) { pMsg('Pick a group first.'); return; }
+      pSave.disabled = true; pMsg('Creating…');
+      const { data, error } = await sb.functions.invoke('create-player', { body: { name, group_id: pform.group_id } });
+      pSave.disabled = false;
+      if (error) {
+        // supabase-js surfaces a non-2xx function response as an error whose
+        // .context is the raw Response — the function's own {error: "..."}
+        // JSON body (the actual useful message) lives there, not on error.message.
+        let msg = error.message || 'Could not create the player.';
+        if (error.context && typeof error.context.json === 'function') {
+          try { const body = await error.context.json(); if (body && body.error) msg = body.error; } catch (e) { /* fall back to msg */ }
+        }
+        pMsg(msg); return;
+      }
+      if (data && data.error) { pMsg(data.error); return; }
+      pform = blankPlayerForm();
+      pMsg(`Created ${data.name}. Tell them to sign in with their name and "dominion".`);
+      await boot();
+    });
+
     const gName = $('#gfName');
     gName && gName.addEventListener('input', () => { gform.name = gName.value; render(); });
     const gMsg = t => { const el = $('#gfMsg'); if (el) el.textContent = t; };
