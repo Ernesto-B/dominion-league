@@ -51,7 +51,7 @@
   const SET_NAMES = Object.keys(SET_ICONS);
   const setIcon = (name, size) => {
     const slug = SET_ICONS[name];
-    return slug ? `<img class="tier" src="icons/sets/${slug}.png" width="${size}" height="${size}" alt="${esc(name)}" title="${esc(name)}">` : '';
+    return slug ? `<img class="tier seticon" src="icons/sets/${slug}.png" width="${size}" height="${size}" alt="${esc(name)}" title="${esc(name)}">` : '';
   };
   const tierOf = n => { const p = D && D.byName && D.byName[n]; return p && p.tier; };
   const nameIcon = (n, size) => { const t = tierOf(n); return t ? icon(t.icon, size || 18, t.name + ' tier') : ''; };
@@ -73,13 +73,21 @@
     const iso = Eng.fmtDay(day);
     return `<div class="tieranchor"><b title="${esc(iso)}">${short(iso)}</b><span>${esc(label)}</span></div>`;
   }
+  function tierPopup() {
+    const rows = D.tiers.map((t, i) => {
+      const hi = D.tiers[i + 1] ? D.tiers[i + 1].min - 1 : null;
+      const range = t.min === -Infinity ? `under ${D.tiers[i + 1].min}` : hi == null ? `${t.min}+` : `${t.min}–${hi}`;
+      return `<div class="tierpoprow">${icon(t.icon, 22, t.name)}<b>${esc(t.name)}</b><span>${range}</span></div>`;
+    }).join('');
+    return `<div class="tierpopup">${rows}</div>`;
+  }
   function tierProgressBar(p) {
     if (!p.tier) return '';
-    if (!p.nextTier) return `<div class="tierbar">${tierAnchor(p.tier)}<div class="progress" role="img" aria-label="Top tier reached"><i style="width:100%;background:var(--brass)"></i></div>${tierAnchor(null)}</div>`;
+    if (!p.nextTier) return `<div class="tierbarwrap" tabindex="0">${tierPopup()}<div class="tierbar">${tierAnchor(p.tier)}<div class="progress" role="img" aria-label="Top tier reached"><i style="width:100%;background:var(--brass)"></i></div>${tierAnchor(null)}</div></div>`;
     const lower = p.tier.min === -Infinity ? D.E.start : p.tier.min;
     const upper = p.nextTier.tier.min;
     const pct = Math.max(0, Math.min(1, (p.elo - lower) / (upper - lower))) * 100;
-    return `<div class="tierbar">${tierAnchor(p.tier)}<div class="progress" role="img" aria-label="${Math.round(pct)}% of the way to ${esc(p.nextTier.tier.name)}"><i style="width:${pct}%"></i></div>${tierAnchor(p.nextTier.tier)}</div>`;
+    return `<div class="tierbarwrap" tabindex="0">${tierPopup()}<div class="tierbar">${tierAnchor(p.tier)}<div class="progress" role="img" aria-label="${Math.round(pct)}% of the way to ${esc(p.nextTier.tier.name)}"><i style="width:${pct}%"></i></div>${tierAnchor(p.nextTier.tier)}</div></div>`;
   }
   function storyCards(R) {
     const cards = [];
@@ -175,10 +183,6 @@
     });
     h += '</div>' + lastNightPanel(gl) + '<h2>Rank tiers</h2>' + tierLegend() + '<p class="note">Your tier follows your current Elo, so it can go down as well as up. The trophy is for winning a season and never goes away.</p><p class="note">Everyone starts at ' + D.E.start + ' as a ' + D.startTier.name + ' and climbs from there. Elo carries across seasons; friendly games never count. New players move faster for their first ' + D.E.provisionalGames + ' games (provisional).</p>' + `<p class="note">This ladder is Elo — a lifetime skill rating that never resets. It's not what decides a season's winner; that's points, on the <a href="${hashFor('season', gid)}">Season page</a>.</p>`;
     h += '<h2>Rating history</h2>' + ratingChart(null, rk.map(p => p.name));
-    const cs = D.seasonStandings(D.currentSeasonFor(gid));
-    if (cs && cs.rows.length) {
-      h += `<h2>${esc(cs.season.name)} standings</h2>` + seasonTable(cs, 5) + `<p class="note"><a href="${hashFor('season', gid)}">Full season table</a></p>`;
-    }
     return h;
   }
 
@@ -238,7 +242,7 @@
 
   function resultRow(r) {
     const d = r.after - r.before;
-    return `<tr><td>${r.game.date}</td><td>${typePill(r.game.type)}</td><td>${ord(r.place)} of ${r.game.n}</td><td>${f2(r.pts)}</td><td>${f0(r.before)} → ${f0(r.after)}</td><td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${sgn(d)}</td></tr>`;
+    return `<tr><td>${r.game.date}</td><td>${typePill(r.game.type)}</td><td class="wrap">${finishText(r.game)}</td><td>${f2(r.pts)}</td><td>${f0(r.before)} → ${f0(r.after)}</td><td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${sgn(d)}</td></tr>`;
   }
   const typePill = t => t === 'Playoff' ? '<span class="pill play">Playoff</span>' : t === 'Friendly' ? '<span class="pill fr">Friendly</span>' : '';
 
@@ -267,7 +271,7 @@
     h += '<h2>Rating history</h2>' + ratingChart(p.name, rankedHere.map(x => x.name));
     const opp = hh.players.filter(o => o !== p.name).map(o => ({ o, w: hh.ahead[p.name][o], l: hh.ahead[o][p.name] })).filter(x => x.w + x.l > 0).sort((a, b) => (b.w / (b.w + b.l)) - (a.w / (a.w + a.l)) || (b.w + b.l) - (a.w + a.l));
     if (opp.length) h += `<h2>Against each opponent</h2><div class="tablewrap"><table><thead><tr><th class="l">Opponent</th><th>Finished ahead</th><th>Finished behind</th><th>Share ahead</th></tr></thead><tbody>${opp.map(x => `<tr><td class="name">${link(x.o)}</td><td>${x.w}</td><td>${x.l}</td><td>${x.w + x.l ? pc(x.w / (x.w + x.l)) : ''}</td></tr>`).join('')}</tbody></table></div><p class="note">Counts tables where both of you played, rated games only. Tied finishes aren't counted either way.</p>`;
-    h += `<h2>Results</h2><div class="tablewrap"><table><thead><tr><th class="l">Date</th><th></th><th>Finish</th><th>Points</th><th>Elo</th><th>Change</th></tr></thead><tbody>${p.results.slice().reverse().map(resultRow).join('')}</tbody></table></div>`;
+    h += `<h2>Results</h2><div class="tablewrap"><table><thead><tr><th class="l">Date</th><th></th><th class="l">Finish</th><th>Points</th><th>Elo</th><th>Change</th></tr></thead><tbody>${p.results.slice().reverse().map(resultRow).join('')}</tbody></table></div>`;
     return h;
   }
 
@@ -313,8 +317,7 @@
     if (R.longest) gr.push(grow('Longest game', esc(winnerOf(R.longest.game)) + ' won', R.longest.game.date, R.longest.value + ' min'));
     if (R.shortest) gr.push(grow('Shortest game', esc(winnerOf(R.shortest.game)) + ' won', R.shortest.game.date, R.shortest.value + ' min'));
     if (gr.length) h += `<h2>Single-game records</h2><div class="tablewrap"><table class="plain"><thead><tr><th class="l">Record</th><th class="l">Who</th><th class="l">When</th><th>Value</th></tr></thead><tbody>${gr.join('')}</tbody></table></div>`;
-    h += '<div class="grid2"><div><h2>Winning strategies</h2>' + (R.stratLogged ? `<div class="tablewrap"><table><thead><tr><th class="l">Strategy</th><th>Wins</th><th>Share</th></tr></thead><tbody>${cnt(R.strategies).map(([k, v]) => `<tr><td class="l">${esc(k)}</td><td>${v}</td><td>${pc(v / R.stratLogged)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">Fill the strategy field when adding a game to see which approaches win.</p>') + '</div>';
-    h += '<div><h2>Sets in play</h2>' + (R.setsLogged ? `<div class="tablewrap"><table><thead><tr><th class="l">Set</th><th>Games</th><th>Share</th></tr></thead><tbody>${cnt(R.sets).map(([k, v]) => `<tr><td class="l">${setIcon(k, 20)} ${esc(k)}</td><td>${v}</td><td>${pc(v / R.setsLogged)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">Fill the sets field when adding a game (separate sets with semicolons).</p>') + '</div></div>';
+    h += '<h2>Sets in play</h2>' + (R.setsLogged ? `<div class="tablewrap"><table><thead><tr><th class="l">Set</th><th>Games</th><th>Share</th></tr></thead><tbody>${cnt(R.sets).map(([k, v]) => `<tr><td class="l">${setIcon(k, 20)} ${esc(k)}</td><td>${v}</td><td>${pc(v / R.setsLogged)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">Fill the sets field when adding a game (separate sets with semicolons).</p>');
     h += `<h2>Season champions</h2><div class="tablewrap"><table><thead><tr><th class="l">Season</th><th class="l">Champion</th><th class="l">Dates</th></tr></thead><tbody>${D.seasons.filter(s => !gid || s.group === gid).map(s => `<tr><td class="l"><a href="${hashFor('season', gid, s.number)}">${esc(s.name)}</a></td><td class="l">${s.champion ? icon('champion', 20, 'Champion') + ' ' + (D.byName[s.champion] ? link(s.champion) : esc(s.champion)) : '<span class="meta">not decided</span>'}</td><td class="l">${s.ok ? Eng.fmtDay(s.start) + ' to ' + Eng.fmtDay(s.end) : ''}</td></tr>`).join('')}</tbody></table></div>`;
     return h;
   }
@@ -324,7 +327,7 @@
     return names.map((n, i) => (i ? (g.places[n] === g.places[names[i - 1]] ? ' = ' : ' > ') : '') + nameIcon(n, 16) + (i === 0 || g.places[n] === 1 ? `<b>${esc(n)}</b>` : esc(n))).join('');
   }
   function gamesTable(list, canEdit) {
-    return `<div class="tablewrap"><table><thead><tr><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th class="l">Strategy</th><th>VP</th><th>Min</th><th class="l">Notes</th>${canEdit ? '<th></th>' : ''}</tr></thead><tbody>${list.map(g => `<tr><td class="l">${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 22) || esc(s)).join(' ')}</td><td class="l">${esc(g.strategy)}</td><td>${g.vp ?? ''}</td><td>${g.minutes ?? ''}</td><td class="wrap">${esc(g.notes)}</td>${canEdit ? `<td><a href="${hashFor('add', curGid, 'edit/' + g.line)}">Edit</a></td>` : ''}</tr>`).join('')}</tbody></table></div>`;
+    return `<div class="tablewrap"><table><thead><tr><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>VP</th><th>Min</th><th class="l">Notes</th>${canEdit ? '<th></th>' : ''}</tr></thead><tbody>${list.map(g => `<tr><td class="l">${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 22) || esc(s)).join(' ')}</td><td>${g.vp ?? ''}</td><td>${g.minutes ?? ''}</td><td class="wrap">${esc(g.notes)}</td>${canEdit ? `<td><a href="${hashFor('add', curGid, 'edit/' + g.line)}">Edit</a></td>` : ''}</tr>`).join('')}</tbody></table></div>`;
   }
   const gf = { season: 'all', type: 'all', player: 'all' };
   function pageGames(gid) {
@@ -340,7 +343,7 @@
   }
 
   /* ---------- add / edit a game (admin only) ---------- */
-  const blankBS = () => ({ date: '', type: '', picked: [], tie: {}, sets: [], strategy: '', vp: '', minutes: '', notes: '', editId: null });
+  const blankBS = () => ({ date: '', type: '', picked: [], tie: {}, sets: [], vp: '', minutes: '', notes: '', editId: null });
   let bs = blankBS();
   function previewBlock() {
     const pv = D.preview(bs.picked);
@@ -358,7 +361,7 @@
     });
     bs = {
       date: g.date, type: g.type === 'Regular' ? '' : g.type, picked, tie,
-      sets: g.sets.slice(), strategy: g.strategy, vp: g.vp || '', minutes: g.minutes || '', notes: g.notes, editId,
+      sets: g.sets.slice(), vp: g.vp || '', minutes: g.minutes || '', notes: g.notes, editId,
     };
   }
   function pageAdd(gid, arg) {
@@ -376,7 +379,6 @@
       ${previewBlock()}
       <p class="meta">3. Which expansions were in play?</p><div class="pills" id="bsets">${SET_NAMES.map(n => `<a href="#" data-n="${esc(n)}" ${bs.sets.includes(n) ? 'aria-current="true"' : ''}>${setIcon(n, 18)}${esc(n)}</a>`).join('')}</div>
       <p class="meta" style="margin-top:14px">4. Optional details.</p><div class="controls">
-      <label class="f">Winning strategy <input type="text" id="bst" size="16" value="${esc(bs.strategy)}"></label>
       <label class="f">Winner VP <input type="text" id="bvp" size="4" value="${esc(bs.vp)}"></label>
       <label class="f">Minutes <input type="text" id="bm" size="4" value="${esc(bs.minutes)}"></label></div>
       <label class="f">Notes <input type="text" id="bn" size="50" value="${esc(bs.notes)}"></label>
@@ -390,7 +392,7 @@
   function wireAdd() {
     const rer = () => render();
     const bind = (id, k) => { const el = $(id); el && el.addEventListener('input', () => { bs[k] = el.value; }); };
-    bind('#bd', 'date'); bind('#bty', 'type'); bind('#bst', 'strategy'); bind('#bvp', 'vp'); bind('#bm', 'minutes'); bind('#bn', 'notes');
+    bind('#bd', 'date'); bind('#bty', 'type'); bind('#bvp', 'vp'); bind('#bm', 'minutes'); bind('#bn', 'notes');
     const pick = $('#bpick');
     pick && pick.addEventListener('click', e => {
       const a = e.target.closest('a[data-n]'); if (!a) return; e.preventDefault();
@@ -426,7 +428,7 @@
         if (id) results.push({ player_id: id, place: pos });
       });
       const args = {
-        p_date: bs.date, p_type: bs.type || '', p_sets: bs.sets.length ? SET_NAMES.filter(n => bs.sets.includes(n)).join('; ') : null, p_strategy: bs.strategy || null,
+        p_date: bs.date, p_type: bs.type || '', p_sets: bs.sets.length ? SET_NAMES.filter(n => bs.sets.includes(n)).join('; ') : null, p_strategy: null,
         p_winner_vp: bs.vp ? +bs.vp : null, p_minutes: bs.minutes ? +bs.minutes : null, p_notes: bs.notes || null,
         p_results: results,
       };
@@ -705,7 +707,7 @@
       const finish = [...byPlace.keys()].sort((a, b) => a - b).map(p => byPlace.get(p).join(' = ')).join(' > ');
       return {
         _line: g.id, date: g.date, type: g.type, finish,
-        sets: g.sets || '', strategy: g.strategy || '',
+        sets: g.sets || '',
         winner_vp: g.winner_vp ?? '', minutes: g.minutes ?? '', notes: g.notes || '',
       };
     });

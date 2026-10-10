@@ -139,7 +139,7 @@
       games.push({
         line, day, date: fmtDay(day), type, places, names, n: names.length,
         sets: (r.sets || '').split(/[;|]/).map(x => x.trim()).filter(Boolean),
-        strategy: r.strategy || '', vp: r.winner_vp ? +r.winner_vp : null, minutes: r.minutes ? +r.minutes : null,
+        vp: r.winner_vp ? +r.winner_vp : null, minutes: r.minutes ? +r.minutes : null,
         notes: r.notes || '', season: seasonOf(day),
       });
     });
@@ -343,10 +343,8 @@
           });
           return best;
         })(),
-        strategies: countBy(gameList.map(g => g.strategy).filter(Boolean)),
         sets: countBy([].concat(...gameList.map(g => g.sets))),
         setsLogged: gameList.filter(g => g.sets.length).length,
-        stratLogged: gameList.filter(g => g.strategy).length,
       };
     }
     const records = buildRecords(players, games, ranked);
