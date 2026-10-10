@@ -43,6 +43,16 @@
     const fb = explicit ? '' : ` onerror="this.onerror=null;this.src='icons/${esc(id)}.svg'"`;
     return `<img class="tier" src="${esc(src)}" width="${size}" height="${size}" alt="${esc(alt == null ? id : alt)}"${fb}>`;
   };
+  const SET_ICONS = {
+    Base: 'base', Intrigue: 'intrigue', Seaside: 'seaside', Prosperity: 'prosperity',
+    Hinterlands: 'hinterlands', 'Dark Ages': 'dark-ages', 'Cornucopia & Guilds': 'cornucopia-guilds',
+    Adventures: 'adventures', Empires: 'empires', Renaissance: 'renaissance', Plunder: 'plunder',
+  };
+  const SET_NAMES = Object.keys(SET_ICONS);
+  const setIcon = (name, size) => {
+    const slug = SET_ICONS[name];
+    return slug ? `<img class="tier" src="icons/sets/${slug}.png" width="${size}" height="${size}" alt="${esc(name)}" title="${esc(name)}">` : '';
+  };
   const tierOf = n => { const p = D && D.byName && D.byName[n]; return p && p.tier; };
   const nameIcon = (n, size) => { const t = tierOf(n); return t ? icon(t.icon, size || 18, t.name + ' tier') : ''; };
   const link = n => {
@@ -56,13 +66,20 @@
       return `<div class="tierkey" role="listitem">${icon(t.icon, 40, '')}<b>${esc(t.name)}</b><span>${range}</span></div>`;
     }).join('')}<div class="tierkey" role="listitem">${icon('champion', 40, '')}<b>Champion</b><span>won a season</span></div></div>`;
   }
+  function tierAnchor(tier) {
+    return `<div class="tieranchor">${tier ? icon(tier.icon, 28, tier.name) : ''}<span>${tier ? esc(tier.name) : 'Top tier'}</span></div>`;
+  }
+  function dateAnchor(day, label) {
+    const iso = Eng.fmtDay(day);
+    return `<div class="tieranchor"><b title="${esc(iso)}">${short(iso)}</b><span>${esc(label)}</span></div>`;
+  }
   function tierProgressBar(p) {
     if (!p.tier) return '';
-    if (!p.nextTier) return `<div class="progress" role="img" aria-label="Top tier reached"><i style="width:100%;background:var(--brass)"></i></div>`;
+    if (!p.nextTier) return `<div class="tierbar">${tierAnchor(p.tier)}<div class="progress" role="img" aria-label="Top tier reached"><i style="width:100%;background:var(--brass)"></i></div>${tierAnchor(null)}</div>`;
     const lower = p.tier.min === -Infinity ? D.E.start : p.tier.min;
     const upper = p.nextTier.tier.min;
     const pct = Math.max(0, Math.min(1, (p.elo - lower) / (upper - lower))) * 100;
-    return `<div class="progress" role="img" aria-label="${Math.round(pct)}% of the way to ${esc(p.nextTier.tier.name)}"><i style="width:${pct}%"></i></div>`;
+    return `<div class="tierbar">${tierAnchor(p.tier)}<div class="progress" role="img" aria-label="${Math.round(pct)}% of the way to ${esc(p.nextTier.tier.name)}"><i style="width:${pct}%"></i></div>${tierAnchor(p.nextTier.tier)}</div>`;
   }
   function storyCards(R) {
     const cards = [];
@@ -156,7 +173,7 @@
         <span class="bar" aria-hidden="true"><i class="${d >= 0 ? 'up' : 'down'}" style="width:${wpx}%;${d >= 0 ? 'left:50%' : 'left:' + (50 - wpx) + '%'}"></i></span>
         <span class="lelo">${f0(p.elo)}</span><span class="ldelta ${dl > 0.5 ? 'up-t' : dl < -0.5 ? 'down-t' : ''}">${sgn(dl)}</span><span class="form" aria-label="Recent form">${form}</span></div>`;
     });
-    h += '</div>' + lastNightPanel(gl) + '<h2>Rank tiers</h2>' + tierLegend() + '<p class="note">Your tier follows your current Elo, so it can go down as well as up. The trophy is for winning a season and never goes away.</p><p class="note">Everyone starts at ' + D.E.start + ' as a ' + D.startTier.name + ' and climbs from there. Elo carries across seasons; friendly games never count. New players move faster for their first ' + D.E.provisionalGames + ' games (provisional).</p>';
+    h += '</div>' + lastNightPanel(gl) + '<h2>Rank tiers</h2>' + tierLegend() + '<p class="note">Your tier follows your current Elo, so it can go down as well as up. The trophy is for winning a season and never goes away.</p><p class="note">Everyone starts at ' + D.E.start + ' as a ' + D.startTier.name + ' and climbs from there. Elo carries across seasons; friendly games never count. New players move faster for their first ' + D.E.provisionalGames + ' games (provisional).</p>' + `<p class="note">This ladder is Elo — a lifetime skill rating that never resets. It's not what decides a season's winner; that's points, on the <a href="${hashFor('season', gid)}">Season page</a>.</p>`;
     h += '<h2>Rating history</h2>' + ratingChart(null, rk.map(p => p.name));
     const cs = D.seasonStandings(D.currentSeasonFor(gid));
     if (cs && cs.rows.length) {
@@ -202,7 +219,7 @@
     const st = D.seasonStandings(num); const s = st.season;
     const wk = s.status === 'In progress' ? Math.floor((D.today - s.start) / 7) + 1 : null;
     const frac = !s.ok ? 0 : Math.max(0, Math.min(1, (D.today - s.start + 1) / (7 * s.weeks)));
-    let h = `<div class="head"><div><h1>${esc(s.name)}</h1><p class="lede">${s.ok ? long(Eng.fmtDay(s.start)) + ' to ' + long(Eng.fmtDay(s.end)) + ` (${s.weeks} weeks)` : 'Start date or length is missing in config.json.'}</p></div>
+    let h = `<div class="head"><div><h1>${esc(s.name)}</h1>${!s.ok ? `<p class="lede">Start date or length is missing.${me && me.is_admin ? ' Fix it from the <a href="#/admin">Admin page</a>.' : ''}</p>` : ''}</div>
       <div class="pills" aria-label="Choose a season">${seasonsForGroup.map(x => `<a href="${hashFor('season', gid, x.number)}" ${x.number === num ? 'aria-current="true"' : ''}>${esc(x.name)}</a>`).join('')}</div></div>${groupSwitcher('season', gid)}${banner()}${seasonRecap(st)}`;
     h += `<div class="stats">
       <div class="stat"><b>${wk ? 'Week ' + wk + ' of ' + s.weeks : s.status}</b><span>${wk ? s.weeksLeft + ' week' + (s.weeksLeft === 1 ? '' : 's') + ' left' : 'status'}</span></div>
@@ -211,9 +228,9 @@
       <div class="stat"><b>${s.minGames}</b><span>games to qualify (${s.target} target)</span></div>
       <div class="stat"><b>${s.spots}</b><span>playoff spots</span></div>
       <div class="stat"><b>${esc(s.champion) || '—'}</b><span>champion</span></div></div>`;
-    if (s.ok) h += `<div class="progress" role="img" aria-label="${Math.round(frac * 100)} percent of the season has passed"><i style="width:${frac * 100}%"></i></div>`;
+    if (s.ok) h += `<div class="tierbar">${dateAnchor(s.start, 'Start')}<div class="progress" role="img" aria-label="${Math.round(frac * 100)} percent of the season has passed"><i style="width:${frac * 100}%"></i></div>${dateAnchor(s.end, 'End')}</div>`;
     h += st.rows.length ? seasonTable(st) : '<p class="empty">No regular games in this season yet.</p>';
-    h += `<p class="note">Season score = (points + ${D.S.prior} × 0.5) ÷ (games + ${D.S.prior}). Points run from 1 for a win down to 0 for last, so a 3-player table and a 6-player table are worth the same, and ties split. The ${D.S.prior} imaginary average games stop one lucky night from topping the table. Missing a night costs nothing. Qualified players rank first; green rows are playoff seeds. Playoff and friendly games don't count toward the table (playoffs still move Elo).</p>`;
+    h += `<p class="note">Season score = (points + ${D.S.prior} × 0.5) ÷ (games + ${D.S.prior}). Points run from 1 for a win down to 0 for last, so a 3-player table and a 6-player table are worth the same, and ties split. The ${D.S.prior} imaginary average games stop one lucky night from topping the table. Missing a night costs nothing. Qualified players rank first; green rows are playoff seeds. Playoff and friendly games don't count toward the table (playoffs still move Elo). This table — not Elo — decides the season champion; Elo is a separate, ongoing skill rating shown on <a href="${hashFor('', gid)}">Rankings</a> that never resets.</p>`;
     const sg = st.games.filter(g => g.n >= 2).slice().reverse();
     if (sg.length) h += '<h2>Games this season</h2>' + gamesTable(sg);
     return h;
@@ -297,7 +314,7 @@
     if (R.shortest) gr.push(grow('Shortest game', esc(winnerOf(R.shortest.game)) + ' won', R.shortest.game.date, R.shortest.value + ' min'));
     if (gr.length) h += `<h2>Single-game records</h2><div class="tablewrap"><table class="plain"><thead><tr><th class="l">Record</th><th class="l">Who</th><th class="l">When</th><th>Value</th></tr></thead><tbody>${gr.join('')}</tbody></table></div>`;
     h += '<div class="grid2"><div><h2>Winning strategies</h2>' + (R.stratLogged ? `<div class="tablewrap"><table><thead><tr><th class="l">Strategy</th><th>Wins</th><th>Share</th></tr></thead><tbody>${cnt(R.strategies).map(([k, v]) => `<tr><td class="l">${esc(k)}</td><td>${v}</td><td>${pc(v / R.stratLogged)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">Fill the strategy field when adding a game to see which approaches win.</p>') + '</div>';
-    h += '<div><h2>Sets in play</h2>' + (R.setsLogged ? `<div class="tablewrap"><table><thead><tr><th class="l">Set</th><th>Games</th><th>Share</th></tr></thead><tbody>${cnt(R.sets).map(([k, v]) => `<tr><td class="l">${esc(k)}</td><td>${v}</td><td>${pc(v / R.setsLogged)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">Fill the sets field when adding a game (separate sets with semicolons).</p>') + '</div></div>';
+    h += '<div><h2>Sets in play</h2>' + (R.setsLogged ? `<div class="tablewrap"><table><thead><tr><th class="l">Set</th><th>Games</th><th>Share</th></tr></thead><tbody>${cnt(R.sets).map(([k, v]) => `<tr><td class="l">${setIcon(k, 20)} ${esc(k)}</td><td>${v}</td><td>${pc(v / R.setsLogged)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">Fill the sets field when adding a game (separate sets with semicolons).</p>') + '</div></div>';
     h += `<h2>Season champions</h2><div class="tablewrap"><table><thead><tr><th class="l">Season</th><th class="l">Champion</th><th class="l">Dates</th></tr></thead><tbody>${D.seasons.filter(s => !gid || s.group === gid).map(s => `<tr><td class="l"><a href="${hashFor('season', gid, s.number)}">${esc(s.name)}</a></td><td class="l">${s.champion ? icon('champion', 20, 'Champion') + ' ' + (D.byName[s.champion] ? link(s.champion) : esc(s.champion)) : '<span class="meta">not decided</span>'}</td><td class="l">${s.ok ? Eng.fmtDay(s.start) + ' to ' + Eng.fmtDay(s.end) : ''}</td></tr>`).join('')}</tbody></table></div>`;
     return h;
   }
@@ -307,7 +324,7 @@
     return names.map((n, i) => (i ? (g.places[n] === g.places[names[i - 1]] ? ' = ' : ' > ') : '') + nameIcon(n, 16) + (i === 0 || g.places[n] === 1 ? `<b>${esc(n)}</b>` : esc(n))).join('');
   }
   function gamesTable(list, canEdit) {
-    return `<div class="tablewrap"><table><thead><tr><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th class="l">Strategy</th><th>VP</th><th>Min</th><th class="l">Notes</th>${canEdit ? '<th></th>' : ''}</tr></thead><tbody>${list.map(g => `<tr><td class="l">${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${esc(g.sets.join(', '))}</td><td class="l">${esc(g.strategy)}</td><td>${g.vp ?? ''}</td><td>${g.minutes ?? ''}</td><td class="wrap">${esc(g.notes)}</td>${canEdit ? `<td><a href="${hashFor('add', curGid, 'edit/' + g.line)}">Edit</a></td>` : ''}</tr>`).join('')}</tbody></table></div>`;
+    return `<div class="tablewrap"><table><thead><tr><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th class="l">Strategy</th><th>VP</th><th>Min</th><th class="l">Notes</th>${canEdit ? '<th></th>' : ''}</tr></thead><tbody>${list.map(g => `<tr><td class="l">${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 22) || esc(s)).join(' ')}</td><td class="l">${esc(g.strategy)}</td><td>${g.vp ?? ''}</td><td>${g.minutes ?? ''}</td><td class="wrap">${esc(g.notes)}</td>${canEdit ? `<td><a href="${hashFor('add', curGid, 'edit/' + g.line)}">Edit</a></td>` : ''}</tr>`).join('')}</tbody></table></div>`;
   }
   const gf = { season: 'all', type: 'all', player: 'all' };
   function pageGames(gid) {
@@ -323,7 +340,7 @@
   }
 
   /* ---------- add / edit a game (admin only) ---------- */
-  const blankBS = () => ({ date: '', type: '', picked: [], tie: {}, sets: '', strategy: '', vp: '', minutes: '', notes: '', editId: null });
+  const blankBS = () => ({ date: '', type: '', picked: [], tie: {}, sets: [], strategy: '', vp: '', minutes: '', notes: '', editId: null });
   let bs = blankBS();
   function previewBlock() {
     const pv = D.preview(bs.picked);
@@ -341,7 +358,7 @@
     });
     bs = {
       date: g.date, type: g.type === 'Regular' ? '' : g.type, picked, tie,
-      sets: g.sets.join('; '), strategy: g.strategy, vp: g.vp || '', minutes: g.minutes || '', notes: g.notes, editId,
+      sets: g.sets.slice(), strategy: g.strategy, vp: g.vp || '', minutes: g.minutes || '', notes: g.notes, editId,
     };
   }
   function pageAdd(gid, arg) {
@@ -357,8 +374,8 @@
       <p class="meta">2. Tick "tied" if a player finished level with the one above.</p>
       <ol class="order" id="border">${bs.picked.map((n, i) => `<li><span class="nm">${i + 1}. ${esc(n)}</span><button class="ghost" data-up="${i}" type="button" aria-label="Move ${esc(n)} up"${i === 0 ? ' disabled' : ''}>↑</button><button class="ghost" data-dn="${i}" type="button" aria-label="Move ${esc(n)} down"${i === bs.picked.length - 1 ? ' disabled' : ''}>↓</button>${i ? `<label class="f"><input type="checkbox" data-tie="${esc(n)}"${bs.tie[n] ? ' checked' : ''}> tied with above</label>` : ''}</li>`).join('') || '<li class="meta">No players chosen yet.</li>'}</ol>
       ${previewBlock()}
-      <p class="meta">3. Optional details.</p><div class="controls">
-      <label class="f">Sets <input type="text" id="bs" size="22" placeholder="Base; Intrigue" value="${esc(bs.sets)}"></label>
+      <p class="meta">3. Which expansions were in play?</p><div class="pills" id="bsets">${SET_NAMES.map(n => `<a href="#" data-n="${esc(n)}" ${bs.sets.includes(n) ? 'aria-current="true"' : ''}>${setIcon(n, 18)}${esc(n)}</a>`).join('')}</div>
+      <p class="meta" style="margin-top:14px">4. Optional details.</p><div class="controls">
       <label class="f">Winning strategy <input type="text" id="bst" size="16" value="${esc(bs.strategy)}"></label>
       <label class="f">Winner VP <input type="text" id="bvp" size="4" value="${esc(bs.vp)}"></label>
       <label class="f">Minutes <input type="text" id="bm" size="4" value="${esc(bs.minutes)}"></label></div>
@@ -373,12 +390,19 @@
   function wireAdd() {
     const rer = () => render();
     const bind = (id, k) => { const el = $(id); el && el.addEventListener('input', () => { bs[k] = el.value; }); };
-    bind('#bd', 'date'); bind('#bty', 'type'); bind('#bs', 'sets'); bind('#bst', 'strategy'); bind('#bvp', 'vp'); bind('#bm', 'minutes'); bind('#bn', 'notes');
+    bind('#bd', 'date'); bind('#bty', 'type'); bind('#bst', 'strategy'); bind('#bvp', 'vp'); bind('#bm', 'minutes'); bind('#bn', 'notes');
     const pick = $('#bpick');
     pick && pick.addEventListener('click', e => {
       const a = e.target.closest('a[data-n]'); if (!a) return; e.preventDefault();
       const n = a.dataset.n, i = bs.picked.indexOf(n);
       if (i >= 0) { bs.picked.splice(i, 1); delete bs.tie[n]; } else bs.picked.push(n);
+      rer();
+    });
+    const setsPick = $('#bsets');
+    setsPick && setsPick.addEventListener('click', e => {
+      const a = e.target.closest('a[data-n]'); if (!a) return; e.preventDefault();
+      const n = a.dataset.n, i = bs.sets.indexOf(n);
+      if (i >= 0) bs.sets.splice(i, 1); else bs.sets.push(n);
       rer();
     });
     const order = $('#border');
@@ -402,7 +426,7 @@
         if (id) results.push({ player_id: id, place: pos });
       });
       const args = {
-        p_date: bs.date, p_type: bs.type || '', p_sets: bs.sets || null, p_strategy: bs.strategy || null,
+        p_date: bs.date, p_type: bs.type || '', p_sets: bs.sets.length ? SET_NAMES.filter(n => bs.sets.includes(n)).join('; ') : null, p_strategy: bs.strategy || null,
         p_winner_vp: bs.vp ? +bs.vp : null, p_minutes: bs.minutes ? +bs.minutes : null, p_notes: bs.notes || null,
         p_results: results,
       };

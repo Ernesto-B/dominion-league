@@ -178,6 +178,10 @@ th.sortable[data-dir=asc]::after{content:" \25B2";font-size:10px}
 th.sortable[data-dir=desc]::after{content:" \25BC";font-size:10px}
 .progress{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:-4px 0 18px}
 .progress i{display:block;height:100%;background:var(--felt)}
+.tierbar{display:flex;align-items:center;gap:10px;margin:10px 0 18px}
+.tierbar .progress{flex:1;margin:0}
+.tieranchor{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none}
+.tieranchor span{font-size:11px;color:var(--muted);white-space:nowrap}
 .rivals{margin:14px 0 0}.rivals p{margin:4px 0}
 .chgs{display:flex;flex-wrap:wrap;gap:4px 16px}
 .chg{white-space:nowrap}
