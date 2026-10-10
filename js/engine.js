@@ -136,10 +136,17 @@
       type = type === 'playoff' ? 'Playoff' : type === 'friendly' ? 'Friendly' : 'Regular';
       if (r.type && !['regular', 'playoff', 'friendly'].includes(r.type.trim().toLowerCase()))
         warnings.push(`games.csv line ${line}: type "${r.type}" is not Regular, Playoff or Friendly. Treated as Regular.`);
+      // Per-player VP, keyed by canon name so case differences can't split one
+      // player into two entries. Falls back to the legacy single winner_vp
+      // field (pre-per-player-VP games) when no player-level value is given.
+      const playerVP = {};
+      Object.entries(r.playerVP || {}).forEach(([nm, v]) => { if (v != null && v !== '') playerVP[canon(nm)] = +v; });
+      const winnerName = names.find(nm => places[nm] === 1);
+      const vp = winnerName && playerVP[winnerName] != null ? playerVP[winnerName] : (r.winner_vp ? +r.winner_vp : null);
       games.push({
         line, day, date: fmtDay(day), type, places, names, n: names.length,
         sets: (r.sets || '').split(/[;|]/).map(x => x.trim()).filter(Boolean),
-        vp: r.winner_vp ? +r.winner_vp : null, minutes: r.minutes ? +r.minutes : null,
+        vp, playerVP, minutes: r.minutes ? +r.minutes : null,
         notes: r.notes || '', season: seasonOf(day),
       });
     });
@@ -199,6 +206,24 @@
       g.snapshot = Object.assign({}, cur);
     });
     Object.keys(cur).forEach(n => { P[n].elo = cur[n]; });
+
+    /* running season score before/after each Regular game, per player, per
+       season — mirrors g.elo[name] = {before, after} exactly, same formula
+       seasonStandings() uses, so a player's last g.score[name].after for a
+       season always equals their final seasonStandings() score by construction. */
+    const seasonRunning = {}; // `${name}|${seasonNum}` -> { pts, games }
+    games.forEach(g => {
+      if (g.type !== 'Regular' || g.n < 2 || g.season == null) return;
+      g.score = {};
+      g.names.forEach(a => {
+        const key = a + '|' + g.season;
+        const run = seasonRunning[key] || (seasonRunning[key] = { pts: 0, games: 0 });
+        const before = (run.pts + S.prior * 0.5) / (run.games + S.prior);
+        run.pts += g.pts[a]; run.games += 1;
+        const after = (run.pts + S.prior * 0.5) / (run.games + S.prior);
+        g.score[a] = { before, after };
+      });
+    });
 
     /* titles */
     const titles = {};

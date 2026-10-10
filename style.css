@@ -86,6 +86,11 @@ td.name{text-align:left;font-weight:600}
 td a{text-decoration:none;font-weight:600} td a:hover{text-decoration:underline}
 tr.seed td{background:var(--felt-soft)}
 td.wrap{white-space:normal;min-width:180px;text-align:left}
+tr.grow{cursor:pointer}
+td.chev{width:18px;color:var(--muted);transition:transform .15s}
+tr.grow.open td.chev{transform:rotate(90deg)}
+tr.gdetail td{background:var(--bg);padding:14px 16px}
+tr.gdetail:hover{background:none}
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;background:var(--line)}
 .pill.ok{background:var(--felt-soft);color:var(--felt)} .pill.warn{background:var(--brass-soft);color:var(--brass)}
 .pill.play{background:var(--brass-soft);color:var(--brass)} .pill.fr{background:var(--line);color:var(--muted)}

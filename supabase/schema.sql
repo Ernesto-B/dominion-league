@@ -33,8 +33,10 @@ create table if not exists game_results (
   game_id bigint not null references games(id) on delete cascade,
   player_id uuid not null references players(id),
   place int not null,                     -- ties share the same place number
+  vp int,                                 -- this player's own VP, not just the winner's
   unique (game_id, player_id)
 );
+alter table game_results add column if not exists vp int;
 
 -- Deliberately no FK from players.group_id to groups.id: adding one
 -- retroactively is an ordering headache (it's checked against existing data
@@ -91,26 +93,43 @@ as $$
   select coalesce((select p.is_admin from players p where p.id = auth.uid()), false);
 $$;
 
+-- Unlike tables/functions, CREATE POLICY has no IF NOT EXISTS — drop-then-
+-- create is what keeps this file safely re-runnable against an already-
+-- deployed database (re-running it bare used to abort here with "policy
+-- already exists", which silently skipped every change below this point,
+-- including RPC updates. Caught running this file against a second,
+-- already-migrated database as part of testing the per-player-VP change).
+
 -- Read access: any authenticated player sees the full roster/games/results
 -- (needed for rankings, standings, head-to-head). No anonymous access at all
 -- on any of the three tables — that's what makes the whole site login-gated.
+drop policy if exists players_select on players;
 create policy players_select on players for select to authenticated using (true);
+drop policy if exists games_select on games;
 create policy games_select on games for select to authenticated using (true);
+drop policy if exists game_results_select on game_results;
 create policy game_results_select on game_results for select to authenticated using (true);
+drop policy if exists groups_select on groups;
 create policy groups_select on groups for select to authenticated using (true);
+drop policy if exists seasons_select on seasons;
 create policy seasons_select on seasons for select to authenticated using (true);
 
 -- Write access: admin only, as a defense-in-depth backstop. The real write
 -- path is the RPCs below, which re-check is_admin() themselves so a dangling
 -- games row can't be left behind by a partially-failed two-step client write.
+drop policy if exists players_write on players;
 create policy players_write on players for all to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists games_write on games;
 create policy games_write on games for all to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists game_results_write on game_results;
 create policy game_results_write on game_results for all to authenticated using (is_admin()) with check (is_admin());
 
 -- groups and seasons are single-row writes (no child table to keep in sync),
 -- so the RLS policy alone is the right place to gate them — no RPC wrapper
 -- needed the way add_game/edit_game need one.
+drop policy if exists groups_write on groups;
 create policy groups_write on groups for all to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists seasons_write on seasons;
 create policy seasons_write on seasons for all to authenticated using (is_admin()) with check (is_admin());
 
 -- Deliberately NOT a general self-row UPDATE policy on players: RLS is
@@ -146,8 +165,8 @@ begin
   values (p_date, coalesce(p_type, ''), p_sets, p_strategy, p_winner_vp, p_minutes, p_notes, auth.uid())
   returning id into v_game_id;
 
-  insert into game_results (game_id, player_id, place)
-  select v_game_id, (r->>'player_id')::uuid, (r->>'place')::int
+  insert into game_results (game_id, player_id, place, vp)
+  select v_game_id, (r->>'player_id')::uuid, (r->>'place')::int, (r->>'vp')::int
   from jsonb_array_elements(p_results) r;
 
   return v_game_id;
@@ -174,8 +193,8 @@ begin
 
   delete from game_results where game_id = p_game_id;
 
-  insert into game_results (game_id, player_id, place)
-  select p_game_id, (r->>'player_id')::uuid, (r->>'place')::int
+  insert into game_results (game_id, player_id, place, vp)
+  select p_game_id, (r->>'player_id')::uuid, (r->>'place')::int, (r->>'vp')::int
   from jsonb_array_elements(p_results) r;
 end;
 $$;

@@ -176,6 +176,16 @@
     wrap.addEventListener('mousemove', move);
     wrap.addEventListener('mouseenter', move);
   }
+  function wireGameRows(root) {
+    root.querySelectorAll('tr.grow').forEach(tr => {
+      tr.addEventListener('click', () => {
+        const det = root.querySelector(`tr.gdetail[data-g="${tr.dataset.g}"]`);
+        if (!det) return;
+        det.hidden = !det.hidden;
+        tr.classList.toggle('open', !det.hidden);
+      });
+    });
+  }
 
   /* ---------- pages ---------- */
   function pageHome(gid) {
@@ -259,7 +269,7 @@
 
   function resultRow(r) {
     const d = r.after - r.before;
-    return `<tr><td>${r.game.date}</td><td>${typePill(r.game.type)}</td><td class="wrap">${finishText(r.game)}</td><td>${f2(r.pts)}</td><td>${f0(r.before)} → ${f0(r.after)}</td><td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${sgn(d)}</td></tr>`;
+    return `<tr><td>${r.game.date}</td><td>${typePill(r.game.type)}</td><td class="wrap">${finishText(r.game)}</td><td class="wrap">${r.game.sets.map(s => setIcon(s, 20) || esc(s)).join(' ')}</td><td>${f2(r.pts)}</td><td>${f0(r.before)} → ${f0(r.after)}</td><td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${sgn(d)}</td></tr>`;
   }
   const typePill = t => t === 'Playoff' ? '<span class="pill play">Playoff</span>' : t === 'Friendly' ? '<span class="pill fr">Friendly</span>' : '';
 
@@ -296,7 +306,7 @@
     h += '<h2>Rating history</h2>' + ratingChart(p.name, rankedHere.map(x => x.name));
     const opp = hh.players.filter(o => o !== p.name).map(o => ({ o, w: hh.ahead[p.name][o], l: hh.ahead[o][p.name] })).filter(x => x.w + x.l > 0).sort((a, b) => (b.w / (b.w + b.l)) - (a.w / (a.w + a.l)) || (b.w + b.l) - (a.w + a.l));
     if (opp.length) h += `<h2>Against each opponent</h2><div class="tablewrap"><table><thead><tr><th class="l">Opponent</th><th>Finished ahead</th><th>Finished behind</th><th>Share ahead</th></tr></thead><tbody>${opp.map(x => `<tr><td class="name">${link(x.o)}</td><td>${x.w}</td><td>${x.l}</td><td>${x.w + x.l ? pc(x.w / (x.w + x.l)) : ''}</td></tr>`).join('')}</tbody></table></div><p class="note">Counts tables where both of you played, rated games only. Tied finishes aren't counted either way.</p>`;
-    h += `<h2>Results</h2><div class="tablewrap"><table><thead><tr><th class="l">Date</th><th></th><th class="l">Finish</th><th>Points</th><th>Elo</th><th>Change</th></tr></thead><tbody>${p.results.slice().reverse().map(resultRow).join('')}</tbody></table></div>`;
+    h += `<h2>Results</h2><div class="tablewrap"><table><thead><tr><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>Points</th><th>Elo</th><th>Change</th></tr></thead><tbody>${p.results.slice().reverse().map(resultRow).join('')}</tbody></table></div>`;
     return h;
   }
 
@@ -351,8 +361,23 @@
     const names = g.names.slice().sort((a, b) => g.places[a] - g.places[b]);
     return names.map((n, i) => (i ? (g.places[n] === g.places[names[i - 1]] ? ' = ' : ' > ') : '') + nameIcon(n, 16) + (i === 0 || g.places[n] === 1 ? `<b>${esc(n)}</b>` : esc(n))).join('');
   }
+  function gameDetail(g) {
+    const rows = g.names.slice().sort((a, b) => g.places[a] - g.places[b]).map(n => {
+      const elo = g.elo && g.elo[n];
+      const score = g.score && g.score[n];
+      const vp = g.playerVP && g.playerVP[n];
+      const d = elo ? elo.after - elo.before : null;
+      return `<tr><td class="name">${link(n)}</td>
+        <td>${elo ? f0(elo.before) + ' → ' + f0(elo.after) : '—'}</td>
+        <td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${d != null ? sgn(d) : ''}</td>
+        <td>${score ? f3(score.before) + ' → ' + f3(score.after) : '—'}</td>
+        <td>${vp != null ? vp : '—'}</td></tr>`;
+    }).join('');
+    return `<div class="tablewrap"><table class="plain"><thead><tr><th class="l">Player</th><th>Elo</th><th>Change</th><th>Season score</th><th>VP</th></tr></thead><tbody>${rows}</tbody></table></div>${g.notes ? `<p class="note">${esc(g.notes)}</p>` : ''}`;
+  }
   function gamesTable(list, canEdit) {
-    return `<div class="tablewrap"><table><thead><tr><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>VP</th><th>Min</th><th class="l">Notes</th>${canEdit ? '<th></th>' : ''}</tr></thead><tbody>${list.map(g => `<tr><td class="l">${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 22) || esc(s)).join(' ')}</td><td>${g.vp ?? ''}</td><td>${g.minutes ?? ''}</td><td class="wrap">${esc(g.notes)}</td>${canEdit ? `<td><a href="${hashFor('add', curGid, 'edit/' + g.line)}">Edit</a></td>` : ''}</tr>`).join('')}</tbody></table></div>`;
+    const cols = canEdit ? 9 : 8;
+    return `<div class="tablewrap"><table><thead><tr><th></th><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>VP</th><th>Min</th><th class="l">Notes</th>${canEdit ? '<th></th>' : ''}</tr></thead><tbody>${list.map(g => `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td class="l">${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 22) || esc(s)).join(' ')}</td><td>${g.vp ?? ''}</td><td>${g.minutes ?? ''}</td><td class="wrap">${esc(g.notes)}</td>${canEdit ? `<td><a href="${hashFor('add', curGid, 'edit/' + g.line)}" onclick="event.stopPropagation()">Edit</a></td>` : ''}</tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="${cols}">${gameDetail(g)}</td></tr>`).join('')}</tbody></table></div>`;
   }
   const gf = { season: 'all', type: 'all', player: 'all' };
   function pageGames(gid) {
@@ -368,7 +393,7 @@
   }
 
   /* ---------- add / edit a game (admin only) ---------- */
-  const blankBS = () => ({ date: '', type: '', picked: [], tie: {}, sets: [], vp: '', minutes: '', notes: '', editId: null });
+  const blankBS = () => ({ date: '', type: '', picked: [], tie: {}, sets: [], vp: {}, minutes: '', notes: '', editId: null });
   let bs = blankBS();
   function previewBlock() {
     const pv = D.preview(bs.picked);
@@ -386,7 +411,7 @@
     });
     bs = {
       date: g.date, type: g.type === 'Regular' ? '' : g.type, picked, tie,
-      sets: g.sets.slice(), vp: g.vp || '', minutes: g.minutes || '', notes: g.notes, editId,
+      sets: g.sets.slice(), vp: Object.assign({}, g.playerVP), minutes: g.minutes || '', notes: g.notes, editId,
     };
   }
   function pageAdd(gid, arg) {
@@ -399,12 +424,11 @@
     <div class="builder"><div class="controls"><label class="f">Date <input type="date" id="bd" value="${esc(bs.date)}"></label>
       <label class="f">Type <select id="bty">${['', 'Playoff', 'Friendly'].map(t => `<option value="${t}"${bs.type === t ? ' selected' : ''}>${t || 'Regular'}</option>`).join('')}</select></label></div>
       <p class="meta">1. Click the players in the order they finished, winner first.</p><div class="pills" id="bpick">${roster.map(n => `<a href="${hashFor('add', gid, bs.editId ? 'edit/' + bs.editId : '')}" data-n="${esc(n)}" ${bs.picked.includes(n) ? 'aria-current="true"' : ''}>${nameIcon(n, 18)}${esc(n)}</a>`).join('')}</div>
-      <p class="meta">2. Tick "tied" if a player finished level with the one above.</p>
-      <ol class="order" id="border">${bs.picked.map((n, i) => `<li><span class="nm">${i + 1}. ${esc(n)}</span><button class="ghost" data-up="${i}" type="button" aria-label="Move ${esc(n)} up"${i === 0 ? ' disabled' : ''}>↑</button><button class="ghost" data-dn="${i}" type="button" aria-label="Move ${esc(n)} down"${i === bs.picked.length - 1 ? ' disabled' : ''}>↓</button>${i ? `<label class="f"><input type="checkbox" data-tie="${esc(n)}"${bs.tie[n] ? ' checked' : ''}> tied with above</label>` : ''}</li>`).join('') || '<li class="meta">No players chosen yet.</li>'}</ol>
+      <p class="meta">2. Tick "tied" if a player finished level with the one above, and fill in VP if you tracked it.</p>
+      <ol class="order" id="border">${bs.picked.map((n, i) => `<li><span class="nm">${i + 1}. ${esc(n)}</span><button class="ghost" data-up="${i}" type="button" aria-label="Move ${esc(n)} up"${i === 0 ? ' disabled' : ''}>↑</button><button class="ghost" data-dn="${i}" type="button" aria-label="Move ${esc(n)} down"${i === bs.picked.length - 1 ? ' disabled' : ''}>↓</button><label class="f">VP <input type="text" data-vp="${esc(n)}" size="3" value="${esc(bs.vp[n] ?? '')}"></label>${i ? `<label class="f"><input type="checkbox" data-tie="${esc(n)}"${bs.tie[n] ? ' checked' : ''}> tied with above</label>` : ''}</li>`).join('') || '<li class="meta">No players chosen yet.</li>'}</ol>
       ${previewBlock()}
       <p class="meta">3. Which expansions were in play?</p><div class="pills" id="bsets">${SET_NAMES.map(n => `<a href="#" data-n="${esc(n)}" ${bs.sets.includes(n) ? 'aria-current="true"' : ''}>${setIcon(n, 18)}${esc(n)}</a>`).join('')}</div>
       <p class="meta" style="margin-top:14px">4. Optional details.</p><div class="controls">
-      <label class="f">Winner VP <input type="text" id="bvp" size="4" value="${esc(bs.vp)}"></label>
       <label class="f">Minutes <input type="text" id="bm" size="4" value="${esc(bs.minutes)}"></label></div>
       <label class="f">Notes <input type="text" id="bn" size="50" value="${esc(bs.notes)}"></label>
       <div class="controls" style="margin-top:14px">
@@ -417,7 +441,7 @@
   function wireAdd() {
     const rer = () => render();
     const bind = (id, k) => { const el = $(id); el && el.addEventListener('input', () => { bs[k] = el.value; }); };
-    bind('#bd', 'date'); bind('#bty', 'type'); bind('#bvp', 'vp'); bind('#bm', 'minutes'); bind('#bn', 'notes');
+    bind('#bd', 'date'); bind('#bty', 'type'); bind('#bm', 'minutes'); bind('#bn', 'notes');
     const pick = $('#bpick');
     pick && pick.addEventListener('click', e => {
       const a = e.target.closest('a[data-n]'); if (!a) return; e.preventDefault();
@@ -441,6 +465,7 @@
       rer();
     });
     order && order.addEventListener('change', e => { const t = e.target.dataset.tie; if (t) bs.tie[t] = e.target.checked; });
+    order && order.addEventListener('input', e => { const v = e.target.dataset.vp; if (v) bs.vp[v] = e.target.value; });
     const msg = t => { const el = $('#bmsg'); if (el) el.textContent = t; };
     const save = $('#bsave');
     save && save.addEventListener('click', async () => {
@@ -450,11 +475,12 @@
       bs.picked.forEach((n, i) => {
         if (i > 0 && !bs.tie[n]) pos = i + 1;
         const id = playerIdByName.get(n);
-        if (id) results.push({ player_id: id, place: pos });
+        const vp = bs.vp[n] !== undefined && bs.vp[n] !== '' ? +bs.vp[n] : null;
+        if (id) results.push({ player_id: id, place: pos, vp });
       });
       const args = {
         p_date: bs.date, p_type: bs.type || '', p_sets: bs.sets.length ? SET_NAMES.filter(n => bs.sets.includes(n)).join('; ') : null, p_strategy: null,
-        p_winner_vp: bs.vp ? +bs.vp : null, p_minutes: bs.minutes ? +bs.minutes : null, p_notes: bs.notes || null,
+        p_winner_vp: null, p_minutes: bs.minutes ? +bs.minutes : null, p_notes: bs.notes || null,
         p_results: results,
       };
       save.disabled = true; msg('Saving…');
@@ -694,13 +720,22 @@
           const dir = th.dataset.dir === 'desc' ? 'asc' : 'desc';
           heads.forEach(x => { delete x.dataset.dir; x.removeAttribute('aria-sort'); });
           th.dataset.dir = dir; th.setAttribute('aria-sort', dir === 'asc' ? 'ascending' : 'descending');
-          const rows = [...t.tBodies[0].rows];
+          // Expandable game rows (gamesTable) pair each .grow summary row with
+          // a sibling .gdetail row sharing the same data-g — sort only the
+          // summary rows, then re-attach each one's detail row right after it,
+          // so an expanded game's detail stays with it instead of scattering
+          // to wherever its near-empty colspan cell happens to sort.
+          const rows = [...t.tBodies[0].rows].filter(r => !r.classList.contains('gdetail'));
           rows.sort((ra, rb) => {
             const x = val(ra, ci), y = val(rb, ci);
             const r = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true });
             return dir === 'asc' ? r : -r;
           });
-          rows.forEach(r => t.tBodies[0].appendChild(r));
+          rows.forEach(r => {
+            t.tBodies[0].appendChild(r);
+            const det = r.dataset.g != null ? t.tBodies[0].querySelector(`tr.gdetail[data-g="${r.dataset.g}"]`) : null;
+            if (det) t.tBodies[0].appendChild(det);
+          });
         };
         th.addEventListener('click', go);
         th.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
@@ -721,6 +756,7 @@
     const fn = pages[route] || pageHome;
     main.innerHTML = fn(gid, arg);
     makeSortable(main);
+    wireGameRows(main);
     document.querySelectorAll('#nav a').forEach(a => { if (a.dataset.r === (pages[route] ? route : 'home')) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     document.title = (route === 'home' ? '' : route.charAt(0).toUpperCase() + route.slice(1) + ' · ') + (cfg.title || 'Dominion Night');
     if (route === 'home' || route === 'players') wireHighlight(main);
@@ -766,15 +802,17 @@
     rr.data.forEach(r => { if (!byGame.has(r.game_id)) byGame.set(r.game_id, []); byGame.get(r.game_id).push(r); });
     const rows = gr.data.map(g => {
       const byPlace = new Map();
+      const playerVP = {};
       (byGame.get(g.id) || []).forEach(r => {
         const nm = nameById.get(r.player_id); if (!nm) return;
         if (!byPlace.has(r.place)) byPlace.set(r.place, []);
         byPlace.get(r.place).push(nm);
+        if (r.vp != null) playerVP[nm] = r.vp;
       });
       const finish = [...byPlace.keys()].sort((a, b) => a - b).map(p => byPlace.get(p).join(' = ')).join(' > ');
       return {
         _line: g.id, date: g.date, type: g.type, finish,
-        sets: g.sets || '',
+        sets: g.sets || '', playerVP,
         winner_vp: g.winner_vp ?? '', minutes: g.minutes ?? '', notes: g.notes || '',
       };
     });
