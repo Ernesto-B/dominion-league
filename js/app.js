@@ -38,8 +38,8 @@
   // A tier icon is icons/<id>.png (drop in your own artwork). 'champion' is the bundled trophy SVG.
   // A value containing a slash is used exactly as written.
   const icon = (id, size, alt) => {
-    const explicit = /\//.test(id) || id === 'champion';
-    const src = id === 'champion' ? 'icons/champion.svg' : explicit ? id : 'icons/' + id + '.png';
+    const explicit = /\//.test(id);
+    const src = explicit ? id : 'icons/' + id + '.png';
     const fb = explicit ? '' : ` onerror="this.onerror=null;this.src='icons/${esc(id)}.svg'"`;
     return `<img class="tier" src="${esc(src)}" width="${size}" height="${size}" alt="${esc(alt == null ? id : alt)}"${fb}>`;
   };
@@ -55,6 +55,20 @@
       const range = t.min === -Infinity ? `under ${D.tiers[i + 1].min}` : hi == null ? `${t.min}+` : `${t.min}–${hi}`;
       return `<div class="tierkey" role="listitem">${icon(t.icon, 40, '')}<b>${esc(t.name)}</b><span>${range}</span></div>`;
     }).join('')}<div class="tierkey" role="listitem">${icon('champion', 40, '')}<b>Champion</b><span>won a season</span></div></div>`;
+  }
+  function tierProgressBar(p) {
+    if (!p.tier) return '';
+    if (!p.nextTier) return `<div class="progress" role="img" aria-label="Top tier reached"><i style="width:100%;background:var(--brass)"></i></div>`;
+    const lower = p.tier.min === -Infinity ? D.E.start : p.tier.min;
+    const upper = p.nextTier.tier.min;
+    const pct = Math.max(0, Math.min(1, (p.elo - lower) / (upper - lower))) * 100;
+    return `<div class="progress" role="img" aria-label="${Math.round(pct)}% of the way to ${esc(p.nextTier.tier.name)}"><i style="width:${pct}%"></i></div>`;
+  }
+  function storyCards(R) {
+    const cards = [];
+    if (R.closestRace) cards.push(`<div class="story"><span class="slabel">Closest race</span>${link(R.closestRace.a)} leads ${link(R.closestRace.b)} by just <b>${f0(R.closestRace.gap)}</b> Elo</div>`);
+    if (R.biggestUpset) cards.push(`<div class="story"><span class="slabel">Biggest upset</span>${link(R.biggestUpset.winner)} beat ${link(R.biggestUpset.loser)} despite trailing by <b>${f0(R.biggestUpset.deficit)}</b> Elo <span class="meta">(${short(R.biggestUpset.date)})</span></div>`);
+    return cards.length ? `<div class="storyrow">${cards.join('')}</div>` : '';
   }
   function banner() {
     if (!D.warnings.length) return '';
@@ -128,7 +142,7 @@
     const last = gl.length ? gl[gl.length - 1].date : null;
     const R = D.recordsFor(gid);
     let h = `<div class="head"><div><h1>${esc(cfg.title || 'Dominion Night')}</h1><p class="lede">${esc(cfg.subtitle || '')}</p></div>
-      <div class="chips">${seasonChip(gid)}${last ? `<span class="chip">Last night <b>${short(last)}</b></span>` : ''}<span class="chip"><b>${R.overview.nights}</b> night${R.overview.nights === 1 ? '' : 's'} played</span></div></div>${groupSwitcher('', gid)}${banner()}`;
+      <div class="chips">${seasonChip(gid)}${last ? `<span class="chip">Last night <b>${short(last)}</b></span>` : ''}<span class="chip"><b>${R.overview.nights}</b> night${R.overview.nights === 1 ? '' : 's'} played</span></div></div>${groupSwitcher('', gid)}${banner()}${storyCards(R)}`;
     if (!rk.length) return h + '<p class="empty">No rated games yet. Once the admin adds one, the rankings show up here.</p>';
     const mx = Math.max(60, ...rk.map(p => Math.abs(p.elo - D.E.start))) * 1.08;
     h += `<div class="ladder" role="table" aria-label="Elo rankings"><div class="lhead" role="row"><span>Rank</span><span>Player</span><span>Rating vs ${D.E.start} start</span><span>Elo</span><span>Last</span><span>Recent form</span></div>`;
@@ -138,7 +152,7 @@
       const dl = lastR ? lastR.after - lastR.before : 0;
       const form = p.results.slice(-5).map(r => `<i class="${r.pts >= 0.67 ? 'w' : r.pts <= 0.33 ? 'l' : 'm'}" title="${esc(r.game.date)}: ${ord(r.place)} of ${r.game.n}"></i>`).join('');
       h += `<div class="lrow" data-p="${esc(p.name)}" role="row"><span class="lrank">${p.rank}</span>
-        <a class="lname" href="${hashFor('players', gid, encodeURIComponent(p.name))}">${icon(p.tier.icon, 28, p.tier.name + ' tier')}${esc(p.name)}${p.titles ? `<span class="crown" title="${p.titles} season title${p.titles > 1 ? 's' : ''}">${icon('champion', 20, 'Season champion')}${p.titles > 1 ? '×' + p.titles : ''}</span>` : ''}${p.status === 'Provisional' ? '<span class="tag">provisional</span>' : ''}</a>
+        <a class="lname" href="${hashFor('players', gid, encodeURIComponent(p.name))}">${icon(p.tier.icon, 28, p.tier.name + ' tier')}${esc(p.name)}${p.titles ? `<span class="crown" title="${p.titles} season title${p.titles > 1 ? 's' : ''}">${icon('champion', 20, 'Season champion')}${p.titles > 1 ? '×' + p.titles : ''}</span>` : ''}${p.streak >= 3 ? `<span class="pill hot" title="${p.streak}-game win streak">🔥 ${p.streak}</span>` : ''}${p.status === 'Provisional' ? '<span class="tag">provisional</span>' : ''}</a>
         <span class="bar" aria-hidden="true"><i class="${d >= 0 ? 'up' : 'down'}" style="width:${wpx}%;${d >= 0 ? 'left:50%' : 'left:' + (50 - wpx) + '%'}"></i></span>
         <span class="lelo">${f0(p.elo)}</span><span class="ldelta ${dl > 0.5 ? 'up-t' : dl < -0.5 ? 'down-t' : ''}">${sgn(dl)}</span><span class="form" aria-label="Recent form">${form}</span></div>`;
     });
@@ -168,6 +182,19 @@
         <td>${r.qualified ? '<span class="pill ok">Yes</span>' : `<span class="pill warn">${r.need} more</span>`}</td><td>${r.seed || ''}</td><td class="${r.eloChange > 0.5 ? 'up-t' : r.eloChange < -0.5 ? 'down-t' : ''}">${sgn(r.eloChange)}</td><td>${r.nights}</td><td>${pc(r.attendance)}</td></tr>`).join('') + '</tbody></table></div>';
   }
 
+  function seasonRecap(st) {
+    const s = st.season;
+    if (s.status !== 'Complete' || !st.rows.length) return '';
+    const riser = st.rows.reduce((b, r) => (!b || r.eloChange > b.eloChange) ? r : b, null);
+    const best = st.rows.reduce((b, r) => (!b || r.winPct > b.winPct) ? r : b, null);
+    const tables = st.games.filter(g => g.n >= 2).length;
+    return `<div class="recap"><div class="recapchamp">${icon('champion', 56, '')}<div><span class="slabel">Season champion</span><h3>${s.champion ? link(s.champion) : 'Not decided'}</h3></div></div>
+      <div class="stats">
+      ${riser ? `<div class="stat"><b class="${riser.eloChange > 0.5 ? 'up-t' : riser.eloChange < -0.5 ? 'down-t' : ''}">${sgn(riser.eloChange)}</b><span>biggest riser: ${esc(riser.name)}</span></div>` : ''}
+      ${best ? `<div class="stat"><b>${pc(best.winPct)}</b><span>best record: ${esc(best.name)}</span></div>` : ''}
+      <div class="stat"><b>${tables}</b><span>tables played</span></div>
+      </div></div>`;
+  }
   function pageSeason(gid, arg) {
     const seasonsForGroup = D.seasons.filter(s => !gid || s.group === gid);
     if (!seasonsForGroup.length) return `<h1>Season</h1>${groupSwitcher('season', gid)}<p class="empty">No seasons are set up yet.${me && me.is_admin ? ' Add one from the <a href="#/admin">Admin page</a>.' : ''}</p>`;
@@ -176,7 +203,7 @@
     const wk = s.status === 'In progress' ? Math.floor((D.today - s.start) / 7) + 1 : null;
     const frac = !s.ok ? 0 : Math.max(0, Math.min(1, (D.today - s.start + 1) / (7 * s.weeks)));
     let h = `<div class="head"><div><h1>${esc(s.name)}</h1><p class="lede">${s.ok ? long(Eng.fmtDay(s.start)) + ' to ' + long(Eng.fmtDay(s.end)) + ` (${s.weeks} weeks)` : 'Start date or length is missing in config.json.'}</p></div>
-      <div class="pills" aria-label="Choose a season">${seasonsForGroup.map(x => `<a href="${hashFor('season', gid, x.number)}" ${x.number === num ? 'aria-current="true"' : ''}>${esc(x.name)}</a>`).join('')}</div></div>${groupSwitcher('season', gid)}${banner()}`;
+      <div class="pills" aria-label="Choose a season">${seasonsForGroup.map(x => `<a href="${hashFor('season', gid, x.number)}" ${x.number === num ? 'aria-current="true"' : ''}>${esc(x.name)}</a>`).join('')}</div></div>${groupSwitcher('season', gid)}${banner()}${seasonRecap(st)}`;
     h += `<div class="stats">
       <div class="stat"><b>${wk ? 'Week ' + wk + ' of ' + s.weeks : s.status}</b><span>${wk ? s.weeksLeft + ' week' + (s.weeksLeft === 1 ? '' : 's') + ' left' : 'status'}</span></div>
       <div class="stat"><b>${s.regularGames}</b><span>regular games</span></div>
@@ -204,7 +231,7 @@
     const rankedHere = D.ranked.filter(p => !gid || D.groupOf(p.name) === gid);
     const name = arg ? decodeURIComponent(arg) : (rankedHere[0] || all[0]).name;
     const p = D.players.find(x => x.name === name) || all[0];
-    let h = `<div class="head"><div class="who">${p.tier ? icon(p.tier.icon, 72, p.tier.name + ' tier') : ''}<div><h1>${esc(p.name)}</h1>${p.tier ? `<p class="lede">${esc(p.tier.name)} tier${p.nextTier ? `, ${p.nextTier.need} Elo to ${esc(p.nextTier.tier.name)}` : ', top tier'}${p.peakTier && p.peakTier.id !== p.tier.id ? `. Best ever: ${esc(p.peakTier.name)}.` : ''}</p>` : ''}</div></div><div class="pills" aria-label="Choose a player">${all.map(x => `<a href="${hashFor('players', gid, encodeURIComponent(x.name))}" ${x.name === p.name ? 'aria-current="true"' : ''}>${nameIcon(x.name, 18)}${esc(x.name)}</a>`).join('')}</div></div>${groupSwitcher('players', gid)}${banner()}`;
+    let h = `<div class="head"><div class="who">${p.tier ? icon(p.tier.icon, 72, p.tier.name + ' tier') : ''}<div><h1>${esc(p.name)}</h1>${p.tier ? `<p class="lede">${esc(p.tier.name)} tier${p.nextTier ? `, ${p.nextTier.need} Elo to ${esc(p.nextTier.tier.name)}` : ', top tier'}${p.peakTier && p.peakTier.id !== p.tier.id ? `. Best ever: ${esc(p.peakTier.name)}.` : ''}</p>` : ''}</div></div><div class="pills" aria-label="Choose a player">${all.map(x => `<a href="${hashFor('players', gid, encodeURIComponent(x.name))}" ${x.name === p.name ? 'aria-current="true"' : ''}>${nameIcon(x.name, 18)}${esc(x.name)}</a>`).join('')}</div></div>${groupSwitcher('players', gid)}${tierProgressBar(p)}${banner()}`;
     if (!p.rated) return h + '<p class="empty">No rated games yet.</p>';
     const hh = D.h2h(null, gid);
     h += `<div class="stats">

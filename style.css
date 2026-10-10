@@ -85,6 +85,16 @@ td.wrap{white-space:normal;min-width:180px;text-align:left}
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;background:var(--line)}
 .pill.ok{background:var(--felt-soft);color:var(--felt)} .pill.warn{background:var(--brass-soft);color:var(--brass)}
 .pill.play{background:var(--brass-soft);color:var(--brass)} .pill.fr{background:var(--line);color:var(--muted)}
+.pill.hot{background:var(--brass-soft);color:var(--brass);margin-left:6px}
+
+/* storylines and season recap */
+.slabel{display:block;color:var(--muted);font-size:12px;margin-bottom:2px}
+.storyrow{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 20px}
+.story{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;max-width:380px}
+.recap{background:var(--felt-soft);border:1px solid var(--felt);border-radius:10px;padding:14px 18px;margin:0 0 18px}
+.recapchamp{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.recapchamp h3{margin:0;font-size:20px}
+.recap .stats{margin:0}
 
 /* controls */
 .controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:0 0 16px}

@@ -320,6 +320,29 @@
         longest: (() => { let b = null; gameList.forEach(g => { if (g.minutes && (!b || g.minutes > b.value)) b = { game: g, value: g.minutes }; }); return b; })(),
         shortest: (() => { let b = null; gameList.forEach(g => { if (g.minutes && g.n >= 2 && (!b || g.minutes < b.value)) b = { game: g, value: g.minutes }; }); return b; })(),
         topVP: (() => { let b = null; gameList.forEach(g => { if (g.vp && (!b || g.vp > b.value)) b = { game: g, value: g.vp }; }); return b; })(),
+        closestRace: (() => {
+          let best = null;
+          for (let i = 0; i < leaderList.length - 1; i++) {
+            const gap = leaderList[i].elo - leaderList[i + 1].elo;
+            if (!best || gap < best.gap) best = { a: leaderList[i].name, b: leaderList[i + 1].name, gap, rank: i + 1 };
+          }
+          return best;
+        })(),
+        biggestUpset: (() => {
+          let best = null;
+          gameList.forEach(g => {
+            if (!g.elo || g.n < 2) return;
+            g.names.forEach(w => {
+              if (g.places[w] !== 1 || !g.elo[w]) return;
+              g.names.forEach(o => {
+                if (o === w || g.places[o] === g.places[w] || !g.elo[o]) return;
+                const deficit = g.elo[o].before - g.elo[w].before;
+                if (deficit > 0 && (!best || deficit > best.deficit)) best = { winner: w, loser: o, deficit, date: g.date, game: g };
+              });
+            });
+          });
+          return best;
+        })(),
         strategies: countBy(gameList.map(g => g.strategy).filter(Boolean)),
         sets: countBy([].concat(...gameList.map(g => g.sets))),
         setsLogged: gameList.filter(g => g.sets.length).length,

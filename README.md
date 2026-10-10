@@ -54,7 +54,7 @@ With more than one group, every page grows a small pill switcher to flip between
 
 ## Rank titles and icons
 
-Every player has a title from their current Elo: Peasant, Knight, Lord, Duke, Emperor. Everyone starts at 1000 as a Peasant and climbs. The icons are the PNG files in `icons/`; replace any of them with your own square PNG of the same name (`peasant.png`, `knight.png`, `lord.png`, `duke.png`, `emperor.png`). The little trophy (`champion.svg`) marks players who have won a season; it isn't a rank.
+Every player has a title from their current Elo: Peasant, Knight, Lord, Duke, Emperor. Everyone starts at 1000 as a Peasant and climbs. The icons are the PNG files in `icons/`; replace any of them with your own square PNG of the same name (`peasant.png`, `knight.png`, `lord.png`, `duke.png`, `emperor.png`). The little trophy (`champion.png`) marks players who have won a season; it isn't a rank. If a PNG is ever missing, the site falls back to `icons/<name>.svg` if one exists — that's why the original `champion.svg` is still in the folder, as a fallback.
 
 Defaults: Peasant under 1040, Knight 1040, Lord 1090, Duke 1150, Emperor 1225. To change names or cut-offs, add a `tiers` list to `data/config.json`. The first tier's `min` is `null`, and each `id` needs a matching `icons/<id>.png` (or give an `icon` path):
 
