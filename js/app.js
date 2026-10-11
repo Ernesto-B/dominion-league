@@ -876,7 +876,6 @@
         const res = await fetch('data/config.json?v=' + Date.now());
         if (!res.ok) throw new Error('Could not load data/config.json (' + res.status + ').');
         cfg = await res.json();
-        $('.brand').textContent = cfg.title || 'Dominion Night';
       }
       if (!authWired) {
         authWired = true;
