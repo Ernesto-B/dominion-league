@@ -10,6 +10,7 @@
   let playerIdByName = new Map();  // name -> uuid, for admin writes
   let seasonDbIds = [];      // D.seasons[i] (number = i+1) -> seasons.id row, for admin edit links
   let curGid = null;       // group currently being viewed
+  let enabledSets = new Set();  // sets the admin has marked as owned; populated in boot()
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const f0 = x => x == null ? '' : Math.round(x).toString();
@@ -54,19 +55,39 @@
     const src = setIconPath(name);
     return src ? `<img class="tier seticon" src="${src}" width="${size}" height="${size}" alt="${esc(name)}" title="${esc(name)}">` : '';
   };
+  // withPopup(): wraps a tile's markup with a follow-the-mouse popup, same
+  // mechanism as the tier progress bar's (see wireHoverPopups). Pass no
+  // popupHtml and a tile renders exactly as before — a no-op wrapper.
+  function withPopup(bodyHtml, popupHtml) {
+    return popupHtml ? `<div class="popwrap" tabindex="0">${bodyHtml}<div class="popbox">${popupHtml}</div></div>` : bodyHtml;
+  }
+  const popText = (text, extra) => `<div class="popdesc">${text}${extra ? `<b>${extra}</b>` : ''}</div>`;
   // statTile(): a .stat tile with an optional leading category icon. Tiles
   // built without one (icon = null/undefined) render byte-for-byte like the
   // plain .stat tiles used everywhere else on the site (Season/Records/Admin),
   // since .stat-body has no styling of its own — it's a no-op wrapper then.
-  function statTile(iconSrc, big, label, iconClass) {
-    return `<div class="stat${iconSrc ? ' has-icon' : ''}">${iconSrc ? `<img class="staticon${iconClass ? ' ' + iconClass : ''}" src="${iconSrc}" alt="">` : ''}<div class="stat-body"><b>${big}</b><span>${label}</span></div></div>`;
+  function statTile(iconSrc, big, label, iconClass, popupHtml) {
+    const body = `<div class="stat${iconSrc ? ' has-icon' : ''}">${iconSrc ? `<img class="staticon${iconClass ? ' ' + iconClass : ''}" src="${iconSrc}" alt="">` : ''}<div class="stat-body"><b>${big}</b><span>${label}</span></div></div>`;
+    return withPopup(body, popupHtml);
   }
   // Just the set's icon and a caption — no count. A raw number here (table
   // count) isn't a meaningful stat the way the other tiles' numbers are.
-  function setStatTile(setName, label) {
+  function setStatTile(setName, label, popupHtml) {
     if (!setName) return '';
     const src = setIconPath(setName);
-    return `<div class="stat seticon-stat">${src ? `<img class="seticon" src="${src}" alt="${esc(setName)}">` : ''}<span>${label}: ${esc(setName)}</span></div>`;
+    const body = `<div class="stat seticon-stat">${src ? `<img class="seticon" src="${src}" alt="${esc(setName)}">` : ''}<span>${label}: ${esc(setName)}</span></div>`;
+    return withPopup(body, popupHtml);
+  }
+  // Full breakdown of every currently-owned set (not just ones this player
+  // has used), for the most/least-played set tiles — shows what's missing
+  // as much as what's played. A set unticked in Admin > Sets drops out of
+  // this list entirely, same as it does from the Add A Game picker.
+  function setBreakdownPopup(setCounts) {
+    const rows = SET_NAMES.filter(nm => enabledSets.has(nm)).sort((a, b) => (setCounts[b] || 0) - (setCounts[a] || 0) || a.localeCompare(b)).map(nm => {
+      const n = setCounts[nm] || 0;
+      return `<div class="poprow">${setIcon(nm, 20)}<b>${esc(nm)}</b><span>${n} game${n === 1 ? '' : 's'}</span></div>`;
+    }).join('');
+    return rows;
   }
   const tierOf = n => { const p = D && D.byName && D.byName[n]; return p && p.tier; };
   const nameIcon = (n, size) => { const t = tierOf(n); return t ? icon(t.icon, size || 18, t.name + ' tier') : ''; };
@@ -176,22 +197,47 @@
       el.addEventListener('focusin', () => set(el.dataset.p));
     });
   }
-  function wireTierPopup(root) {
-    const wrap = root.querySelector('.tierbarwrap');
-    const pop = wrap && wrap.querySelector('.tierpopup');
-    if (!wrap || !pop) return;
-    const move = e => {
-      const pad = 16;
-      pop.style.transform = 'none';
-      let x = e.clientX + pad, y = e.clientY + pad;
-      const pw = pop.offsetWidth, ph = pop.offsetHeight;
-      if (x + pw > window.innerWidth - 8) x = e.clientX - pw - pad;
-      if (y + ph > window.innerHeight - 8) y = e.clientY - ph - pad;
-      pop.style.left = x + 'px';
-      pop.style.top = y + 'px';
-    };
-    wrap.addEventListener('mousemove', move);
-    wrap.addEventListener('mouseenter', move);
+  // A single popup node attached directly to <body>, reused for every
+  // .tierbarwrap/.popwrap on the page. It has to live outside `main`: any
+  // .popwrap nested inside .stats sits under an ancestor that gets
+  // backdrop-filter in dark mode, and backdrop-filter (like transform/
+  // filter) makes an element a new containing block for position:fixed
+  // descendants — combined with .stats's overflow:hidden, a popup embedded
+  // in place there would be clipped into invisibility instead of floating
+  // over the page. Each wrap keeps its own hidden source node (built by
+  // withPopup/tierPopup) purely as content to clone into this shared layer.
+  let popLayer = null;
+  function ensurePopLayer() {
+    if (!popLayer) { popLayer = document.createElement('div'); popLayer.className = 'popbox'; document.body.appendChild(popLayer); }
+    return popLayer;
+  }
+  function hidePopLayer() { if (popLayer) popLayer.style.display = 'none'; }
+  function wireHoverPopups(root) {
+    const layer = ensurePopLayer();
+    root.querySelectorAll('.tierbarwrap, .popwrap').forEach(wrap => {
+      const src = wrap.querySelector('.tierpopup, .popbox');
+      if (!src) return;
+      src.style.display = 'none';
+      const place = e => {
+        const pad = 16;
+        layer.style.transform = 'none';
+        let x = e.clientX + pad, y = e.clientY + pad;
+        const pw = layer.offsetWidth, ph = layer.offsetHeight;
+        if (x + pw > window.innerWidth - 8) x = e.clientX - pw - pad;
+        if (y + ph > window.innerHeight - 8) y = e.clientY - ph - pad;
+        layer.style.left = x + 'px';
+        layer.style.top = y + 'px';
+      };
+      const show = e => { layer.innerHTML = src.innerHTML; layer.style.display = 'block'; place(e); };
+      wrap.addEventListener('mouseenter', show);
+      wrap.addEventListener('mousemove', place);
+      wrap.addEventListener('mouseleave', hidePopLayer);
+      wrap.addEventListener('focusin', () => {
+        layer.innerHTML = src.innerHTML; layer.style.display = 'block';
+        layer.style.transform = 'translate(-50%,-50%)'; layer.style.left = '50%'; layer.style.top = '50%';
+      });
+      wrap.addEventListener('focusout', hidePopLayer);
+    });
   }
   function wireGameRows(root) {
     root.querySelectorAll('tr.grow').forEach(tr => {
@@ -334,19 +380,23 @@
     const setEntries = Object.entries(setCounts);
     const mostSet = setEntries.length ? setEntries.reduce((a, b) => b[1] > a[1] ? b : a) : null;
     const leastSet = setEntries.length > 1 ? setEntries.reduce((a, b) => b[1] < a[1] ? b : a) : null;
+    const losses = p.rated - p.wins;
+    const ratioTxt = p.wins ? (losses ? `${(p.wins / losses).toFixed(2)}:1` : 'no losses yet') : '—';
+    const peakGap = p.peak - p.elo;
+    const setsPop = setBreakdownPopup(setCounts);
     h += `<div class="stats">
-      ${statTile('icons/stats/elo.png', f0(p.elo), 'Elo' + (p.rank ? ', rank ' + p.rank : ''))}
-      ${statTile('icons/stats/peak-elo.png', f0(p.peak), 'peak Elo')}
-      ${statTile('icons/stats/rated-games.png', p.rated, 'rated games' + (p.status === 'Provisional' ? ' (provisional)' : ''))}
-      ${statTile('icons/stats/wins.png', p.wins, `wins (${pc(p.winPct)})`)}
-      ${statTile('icons/stats/average-points.png', f2(p.avgPts), 'avg points, 0 to 1')}
-      ${statTile('icons/stats/win-streak.png', p.streak, `win streak (best ${p.bestStreak})`)}
-      ${statTile('icons/champion.png', p.titles, 'season title' + (p.titles === 1 ? '' : 's'))}
-      ${statTile('icons/stats/top-half-finishes.png', pc(p.topHalf), 'top half')}
-      ${statTile('icons/stats/last-place-finishes.png', p.lasts, 'last places')}
-      ${statTile('icons/stats/longest-without-win.png', p.bestDry, 'longest dry spell')}
-      ${setStatTile(mostSet && mostSet[0], 'most played')}
-      ${setStatTile(leastSet && leastSet[0], 'least played')}
+      ${statTile('icons/stats/elo.png', f0(p.elo), 'Elo' + (p.rank ? ', rank ' + p.rank : ''), null, popText(`Your current skill rating. Everyone starts at ${D.E.start}; it moves after every rated game based on who you played and how surprising the result was.`))}
+      ${statTile('icons/stats/peak-elo.png', f0(p.peak), 'peak Elo', null, popText('The highest Elo you\'ve ever reached — it never goes down.', peakGap > 0.5 ? `${f0(peakGap)} below your peak right now` : 'You\'re at your all-time peak right now'))}
+      ${statTile('icons/stats/rated-games.png', p.rated, 'rated games' + (p.status === 'Provisional' ? ' (provisional)' : ''), null, popText(`Games that count toward Elo — everything except Friendly games. Your first ${D.E.provisionalGames} are Provisional, with bigger rating swings while the system is still learning your skill.`))}
+      ${statTile('icons/stats/wins.png', p.wins, `wins (${pc(p.winPct)})`, null, popText(`Tables you've won outright — sole 1st place, no ties.`, `W/L ratio ${ratioTxt}`))}
+      ${statTile('icons/stats/average-points.png', f2(p.avgPts), 'avg points, 0 to 1', null, popText('Your average share of the points on offer at your tables, from 0 (always last) to 1 (always first). 0.5 is what an evenly matched table averages.'))}
+      ${statTile('icons/stats/win-streak.png', p.streak, `win streak (best ${p.bestStreak})`, null, popText('Wins in a row right now — resets the moment you don\'t finish 1st.', `Best ever: ${p.bestStreak}`))}
+      ${statTile('icons/champion.png', p.titles, 'season title' + (p.titles === 1 ? '' : 's'), null, popText('Seasons you\'ve won outright. Decided by points, not Elo — see the Season page.'))}
+      ${statTile('icons/stats/top-half-finishes.png', pc(p.topHalf), 'top half', null, popText('Share of tables where your points share was 0.5 or better — roughly, finishing in the top half of the table.'))}
+      ${statTile('icons/stats/last-place-finishes.png', p.lasts, 'last places', null, popText('Tables where you finished alone in last place. A tie for last doesn\'t count against you.'))}
+      ${statTile('icons/stats/longest-without-win.png', p.bestDry, 'longest dry spell', null, popText('Your longest-ever run of rated games without a win.', p.dry > 0 ? `${p.dry} games into one right now` : 'Not in one right now'))}
+      ${setStatTile(mostSet && mostSet[0], 'most played', setsPop)}
+      ${setStatTile(leastSet && leastSet[0], 'least played', setsPop)}
       </div>`;
     const dec = hh.players.filter(o => o !== p.name).map(o => ({ o, w: hh.ahead[p.name][o], l: hh.ahead[o][p.name] })).filter(x => x.w + x.l >= 3);
     const nem = dec.filter(x => x.l > x.w).sort((a, b) => b.l / (b.w + b.l) - a.l / (a.w + a.l) || b.l - a.l)[0];
@@ -444,15 +494,16 @@
     const cols = canEdit ? 9 : 8;
     return `<div class="tablewrap"><table><thead><tr><th></th><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>VP</th><th>Min</th><th class="l">Notes</th>${canEdit ? '<th></th>' : ''}</tr></thead><tbody>${list.map(g => `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td class="l">${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 22) || esc(s)).join(' ')}</td><td>${g.vp ?? ''}</td><td>${g.minutes ?? ''}</td><td class="wrap">${esc(g.notes)}</td>${canEdit ? `<td><a href="#" data-edit="${g.line}" onclick="event.stopPropagation()">Edit</a></td>` : ''}</tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="${cols}">${gameDetail(g)}</td></tr>`).join('')}</tbody></table></div>`;
   }
-  const gf = { season: 'all', type: 'all', player: 'all' };
+  const gf = { season: 'all', type: 'all', player: 'all', set: 'all' };
   function pageGames(gid) {
     let list = D.games.filter(g => (!gid || g.names.every(n => D.groupOf(n) === gid)) &&
-      (gf.season === 'all' || String(g.season) === gf.season) && (gf.type === 'all' || g.type === gf.type) && (gf.player === 'all' || g.places[gf.player] != null)).slice().reverse();
+      (gf.season === 'all' || String(g.season) === gf.season) && (gf.type === 'all' || g.type === gf.type) && (gf.player === 'all' || g.places[gf.player] != null) && (gf.set === 'all' || g.sets.includes(gf.set))).slice().reverse();
     const canEdit = !!(me && me.is_admin);
     return `<div class="head"><div><h1>Games</h1><p class="lede">Every table we've logged, newest first. Winners in bold.</p></div>${canEdit ? '<button id="gAddBtn" class="iconbtn" type="button"><img src="icons/nav/add-a-game.png" alt="Add a game"></button>' : ''}</div>${groupSwitcher('games', gid)}${banner()}
       <div class="controls"><label class="f">Season <select id="gfs">${seasonOptions(gf.season, true, gid)}</select></label>
       <label class="f">Type <select id="gft">${['all', 'Regular', 'Playoff', 'Friendly'].map(t => `<option value="${t}"${gf.type === t ? ' selected' : ''}>${t === 'all' ? 'All types' : t}</option>`).join('')}</select></label>
       <label class="f">Player <select id="gfp"><option value="all">Everyone</option>${D.players.filter(p => !gid || D.groupOf(p.name) === gid).map(p => `<option${gf.player === p.name ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
+      <label class="f">Set <select id="gfset"><option value="all">All sets</option>${SET_NAMES.map(n => `<option${gf.set === n ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
       <span class="meta">${list.length} table${list.length === 1 ? '' : 's'}</span></div>` +
       (list.length ? gamesTable(list, canEdit) : '<p class="empty">Nothing matches those filters.</p>');
   }
@@ -488,7 +539,7 @@
       <p class="meta">2. Tick "tied" if a player finished level with the one above, and fill in VP if you tracked it.</p>
       <ol class="order" id="border">${bs.picked.map((n, i) => `<li><span class="nm">${i + 1}. ${esc(n)}</span><button class="ghost" data-up="${i}" type="button" aria-label="Move ${esc(n)} up"${i === 0 ? ' disabled' : ''}>↑</button><button class="ghost" data-dn="${i}" type="button" aria-label="Move ${esc(n)} down"${i === bs.picked.length - 1 ? ' disabled' : ''}>↓</button><label class="f">VP <input type="text" data-vp="${esc(n)}" size="3" value="${esc(bs.vp[n] ?? '')}"></label>${i ? `<label class="f"><input type="checkbox" data-tie="${esc(n)}"${bs.tie[n] ? ' checked' : ''}> tied with above</label>` : ''}</li>`).join('') || '<li class="meta">No players chosen yet.</li>'}</ol>
       ${previewBlock()}
-      <p class="meta">3. Which expansions were in play?</p><div class="pills" id="bsets">${SET_NAMES.map(n => `<a href="#" data-n="${esc(n)}" ${bs.sets.includes(n) ? 'aria-current="true"' : ''}>${setIcon(n, 18)}${esc(n)}</a>`).join('')}</div>
+      <p class="meta">3. Which expansions were in play?</p><div class="pills" id="bsets">${SET_NAMES.filter(n => enabledSets.has(n) || bs.sets.includes(n)).map(n => `<a href="#" data-n="${esc(n)}" ${bs.sets.includes(n) ? 'aria-current="true"' : ''}>${setIcon(n, 18)}${esc(n)}</a>`).join('')}</div>
       <p class="meta" style="margin-top:14px">4. Optional details.</p><div class="controls">
       <label class="f">Minutes <input type="text" id="bm" size="4" value="${esc(bs.minutes)}"></label></div>
       <label class="f">Notes <input type="text" id="bn" size="50" value="${esc(bs.notes)}"></label>
@@ -627,6 +678,10 @@
         <p class="note">Creates their account with the preset password <code>dominion</code> — tell them their name and that password, and they'll set a real one on first sign-in.</p></div>`
       : '<p class="empty">Create a group below first.</p>';
 
+    h += '<h2>Sets</h2><div class="builder"><p class="note" style="margin-top:0">Untick a set you don\'t currently own — it disappears from the Add A Game picker. Games already logged with it are unaffected.</p><div class="controls" id="setsToggle">' +
+      SET_NAMES.map(n => `<label class="f"><input type="checkbox" data-set="${esc(n)}"${enabledSets.has(n) ? ' checked' : ''}> ${setIcon(n, 18)}${esc(n)}</label>`).join('') +
+      '</div><span class="meta" id="setsMsg" role="status"></span></div>';
+
     h += '<h2>Groups</h2>';
     h += D.groups.length
       ? `<div class="tablewrap"><table class="plain"><thead><tr><th class="l">Name</th><th class="l">Id</th></tr></thead><tbody>${D.groups.map(g => `<tr><td class="l">${esc(g.name)}</td><td class="l"><code>${esc(g.id)}</code></td></tr>`).join('')}</tbody></table></div>`
@@ -663,6 +718,16 @@
     return h;
   }
   function wireAdmin() {
+    const setsToggle = $('#setsToggle');
+    setsToggle && setsToggle.addEventListener('change', async e => {
+      const cb = e.target.closest('input[data-set]');
+      if (!cb) return;
+      if (cb.checked) enabledSets.add(cb.dataset.set); else enabledSets.delete(cb.dataset.set);
+      const msg = $('#setsMsg');
+      if (msg) msg.textContent = 'Saving…';
+      const { error } = await sb.from('settings').update({ enabled_sets: [...enabledSets] }).eq('id', true);
+      if (msg) msg.textContent = error ? error.message : 'Saved.';
+    });
     const pName = $('#pfName');
     pName && pName.addEventListener('input', () => { pform.name = pName.value; });
     const pGroup = $('#pfGroup');
@@ -838,6 +903,7 @@
     const arg = (multi ? parts.slice(2) : parts.slice(1)).join('/');
     curGid = gid;
     closeAddModal();
+    hidePopLayer();
     const pages = { home: pageHome, season: pageSeason, players: pagePlayers, h2h: pageH2H, records: pageRecords, games: pageGames, admin: pageAdmin };
     const fn = pages[route] || pageHome;
     main.innerHTML = fn(gid, arg);
@@ -846,10 +912,10 @@
     document.querySelectorAll('#nav a').forEach(a => { if (a.dataset.r === (pages[route] ? route : 'home')) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     document.title = (route === 'home' ? '' : route.charAt(0).toUpperCase() + route.slice(1) + ' · ') + (cfg.title || 'Dominion Night');
     if (route === 'home' || route === 'players') wireHighlight(main);
-    if (route === 'players') wireTierPopup(main);
+    if (route === 'players') wireHoverPopups(main);
     if (route === 'admin') wireAdmin();
     const hs = $('#h2hsel'); if (hs) hs.addEventListener('change', () => { location.hash = hashFor('h2h', curGid, hs.value); });
-    [['#gfs', 'season'], ['#gft', 'type'], ['#gfp', 'player']].forEach(([id, k]) => { const el = $(id); if (el) el.addEventListener('change', () => { gf[k] = el.value; render(); const again = $(id); if (again) again.focus(); }); });
+    [['#gfs', 'season'], ['#gft', 'type'], ['#gfp', 'player'], ['#gfset', 'set']].forEach(([id, k]) => { const el = $(id); if (el) el.addEventListener('change', () => { gf[k] = el.value; render(); const again = $(id); if (again) again.focus(); }); });
   }
   window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
 
@@ -868,18 +934,22 @@
   }
 
   async function loadData() {
-    const [pr, gr, rr, grp, sr] = await Promise.all([
+    const [pr, gr, rr, grp, sr, stg] = await Promise.all([
       sb.from('players').select('*'),
       sb.from('games').select('*'),
       sb.from('game_results').select('*'),
       sb.from('groups').select('*'),
       sb.from('seasons').select('*'),
+      sb.from('settings').select('*').maybeSingle(),
     ]);
     if (pr.error) throw pr.error;
     if (gr.error) throw gr.error;
     if (rr.error) throw rr.error;
     if (grp.error) throw grp.error;
     if (sr.error) throw sr.error;
+    // Missing row/table (e.g. schema.sql not yet re-run) just means every
+    // known set is treated as owned — never blocks the rest of the site.
+    const enabled = stg.data && stg.data.enabled_sets ? stg.data.enabled_sets : SET_NAMES;
     const nameById = new Map(pr.data.map(p => [p.id, p.name]));
     const byGame = new Map();
     rr.data.forEach(r => { if (!byGame.has(r.game_id)) byGame.set(r.game_id, []); byGame.get(r.game_id).push(r); });
@@ -906,7 +976,7 @@
       targetGames: s.target_games, qualifyPct: s.qualify_pct, playoffSpots: s.playoff_spots,
       champion: s.champion_player_id ? (nameById.get(s.champion_player_id) || '') : '', notes: s.notes || '',
     }));
-    return { rows, players: pr.data, byGroup, groups: grp.data, seasons: seasonRows };
+    return { rows, players: pr.data, byGroup, groups: grp.data, seasons: seasonRows, enabledSets: enabled };
   }
 
   let authWired = false;
@@ -934,7 +1004,8 @@
       me = meRow;
       if (me.must_change_password) { main.innerHTML = pagePwChange(); wirePwChange(); setNavVisible(false); return; }
 
-      const { rows, players, byGroup, groups, seasons } = await loadData();
+      const { rows, players, byGroup, groups, seasons, enabledSets: enabled } = await loadData();
+      enabledSets = new Set(enabled);
       playerIdByName = new Map(players.map(p => [p.name, p.id]));
       seasonDbIds = seasons.map(s => s._id);
       const knownGroupIds = new Set(groups.map(g => g.id));

@@ -62,6 +62,17 @@ create table if not exists seasons (
   created_at timestamptz not null default now()
 );
 
+-- Single-row table (the `id boolean primary key default true` trick forces
+-- exactly one row) for small site-wide admin toggles. Currently just which
+-- Dominion expansions are "owned" — unticking one hides it from the Add A
+-- Game set picker without touching any already-logged game.
+create table if not exists settings (
+  id boolean primary key default true,
+  enabled_sets text[] not null default array['Base','Intrigue','Seaside','Prosperity','Hinterlands','Dark Ages','Cornucopia & Guilds','Adventures','Empires','Renaissance','Plunder'],
+  constraint settings_single_row check (id)
+);
+insert into settings (id) values (true) on conflict (id) do nothing;
+
 create index if not exists games_date_idx on games(date);
 create index if not exists game_results_game_id_idx on game_results(game_id);
 create index if not exists game_results_player_id_idx on game_results(player_id);
@@ -72,6 +83,7 @@ alter table games enable row level security;
 alter table game_results enable row level security;
 alter table groups enable row level security;
 alter table seasons enable row level security;
+alter table settings enable row level security;
 
 -- Inserting into a bigserial column calls nextval() on its backing sequence,
 -- which needs its own grant separate from the table's. games/game_results
@@ -113,6 +125,8 @@ drop policy if exists groups_select on groups;
 create policy groups_select on groups for select to authenticated using (true);
 drop policy if exists seasons_select on seasons;
 create policy seasons_select on seasons for select to authenticated using (true);
+drop policy if exists settings_select on settings;
+create policy settings_select on settings for select to authenticated using (true);
 
 -- Write access: admin only, as a defense-in-depth backstop. The real write
 -- path is the RPCs below, which re-check is_admin() themselves so a dangling
@@ -131,6 +145,8 @@ drop policy if exists groups_write on groups;
 create policy groups_write on groups for all to authenticated using (is_admin()) with check (is_admin());
 drop policy if exists seasons_write on seasons;
 create policy seasons_write on seasons for all to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists settings_write on settings;
+create policy settings_write on settings for all to authenticated using (is_admin()) with check (is_admin());
 
 -- Deliberately NOT a general self-row UPDATE policy on players: RLS is
 -- row-level, not column-level, so "let a player update their own row" would

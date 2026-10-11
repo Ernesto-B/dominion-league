@@ -17,7 +17,7 @@ A website for our Dominion league: Elo rankings, seasons, head-to-head, records 
 The site needs a free [Supabase](https://supabase.com) project for accounts and game data.
 
 1. Create a Supabase project. Under Project Settings → API, copy the **Project URL** and the **anon / publishable key** into `js/supabase-config.js` (both are safe to commit — they're meant to be public; real security comes from the database policies, not from hiding them).
-2. Open the SQL editor and run everything in `supabase/schema.sql`. This creates the `players`, `games`, `game_results`, `groups` and `seasons` tables, turns on Row Level Security, and adds the admin-only functions the site calls to add/edit/delete games.
+2. Open the SQL editor and run everything in `supabase/schema.sql`. This creates the `players`, `games`, `game_results`, `groups`, `seasons` and `settings` tables, turns on Row Level Security, and adds the admin-only functions the site calls to add/edit/delete games. It's safe to re-run after pulling a newer version of this file — already-applied changes are skipped.
 3. Under Authentication → Providers → Email, you can leave "Confirm email" on — the migration script below confirms each account directly through the Admin API, so players never need a real inbox.
 4. Run the one-time migration script from your own computer (not from the browser):
    ```
