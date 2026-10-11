@@ -370,6 +370,23 @@
         })(),
         sets: countBy([].concat(...gameList.map(g => g.sets))),
         setsLogged: gameList.filter(g => g.sets.length).length,
+        setStats: (() => {
+          // A game can log more than one expansion at once (the kingdom was
+          // mixed), so — same attribution rule as the `sets` count above —
+          // each stat is credited to every set tagged on that game, not split
+          // between them.
+          const m = {};
+          gameList.forEach(g => {
+            g.sets.forEach(s => {
+              const e = m[s] || (m[s] = { games: 0, vpSum: 0, vpN: 0, minSum: 0, minN: 0 });
+              e.games++;
+              if (g.vp != null) { e.vpSum += g.vp; e.vpN++; }
+              if (g.minutes != null) { e.minSum += g.minutes; e.minN++; }
+            });
+          });
+          Object.values(m).forEach(e => { e.avgVP = e.vpN ? e.vpSum / e.vpN : null; e.avgMinutes = e.minN ? e.minSum / e.minN : null; });
+          return m;
+        })(),
       };
     }
     const records = buildRecords(players, games, ranked);

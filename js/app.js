@@ -104,10 +104,12 @@
     const pct = Math.max(0, Math.min(1, (p.elo - lower) / (upper - lower))) * 100;
     return `<div class="tierbarwrap" tabindex="0">${tierPopup()}<div class="tierbar">${tierAnchor(p.tier)}<div class="progress" role="img" aria-label="${Math.round(pct)}% of the way to ${esc(p.nextTier.tier.name)}"><i style="width:${pct}%"></i></div>${tierAnchor(p.nextTier.tier)}</div></div>`;
   }
-  function storyCards(R) {
+  function storyCards(R, rk) {
     const cards = [];
     if (R.closestRace) cards.push(`<div class="story"><span class="slabel">Closest race</span>${link(R.closestRace.a)} leads ${link(R.closestRace.b)} by just <b>${f0(R.closestRace.gap)}</b> Elo</div>`);
     if (R.biggestUpset) cards.push(`<div class="story"><span class="slabel">Biggest upset</span>${link(R.biggestUpset.winner)} beat ${link(R.biggestUpset.loser)} despite trailing by <b>${f0(R.biggestUpset.deficit)}</b> Elo <span class="meta">(${short(R.biggestUpset.date)})</span></div>`);
+    const streaker = (rk || []).filter(p => p.streak >= 3).sort((a, b) => b.streak - a.streak)[0];
+    if (streaker) cards.push(`<div class="story"><span class="slabel">Hot streak</span>${link(streaker.name)} has won <b>${streaker.streak}</b> in a row 🔥</div>`);
     return cards.length ? `<div class="storyrow">${cards.join('')}</div>` : '';
   }
   function banner() {
@@ -213,7 +215,7 @@
     const gl = D.games.filter(g => g.n >= 2 && (!gid || g.names.every(n => D.groupOf(n) === gid)));
     const last = gl.length ? gl[gl.length - 1].date : null;
     const R = D.recordsFor(gid);
-    let h = `<div class="head">${storyCards(R)}
+    let h = `<div class="head">${storyCards(R, rk)}
       <div class="chips" style="margin-left:auto">${seasonChip(gid)}${last ? `<span class="chip">Last night <b>${short(last)}</b></span>` : ''}<span class="chip"><b>${R.overview.nights}</b> night${R.overview.nights === 1 ? '' : 's'} played</span></div></div>${groupSwitcher('', gid)}${banner()}`;
     if (!rk.length) return h + '<p class="empty">No rated games yet. Once the admin adds one, the rankings show up here.</p>';
     const mx = Math.max(60, ...rk.map(p => Math.abs(p.elo - D.E.start))) * 1.08;
@@ -256,11 +258,36 @@
     const riser = st.rows.reduce((b, r) => (!b || r.eloChange > b.eloChange) ? r : b, null);
     const best = st.rows.reduce((b, r) => (!b || r.winPct > b.winPct) ? r : b, null);
     const tables = st.games.filter(g => g.n >= 2).length;
-    return `<div class="recap"><div class="recapchamp">${icon('champion', 56, '')}<div><span class="slabel">Season champion</span><h3>${s.champion ? link(s.champion) : 'Not decided'}</h3></div></div>
+    const ironman = st.rows.reduce((b, r) => (!b || (r.attendance ?? -1) > (b.attendance ?? -1)) ? r : b, null);
+    // Same deficit-of-the-loser-who-won algorithm as the all-time
+    // `biggestUpset` record in engine.js, just scoped to this season's games.
+    let upset = null;
+    st.games.forEach(g => {
+      if (!g.elo || g.n < 2) return;
+      g.names.forEach(w => {
+        if (g.places[w] !== 1 || !g.elo[w]) return;
+        g.names.forEach(o => {
+          if (o === w || g.places[o] === g.places[w] || !g.elo[o]) return;
+          const deficit = g.elo[o].before - g.elo[w].before;
+          if (deficit > 0 && (!upset || deficit > upset.deficit)) upset = { winner: w, loser: o, deficit };
+        });
+      });
+    });
+    let topVP = null;
+    st.games.forEach(g => { if (g.vp && (!topVP || g.vp > topVP.value)) topVP = { who: g.names.filter(n => g.places[n] === 1).join(' & '), value: g.vp }; });
+    const setCounts = {};
+    st.games.forEach(g => g.sets.forEach(nm => { setCounts[nm] = (setCounts[nm] || 0) + 1; }));
+    const setEntries = Object.entries(setCounts);
+    const topSet = setEntries.length ? setEntries.reduce((a, b) => b[1] > a[1] ? b : a) : null;
+    return `<h2>Hall of Fame</h2><div class="recap"><div class="recapchamp">${icon('champion', 56, '')}<div><span class="slabel">Season champion</span><h3>${s.champion ? link(s.champion) : 'Not decided'}</h3></div></div>
       <div class="stats">
       ${riser ? `<div class="stat has-icon"><img class="staticon" src="icons/stats/elo.png" alt=""><div class="stat-body"><b class="${riser.eloChange > 0.5 ? 'up-t' : riser.eloChange < -0.5 ? 'down-t' : ''}">${sgn(riser.eloChange)}</b><span>biggest riser: ${esc(riser.name)}</span></div></div>` : ''}
       ${best ? `<div class="stat"><b>${pc(best.winPct)}</b><span>best record: ${esc(best.name)}</span></div>` : ''}
       <div class="stat"><b>${tables}</b><span>tables played</span></div>
+      ${upset ? `<div class="stat"><b>${f0(upset.deficit)}</b><span>biggest upset: ${esc(upset.winner)} over ${esc(upset.loser)}</span></div>` : ''}
+      ${topVP ? `<div class="stat"><b>${topVP.value} VP</b><span>highest score: ${esc(topVP.who)}</span></div>` : ''}
+      ${topSet ? `<div class="stat seticon-stat">${setIcon(topSet[0], 24)}<span>most played: ${esc(topSet[0])}</span></div>` : ''}
+      ${ironman && ironman.attendance != null ? `<div class="stat"><b>${pc(ironman.attendance)}</b><span>best attendance: ${esc(ironman.name)}</span></div>` : ''}
       </div></div>`;
   }
   function pageSeason(gid, arg) {
@@ -338,6 +365,19 @@
     let h = `<div class="head"><div><h1>Head to head</h1><p class="lede">Each cell shows how often the row player finished ahead of the column player.</p></div>
       <label class="f">Show <select id="h2hsel">${seasonOptions(sel == null ? 'all' : sel, true, gid)}</select></label></div>${groupSwitcher('h2h', gid)}${banner()}`;
     if (hh.players.length < 2) return h + '<p class="empty">Needs at least two players who shared a table.</p>';
+    let mostPlayed = null, closest = null;
+    for (let i = 0; i < hh.players.length; i++) {
+      for (let j = i + 1; j < hh.players.length; j++) {
+        const a = hh.players[i], b = hh.players[j], w = hh.ahead[a][b], l = hh.ahead[b][a], t = w + l;
+        if (!t) continue;
+        if (!mostPlayed || t > mostPlayed.t) mostPlayed = { a, b, t };
+        if (t >= 3) { const gap = Math.abs(w - l); if (!closest || gap < closest.gap || (gap === closest.gap && t > closest.t)) closest = { a, b, w, l, t, gap }; }
+      }
+    }
+    if (mostPlayed || closest) h += `<div class="storyrow">
+      ${mostPlayed ? `<div class="story"><span class="slabel">Most played rivalry</span>${link(mostPlayed.a)} and ${link(mostPlayed.b)} have shared <b>${mostPlayed.t}</b> tables</div>` : ''}
+      ${closest ? `<div class="story"><span class="slabel">Closest rivalry</span>${link(closest.a)} and ${link(closest.b)} are split <b>${closest.w}–${closest.l}</b></div>` : ''}
+      </div>`;
     h += `<div class="tablewrap"><table class="matrix"><thead><tr><th>Row vs column</th>${hh.players.map(n => `<th>${nameIcon(n, 26)}<br>${esc(n)}</th>`).join('')}</tr></thead><tbody>`;
     hh.players.forEach(a => {
       h += `<tr><td>${link(a)}</td>` + hh.players.map(b => {
@@ -374,7 +414,7 @@
     if (R.longest) gr.push(grow('Longest game', esc(winnerOf(R.longest.game)) + ' won', R.longest.game.date, R.longest.value + ' min'));
     if (R.shortest) gr.push(grow('Shortest game', esc(winnerOf(R.shortest.game)) + ' won', R.shortest.game.date, R.shortest.value + ' min'));
     if (gr.length) h += `<h2>Single-game records</h2><div class="tablewrap"><table class="plain"><thead><tr><th class="l">Record</th><th class="l">Who</th><th class="l">When</th><th>Value</th></tr></thead><tbody>${gr.join('')}</tbody></table></div>`;
-    h += '<h2>Sets in play</h2>' + (R.setsLogged ? `<div class="tablewrap"><table><thead><tr><th class="l">Set</th><th>Games</th><th>Share</th></tr></thead><tbody>${cnt(R.sets).map(([k, v]) => `<tr><td class="l">${setIcon(k, 20)} ${esc(k)}</td><td>${v}</td><td>${pc(v / R.setsLogged)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">Fill the sets field when adding a game (separate sets with semicolons).</p>');
+    h += '<h2>Sets in play</h2>' + (R.setsLogged ? `<div class="tablewrap"><table><thead><tr><th class="l">Set</th><th>Games</th><th>Share</th><th>Avg winning VP</th><th>Avg minutes</th></tr></thead><tbody>${cnt(R.sets).map(([k, v]) => { const st = R.setStats[k]; return `<tr><td class="l">${setIcon(k, 20)} ${esc(k)}</td><td>${v}</td><td>${pc(v / R.setsLogged)}</td><td>${st && st.avgVP != null ? f1(st.avgVP) : '—'}</td><td>${st && st.avgMinutes != null ? f0(st.avgMinutes) : '—'}</td></tr>`; }).join('')}</tbody></table></div><p class="note">A game tagged with more than one set counts fully toward each one — the kingdom was mixed, not split.</p>` : '<p class="empty">Fill the sets field when adding a game (separate sets with semicolons).</p>');
     h += `<h2>Season champions</h2><div class="tablewrap"><table><thead><tr><th class="l">Season</th><th class="l">Champion</th><th class="l">Dates</th></tr></thead><tbody>${D.seasons.filter(s => !gid || s.group === gid).map(s => `<tr><td class="l"><a href="${hashFor('season', gid, s.number)}">${esc(s.name)}</a></td><td class="l">${s.champion ? icon('champion', 20, 'Champion') + ' ' + (D.byName[s.champion] ? link(s.champion) : esc(s.champion)) : '<span class="meta">not decided</span>'}</td><td class="l">${s.ok ? Eng.fmtDay(s.start) + ' to ' + Eng.fmtDay(s.end) : ''}</td></tr>`).join('')}</tbody></table></div>`;
     return h;
   }
