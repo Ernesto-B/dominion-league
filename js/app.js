@@ -213,8 +213,8 @@
     const gl = D.games.filter(g => g.n >= 2 && (!gid || g.names.every(n => D.groupOf(n) === gid)));
     const last = gl.length ? gl[gl.length - 1].date : null;
     const R = D.recordsFor(gid);
-    let h = `<div class="head"><div><h1>${esc(cfg.title || 'Dominion Night')}</h1></div>
-      <div class="chips">${seasonChip(gid)}${last ? `<span class="chip">Last night <b>${short(last)}</b></span>` : ''}<span class="chip"><b>${R.overview.nights}</b> night${R.overview.nights === 1 ? '' : 's'} played</span></div></div>${groupSwitcher('', gid)}${banner()}${storyCards(R)}`;
+    let h = `<div class="head">${storyCards(R)}
+      <div class="chips" style="margin-left:auto">${seasonChip(gid)}${last ? `<span class="chip">Last night <b>${short(last)}</b></span>` : ''}<span class="chip"><b>${R.overview.nights}</b> night${R.overview.nights === 1 ? '' : 's'} played</span></div></div>${groupSwitcher('', gid)}${banner()}`;
     if (!rk.length) return h + '<p class="empty">No rated games yet. Once the admin adds one, the rankings show up here.</p>';
     const mx = Math.max(60, ...rk.map(p => Math.abs(p.elo - D.E.start))) * 1.08;
     h += `<div class="ladder" role="table" aria-label="Elo rankings"><div class="lhead" role="row"><span>Rank</span><span>Player</span><span>Rating vs ${D.E.start} start</span><span>Elo</span><span>Last</span><span>Recent form</span></div>`;

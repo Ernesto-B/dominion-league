@@ -120,7 +120,7 @@ tr.gdetail:hover{background:none}
 
 /* storylines and season recap */
 .slabel{display:block;color:var(--muted);font-size:12px;margin-bottom:2px}
-.storyrow{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 20px}
+.storyrow{display:flex;gap:10px;flex-wrap:wrap}
 .story{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;max-width:380px}
 .recap{background:var(--felt-soft);border:1px solid var(--felt);border-radius:10px;padding:14px 18px;margin:0 0 18px}
 .recapchamp{display:flex;gap:12px;align-items:center;margin-bottom:10px}
