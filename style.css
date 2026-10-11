@@ -14,7 +14,12 @@
   img.seticon{filter:brightness(0) invert(1);opacity:.85}
 }
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+/* Reserve the vertical scrollbar's width on every page, not just the ones
+   tall enough to need it — otherwise centered content (main, and the fixed
+   background below) sits at a very slightly different width on short pages
+   (no scrollbar) vs. tall ones like Games/Head to head (scrollbar present),
+   which reads as everything shifting a few pixels between pages. */
+html{-webkit-text-size-adjust:100%;overflow-y:scroll}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--text);font-variant-numeric:tabular-nums}
 @media (prefers-color-scheme:dark){
   /* A fixed, full-viewport pseudo-element instead of background-attachment:
