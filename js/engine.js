@@ -50,10 +50,10 @@
 
   const DEFAULT_TIERS = [
     { id: 'peasant', name: 'Peasant', min: null },
-    { id: 'knight', name: 'Knight', min: 1040 },
-    { id: 'lord', name: 'Lord', min: 1090 },
-    { id: 'duke', name: 'Duke', min: 1150 },
-    { id: 'emperor', name: 'Emperor', min: 1225 },
+    { id: 'knight', name: 'Knight', min: 1250 },
+    { id: 'lord', name: 'Lord', min: 1550 },
+    { id: 'duke', name: 'Duke', min: 1950 },
+    { id: 'emperor', name: 'Emperor', min: 2400 },
   ];
   function roundUp9(x) { return Math.ceil(+x.toFixed(9)); }
 
@@ -61,7 +61,7 @@
   function compute(config, csvRows, today) {
     config = config || {};
     today = today == null ? todayDay() : today;
-    const E = Object.assign({ k: 32, provisionalK: 48, provisionalGames: 10, start: 1000, scale: 400 }, config.elo || {});
+    const E = Object.assign({ k: 200, provisionalK: 300, provisionalGames: 10, start: 1000, scale: 400 }, config.elo || {});
     const S = Object.assign({ prior: 3, minGamesForRecords: 5 }, config.season || {});
     const warnings = [];
     const tiers = (Array.isArray(config.tiers) && config.tiers.length ? config.tiers : DEFAULT_TIERS)

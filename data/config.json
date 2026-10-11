@@ -2,6 +2,13 @@
   "title": "Dominion Night",
   "subtitle": "Weekly Dominion with the group. Ratings, seasons and records.",
   "repo": "",
-  "elo": { "k": 32, "provisionalK": 48, "provisionalGames": 10, "start": 1000, "scale": 400 },
-  "season": { "prior": 3, "minGamesForRecords": 5 }
+  "elo": { "k": 200, "provisionalK": 300, "provisionalGames": 10, "start": 1000, "scale": 400 },
+  "season": { "prior": 3, "minGamesForRecords": 5 },
+  "tiers": [
+    { "id": "peasant", "name": "Peasant", "min": null },
+    { "id": "knight", "name": "Knight", "min": 1250 },
+    { "id": "lord", "name": "Lord", "min": 1550 },
+    { "id": "duke", "name": "Duke", "min": 1950 },
+    { "id": "emperor", "name": "Emperor", "min": 2400 }
+  ]
 }
