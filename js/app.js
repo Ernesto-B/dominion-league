@@ -49,16 +49,17 @@
     Adventures: 'adventures', Empires: 'empires', Renaissance: 'renaissance', Plunder: 'plunder',
   };
   const SET_NAMES = Object.keys(SET_ICONS);
+  const setIconPath = name => { const slug = SET_ICONS[name]; return slug ? `icons/sets/${slug}.png` : null; };
   const setIcon = (name, size) => {
-    const slug = SET_ICONS[name];
-    return slug ? `<img class="tier seticon" src="icons/sets/${slug}.png" width="${size}" height="${size}" alt="${esc(name)}" title="${esc(name)}">` : '';
+    const src = setIconPath(name);
+    return src ? `<img class="tier seticon" src="${src}" width="${size}" height="${size}" alt="${esc(name)}" title="${esc(name)}">` : '';
   };
   // statTile(): a .stat tile with an optional leading category icon. Tiles
   // built without one (icon = null/undefined) render byte-for-byte like the
   // plain .stat tiles used everywhere else on the site (Season/Records/Admin),
   // since .stat-body has no styling of its own — it's a no-op wrapper then.
-  function statTile(iconSrc, big, label) {
-    return `<div class="stat${iconSrc ? ' has-icon' : ''}">${iconSrc ? `<img class="staticon" src="${iconSrc}" alt="">` : ''}<div class="stat-body"><b>${big}</b><span>${label}</span></div></div>`;
+  function statTile(iconSrc, big, label, iconClass) {
+    return `<div class="stat${iconSrc ? ' has-icon' : ''}">${iconSrc ? `<img class="staticon${iconClass ? ' ' + iconClass : ''}" src="${iconSrc}" alt="">` : ''}<div class="stat-body"><b>${big}</b><span>${label}</span></div></div>`;
   }
   const tierOf = n => { const p = D && D.byName && D.byName[n]; return p && p.tier; };
   const nameIcon = (n, size) => { const t = tierOf(n); return t ? icon(t.icon, size || 18, t.name + ' tier') : ''; };
@@ -307,11 +308,11 @@
       ${statTile('icons/stats/average-points.png', f2(p.avgPts), 'avg points, 0 to 1')}
       ${statTile('icons/stats/win-streak.png', p.streak, `win streak (best ${p.bestStreak})`)}
       ${statTile(p.titles ? 'icons/champion.png' : null, p.titles, 'season title' + (p.titles === 1 ? '' : 's'))}
-      ${statTile('icons/stats/top-half-finishes.png', pc(p.topHalf), 'top-half finishes')}
-      ${statTile('icons/stats/last-place-finishes.png', p.lasts, 'outright last places')}
-      ${statTile('icons/stats/longest-without-win.png', p.bestDry, 'longest run without a win')}
-      ${mostSet ? statTile('icons/stats/most-played-set.png', mostSet[1], `most-played: ${setIcon(mostSet[0], 16)} ${esc(mostSet[0])}`) : ''}
-      ${leastSet ? statTile(null, leastSet[1], `least-played: ${setIcon(leastSet[0], 16)} ${esc(leastSet[0])}`) : ''}
+      ${statTile('icons/stats/top-half-finishes.png', pc(p.topHalf), 'top half')}
+      ${statTile('icons/stats/last-place-finishes.png', p.lasts, 'last places')}
+      ${statTile('icons/stats/longest-without-win.png', p.bestDry, 'longest dry spell')}
+      ${mostSet ? statTile(setIconPath(mostSet[0]), mostSet[1], `most played: ${esc(mostSet[0])}`, 'seticon') : ''}
+      ${leastSet ? statTile(setIconPath(leastSet[0]), leastSet[1], `least played: ${esc(leastSet[0])}`, 'seticon') : ''}
       </div>`;
     const dec = hh.players.filter(o => o !== p.name).map(o => ({ o, w: hh.ahead[p.name][o], l: hh.ahead[o][p.name] })).filter(x => x.w + x.l >= 3);
     const nem = dec.filter(x => x.l > x.w).sort((a, b) => b.l / (b.w + b.l) - a.l / (a.w + a.l) || b.l - a.l)[0];
