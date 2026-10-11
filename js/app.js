@@ -61,6 +61,13 @@
   function statTile(iconSrc, big, label, iconClass) {
     return `<div class="stat${iconSrc ? ' has-icon' : ''}">${iconSrc ? `<img class="staticon${iconClass ? ' ' + iconClass : ''}" src="${iconSrc}" alt="">` : ''}<div class="stat-body"><b>${big}</b><span>${label}</span></div></div>`;
   }
+  // Just the set's icon and a caption — no count. A raw number here (table
+  // count) isn't a meaningful stat the way the other tiles' numbers are.
+  function setStatTile(setName, label) {
+    if (!setName) return '';
+    const src = setIconPath(setName);
+    return `<div class="stat seticon-stat">${src ? `<img class="seticon" src="${src}" alt="${esc(setName)}">` : ''}<span>${label}: ${esc(setName)}</span></div>`;
+  }
   const tierOf = n => { const p = D && D.byName && D.byName[n]; return p && p.tier; };
   const nameIcon = (n, size) => { const t = tierOf(n); return t ? icon(t.icon, size || 18, t.name + ' tier') : ''; };
   const link = n => {
@@ -206,7 +213,7 @@
     const gl = D.games.filter(g => g.n >= 2 && (!gid || g.names.every(n => D.groupOf(n) === gid)));
     const last = gl.length ? gl[gl.length - 1].date : null;
     const R = D.recordsFor(gid);
-    let h = `<div class="head"><div><h1>${esc(cfg.title || 'Dominion Night')}</h1><p class="lede">${esc(cfg.subtitle || '')}</p></div>
+    let h = `<div class="head"><div><h1>${esc(cfg.title || 'Dominion Night')}</h1></div>
       <div class="chips">${seasonChip(gid)}${last ? `<span class="chip">Last night <b>${short(last)}</b></span>` : ''}<span class="chip"><b>${R.overview.nights}</b> night${R.overview.nights === 1 ? '' : 's'} played</span></div></div>${groupSwitcher('', gid)}${banner()}${storyCards(R)}`;
     if (!rk.length) return h + '<p class="empty">No rated games yet. Once the admin adds one, the rankings show up here.</p>';
     const mx = Math.max(60, ...rk.map(p => Math.abs(p.elo - D.E.start))) * 1.08;
@@ -311,8 +318,8 @@
       ${statTile('icons/stats/top-half-finishes.png', pc(p.topHalf), 'top half')}
       ${statTile('icons/stats/last-place-finishes.png', p.lasts, 'last places')}
       ${statTile('icons/stats/longest-without-win.png', p.bestDry, 'longest dry spell')}
-      ${mostSet ? statTile(setIconPath(mostSet[0]), mostSet[1], `most played: ${esc(mostSet[0])}`, 'seticon') : ''}
-      ${leastSet ? statTile(setIconPath(leastSet[0]), leastSet[1], `least played: ${esc(leastSet[0])}`, 'seticon') : ''}
+      ${setStatTile(mostSet && mostSet[0], 'most played')}
+      ${setStatTile(leastSet && leastSet[0], 'least played')}
       </div>`;
     const dec = hh.players.filter(o => o !== p.name).map(o => ({ o, w: hh.ahead[p.name][o], l: hh.ahead[o][p.name] })).filter(x => x.w + x.l >= 3);
     const nem = dec.filter(x => x.l > x.w).sort((a, b) => b.l / (b.w + b.l) - a.l / (a.w + a.l) || b.l - a.l)[0];

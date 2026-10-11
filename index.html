@@ -13,26 +13,30 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<header class="top">
-  <div class="top-inner">
-    <div class="top-row">
-      <a class="brand" href="#/" id="brand">Dominion Night</a>
-      <span id="navuser"></span>
+<div class="shell">
+  <header class="top">
+    <div class="top-inner">
+      <div class="top-row">
+        <a class="brand" href="#/" id="brand">Dominion Night</a>
+        <span id="navuser"></span>
+      </div>
+      <nav id="nav" aria-label="Sections">
+        <a href="#/" data-r="home"><img src="icons/nav/rankings.png" alt="Rankings"></a>
+        <a href="#/season" data-r="season"><img src="icons/nav/season.png" alt="Season"></a>
+        <a href="#/players" data-r="players"><img src="icons/nav/players.png" alt="Players"></a>
+        <a href="#/h2h" data-r="h2h"><img src="icons/nav/h2h.png" alt="Head to head"></a>
+        <a href="#/records" data-r="records"><img src="icons/nav/records.png" alt="Records"></a>
+        <a href="#/games" data-r="games"><img src="icons/nav/games.png" alt="Games"></a>
+        <a href="#/admin" data-r="admin"><img src="icons/nav/admin.png" alt="Admin"></a>
+      </nav>
     </div>
-    <nav id="nav" aria-label="Sections">
-      <a href="#/" data-r="home"><img src="icons/nav/rankings.png" alt="Rankings"></a>
-      <a href="#/season" data-r="season"><img src="icons/nav/season.png" alt="Season"></a>
-      <a href="#/players" data-r="players"><img src="icons/nav/players.png" alt="Players"></a>
-      <a href="#/h2h" data-r="h2h"><img src="icons/nav/h2h.png" alt="Head to head"></a>
-      <a href="#/records" data-r="records"><img src="icons/nav/records.png" alt="Records"></a>
-      <a href="#/games" data-r="games"><img src="icons/nav/games.png" alt="Games"></a>
-      <a href="#/admin" data-r="admin"><img src="icons/nav/admin.png" alt="Admin"></a>
-    </nav>
+  </header>
+  <div class="page">
+    <main id="main" tabindex="-1"><p class="loading">Loading the standings…</p></main>
+    <footer class="foot"><span id="foot"></span></footer>
   </div>
-</header>
-<main id="main" tabindex="-1"><p class="loading">Loading the standings…</p></main>
+</div>
 <div id="modalRoot"></div>
-<footer class="foot"><span id="foot"></span></footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-config.js"></script>
 <script src="js/engine.js"></script>
