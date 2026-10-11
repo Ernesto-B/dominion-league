@@ -314,7 +314,7 @@
       ${statTile('icons/stats/wins.png', p.wins, `wins (${pc(p.winPct)})`)}
       ${statTile('icons/stats/average-points.png', f2(p.avgPts), 'avg points, 0 to 1')}
       ${statTile('icons/stats/win-streak.png', p.streak, `win streak (best ${p.bestStreak})`)}
-      ${statTile(p.titles ? 'icons/champion.png' : null, p.titles, 'season title' + (p.titles === 1 ? '' : 's'))}
+      ${statTile('icons/champion.png', p.titles, 'season title' + (p.titles === 1 ? '' : 's'))}
       ${statTile('icons/stats/top-half-finishes.png', pc(p.topHalf), 'top half')}
       ${statTile('icons/stats/last-place-finishes.png', p.lasts, 'last places')}
       ${statTile('icons/stats/longest-without-win.png', p.bestDry, 'longest dry spell')}
