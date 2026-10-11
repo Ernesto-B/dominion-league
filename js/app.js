@@ -906,6 +906,7 @@
     curGid = gid;
     closeAddModal();
     hidePopLayer();
+    closeNavMenu();
     const pages = { home: pageHome, season: pageSeason, players: pagePlayers, h2h: pageH2H, records: pageRecords, games: pageGames, admin: pageAdmin };
     const fn = pages[route] || pageHome;
     main.innerHTML = fn(gid, arg);
@@ -922,8 +923,26 @@
   window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
 
   /* ---------- auth / data boot ---------- */
+  // Mobile hamburger: #navToggle/#nav live in the static index.html shell,
+  // never touched by render()'s main.innerHTML swap, so this is wired once
+  // rather than per-render. closeNavMenu() runs on every route change so
+  // tapping a link collapses the menu back instead of leaving it open.
+  function closeNavMenu() {
+    const nav = $('#nav'), btn = $('#navToggle');
+    if (nav) nav.classList.remove('nav-open');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
+  function wireNavToggle() {
+    const btn = $('#navToggle'), nav = $('#nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', () => {
+      const open = nav.classList.toggle('nav-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
   function setNavVisible(show) {
     $('#nav').style.display = show ? '' : 'none';
+    const toggle = $('#navToggle'); if (toggle) toggle.style.display = show ? '' : 'none';
     const isAdmin = show && me && me.is_admin;
     const adminLink = document.querySelector('#nav a[data-r="admin"]');
     if (adminLink) adminLink.style.display = isAdmin ? '' : 'none';
@@ -1025,5 +1044,6 @@
       main.innerHTML = `<h1>Can't load the data</h1><p class="lede">${esc(e.message || String(e))}</p>`;
     }
   }
+  wireNavToggle();
   boot();
 })();
