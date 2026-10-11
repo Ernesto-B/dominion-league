@@ -271,7 +271,9 @@
       const lastR = p.results[p.results.length - 1];
       const dl = lastR ? lastR.after - lastR.before : 0;
       const form = p.results.slice(-5).map(r => `<i class="${r.pts >= 0.67 ? 'w' : r.pts <= 0.33 ? 'l' : 'm'}" title="${esc(r.game.date)}: ${ord(r.place)} of ${r.game.n}"></i>`).join('');
-      h += `<div class="lrow" data-p="${esc(p.name)}" role="row"><span class="lrank">${p.rank}</span>
+      const rm = p.rankDelta;
+      const rmHtml = !rm ? '' : rm > 0 ? `<span class="rankmove up-t" title="Up ${rm} spot${rm === 1 ? '' : 's'} since last night">▲${rm}</span>` : `<span class="rankmove down-t" title="Down ${-rm} spot${-rm === 1 ? '' : 's'} since last night">▼${-rm}</span>`;
+      h += `<div class="lrow" data-p="${esc(p.name)}" role="row"><span class="lrank">${p.rank}${rmHtml}</span>
         <a class="lname" href="${hashFor('players', gid, encodeURIComponent(p.name))}">${icon(p.tier.icon, 28, p.tier.name + ' tier')}${esc(p.name)}${p.titles ? `<span class="crown" title="${p.titles} season title${p.titles > 1 ? 's' : ''}">${icon('champion', 20, 'Season champion')}${p.titles > 1 ? '×' + p.titles : ''}</span>` : ''}${p.streak >= 3 ? `<span class="pill hot" title="${p.streak}-game win streak">🔥 ${p.streak}</span>` : ''}${p.status === 'Provisional' ? '<span class="tag">provisional</span>' : ''}</a>
         <span class="bar" aria-hidden="true"><i class="${d >= 0 ? 'up' : 'down'}" style="width:${wpx}%;${d >= 0 ? 'left:50%' : 'left:' + (50 - wpx) + '%'}"></i></span>
         <span class="lelo">${f0(p.elo)}</span><span class="ldelta ${dl > 0.5 ? 'up-t' : dl < -0.5 ? 'down-t' : ''}">${sgn(dl)}</span><span class="form" aria-label="Recent form">${form}</span></div>`;

@@ -255,6 +255,30 @@
     /* nights */
     const nightsAll = [...new Set(games.map(g => g.day))];
 
+    /* Rank movement since the night before last — people can't eyeball a raw
+       Elo delta against everyone else's, but "passed Bob" reads instantly.
+       Needs at least 2 distinct game nights to have a "before" to compare
+       against; a player with no result before that cutoff (brand new as of
+       last night) just gets no arrow, not a fabricated one. */
+    if (nightsAll.length >= 2) {
+      const cutoff = nightsAll[nightsAll.length - 2];
+      const eloMap = (snapshotAtOrBefore(g => g.day <= cutoff) || { snapshot: {} }).snapshot;
+      const prevCandidates = players
+        .filter(p => p.results.some(r => r.game.day <= cutoff))
+        .map(p => ({ name: p.name, elo: eloMap[p.name] ?? E.start }));
+      prevCandidates.forEach(p => {
+        const peers = friendGroups.length ? prevCandidates.filter(q => groupOf(q.name) === groupOf(p.name)) : prevCandidates;
+        p.prevRank = 1 + peers.filter(q => Math.round(q.elo * 10) > Math.round(p.elo * 10)).length;
+      });
+      const prevRankByName = new Map(prevCandidates.map(p => [p.name, p.prevRank]));
+      ranked.forEach(p => {
+        const pr = prevRankByName.get(p.name);
+        p.rankDelta = pr != null ? pr - p.rank : null; // positive = moved up
+      });
+    } else {
+      ranked.forEach(p => { p.rankDelta = null; });
+    }
+
     /* season info */
     seasons.forEach(s => {
       const sg = games.filter(g => g.season === s.number);
