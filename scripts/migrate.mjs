@@ -41,14 +41,15 @@ function slugify(name) {
   return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
-// Who to create, their friend group, and who's the admin.
+// Who to create, their friend group(s) (a player can list more than one —
+// e.g. someone who plays with two separate circles), and who's the admin.
 const PLAYERS = [
-  { name: 'Jose', group_id: 'a' },
-  { name: 'Ernesto', group_id: 'a', is_admin: true },
-  { name: 'Bassim', group_id: 'a' },
-  { name: 'Geddy', group_id: 'a' },
-  { name: 'Alessandro', group_id: 'a' },
-  { name: 'Gabe', group_id: 'a' },
+  { name: 'Jose', group_ids: ['a'] },
+  { name: 'Ernesto', group_ids: ['a'], is_admin: true },
+  { name: 'Bassim', group_ids: ['a'] },
+  { name: 'Geddy', group_ids: ['a'] },
+  { name: 'Alessandro', group_ids: ['a'] },
+  { name: 'Gabe', group_ids: ['a'] },
 ];
 
 // The starting friend group and season. Add players to the UI by creating a
@@ -76,7 +77,7 @@ async function api(pathname, { method = 'GET', body, admin = false } = {}) {
   return res.status === 204 ? null : res.json();
 }
 
-async function createAccount({ name, group_id, is_admin }) {
+async function createAccount({ name, group_ids, is_admin }) {
   const email = `${slugify(name)}@dominion.local`;
   const user = await api('/users', {
     method: 'POST', admin: true,
@@ -84,9 +85,9 @@ async function createAccount({ name, group_id, is_admin }) {
   });
   const [row] = await api('/players', {
     method: 'POST',
-    body: { id: user.id, name, group_id, is_admin: !!is_admin, must_change_password: true },
+    body: { id: user.id, name, group_ids, is_admin: !!is_admin, must_change_password: true },
   });
-  console.log(`created ${name} <${email}> group=${group_id}${is_admin ? ' [admin]' : ''}`);
+  console.log(`created ${name} <${email}> groups=${group_ids.join(',')}${is_admin ? ' [admin]' : ''}`);
   return row.id;
 }
 
@@ -98,7 +99,21 @@ function placesFromFinish(finishStr) {
   return places;
 }
 
-async function importGames(idByLowerName, adminId) {
+// A game's group is whichever one every player at that table shares — same
+// rule as the backfill in schema.sql, just computed here instead since this
+// script writes games directly (service-role, bypassing add_game's RPC
+// validation). Ambiguous (shares none or more than one) is left null, same
+// as the backfill, for the admin to resolve via Edit Game afterward.
+function sharedGroupFor(names, groupsByLowerName) {
+  let shared = null;
+  for (const n of names) {
+    const mine = groupsByLowerName.get(n.toLowerCase()) || new Set();
+    shared = shared === null ? new Set(mine) : new Set([...shared].filter(x => mine.has(x)));
+  }
+  return shared && shared.size === 1 ? [...shared][0] : null;
+}
+
+async function importGames(idByLowerName, groupsByLowerName, adminId) {
   const csvText = readFileSync(path.join(ROOT, 'data', 'games.csv'), 'utf8');
   const rows = Eng.parseCSV(csvText);
   let imported = 0, skipped = 0;
@@ -117,12 +132,13 @@ async function importGames(idByLowerName, adminId) {
     if (bad) { skipped++; continue; }
     let type = (r.type || '').trim().toLowerCase();
     type = type === 'playoff' ? 'Playoff' : type === 'friendly' ? 'Friendly' : '';
+    const group_id = sharedGroupFor(places.map(p => p.name), groupsByLowerName);
     const [game] = await api('/games', {
       method: 'POST',
       body: {
         date: Eng.fmtDay(day), type, sets: r.sets || null, strategy: r.strategy || null,
         winner_vp: r.winner_vp ? +r.winner_vp : null, minutes: r.minutes ? +r.minutes : null,
-        notes: r.notes || null, created_by: adminId,
+        notes: r.notes || null, group_id, created_by: adminId,
       },
     });
     await api('/game_results', {
@@ -147,6 +163,7 @@ async function seedGroupsAndSeasons() {
 
 async function main() {
   const idByLowerName = new Map();
+  const groupsByLowerName = new Map(PLAYERS.map(p => [p.name.toLowerCase(), new Set(p.group_ids || [])]));
   let adminId = null;
   for (const p of PLAYERS) {
     const id = await createAccount(p);
@@ -154,7 +171,7 @@ async function main() {
     if (p.is_admin) adminId = id;
   }
   await seedGroupsAndSeasons();
-  await importGames(idByLowerName, adminId);
+  await importGames(idByLowerName, groupsByLowerName, adminId);
   console.log('Done. Everyone\'s preset password is "dominion" — tell players to log in and change it.');
 }
 main().catch(e => { console.error(e); process.exit(1); });

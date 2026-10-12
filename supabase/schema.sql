@@ -14,6 +14,13 @@ create table if not exists players (
   must_change_password boolean not null default true,
   created_at timestamptz not null default now()
 );
+-- A player can belong to more than one friend group (e.g. someone who plays
+-- with two separate circles) — group_ids replaces the single group_id above,
+-- which stays only so existing rows have something to backfill from and
+-- isn't written to by the app anymore.
+alter table players add column if not exists group_ids text[] not null default '{}'::text[];
+update players set group_ids = array[group_id] where group_ids = '{}'::text[] and group_id is not null;
+alter table players alter column group_id drop not null;
 
 create table if not exists games (
   id bigserial primary key,
@@ -27,6 +34,15 @@ create table if not exists games (
   created_by uuid references players(id),
   created_at timestamptz not null default now()
 );
+-- Which group this table was played for — chosen explicitly by the admin
+-- when logging the game (add_game/edit_game validate every player listed
+-- actually belongs to it), not inferred from the players. That's what makes
+-- two groups' stats genuinely independent (each group's ranking is computed
+-- from only its own games) and what the RLS policy below keys off to keep
+-- a group's games invisible to anyone not in it. Null means "no group" —
+-- the whole-site-is-one-league case when no groups are configured at all.
+alter table games add column if not exists group_id text;
+create index if not exists games_group_id_idx on games(group_id);
 
 create table if not exists game_results (
   id bigserial primary key,
@@ -37,6 +53,31 @@ create table if not exists game_results (
   unique (game_id, player_id)
 );
 alter table game_results add column if not exists vp int;
+
+-- One-time best-effort backfill for games logged before games.group_id
+-- existed: a game gets the one group every one of its players shares, if
+-- there's exactly one. Ambiguous (shares more than one, or none) is left
+-- null for the admin to fix via Edit Game (or delete_group, if the whole
+-- group's getting removed). Only ever touches rows still null, and needs
+-- game_results to already exist, so it runs after both tables are created
+-- rather than right after games — on a brand-new install this is a no-op,
+-- there's nothing to backfill yet.
+with shared as (
+  select gr.game_id, arr.grp,
+    count(distinct gr.player_id) as players_in_game,
+    (select count(*) from game_results gr2 where gr2.game_id = gr.game_id) as total_players
+  from game_results gr
+  join players pl on pl.id = gr.player_id
+  cross join lateral unnest(pl.group_ids) as arr(grp)
+  group by gr.game_id, arr.grp
+), candidates as (
+  select game_id, grp from shared where players_in_game = total_players
+), unambiguous as (
+  select game_id, min(grp) as grp from candidates group by game_id having count(*) = 1
+)
+update games g set group_id = u.grp
+from unambiguous u
+where g.id = u.game_id and g.group_id is null;
 
 -- Deliberately no FK from players.group_id to groups.id: adding one
 -- retroactively is an ordering headache (it's checked against existing data
@@ -105,6 +146,37 @@ as $$
   select coalesce((select p.is_admin from players p where p.id = auth.uid()), false);
 $$;
 
+-- SECURITY DEFINER for the same reason as is_admin(): must never depend on
+-- (or risk recursing into) the players RLS policies it's used from. This is
+-- what the group-scoped SELECT policies below key off, so a user genuinely
+-- cannot read another group's rows through the API, not just have them
+-- hidden in the UI.
+create or replace function my_groups()
+returns text[]
+language sql
+security definer
+set search_path = public, pg_temp
+stable
+as $$
+  select coalesce((select p.group_ids from players p where p.id = auth.uid()), '{}'::text[]);
+$$;
+
+-- True only in the no-groups-configured, whole-site-is-one-league case —
+-- that's when a null group_id (on a game or season) should stay visible to
+-- everyone. Once any group exists, a null group_id instead means "not yet
+-- assigned" (an old pre-migration game the backfill couldn't resolve, or one
+-- genuinely spanning groups) and should be admin-only until resolved, not
+-- broadly readable just because it happens to be unassigned.
+create or replace function no_groups_configured()
+returns boolean
+language sql
+security definer
+set search_path = public, pg_temp
+stable
+as $$
+  select not exists (select 1 from groups);
+$$;
+
 -- Unlike tables/functions, CREATE POLICY has no IF NOT EXISTS — drop-then-
 -- create is what keeps this file safely re-runnable against an already-
 -- deployed database (re-running it bare used to abort here with "policy
@@ -112,19 +184,31 @@ $$;
 -- including RPC updates. Caught running this file against a second,
 -- already-migrated database as part of testing the per-player-VP change).
 
--- Read access: any authenticated player sees the full roster/games/results
--- (needed for rankings, standings, head-to-head). No anonymous access at all
--- on any of the three tables — that's what makes the whole site login-gated.
+-- Read access: scoped to the groups a player actually belongs to — a game,
+-- season, or group with group_id/id outside my_groups() genuinely doesn't
+-- come back from the API, not just get filtered out client-side. The admin
+-- bypasses this everywhere (they manage the whole site). A row with no
+-- group at all (null) stays visible to everyone — that's the no-groups-
+-- configured, whole-site-is-one-league case. No anonymous access at all —
+-- that's what makes the whole site login-gated.
 drop policy if exists players_select on players;
-create policy players_select on players for select to authenticated using (true);
+create policy players_select on players for select to authenticated
+  using (is_admin() or id = auth.uid() or group_ids && my_groups());
 drop policy if exists games_select on games;
-create policy games_select on games for select to authenticated using (true);
+create policy games_select on games for select to authenticated
+  using (is_admin() or (group_id is null and no_groups_configured()) or group_id = any(my_groups()));
 drop policy if exists game_results_select on game_results;
-create policy game_results_select on game_results for select to authenticated using (true);
+create policy game_results_select on game_results for select to authenticated
+  using (is_admin() or exists (
+    select 1 from games g where g.id = game_id
+      and ((g.group_id is null and no_groups_configured()) or g.group_id = any(my_groups()))
+  ));
 drop policy if exists groups_select on groups;
-create policy groups_select on groups for select to authenticated using (true);
+create policy groups_select on groups for select to authenticated
+  using (is_admin() or id = any(my_groups()));
 drop policy if exists seasons_select on seasons;
-create policy seasons_select on seasons for select to authenticated using (true);
+create policy seasons_select on seasons for select to authenticated
+  using (is_admin() or (group_id is null and no_groups_configured()) or group_id = any(my_groups()));
 drop policy if exists settings_select on settings;
 create policy settings_select on settings for select to authenticated using (true);
 
@@ -161,9 +245,16 @@ as $$
   update players set must_change_password = false where id = auth.uid();
 $$;
 
+-- Changing a function's parameter list creates a new overload rather than
+-- replacing it — drop the pre-group_id signatures explicitly so re-running
+-- this file doesn't leave a stale duplicate behind.
+drop function if exists add_game(date, text, text, text, int, int, text, jsonb);
+drop function if exists edit_game(bigint, date, text, text, text, int, int, text, jsonb);
+
 create or replace function add_game(
   p_date date, p_type text, p_sets text, p_strategy text,
   p_winner_vp int, p_minutes int, p_notes text,
+  p_group_id text, -- null only valid when no groups are configured at all
   p_results jsonb -- [{"player_id": "...", "place": 1}, ...]
 ) returns bigint
 language plpgsql
@@ -172,13 +263,23 @@ set search_path = public, pg_temp
 as $$
 declare
   v_game_id bigint;
+  v_bad int;
 begin
   if not is_admin() then
     raise exception 'only the admin can add games';
   end if;
 
-  insert into games (date, type, sets, strategy, winner_vp, minutes, notes, created_by)
-  values (p_date, coalesce(p_type, ''), p_sets, p_strategy, p_winner_vp, p_minutes, p_notes, auth.uid())
+  if p_group_id is not null then
+    select count(*) into v_bad from jsonb_array_elements(p_results) r
+    join players pl on pl.id = (r->>'player_id')::uuid
+    where not (p_group_id = any(pl.group_ids));
+    if v_bad > 0 then
+      raise exception 'every player must belong to the selected group';
+    end if;
+  end if;
+
+  insert into games (date, type, sets, strategy, winner_vp, minutes, notes, group_id, created_by)
+  values (p_date, coalesce(p_type, ''), p_sets, p_strategy, p_winner_vp, p_minutes, p_notes, p_group_id, auth.uid())
   returning id into v_game_id;
 
   insert into game_results (game_id, player_id, place, vp)
@@ -191,20 +292,31 @@ $$;
 
 create or replace function edit_game(
   p_game_id bigint, p_date date, p_type text, p_sets text, p_strategy text,
-  p_winner_vp int, p_minutes int, p_notes text, p_results jsonb
+  p_winner_vp int, p_minutes int, p_notes text, p_group_id text, p_results jsonb
 ) returns void
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
+declare
+  v_bad int;
 begin
   if not is_admin() then
     raise exception 'only the admin can edit games';
   end if;
 
+  if p_group_id is not null then
+    select count(*) into v_bad from jsonb_array_elements(p_results) r
+    join players pl on pl.id = (r->>'player_id')::uuid
+    where not (p_group_id = any(pl.group_ids));
+    if v_bad > 0 then
+      raise exception 'every player must belong to the selected group';
+    end if;
+  end if;
+
   update games set
     date = p_date, type = coalesce(p_type, ''), sets = p_sets, strategy = p_strategy,
-    winner_vp = p_winner_vp, minutes = p_minutes, notes = p_notes
+    winner_vp = p_winner_vp, minutes = p_minutes, notes = p_notes, group_id = p_group_id
   where id = p_game_id;
 
   delete from game_results where game_id = p_game_id;
@@ -229,7 +341,29 @@ begin
 end;
 $$;
 
-revoke execute on function add_game(date, text, text, text, int, int, text, jsonb) from anon;
-revoke execute on function edit_game(bigint, date, text, text, text, int, int, text, jsonb) from anon;
+create or replace function delete_group(p_group_id text)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if not is_admin() then
+    raise exception 'only the admin can delete groups';
+  end if;
+  -- Everything that only exists within this group goes with it: its games
+  -- (game_results cascades), its seasons, and the group itself. Players
+  -- just lose this one membership, not their account — array_remove leaves
+  -- their other groups (and their stats there) untouched.
+  delete from games where group_id = p_group_id;
+  delete from seasons where group_id = p_group_id;
+  update players set group_ids = array_remove(group_ids, p_group_id) where p_group_id = any(group_ids);
+  delete from groups where id = p_group_id;
+end;
+$$;
+
+revoke execute on function add_game(date, text, text, text, int, int, text, text, jsonb) from anon;
+revoke execute on function edit_game(bigint, date, text, text, text, int, int, text, text, jsonb) from anon;
 revoke execute on function delete_game(bigint) from anon;
+revoke execute on function delete_group(text) from anon;
 revoke execute on function mark_password_changed() from anon;

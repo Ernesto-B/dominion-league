@@ -15,8 +15,9 @@ A static Dominion board-game league tracker: Elo rankings, seasons, head-to-head
 ## Architecture
 
 ```
-js/engine.js   — pure computation. compute(config, rows, today) -> {ranked, seasons,
-                 seasonStandings(), h2h(), recordsFor(), ...}. No DOM, no fetch, runs in
+js/engine.js   — pure computation, single-league only (no group concept at all — see
+                 Group scoping below). compute(config, rows, today) -> {ranked, seasons,
+                 seasonStandings(), h2h(), records, ...}. No DOM, no fetch, runs in
                  Node or the browser identically. Treat this as the "model" layer.
 js/app.js      — everything else: Supabase client, auth/session handling, the hash
                  router, one function per page (pageHome, pageSeason, ...), and the
@@ -47,12 +48,28 @@ the change is genuinely about the math/model itself.
   render identically to plain `.stat` tiles elsewhere, so it's safe to reuse everywhere.
   Icons are **unconditional** even when the stat is 0 (a tile that hides its icon at zero
   looks broken, not clean — this was a real bug, fixed once already).
-- **Group scoping**: every page function takes `(gid, arg)`. `gid` is `null` until a
-  second friend-group exists (`D.groups.length > 1`), at which point the hash gains a
-  group segment and every ranking/standings/records call must go through the `*For`/
-  group-aware variants (`recordsFor(gid)`, `seasonStandings(num)` — already scoped via
-  the season's own `group` field, `h2h(seasonNum, gid)`). Never filter by group in two
-  different places for the same view; use the engine's own scoped function.
+- **Group scoping: each group is a fully separate league, not a filtered view of one
+  shared dataset.** `js/app.js`'s `boot()` calls `Eng.compute()` once per group the
+  viewer belongs to, each time with only that group's players/games/seasons —
+  `computedByGroup[groupId]`. `render()` picks the right one into the module-level `D`
+  before calling a page function, so page functions read `D.ranked`/`D.players`/
+  `D.records`/etc. directly with **no group filtering of their own** — if you're adding
+  a new per-group view, trust that `D` is already scoped; filtering it again is a sign
+  something's wrong upstream, not a thing to add. `engine.js` itself has zero concept of
+  groups — don't reintroduce one there; group-splitting belongs in `boot()`. The one
+  cross-group page is **Admin** (`pageAdmin`), which manages the whole site and reads
+  `allGroups`/`rawPlayers`/`rawSeasons` (unfiltered, built once in `boot()`) instead of
+  `D`. A game belongs to exactly one group (`games.group_id`, chosen implicitly by
+  `curGid` when the admin logs it, validated server-side in `add_game`/`edit_game`) —
+  not inferred from who's at the table. Group membership (`players.group_ids`, an
+  array) lets one player belong to several groups with **completely independent** Elo
+  per group — real separation, not the same number viewed two ways.
+- **Group visibility is enforced by RLS, not the client.** `my_groups()` (SQL function)
+  returns the caller's `group_ids`; `games_select`/`seasons_select`/`groups_select`/
+  `players_select` all key off it, so a row for a group the viewer isn't in never comes
+  back from Supabase at all — `loadData()` only ever sees what the viewer is allowed to
+  see. Don't add client-side-only group filtering anywhere and consider it a security
+  boundary; the boundary is the database policy.
 - **Admin writes go through RPCs, not raw table inserts**, wherever a write touches more
   than one table (`add_game`/`edit_game`/`delete_game` in `supabase/schema.sql` keep
   `games` and `game_results` in sync atomically, re-checking `is_admin()` server-side —

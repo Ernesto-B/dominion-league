@@ -4,13 +4,23 @@
   const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
   const $ = s => document.querySelector(s);
   const main = $('#main');
-  let D = null;        // computed model
+  let D = null;        // computed model for the group currently being viewed (computedByGroup[curGid])
   let cfg = null;       // data/config.json
   let me = null;         // signed-in player's own players row
   let playerIdByName = new Map();  // name -> uuid, for admin writes
-  let seasonDbIds = [];      // D.seasons[i] (number = i+1) -> seasons.id row, for admin edit links
-  let curGid = null;       // group currently being viewed
+  let seasonDbIds = [];      // rawSeasons[i] -> seasons.id row, for admin edit links
+  let curGid = null;       // group currently being viewed — null only in true no-groups-configured mode
   let enabledSets = new Set();  // sets the admin has marked as owned; populated in boot()
+  // Each group gets its own independent Eng.compute() call (see boot()) so a
+  // player in two groups gets two completely separate results — not one
+  // shared Elo/stat track filtered two ways. render() picks the right one
+  // into D before calling a page function, so page functions below read D
+  // exactly as if there were only ever one group.
+  let computedByGroup = {};
+  const NOGROUP = '__nogroup__';  // bucket key when no groups are configured at all
+  let allGroups = [];       // groups this viewer can see: [{id, name}]
+  let rawPlayers = [];       // every player row this viewer can see (admin sees all) — for Admin page only
+  let rawSeasons = [];       // every season row this viewer can see, raw (unparsed) — for Admin page only
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const f0 = x => x == null ? '' : Math.round(x).toString();
@@ -27,12 +37,12 @@
 
   /* ---------- hash helpers (group-aware once more than one group exists) ---------- */
   function hashFor(route, gid, rest) {
-    const multi = D && D.groups.length > 1;
+    const multi = allGroups.length > 1;
     return '#/' + route + (multi && gid ? '/' + encodeURIComponent(gid) : '') + (rest != null && rest !== '' ? '/' + rest : '');
   }
   function groupSwitcher(route, gid, rest) {
-    if (!D || D.groups.length <= 1) return '';
-    return `<div class="pills" aria-label="Choose a group">${D.groups.map(g => `<a href="${hashFor(route, g.id, rest)}" ${g.id === gid ? 'aria-current="true"' : ''}>${esc(g.name)}</a>`).join('')}</div>`;
+    if (allGroups.length <= 1) return '';
+    return `<div class="pills" aria-label="Choose a group">${allGroups.map(g => `<a href="${hashFor(route, g.id, rest)}" ${g.id === gid ? 'aria-current="true"' : ''}>${esc(g.name)}</a>`).join('')}</div>`;
   }
 
   /* ---------- shared bits ---------- */
@@ -92,8 +102,10 @@
   const tierOf = n => { const p = D && D.byName && D.byName[n]; return p && p.tier; };
   const nameIcon = (n, size) => { const t = tierOf(n); return t ? icon(t.icon, size || 18, t.name + ' tier') : ''; };
   const link = n => {
-    const gid = D.groupOf(n);
-    return `<a class="pl" href="${hashFor('players', gid, encodeURIComponent(n))}">${nameIcon(n, 20)}<span>${esc(n)}</span></a>`;
+    // Every page is rendered within one group's context (D is already
+    // scoped to curGid), so a link to a player always stays in that same
+    // group — there's no cross-group "their real page" to resolve anymore.
+    return `<a class="pl" href="${hashFor('players', curGid, encodeURIComponent(n))}">${nameIcon(n, 20)}<span>${esc(n)}</span></a>`;
   };
   function tierLegend() {
     return `<div class="tiers" role="list" aria-label="Rank tiers">${D.tiers.map((t, i) => {
@@ -137,16 +149,15 @@
     if (!D.warnings.length) return '';
     return `<div class="banner" role="status"><b>${D.warnings.length} thing${D.warnings.length > 1 ? 's' : ''} to fix in the data</b><ul>${D.warnings.slice(0, 8).map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
   }
-  function seasonChip(gid) {
-    const s = D.seasons[D.currentSeasonFor(gid) - 1];
+  function seasonChip() {
+    const s = D.seasons[D.currentSeasonFor() - 1];
     if (!s) return '';
     const live = s.status === 'In progress';
     return `<span class="chip ${live ? 'live' : ''}"><b>${esc(s.name)}</b> ${live ? 'in progress' : s.status.toLowerCase()}${live && s.weeksLeft ? `, ${s.weeksLeft} week${s.weeksLeft > 1 ? 's' : ''} left` : ''}</span>`;
   }
-  function seasonOptions(sel, withAll, gid) {
-    const list = D.seasons.filter(s => !gid || s.group === gid);
+  function seasonOptions(sel, withAll) {
     return (withAll ? `<option value="all"${sel === 'all' ? ' selected' : ''}>All seasons</option>` : '') +
-      list.map(s => `<option value="${s.number}"${String(sel) === String(s.number) ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
+      D.seasons.map(s => `<option value="${s.number}"${String(sel) === String(s.number) ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
   }
 
   /* ---------- rating chart ---------- */
@@ -257,12 +268,12 @@
 
   /* ---------- pages ---------- */
   function pageHome(gid) {
-    const rk = D.ranked.filter(p => !gid || D.groupOf(p.name) === gid);
-    const gl = D.games.filter(g => g.n >= 2 && (!gid || g.names.every(n => D.groupOf(n) === gid)));
+    const rk = D.ranked;
+    const gl = D.games.filter(g => g.n >= 2);
     const last = gl.length ? gl[gl.length - 1].date : null;
-    const R = D.recordsFor(gid);
+    const R = D.records;
     let h = `<div class="head">${storyCards(R, rk)}
-      <div class="chips" style="margin-left:auto">${seasonChip(gid)}${last ? `<span class="chip">Last night <b>${short(last)}</b></span>` : ''}<span class="chip"><b>${R.overview.nights}</b> night${R.overview.nights === 1 ? '' : 's'} played</span></div></div>${groupSwitcher('', gid)}${banner()}`;
+      <div class="chips" style="margin-left:auto">${seasonChip()}${last ? `<span class="chip">Last night <b>${short(last)}</b></span>` : ''}<span class="chip"><b>${R.overview.nights}</b> night${R.overview.nights === 1 ? '' : 's'} played</span></div></div>${groupSwitcher('', gid)}${banner()}`;
     if (!rk.length) return h + '<p class="empty">No rated games yet. Once the admin adds one, the rankings show up here.</p>';
     const mx = Math.max(60, ...rk.map(p => Math.abs(p.elo - D.E.start))) * 1.08;
     h += `<div class="ladder" role="table" aria-label="Elo rankings"><div class="lhead" role="row"><span>Rank</span><span>Player</span><span>Rating vs ${D.E.start} start</span><span>Elo</span><span>Last</span><span>Recent form</span></div>`;
@@ -271,9 +282,10 @@
       const lastR = p.results[p.results.length - 1];
       const dl = lastR ? lastR.after - lastR.before : 0;
       const form = p.results.slice(-5).map(r => `<i class="${r.pts >= 0.67 ? 'w' : r.pts <= 0.33 ? 'l' : 'm'}" title="${esc(r.game.date)}: ${ord(r.place)} of ${r.game.n}"></i>`).join('');
+      const rank = p.rank;
       const rm = p.rankDelta;
       const rmHtml = !rm ? '' : rm > 0 ? `<span class="rankmove up-t" title="Up ${rm} spot${rm === 1 ? '' : 's'} since last night">▲${rm}</span>` : `<span class="rankmove down-t" title="Down ${-rm} spot${-rm === 1 ? '' : 's'} since last night">▼${-rm}</span>`;
-      h += `<div class="lrow" data-p="${esc(p.name)}" role="row"><span class="lrank">${p.rank}${rmHtml}</span>
+      h += `<div class="lrow" data-p="${esc(p.name)}" role="row"><span class="lrank">${rank}${rmHtml}</span>
         <a class="lname" href="${hashFor('players', gid, encodeURIComponent(p.name))}">${icon(p.tier.icon, 28, p.tier.name + ' tier')}${esc(p.name)}${p.titles ? `<span class="crown" title="${p.titles} season title${p.titles > 1 ? 's' : ''}">${icon('champion', 20, 'Season champion')}${p.titles > 1 ? '×' + p.titles : ''}</span>` : ''}${p.streak >= 3 ? `<span class="pill hot" title="${p.streak}-game win streak">🔥 ${p.streak}</span>` : ''}${p.status === 'Provisional' ? '<span class="tag">provisional</span>' : ''}</a>
         <span class="bar" aria-hidden="true"><i class="${d >= 0 ? 'up' : 'down'}" style="width:${wpx}%;${d >= 0 ? 'left:50%' : 'left:' + (50 - wpx) + '%'}"></i></span>
         <span class="lelo">${f0(p.elo)}</span><span class="ldelta ${dl > 0.5 ? 'up-t' : dl < -0.5 ? 'down-t' : ''}">${sgn(dl)}</span><span class="form" aria-label="Recent form">${form}</span></div>`;
@@ -339,14 +351,13 @@
       </div></div>`;
   }
   function pageSeason(gid, arg) {
-    const seasonsForGroup = D.seasons.filter(s => !gid || s.group === gid);
-    if (!seasonsForGroup.length) return `<h1>Season</h1>${groupSwitcher('season', gid)}<p class="empty">No seasons are set up yet.${me && me.is_admin ? ' Add one from the <a href="#/admin">Admin page</a>.' : ''}</p>`;
-    const num = +arg || D.currentSeasonFor(gid);
+    if (!D.seasons.length) return `<h1>Season</h1>${groupSwitcher('season', gid)}<p class="empty">No seasons are set up yet.${me && me.is_admin ? ' Add one from the <a href="#/admin">Admin page</a>.' : ''}</p>`;
+    const num = +arg || D.currentSeasonFor();
     const st = D.seasonStandings(num); const s = st.season;
     const wk = s.status === 'In progress' ? Math.floor((D.today - s.start) / 7) + 1 : null;
     const frac = !s.ok ? 0 : Math.max(0, Math.min(1, (D.today - s.start + 1) / (7 * s.weeks)));
     let h = `<div class="head"><div><h1>${esc(s.name)}</h1>${!s.ok ? `<p class="lede">Start date or length is missing.${me && me.is_admin ? ' Fix it from the <a href="#/admin">Admin page</a>.' : ''}</p>` : ''}</div>
-      <div class="pills" aria-label="Choose a season">${seasonsForGroup.map(x => `<a href="${hashFor('season', gid, x.number)}" ${x.number === num ? 'aria-current="true"' : ''}>${esc(x.name)}</a>`).join('')}</div></div>${groupSwitcher('season', gid)}${banner()}${seasonRecap(st)}`;
+      <div class="pills" aria-label="Choose a season">${D.seasons.map(x => `<a href="${hashFor('season', gid, x.number)}" ${x.number === num ? 'aria-current="true"' : ''}>${esc(x.name)}</a>`).join('')}</div></div>${groupSwitcher('season', gid)}${banner()}${seasonRecap(st)}`;
     h += `<div class="stats">
       <div class="stat"><b>${wk ? 'Week ' + wk + ' of ' + s.weeks : s.status}</b><span>${wk ? s.weeksLeft + ' week' + (s.weeksLeft === 1 ? '' : 's') + ' left' : 'status'}</span></div>
       <div class="stat"><b>${s.regularGames}</b><span>regular games</span></div>
@@ -369,14 +380,14 @@
   const typePill = t => t === 'Playoff' ? '<span class="pill play">Playoff</span>' : t === 'Friendly' ? '<span class="pill fr">Friendly</span>' : '';
 
   function pagePlayers(gid, arg) {
-    const all = D.players.filter(p => p.allGames > 0 && (!gid || D.groupOf(p.name) === gid));
+    const all = D.players.filter(p => p.allGames > 0);
     if (!all.length) return `<h1>Players</h1>${groupSwitcher('players', gid)}<p class="empty">No games yet.</p>`;
-    const rankedHere = D.ranked.filter(p => !gid || D.groupOf(p.name) === gid);
+    const rankedHere = D.ranked;
     const name = arg ? decodeURIComponent(arg) : (rankedHere[0] || all[0]).name;
     const p = D.players.find(x => x.name === name) || all[0];
     let h = `<div class="head"><div class="who">${p.tier ? icon(p.tier.icon, 72, p.tier.name + ' tier') : ''}<div><h1>${esc(p.name)}</h1>${p.tier ? `<p class="lede">${esc(p.tier.name)} tier${p.nextTier ? `, ${p.nextTier.need} Elo to ${esc(p.nextTier.tier.name)}` : ', top tier'}${p.peakTier && p.peakTier.id !== p.tier.id ? `. Best ever: ${esc(p.peakTier.name)}.` : ''}</p>` : ''}</div></div><div class="pills" aria-label="Choose a player">${all.map(x => `<a href="${hashFor('players', gid, encodeURIComponent(x.name))}" ${x.name === p.name ? 'aria-current="true"' : ''}>${nameIcon(x.name, 18)}${esc(x.name)}</a>`).join('')}</div></div>${groupSwitcher('players', gid)}${tierProgressBar(p)}${banner()}`;
     if (!p.rated) return h + '<p class="empty">No rated games yet.</p>';
-    const hh = D.h2h(null, gid);
+    const hh = D.h2h(null);
     const setCounts = {};
     D.games.forEach(g => { if (g.places[p.name] != null) g.sets.forEach(s => { setCounts[s] = (setCounts[s] || 0) + 1; }); });
     const setEntries = Object.entries(setCounts);
@@ -386,8 +397,9 @@
     const ratioTxt = p.wins ? (losses ? `${(p.wins / losses).toFixed(2)}:1` : 'no losses yet') : '—';
     const peakGap = p.peak - p.elo;
     const setsPop = setBreakdownPopup(setCounts);
+    const pRank = p.rank;
     h += `<div class="stats">
-      ${statTile('icons/stats/elo.png', f0(p.elo), 'Elo' + (p.rank ? ', rank ' + p.rank : ''), null, popText(`Your current skill rating. Everyone starts at ${D.E.start}; it moves after every rated game based on who you played and how surprising the result was.`))}
+      ${statTile('icons/stats/elo.png', f0(p.elo), 'Elo' + (pRank ? ', rank ' + pRank : ''), null, popText(`Your current skill rating. Everyone starts at ${D.E.start}; it moves after every rated game based on who you played and how surprising the result was.`))}
       ${statTile('icons/stats/peak-elo.png', f0(p.peak), 'peak Elo', null, popText('The highest Elo you\'ve ever reached — it never goes down.', peakGap > 0.5 ? `${f0(peakGap)} below your peak right now` : 'You\'re at your all-time peak right now'))}
       ${statTile('icons/stats/rated-games.png', p.rated, 'rated games' + (p.status === 'Provisional' ? ' (provisional)' : ''), null, popText(`Games that count toward Elo — everything except Friendly games. Your first ${D.E.provisionalGames} are Provisional, with bigger rating swings while the system is still learning your skill.`))}
       ${statTile('icons/stats/wins.png', p.wins, `wins (${pc(p.winPct)})`, null, popText(`Tables you've won outright — sole 1st place, no ties.`, `W/L ratio ${ratioTxt}`))}
@@ -413,9 +425,9 @@
 
   function pageH2H(gid, arg) {
     const sel = arg === 'all' || !arg ? null : +arg;
-    const hh = D.h2h(sel, gid);
+    const hh = D.h2h(sel);
     let h = `<div class="head"><div><h1>Head to head</h1><p class="lede">Each cell shows how often the row player finished ahead of the column player.</p></div>
-      <label class="f">Show <select id="h2hsel">${seasonOptions(sel == null ? 'all' : sel, true, gid)}</select></label></div>${groupSwitcher('h2h', gid)}${banner()}`;
+      <label class="f">Show <select id="h2hsel">${seasonOptions(sel == null ? 'all' : sel, true)}</select></label></div>${groupSwitcher('h2h', gid)}${banner()}`;
     if (hh.players.length < 2) return h + '<p class="empty">Needs at least two players who shared a table.</p>';
     let mostPlayed = null, closest = null;
     for (let i = 0; i < hh.players.length; i++) {
@@ -445,7 +457,7 @@
   }
 
   function pageRecords(gid) {
-    const R = D.recordsFor(gid), O = R.overview;
+    const R = D.records, O = R.overview;
     const rec = (label, x, fmt, iconSrc) => `<tr><td class="l">${iconSrc ? `<img class="staticon sm" src="${iconSrc}" alt=""> ` : ''}${label}</td><td class="name">${x ? link(x.name) : '—'}</td><td><b>${x ? fmt(x.value) : ''}</b></td></tr>`;
     let h = `<h1>Records</h1><p class="lede">Everything the league has produced so far.</p>${groupSwitcher('records', gid)}${banner()}`;
     h += `<div class="stats"><div class="stat"><b>${O.tables}</b><span>tables logged</span></div><div class="stat"><b>${O.nights}</b><span>game nights</span></div><div class="stat"><b>${O.playersRated}</b><span>rated players</span></div>
@@ -467,7 +479,7 @@
     if (R.shortest) gr.push(grow('Shortest game', esc(winnerOf(R.shortest.game)) + ' won', R.shortest.game.date, R.shortest.value + ' min'));
     if (gr.length) h += `<h2>Single-game records</h2><div class="tablewrap"><table class="plain"><thead><tr><th class="l">Record</th><th class="l">Who</th><th class="l">When</th><th>Value</th></tr></thead><tbody>${gr.join('')}</tbody></table></div>`;
     h += '<h2>Sets in play</h2>' + (R.setsLogged ? `<div class="tablewrap"><table><thead><tr><th class="l">Set</th><th>Games</th><th>Share</th><th>Avg winning VP</th><th>Avg minutes</th></tr></thead><tbody>${cnt(R.sets).map(([k, v]) => { const st = R.setStats[k]; return `<tr><td class="l">${setIcon(k, 20)} ${esc(k)}</td><td>${v}</td><td>${pc(v / R.setsLogged)}</td><td>${st && st.avgVP != null ? f1(st.avgVP) : '—'}</td><td>${st && st.avgMinutes != null ? f0(st.avgMinutes) : '—'}</td></tr>`; }).join('')}</tbody></table></div><p class="note">A game tagged with more than one set counts fully toward each one — the kingdom was mixed, not split.</p>` : '<p class="empty">Fill the sets field when adding a game (separate sets with semicolons).</p>');
-    h += `<h2>Season champions</h2><div class="tablewrap"><table><thead><tr><th class="l">Season</th><th class="l">Champion</th><th class="l">Dates</th></tr></thead><tbody>${D.seasons.filter(s => !gid || s.group === gid).map(s => `<tr><td class="l"><a href="${hashFor('season', gid, s.number)}">${esc(s.name)}</a></td><td class="l">${s.champion ? icon('champion', 20, 'Champion') + ' ' + (D.byName[s.champion] ? link(s.champion) : esc(s.champion)) : '<span class="meta">not decided</span>'}</td><td class="l">${s.ok ? Eng.fmtDay(s.start) + ' to ' + Eng.fmtDay(s.end) : ''}</td></tr>`).join('')}</tbody></table></div>`;
+    h += `<h2>Season champions</h2><div class="tablewrap"><table><thead><tr><th class="l">Season</th><th class="l">Champion</th><th class="l">Dates</th></tr></thead><tbody>${D.seasons.map(s => `<tr><td class="l"><a href="${hashFor('season', gid, s.number)}">${esc(s.name)}</a></td><td class="l">${s.champion ? icon('champion', 20, 'Champion') + ' ' + (D.byName[s.champion] ? link(s.champion) : esc(s.champion)) : '<span class="meta">not decided</span>'}</td><td class="l">${s.ok ? Eng.fmtDay(s.start) + ' to ' + Eng.fmtDay(s.end) : ''}</td></tr>`).join('')}</tbody></table></div>`;
     return h;
   }
 
@@ -498,13 +510,13 @@
   }
   const gf = { season: 'all', type: 'all', player: 'all', set: 'all' };
   function pageGames(gid) {
-    let list = D.games.filter(g => (!gid || g.names.every(n => D.groupOf(n) === gid)) &&
+    let list = D.games.filter(g =>
       (gf.season === 'all' || String(g.season) === gf.season) && (gf.type === 'all' || g.type === gf.type) && (gf.player === 'all' || g.places[gf.player] != null) && (gf.set === 'all' || g.sets.includes(gf.set))).slice().reverse();
     const canEdit = !!(me && me.is_admin);
     return `<div class="head"><div><h1>Games</h1><p class="lede">Every table we've logged, newest first. Winners in bold.</p></div>${canEdit ? '<button id="gAddBtn" class="iconbtn" type="button"><img src="icons/nav/add-a-game.png" alt="Add a game"></button>' : ''}</div>${groupSwitcher('games', gid)}${banner()}
-      <div class="controls"><label class="f">Season <select id="gfs">${seasonOptions(gf.season, true, gid)}</select></label>
+      <div class="controls"><label class="f">Season <select id="gfs">${seasonOptions(gf.season, true)}</select></label>
       <label class="f">Type <select id="gft">${['all', 'Regular', 'Playoff', 'Friendly'].map(t => `<option value="${t}"${gf.type === t ? ' selected' : ''}>${t === 'all' ? 'All types' : t}</option>`).join('')}</select></label>
-      <label class="f">Player <select id="gfp"><option value="all">Everyone</option>${D.players.filter(p => !gid || D.groupOf(p.name) === gid).map(p => `<option${gf.player === p.name ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
+      <label class="f">Player <select id="gfp"><option value="all">Everyone</option>${D.players.map(p => `<option${gf.player === p.name ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
       <label class="f">Set <select id="gfset"><option value="all">All sets</option>${SET_NAMES.map(n => `<option${gf.set === n ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
       <span class="meta">${list.length} table${list.length === 1 ? '' : 's'}</span></div>` +
       (list.length ? gamesTable(list, canEdit) : '<p class="empty">Nothing matches those filters.</p>');
@@ -534,7 +546,8 @@
   }
   function addFormHTML() {
     const roster = D.roster.slice().sort((a, b) => a.localeCompare(b));
-    return `<h2 style="margin-top:0">${bs.editId ? 'Edit game' : 'Add a game'}</h2><p class="lede">${bs.editId ? 'Change the details and save.' : 'Pick who played, in finishing order, and save.'}</p>
+    const curGroupName = (allGroups.find(g => g.id === curGid) || {}).name;
+    return `<h2 style="margin-top:0">${bs.editId ? 'Edit game' : 'Add a game'}</h2><p class="lede">${bs.editId ? 'Change the details and save.' : 'Pick who played, in finishing order, and save.'}${curGroupName ? ` For ${esc(curGroupName)} — only that group's players are listed below.` : ''}</p>
       <div class="controls"><label class="f">Date <input type="date" id="bd" value="${esc(bs.date)}"></label>
       <label class="f">Type <select id="bty">${['', 'Playoff', 'Friendly'].map(t => `<option value="${t}"${bs.type === t ? ' selected' : ''}>${t || 'Regular'}</option>`).join('')}</select></label></div>
       <p class="meta">1. Click the players in the order they finished, winner first.</p><div class="pills" id="bpick">${roster.map(n => `<a href="#" data-n="${esc(n)}" ${bs.picked.includes(n) ? 'aria-current="true"' : ''}>${nameIcon(n, 18)}${esc(n)}</a>`).join('')}</div>
@@ -619,7 +632,7 @@
       const args = {
         p_date: bs.date, p_type: bs.type || '', p_sets: bs.sets.length ? SET_NAMES.filter(n => bs.sets.includes(n)).join('; ') : null, p_strategy: null,
         p_winner_vp: null, p_minutes: bs.minutes ? +bs.minutes : null, p_notes: bs.notes || null,
-        p_results: results,
+        p_group_id: curGid, p_results: results,
       };
       save.disabled = true; msg('Saving…');
       const { error } = bs.editId
@@ -651,62 +664,75 @@
   let sform = blankSeasonForm();
   function loadSeasonIntoForm(editId) {
     const i = seasonDbIds.indexOf(editId);
-    const s = i >= 0 ? D.seasons[i] : null;
+    const s = i >= 0 ? rawSeasons[i] : null;
     if (!s) { sform = blankSeasonForm(); return; }
     sform = {
-      editId, group_id: s.group || '', name: s.name, start_date: s.ok ? Eng.fmtDay(s.start) : '',
-      weeks: s.weeks || '', target_games: s.target || '', qualify_pct: s.pct ?? '', playoff_spots: s.spots || '',
+      editId, group_id: s.group || '', name: s.name, start_date: s.start || '',
+      weeks: s.weeks || '', target_games: s.targetGames || '', qualify_pct: s.qualifyPct ?? '', playoff_spots: s.playoffSpots || '',
       champion_player_id: s.champion ? (playerIdByName.get(s.champion) || '') : '', notes: s.notes || '',
     };
   }
-  const blankPlayerForm = () => ({ name: '', group_id: '' });
+  const blankPlayerForm = () => ({ name: '', group_ids: [] });
   let pform = blankPlayerForm();
+  // The Admin page manages the whole site, not just the group currently
+  // being viewed — it reads allGroups/rawPlayers/rawSeasons (unfiltered,
+  // set once in boot()) rather than D, which is scoped to one group.
   function pageAdmin(gid, arg) {
     if (!me || !me.is_admin) return '<h1>Admin</h1><p class="empty">Only the admin can manage groups and seasons.</p>';
     const m = /^season\/edit\/(\d+)$/.exec(arg || '');
     const editId = m ? +m[1] : null;
     if (editId !== sform.editId) { if (editId == null) sform = blankSeasonForm(); else loadSeasonIntoForm(editId); }
-    if (!sform.editId && !sform.group_id && D.groups.length) sform.group_id = D.groups[0].id;
-    if (!pform.group_id && D.groups.length) pform.group_id = D.groups[0].id;
+    if (!sform.editId && !sform.group_id && allGroups.length) sform.group_id = allGroups[0].id;
+    if (!pform.group_ids.length && allGroups.length) pform.group_ids = [allGroups[0].id];
 
     let h = '<h1>Admin</h1><p class="lede">Manage friend groups and seasons.</p>';
 
     h += '<h2>Players</h2>';
-    h += D.groups.length
+    h += allGroups.length
       ? `<div class="builder"><div class="controls">
-        <label class="f">New player's name <input type="text" id="pfName" value="${esc(pform.name)}"></label>
-        <label class="f">Group <select id="pfGroup">${D.groups.map(g => `<option value="${esc(g.id)}"${pform.group_id === g.id ? ' selected' : ''}>${esc(g.name)}</option>`).join('')}</select></label>
-        <button id="pfSave" type="button">Add player</button><span class="meta" id="pfMsg" role="status"></span></div>
+        <label class="f">New player's name <input type="text" id="pfName" value="${esc(pform.name)}"></label></div>
+        <p class="meta">Group(s) — tick every friend circle they play with</p>
+        <div class="controls" id="pfGroups">${allGroups.map(g => `<label class="f"><input type="checkbox" data-pg="${esc(g.id)}"${pform.group_ids.includes(g.id) ? ' checked' : ''}> ${esc(g.name)}</label>`).join('')}</div>
+        <div class="controls" style="margin-top:10px"><button id="pfSave" type="button">Add player</button><span class="meta" id="pfMsg" role="status"></span></div>
         <p class="note">Creates their account with the preset password <code>dominion</code> — tell them their name and that password, and they'll set a real one on first sign-in.</p></div>`
       : '<p class="empty">Create a group below first.</p>';
+
+    if (allGroups.length && rawPlayers.length) {
+      h += `<div class="builder" style="margin-top:12px"><p class="meta" style="margin-top:0">Existing players' groups — a player in more than one has a completely separate Elo and stats per group; they don't mix. Each game belongs to exactly one group, picked when it's logged.</p>
+        <div class="tablewrap"><table class="plain"><thead><tr><th class="l">Player</th>${allGroups.map(g => `<th>${esc(g.name)}</th>`).join('')}</tr></thead><tbody id="pgTable">${rawPlayers.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => {
+          const mine = new Set(p.group_ids || []);
+          return `<tr><td class="l">${esc(p.name)}</td>${allGroups.map(g => `<td><input type="checkbox" data-pid="${esc(p.id)}" data-pg="${esc(g.id)}"${mine.has(g.id) ? ' checked' : ''}></td>`).join('')}</tr>`;
+        }).join('')}</tbody></table></div><span class="meta" id="pgMsg" role="status"></span></div>`;
+    }
 
     h += '<h2>Sets</h2><div class="builder"><p class="note" style="margin-top:0">Untick a set you don\'t currently own — it disappears from the Add A Game picker. Games already logged with it are unaffected.</p><div class="controls" id="setsToggle">' +
       SET_NAMES.map(n => `<label class="f"><input type="checkbox" data-set="${esc(n)}"${enabledSets.has(n) ? ' checked' : ''}> ${setIcon(n, 18)}${esc(n)}</label>`).join('') +
       '</div><span class="meta" id="setsMsg" role="status"></span></div>';
 
     h += '<h2>Groups</h2>';
-    h += D.groups.length
-      ? `<div class="tablewrap"><table class="plain"><thead><tr><th class="l">Name</th><th class="l">Id</th></tr></thead><tbody>${D.groups.map(g => `<tr><td class="l">${esc(g.name)}</td><td class="l"><code>${esc(g.id)}</code></td></tr>`).join('')}</tbody></table></div>`
+    h += allGroups.length
+      ? `<div class="tablewrap"><table class="plain"><thead><tr><th class="l">Name</th><th class="l">Id</th><th></th></tr></thead><tbody>${allGroups.map(g => `<tr><td class="l">${esc(g.name)}</td><td class="l"><code>${esc(g.id)}</code></td><td><a href="#" data-delgroup="${esc(g.id)}">Delete</a></td></tr>`).join('')}</tbody></table></div><span class="meta" id="dgMsg" role="status"></span>`
       : '<p class="empty">No groups yet.</p>';
     h += `<div class="builder" style="margin-top:12px"><div class="controls">
       <label class="f">New group name <input type="text" id="gfName" value="${esc(gform.name)}"></label>
       <button id="gfSave" type="button">Add group</button><span class="meta" id="gfMsg" role="status"></span></div>
-      <p class="note">Id will be <code>${esc(slugify(gform.name) || '…')}</code> — that's what you'll type as a player's group_id in Supabase when adding them.</p></div>`;
+      <p class="note">Id will be <code>${esc(slugify(gform.name) || '…')}</code> — it'll show up as a checkbox option in the Players section above once saved.</p></div>`;
 
     h += '<h2>Seasons</h2>';
-    h += D.seasons.length
-      ? `<div class="tablewrap"><table class="plain"><thead><tr><th class="l">Name</th><th class="l">Group</th><th class="l">Dates</th><th class="l">Champion</th><th></th></tr></thead><tbody>${D.seasons.map((s, i) => {
-          const gname = (D.groups.find(g => g.id === s.group) || {}).name || s.group || '—';
-          return `<tr><td class="l">${esc(s.name)}</td><td class="l">${esc(gname)}</td><td class="l">${s.ok ? Eng.fmtDay(s.start) + ' to ' + Eng.fmtDay(s.end) : '—'}</td><td class="l">${esc(s.champion) || '—'}</td><td><a href="#/admin/season/edit/${seasonDbIds[i]}">Edit</a></td></tr>`;
+    h += rawSeasons.length
+      ? `<div class="tablewrap"><table class="plain"><thead><tr><th class="l">Name</th><th class="l">Group</th><th class="l">Dates</th><th class="l">Champion</th><th></th></tr></thead><tbody>${rawSeasons.map((s, i) => {
+          const gname = (allGroups.find(g => g.id === s.group) || {}).name || s.group || '—';
+          const sEnd = s.start ? Eng.fmtDay(Eng.parseISO(s.start) + 7 * (+s.weeks || 0) - 1) : '';
+          return `<tr><td class="l">${esc(s.name)}</td><td class="l">${esc(gname)}</td><td class="l">${s.start ? s.start + ' to ' + sEnd : '—'}</td><td class="l">${esc(s.champion) || '—'}</td><td><a href="#/admin/season/edit/${seasonDbIds[i]}">Edit</a></td></tr>`;
         }).join('')}</tbody></table></div>`
       : '<p class="empty">No seasons yet.</p>';
 
-    if (!D.groups.length) return h + '<p class="empty">Create a group above before adding a season.</p>';
+    if (!allGroups.length) return h + '<p class="empty">Create a group above before adding a season.</p>';
 
-    const championRoster = sform.group_id ? D.roster.filter(n => D.groupOf(n) === sform.group_id) : [];
+    const championRoster = sform.group_id ? rawPlayers.filter(p => (p.group_ids || []).includes(sform.group_id)).map(p => p.name) : [];
     h += `<div class="builder" style="margin-top:12px"><h3 style="margin-top:0">${sform.editId ? 'Edit season' : 'Add a season'}</h3>
       <div class="controls">
-      <label class="f">Group <select id="sfGroup">${D.groups.map(g => `<option value="${esc(g.id)}"${sform.group_id === g.id ? ' selected' : ''}>${esc(g.name)}</option>`).join('')}</select></label>
+      <label class="f">Group <select id="sfGroup">${allGroups.map(g => `<option value="${esc(g.id)}"${sform.group_id === g.id ? ' selected' : ''}>${esc(g.name)}</option>`).join('')}</select></label>
       <label class="f">Name <input type="text" id="sfName" value="${esc(sform.name)}"></label></div>
       <div class="controls">
       <label class="f">Start date <input type="date" id="sfStart" value="${esc(sform.start_date)}"></label>
@@ -732,16 +758,21 @@
     });
     const pName = $('#pfName');
     pName && pName.addEventListener('input', () => { pform.name = pName.value; });
-    const pGroup = $('#pfGroup');
-    pGroup && pGroup.addEventListener('change', () => { pform.group_id = pGroup.value; });
+    const pGroups = $('#pfGroups');
+    pGroups && pGroups.addEventListener('change', e => {
+      const cb = e.target.closest('input[data-pg]'); if (!cb) return;
+      const gid2 = cb.dataset.pg;
+      if (cb.checked) { if (!pform.group_ids.includes(gid2)) pform.group_ids.push(gid2); }
+      else pform.group_ids = pform.group_ids.filter(x => x !== gid2);
+    });
     const pMsg = t => { const el = $('#pfMsg'); if (el) el.textContent = t; };
     const pSave = $('#pfSave');
     pSave && pSave.addEventListener('click', async () => {
       const name = (pform.name || '').trim();
       if (!name) { pMsg('Type a name first.'); return; }
-      if (!pform.group_id) { pMsg('Pick a group first.'); return; }
+      if (!pform.group_ids.length) { pMsg('Pick at least one group first.'); return; }
       pSave.disabled = true; pMsg('Creating…');
-      const { data, error } = await sb.functions.invoke('create-player', { body: { name, group_id: pform.group_id } });
+      const { data, error } = await sb.functions.invoke('create-player', { body: { name, group_ids: pform.group_ids } });
       pSave.disabled = false;
       if (error) {
         // supabase-js surfaces a non-2xx function response as an error whose
@@ -758,6 +789,18 @@
       pMsg(`Created ${data.name}. Tell them to sign in with their name and "dominion".`);
       await boot();
     });
+    const pgTable = $('#pgTable');
+    pgTable && pgTable.addEventListener('change', async e => {
+      const cb = e.target.closest('input[data-pid]'); if (!cb) return;
+      const pid = cb.dataset.pid;
+      const row = cb.closest('tr');
+      const ids = [...row.querySelectorAll('input[data-pg]:checked')].map(x => x.dataset.pg);
+      const msg = $('#pgMsg');
+      if (msg) msg.textContent = 'Saving…';
+      const { error } = await sb.from('players').update({ group_ids: ids }).eq('id', pid);
+      if (msg) msg.textContent = error ? error.message : 'Saved.';
+      if (!error) await boot();
+    });
 
     const gName = $('#gfName');
     gName && gName.addEventListener('input', () => { gform.name = gName.value; render(); });
@@ -766,13 +809,30 @@
     gSave && gSave.addEventListener('click', async () => {
       const name = (gform.name || '').trim(), id = slugify(name);
       if (!name || !id) { gMsg('Type a name first.'); return; }
-      if (D.groups.some(g => g.id === id)) { gMsg('A group with that id already exists.'); return; }
+      if (allGroups.some(g => g.id === id)) { gMsg('A group with that id already exists.'); return; }
       gSave.disabled = true; gMsg('Saving…');
       const { error } = await sb.from('groups').insert({ id, name });
       gSave.disabled = false;
       if (error) { gMsg(error.message); return; }
       gform = blankGroupForm();
       await boot();
+    });
+    document.querySelectorAll('a[data-delgroup]').forEach(a => {
+      a.addEventListener('click', async e => {
+        e.preventDefault();
+        const id = a.dataset.delgroup;
+        const g = allGroups.find(x => x.id === id);
+        const cd = computedByGroup[id];
+        const gameCount = cd ? cd.games.filter(x => x.n >= 2).length : 0;
+        const seasonCount = rawSeasons.filter(s => s.group === id).length;
+        const sure = confirm(`Delete "${g ? g.name : id}"? This permanently deletes its ${gameCount} game${gameCount === 1 ? '' : 's'} and ${seasonCount} season${seasonCount === 1 ? '' : 's'}, and removes it from every player's group list. This cannot be undone.`);
+        if (!sure) return;
+        const msg = $('#dgMsg');
+        if (msg) msg.textContent = 'Deleting…';
+        const { error } = await sb.rpc('delete_group', { p_group_id: id });
+        if (error) { if (msg) msg.textContent = error.message; return; }
+        await boot();
+      });
     });
 
     const bindS = (id, k) => { const el = $(id); el && el.addEventListener('input', () => { sform[k] = el.value; }); };
@@ -897,13 +957,18 @@
 
   /* ---------- router ---------- */
   function render() {
-    if (!D) return;
+    if (!Object.keys(computedByGroup).length) return;
     const parts = location.hash.replace(/^#\/?/, '').split('/');
     const route = parts[0] || 'home';
-    const multi = D.groups.length > 1;
-    const gid = multi ? (parts[1] || (D.groups[0] && D.groups[0].id)) : null;
+    // Admin manages the whole site, so its URLs never carry a group segment
+    // even when other routes do — #/admin/season/edit/5 always means
+    // exactly that, not "group 'season', page edit/5".
+    const multi = route !== 'admin' && allGroups.length > 1;
+    const gid = allGroups.length ? (multi ? (parts[1] || allGroups[0].id) : allGroups[0].id) : null;
     const arg = (multi ? parts.slice(2) : parts.slice(1)).join('/');
     curGid = gid;
+    D = computedByGroup[gid == null ? NOGROUP : gid]
+      || computedByGroup[NOGROUP] || computedByGroup[allGroups[0] && allGroups[0].id] || Object.values(computedByGroup)[0];
     closeAddModal();
     hidePopLayer();
     closeNavMenu();
@@ -986,18 +1051,16 @@
       const finish = [...byPlace.keys()].sort((a, b) => a - b).map(p => byPlace.get(p).join(' = ')).join(' > ');
       return {
         _line: g.id, date: g.date, type: g.type, finish,
-        sets: g.sets || '', playerVP,
+        sets: g.sets || '', playerVP, group_id: g.group_id || null,
         winner_vp: g.winner_vp ?? '', minutes: g.minutes ?? '', notes: g.notes || '',
       };
     });
-    const byGroup = new Map();
-    pr.data.forEach(p => { if (!byGroup.has(p.group_id)) byGroup.set(p.group_id, []); byGroup.get(p.group_id).push(p.name); });
     const seasonRows = sr.data.slice().sort((a, b) => a.id - b.id).map(s => ({
       _id: s.id, name: s.name, group: s.group_id, start: s.start_date, weeks: s.weeks,
       targetGames: s.target_games, qualifyPct: s.qualify_pct, playoffSpots: s.playoff_spots,
       champion: s.champion_player_id ? (nameById.get(s.champion_player_id) || '') : '', notes: s.notes || '',
     }));
-    return { rows, players: pr.data, byGroup, groups: grp.data, seasons: seasonRows, enabledSets: enabled };
+    return { rows, players: pr.data, groups: grp.data, seasons: seasonRows, enabledSets: enabled };
   }
 
   let authWired = false;
@@ -1010,7 +1073,7 @@
       }
       if (!authWired) {
         authWired = true;
-        sb.auth.onAuthStateChange(event => { if (event === 'SIGNED_OUT' && D) { D = null; me = null; location.hash = ''; boot(); } });
+        sb.auth.onAuthStateChange(event => { if (event === 'SIGNED_OUT' && Object.keys(computedByGroup).length) { D = null; computedByGroup = {}; me = null; location.hash = ''; boot(); } });
       }
 
       const { data: { session } } = await sb.auth.getSession();
@@ -1025,18 +1088,43 @@
       me = meRow;
       if (me.must_change_password) { main.innerHTML = pagePwChange(); wirePwChange(); setNavVisible(false); return; }
 
-      const { rows, players, byGroup, groups, seasons, enabledSets: enabled } = await loadData();
+      const { rows, players, groups, seasons, enabledSets: enabled } = await loadData();
       enabledSets = new Set(enabled);
       playerIdByName = new Map(players.map(p => [p.name, p.id]));
       seasonDbIds = seasons.map(s => s._id);
-      const knownGroupIds = new Set(groups.map(g => g.id));
-      const unknownGroupIds = [...byGroup.keys()].filter(id => !knownGroupIds.has(id));
-      cfg.groups = groups.map(g => ({ id: g.id, name: g.name, players: byGroup.get(g.id) || [] }));
-      cfg.seasons = seasons;
-      cfg.players = players.map(p => p.name);
-      D = Eng.compute(cfg, rows);
-      D.byName = Object.fromEntries(D.players.map(p => [p.name, p]));
-      unknownGroupIds.forEach(id => D.warnings.push(`${byGroup.get(id).length} player(s) have group_id "${id}", which isn't a group in the database. They won't appear on any group's pages until one is added on the Admin page.`));
+      rawPlayers = players;
+      rawSeasons = seasons;
+      allGroups = groups.map(g => ({ id: g.id, name: g.name }));
+
+      // Each group is its own completely independent league: a separate
+      // Eng.compute() call seeing only that group's players, games, and
+      // seasons, so a player in two groups gets two unrelated results
+      // rather than one shared Elo/stat track. RLS has already done the
+      // real access-control work (rows for groups this viewer can't see
+      // never arrive here at all) — this loop just organizes what came back.
+      computedByGroup = {};
+      if (!allGroups.length) {
+        // No groups configured anywhere: the whole site is one league, same
+        // as before groups existed at all.
+        const c = Object.assign({}, cfg, { players: players.map(p => p.name), seasons, groups: undefined });
+        computedByGroup[NOGROUP] = Eng.compute(c, rows);
+        computedByGroup[NOGROUP].byName = Object.fromEntries(computedByGroup[NOGROUP].players.map(p => [p.name, p]));
+      } else {
+        allGroups.forEach(g => {
+          const groupPlayers = players.filter(p => (p.group_ids || []).includes(g.id)).map(p => p.name);
+          const groupRows = rows.filter(r => r.group_id === g.id);
+          const groupSeasons = seasons.filter(s => s.group === g.id);
+          const c = Object.assign({}, cfg, { players: groupPlayers, seasons: groupSeasons, groups: undefined });
+          const cd = Eng.compute(c, groupRows);
+          cd.byName = Object.fromEntries(cd.players.map(p => [p.name, p]));
+          computedByGroup[g.id] = cd;
+        });
+        const unassigned = rows.filter(r => r.group_id == null).length;
+        if (unassigned && me.is_admin) {
+          const firstD = computedByGroup[allGroups[0].id];
+          firstD.warnings.push(`${unassigned} game${unassigned === 1 ? '' : 's'} logged before groups existed (or genuinely spanning groups) ${unassigned === 1 ? 'has' : 'have'} no group assigned — only visible to you as admin, and not counted toward anyone's standings until fixed via Edit Game.`);
+        }
+      }
       $('#foot').textContent = 'Ratings are recalculated in your browser each time the page loads.';
       setNavVisible(true);
       render();

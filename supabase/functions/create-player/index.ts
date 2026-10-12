@@ -52,12 +52,13 @@ Deno.serve(async req => {
 
     const body = await req.json().catch(() => ({}));
     const name = String(body.name || '').trim();
-    const group_id = String(body.group_id || '').trim();
+    const group_ids = Array.isArray(body.group_ids) ? body.group_ids.map((g: unknown) => String(g).trim()).filter(Boolean) : [];
     if (!name) return json({ error: 'Name is required.' }, 400);
-    if (!group_id) return json({ error: 'Group is required.' }, 400);
+    if (!group_ids.length) return json({ error: 'At least one group is required.' }, 400);
 
-    const { data: group } = await serviceClient.from('groups').select('id').eq('id', group_id).single();
-    if (!group) return json({ error: `No group with id "${group_id}".` }, 400);
+    const { data: foundGroups } = await serviceClient.from('groups').select('id').in('id', group_ids);
+    const missing = group_ids.filter((g: string) => !(foundGroups || []).some(fg => fg.id === g));
+    if (missing.length) return json({ error: `No group with id "${missing[0]}".` }, 400);
 
     const slug = slugify(name);
     if (!slug) return json({ error: 'That name produced an empty login id — try adding a letter.' }, 400);
@@ -71,7 +72,7 @@ Deno.serve(async req => {
     }
 
     const { error: insertErr } = await serviceClient.from('players').insert({
-      id: created.user.id, name, group_id, is_admin: false, must_change_password: true,
+      id: created.user.id, name, group_ids, is_admin: false, must_change_password: true,
     });
     if (insertErr) {
       // Don't leave a dangling auth account with no players row behind.

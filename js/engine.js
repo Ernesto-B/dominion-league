@@ -1,4 +1,8 @@
-/* Dominion Night engine: pure computation, no DOM. Works in browser and Node. */
+/* Dominion Night engine: pure computation, no DOM. Works in browser and Node.
+   Scoped to a single league: app.js calls compute() once per friend group
+   (each time with only that group's players/games/seasons), so a player who
+   belongs to two groups gets two completely independent results — separate
+   Elo, separate everything — not one blended number filtered two ways. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.DominionEngine = factory();
@@ -77,19 +81,6 @@
     }
     (config.players || []).forEach(n => canon(String(n)));
 
-    /* groups: config.groups = [{id, name, players:[...]}]. A player's group is
-       assigned via membership in one of these lists (sourced at runtime from the
-       players table when backed by Supabase). Players in no list are ungrouped. */
-    const friendGroups = (config.groups || []).map(g => ({ id: g.id, name: g.name || g.id }));
-    const groupOfName = new Map();
-    (config.groups || []).forEach(g => (g.players || []).forEach(n => {
-      const c = canon(String(n));
-      if (groupOfName.has(c) && groupOfName.get(c) !== g.id)
-        warnings.push(`${c} is listed in more than one group; using "${groupOfName.get(c)}".`);
-      else groupOfName.set(c, g.id);
-    }));
-    const groupOf = n => groupOfName.get(canon(String(n))) || null;
-
     /* seasons */
     const seasons = (config.seasons || []).map((s, i) => {
       const start = parseISO(s.start);
@@ -152,11 +143,6 @@
     });
     games = games.map((g, i) => ({ g, i })).sort((a, b) => a.g.day - b.g.day || a.i - b.i).map(x => x.g);
     games.forEach((g, i) => { g.idx = i; });
-    if (friendGroups.length) games.forEach(g => {
-      if (g.n < 2) return;
-      if (new Set(g.names.map(groupOf)).size > 1)
-        warnings.push(`games.csv line ${g.line}: players are in different groups. This game won't count toward any group's standings or records.`);
-    });
 
     /* per-player containers */
     const P = {};
@@ -248,8 +234,7 @@
     const ranked = players.filter(p => p.rated > 0)
       .sort((a, b) => (b.elo + b.rated * 1e-6 - b.order * 1e-9) - (a.elo + a.rated * 1e-6 - a.order * 1e-9));
     ranked.forEach(p => {
-      const peers = friendGroups.length ? ranked.filter(q => groupOf(q.name) === groupOf(p.name)) : ranked;
-      p.rank = 1 + peers.filter(q => Math.round(q.elo * 10) > Math.round(p.elo * 10)).length;
+      p.rank = 1 + ranked.filter(q => Math.round(q.elo * 10) > Math.round(p.elo * 10)).length;
     });
 
     /* nights */
@@ -267,8 +252,7 @@
         .filter(p => p.results.some(r => r.game.day <= cutoff))
         .map(p => ({ name: p.name, elo: eloMap[p.name] ?? E.start }));
       prevCandidates.forEach(p => {
-        const peers = friendGroups.length ? prevCandidates.filter(q => groupOf(q.name) === groupOf(p.name)) : prevCandidates;
-        p.prevRank = 1 + peers.filter(q => Math.round(q.elo * 10) > Math.round(p.elo * 10)).length;
+        p.prevRank = 1 + prevCandidates.filter(q => Math.round(q.elo * 10) > Math.round(p.elo * 10)).length;
       });
       const prevRankByName = new Map(prevCandidates.map(p => [p.name, p.prevRank]));
       ranked.forEach(p => {
@@ -285,13 +269,12 @@
       s.regularGames = sg.filter(g => g.type === 'Regular' && g.n >= 2).length;
       s.nightsHeld = new Set(sg.map(g => g.day)).size;
     });
-    function currentSeasonFor(groupId) {
-      const list = groupId ? seasons.filter(s => s.group === groupId) : seasons;
-      const inProg = list.find(s => s.status === 'In progress');
+    function currentSeasonFor() {
+      const inProg = seasons.find(s => s.status === 'In progress');
       return inProg ? inProg.number
-        : Math.max(0, ...list.filter(s => s.ok && s.start <= today).map(s => s.number)) || (list.length ? list[0].number : 0);
+        : Math.max(0, ...seasons.filter(s => s.ok && s.start <= today).map(s => s.number)) || (seasons.length ? seasons[0].number : 0);
     }
-    let currentSeason = currentSeasonFor(null);
+    let currentSeason = currentSeasonFor();
 
     function snapshotAtOrBefore(pred) { // last game satisfying pred (games sorted by day)
       let last = null; for (const g of games) { if (pred(g)) last = g; else break; } return last;
@@ -300,14 +283,13 @@
     function seasonStandings(num) {
       const s = seasons[num - 1];
       if (!s) return null;
-      const inGroup = n => !s.group || groupOf(n) === s.group;
-      const sg = games.filter(g => g.season === num && (!s.group || g.names.every(inGroup)));
+      const sg = games.filter(g => g.season === num);
       const reg = sg.filter(g => g.type === 'Regular' && g.n >= 2);
       const nightsHeld = new Set(sg.map(g => g.day)).size;
       const before = s.ok ? snapshotAtOrBefore(g => g.day < s.start) : null;
       const after = s.ok ? snapshotAtOrBefore(g => g.day <= s.end) : null;
       const rows = [];
-      roster.filter(inGroup).forEach((n, ri) => {
+      roster.forEach((n, ri) => {
         let gp = 0, w = 0, pts = 0;
         reg.forEach(g => { if (g.places[n] != null) { gp++; if (g.places[n] === 1) w++; pts += g.pts[n]; } });
         if (!gp) return;
@@ -326,14 +308,12 @@
       return { season: s, rows, nightsHeld, games: sg };
     }
 
-    function h2h(seasonNum, groupId) {
-      const inGroup = n => !groupId || groupOf(n) === groupId;
-      const active = roster.filter(n => inGroup(n) && games.some(g => g.n >= 2 && g.places[n] != null && (!groupId || g.names.every(inGroup))));
+    function h2h(seasonNum) {
+      const active = roster.filter(n => games.some(g => g.n >= 2 && g.places[n] != null));
       const ahead = {}; active.forEach(a => { ahead[a] = {}; active.forEach(b => { ahead[a][b] = 0; }); });
       games.forEach(g => {
         if (g.type === 'Friendly' || g.n < 2) return;
         if (seasonNum != null && g.season !== seasonNum) return;
-        if (groupId && !g.names.every(inGroup)) return;
         g.names.forEach(a => g.names.forEach(b => { if (a !== b && g.places[a] < g.places[b]) ahead[a][b]++; }));
       });
       return { players: active, ahead };
@@ -414,14 +394,6 @@
       };
     }
     const records = buildRecords(players, games, ranked);
-    function recordsFor(groupId) {
-      if (!groupId) return records;
-      return buildRecords(
-        players.filter(p => groupOf(p.name) === groupId),
-        games.filter(g => g.names.every(n => groupOf(n) === groupId)),
-        ranked.filter(p => groupOf(p.name) === groupId),
-      );
-    }
 
     /* rating history by night, for charts */
     const nights = nightsAll.map(day => {
@@ -447,7 +419,7 @@
 
     if (!seasons.length) warnings.push('No seasons are set up yet. Games will still count for Elo.');
 
-    return { preview, lastNight, config, E, S, roster, players, ranked, games, seasons, currentSeason, currentSeasonFor, nights, tiers, startTier: tiers[tierIndex(E.start)], warnings, seasonStandings, h2h, records, recordsFor, groups: friendGroups, groupOf, today };
+    return { preview, lastNight, config, E, S, roster, players, ranked, games, seasons, currentSeason, currentSeasonFor, nights, tiers, startTier: tiers[tierIndex(E.start)], warnings, seasonStandings, h2h, records, today };
   }
 
   return { DEFAULT_TIERS, compute, parseCSV, parseFinish, parseISO, fmtDay, todayDay };
