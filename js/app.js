@@ -969,6 +969,15 @@
     curGid = gid;
     D = computedByGroup[gid == null ? NOGROUP : gid]
       || computedByGroup[NOGROUP] || computedByGroup[allGroups[0] && allGroups[0].id] || Object.values(computedByGroup)[0];
+    // The top nav's links live in the static index.html shell (never
+    // touched by main.innerHTML), so without this they'd always point at
+    // whichever group's hash they were written with — stay on #/players
+    // with no group segment and clicking it would silently reset you to
+    // the default group instead of keeping the one you're viewing.
+    document.querySelectorAll('#nav a[data-r]').forEach(a => {
+      const r = a.dataset.r;
+      a.href = hashFor(r === 'home' ? '' : r, r === 'admin' ? null : gid);
+    });
     closeAddModal();
     hidePopLayer();
     closeNavMenu();
