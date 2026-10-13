@@ -101,6 +101,12 @@
   }
   const tierOf = n => { const p = D && D.byName && D.byName[n]; return p && p.tier; };
   const nameIcon = (n, size) => { const t = tierOf(n); return t ? icon(t.icon, size || 18, t.name + ' tier') : ''; };
+  // For a specific game's row, not "right now": a past game should show the
+  // tier the player actually had immediately after that game, so a rank-up
+  // is visible as an icon change between two games in their history instead
+  // of every old game silently wearing today's tier.
+  const nameIconAt = (n, elo, size) => { const t = D.tierFor(elo); return t ? icon(t.icon, size || 18, t.name + ' tier') : ''; };
+  const linkAt = (n, elo) => `<a class="pl" href="${hashFor('players', curGid, encodeURIComponent(n))}">${nameIconAt(n, elo, 20)}<span>${esc(n)}</span></a>`;
   const link = n => {
     // Every page is rendered within one group's context (D is already
     // scoped to curGid), so a link to a player always stays in that same
@@ -298,17 +304,21 @@
   function lastNightPanel(gl) {
     if (!gl.length) return '';
     const day = gl[gl.length - 1].day, date = gl[gl.length - 1].date;
-    const todays = gl.filter(g => g.day === day);
-    return `<h2>Last night, ${long(date)}</h2><div class="tablewrap"><table class="plain"><thead><tr><th class="l">Finish</th><th></th><th class="l">Elo change</th></tr></thead><tbody>${todays.map(g => {
+    // Newest first, matching every other game list on the site; reusing
+    // gameDetail(g) in a click-to-expand row too, same as the Games and
+    // Season pages — wireGameRows() already wires any .grow/.gdetail pair
+    // on the page, so no new JS is needed for the click behavior itself.
+    const todays = gl.filter(g => g.day === day).slice().reverse();
+    return `<h2>Last night, ${long(date)}</h2><div class="tablewrap"><table class="plain"><thead><tr><th></th><th class="l">Finish</th><th></th><th class="l">Elo change</th></tr></thead><tbody>${todays.map(g => {
       const names = g.names.slice().sort((x, y) => g.places[x] - g.places[y]);
       const ch = names.filter(n => g.elo[n]).map(n => { const d = g.elo[n].after - g.elo[n].before; return `<span class="chg">${esc(n)} <b class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${sgn(d)}</b></span>`; }).join('');
-      return `<tr><td class="wrap">${finishText(g)}</td><td>${typePill(g.type)}</td><td class="wrap chgs">${ch || '<span class="meta">No rating change</span>'}</td></tr>`;
+      return `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td class="wrap">${finishText(g)}</td><td>${typePill(g.type)}</td><td class="wrap chgs">${ch || '<span class="meta">No rating change</span>'}</td></tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="4">${gameDetail(g)}</td></tr>`;
     }).join('')}</tbody></table></div>`;
   }
   function seasonTable(st, limit) {
     const s = st.season, rows = limit ? st.rows.slice(0, limit) : st.rows;
     return `<div class="tablewrap"><table><thead><tr><th>Rank</th><th class="l">Player</th><th>Games</th><th>Wins</th><th>Win %</th><th>Avg points</th><th>Season score</th><th>Qualified</th><th>Seed</th><th>Elo change</th><th>Nights</th><th>Attendance</th></tr></thead><tbody>` +
-      rows.map(r => `<tr class="${r.seed ? 'seed' : ''}"><td>${r.rank}</td><td class="name">${link(r.name)}</td><td>${r.games}</td><td>${r.wins}</td><td>${pc(r.winPct)}</td><td>${f2(r.avgPts)}</td><td><b>${f3(r.score)}</b></td>
+      rows.map(r => `<tr class="${r.seed ? 'seed' : ''}"><td>${r.rank}</td><td class="name">${link(r.name)}</td><td>${r.games}</td><td>${r.wins}</td><td>${pc(r.winPct)}</td><td>${f2(r.avgPts)}</td><td><b>${f0(r.score * 1000)}</b></td>
         <td>${r.qualified ? '<span class="pill ok">Yes</span>' : `<span class="pill warn">${r.need} more</span>`}</td><td>${r.seed || ''}</td><td class="${r.eloChange > 0.5 ? 'up-t' : r.eloChange < -0.5 ? 'down-t' : ''}">${sgn(r.eloChange)}</td><td>${r.nights}</td><td>${pc(r.attendance)}</td></tr>`).join('') + '</tbody></table></div>';
   }
 
@@ -367,15 +377,15 @@
       <div class="stat"><b>${esc(s.champion) || '—'}</b><span>champion</span></div></div>`;
     if (s.ok) h += `<div class="tierbar">${dateAnchor(s.start, 'Start')}<div class="progress" role="img" aria-label="${Math.round(frac * 100)} percent of the season has passed"><i style="width:${frac * 100}%"></i></div>${dateAnchor(s.end, 'End')}</div>`;
     h += st.rows.length ? seasonTable(st) : '<p class="empty">No regular games in this season yet.</p>';
-    h += `<p class="note">Season score = (points + ${D.S.prior} × 0.5) ÷ (games + ${D.S.prior}). Points run from 1 for a win down to 0 for last, so a 3-player table and a 6-player table are worth the same, and ties split. The ${D.S.prior} imaginary average games stop one lucky night from topping the table. Missing a night costs nothing. Qualified players rank first; green rows are playoff seeds. Playoff and friendly games don't count toward the table (playoffs still move Elo). This table — not Elo — decides the season champion; Elo is a separate, ongoing skill rating shown on <a href="${hashFor('', gid)}">Rankings</a> that never resets.</p>`;
+    h += `<p class="note">Season score = 1000 × (points + ${D.S.prior} × 0.5) ÷ (games + ${D.S.prior}), so it always lands somewhere between 0 and 1000. Points run from 1 for a win down to 0 for last, so a 3-player table and a 6-player table are worth the same, and ties split. The ${D.S.prior} imaginary average games stop one lucky night from topping the table. Missing a night costs nothing. Qualified players rank first; green rows are playoff seeds. Playoff and friendly games don't count toward the table (playoffs still move Elo). This table — not Elo — decides the season champion; Elo is a separate, ongoing skill rating shown on <a href="${hashFor('', gid)}">Rankings</a> that never resets.</p>`;
     const sg = st.games.filter(g => g.n >= 2).slice().reverse();
     if (sg.length) h += '<h2>Games this season</h2>' + gamesTable(sg);
     return h;
   }
 
   function resultRow(r) {
-    const d = r.after - r.before;
-    return `<tr><td>${r.game.date}</td><td>${typePill(r.game.type)}</td><td class="wrap">${finishText(r.game)}</td><td class="wrap">${r.game.sets.map(s => setIcon(s, 20) || esc(s)).join(' ')}</td><td>${f2(r.pts)}</td><td>${f0(r.before)} → ${f0(r.after)}</td><td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${sgn(d)}</td></tr>`;
+    const d = r.after - r.before, g = r.game;
+    return `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td>${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 20) || esc(s)).join(' ')}</td><td>${f2(r.pts)}</td><td>${f0(r.before)} → ${f0(r.after)}</td><td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${sgn(d)}</td></tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="8">${gameDetail(g)}</td></tr>`;
   }
   const typePill = t => t === 'Playoff' ? '<span class="pill play">Playoff</span>' : t === 'Friendly' ? '<span class="pill fr">Friendly</span>' : '';
 
@@ -419,7 +429,7 @@
     h += '<h2>Rating history</h2>' + ratingChart(p.name, rankedHere.map(x => x.name));
     const opp = hh.players.filter(o => o !== p.name).map(o => ({ o, w: hh.ahead[p.name][o], l: hh.ahead[o][p.name] })).filter(x => x.w + x.l > 0).sort((a, b) => (b.w / (b.w + b.l)) - (a.w / (a.w + a.l)) || (b.w + b.l) - (a.w + a.l));
     if (opp.length) h += `<h2>Against each opponent</h2><div class="tablewrap"><table><thead><tr><th class="l">Opponent</th><th>Finished ahead</th><th>Finished behind</th><th>Share ahead</th></tr></thead><tbody>${opp.map(x => `<tr><td class="name">${link(x.o)}</td><td>${x.w}</td><td>${x.l}</td><td>${x.w + x.l ? pc(x.w / (x.w + x.l)) : ''}</td></tr>`).join('')}</tbody></table></div><p class="note">Counts tables where both of you played, rated games only. Tied finishes aren't counted either way.</p>`;
-    h += `<h2>Results</h2><div class="tablewrap"><table><thead><tr><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>Points</th><th>Elo</th><th>Change</th></tr></thead><tbody>${p.results.slice().reverse().map(resultRow).join('')}</tbody></table></div>`;
+    h += `<h2>Results</h2><div class="tablewrap"><table><thead><tr><th></th><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>Points</th><th>Elo</th><th>Change</th></tr></thead><tbody>${p.results.slice().reverse().map(resultRow).join('')}</tbody></table></div>`;
     return h;
   }
 
@@ -485,21 +495,24 @@
 
   function finishText(g) {
     const names = g.names.slice().sort((a, b) => g.places[a] - g.places[b]);
-    return names.map((n, i) => (i ? (g.places[n] === g.places[names[i - 1]] ? ' = ' : ' > ') : '') + nameIcon(n, 16) + (i === 0 || g.places[n] === 1 ? `<b>${esc(n)}</b>` : esc(n))).join('');
+    return names.map((n, i) => (i ? (g.places[n] === g.places[names[i - 1]] ? ' = ' : ' > ') : '') + nameIconAt(n, g.snapshot[n], 16) + (i === 0 || g.places[n] === 1 ? `<b>${esc(n)}</b>` : esc(n))).join('');
   }
   function gameDetail(g) {
-    const sgn3 = x => (x > 0.0005 ? '+' : x < -0.0005 ? '−' : '') + f3(Math.abs(x));
+    // Season score is a 0-1 ratio internally, but displayed x1000 so it
+    // reads as a whole-number points total instead of a 3-decimal fraction.
+    const sc = x => f0(x * 1000);
+    const sgnSc = x => (x > 0.5 ? '+' : x < -0.5 ? '−' : '') + Math.abs(Math.round(x * 1000));
     const rows = g.names.slice().sort((a, b) => g.places[a] - g.places[b]).map(n => {
       const elo = g.elo && g.elo[n];
       const score = g.score && g.score[n];
       const vp = g.playerVP && g.playerVP[n];
       const d = elo ? elo.after - elo.before : null;
       const sd = score ? score.after - score.before : null;
-      return `<tr><td class="name">${link(n)}</td>
+      return `<tr><td class="name">${linkAt(n, g.snapshot[n])}</td>
         <td>${elo ? f0(elo.before) + ' → ' + f0(elo.after) : '—'}</td>
         <td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${d != null ? sgn(d) : ''}</td>
-        <td>${score ? f3(score.before) + ' → ' + f3(score.after) : '—'}</td>
-        <td class="${sd > 0.0005 ? 'up-t' : sd < -0.0005 ? 'down-t' : ''}">${sd != null ? sgn3(sd) : ''}</td>
+        <td>${score ? sc(score.before) + ' → ' + sc(score.after) : '—'}</td>
+        <td class="${sd > 0.0005 ? 'up-t' : sd < -0.0005 ? 'down-t' : ''}">${sd != null ? sgnSc(sd) : ''}</td>
         <td>${vp != null ? vp : '—'}</td></tr>`;
     }).join('');
     return `<div class="tablewrap"><table class="plain"><thead><tr><th class="l">Player</th><th>Elo</th><th>Change</th><th>Season score</th><th>Change</th><th>VP</th></tr></thead><tbody>${rows}</tbody></table></div>${g.notes ? `<p class="note">${esc(g.notes)}</p>` : ''}`;
@@ -517,13 +530,13 @@
       <div class="controls"><label class="f">Season <select id="gfs">${seasonOptions(gf.season, true)}</select></label>
       <label class="f">Type <select id="gft">${['all', 'Regular', 'Playoff', 'Friendly'].map(t => `<option value="${t}"${gf.type === t ? ' selected' : ''}>${t === 'all' ? 'All types' : t}</option>`).join('')}</select></label>
       <label class="f">Player <select id="gfp"><option value="all">Everyone</option>${D.players.map(p => `<option${gf.player === p.name ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
-      <label class="f">Set <select id="gfset"><option value="all">All sets</option>${SET_NAMES.map(n => `<option${gf.set === n ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
+      <label class="f">Set <select id="gfset"><option value="all">All sets</option>${SET_NAMES.filter(n => enabledSets.has(n) || D.records.sets[n]).map(n => `<option${gf.set === n ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
       <span class="meta">${list.length} table${list.length === 1 ? '' : 's'}</span></div>` +
       (list.length ? gamesTable(list, canEdit) : '<p class="empty">Nothing matches those filters.</p>');
   }
 
   /* ---------- add / edit a game (admin only) ---------- */
-  const blankBS = () => ({ date: '', type: '', picked: [], tie: {}, sets: [], vp: {}, minutes: '', notes: '', editId: null });
+  const blankBS = () => ({ date: Eng.fmtDay(Eng.todayDay()), type: '', picked: [], tie: {}, sets: [], vp: {}, minutes: '', notes: '', editId: null });
   let bs = blankBS();
   function previewBlock() {
     const pv = D.preview(bs.picked);
@@ -550,9 +563,9 @@
     return `<h2 style="margin-top:0">${bs.editId ? 'Edit game' : 'Add a game'}</h2><p class="lede">${bs.editId ? 'Change the details and save.' : 'Pick who played, in finishing order, and save.'}${curGroupName ? ` For ${esc(curGroupName)} — only that group's players are listed below.` : ''}</p>
       <div class="controls"><label class="f">Date <input type="date" id="bd" value="${esc(bs.date)}"></label>
       <label class="f">Type <select id="bty">${['', 'Playoff', 'Friendly'].map(t => `<option value="${t}"${bs.type === t ? ' selected' : ''}>${t || 'Regular'}</option>`).join('')}</select></label></div>
-      <p class="meta">1. Click the players in the order they finished, winner first.</p><div class="pills" id="bpick">${roster.map(n => `<a href="#" data-n="${esc(n)}" ${bs.picked.includes(n) ? 'aria-current="true"' : ''}>${nameIcon(n, 18)}${esc(n)}</a>`).join('')}</div>
-      <p class="meta">2. Tick "tied" if a player finished level with the one above, and fill in VP if you tracked it.</p>
-      <ol class="order" id="border">${bs.picked.map((n, i) => `<li><span class="nm">${i + 1}. ${esc(n)}</span><button class="ghost" data-up="${i}" type="button" aria-label="Move ${esc(n)} up"${i === 0 ? ' disabled' : ''}>↑</button><button class="ghost" data-dn="${i}" type="button" aria-label="Move ${esc(n)} down"${i === bs.picked.length - 1 ? ' disabled' : ''}>↓</button><label class="f">VP <input type="text" data-vp="${esc(n)}" size="3" value="${esc(bs.vp[n] ?? '')}"></label>${i ? `<label class="f"><input type="checkbox" data-tie="${esc(n)}"${bs.tie[n] ? ' checked' : ''}> tied with above</label>` : ''}</li>`).join('') || '<li class="meta">No players chosen yet.</li>'}</ol>
+      <p class="meta">1. Click everyone who played.</p><div class="pills" id="bpick">${roster.map(n => `<a href="#" data-n="${esc(n)}" ${bs.picked.includes(n) ? 'aria-current="true"' : ''}>${nameIcon(n, 18)}${esc(n)}</a>`).join('')}</div>
+      <p class="meta">2. Fill in each player's VP and the order sorts itself (ties too, for equal scores). No VP tracked? Use the arrows and the "tied" box instead.</p>
+      <ol class="order" id="border">${bs.picked.map((n, i) => `<li><span class="nm">${i + 1}. ${esc(n)}</span><button class="ghost" data-up="${i}" type="button" aria-label="Move ${esc(n)} up"${i === 0 ? ' disabled' : ''}>↑</button><button class="ghost" data-dn="${i}" type="button" aria-label="Move ${esc(n)} down"${i === bs.picked.length - 1 ? ' disabled' : ''}>↓</button><label class="f vp">VP <input type="text" data-vp="${esc(n)}" size="3" value="${esc(bs.vp[n] ?? '')}"></label>${i ? `<label class="f tie"><input type="checkbox" data-tie="${esc(n)}"${bs.tie[n] ? ' checked' : ''}> tied with above</label>` : ''}</li>`).join('') || '<li class="meta">No players chosen yet.</li>'}</ol>
       ${previewBlock()}
       <p class="meta">3. Which expansions were in play?</p><div class="pills" id="bsets">${SET_NAMES.filter(n => enabledSets.has(n) || bs.sets.includes(n)).map(n => `<a href="#" data-n="${esc(n)}" ${bs.sets.includes(n) ? 'aria-current="true"' : ''}>${setIcon(n, 18)}${esc(n)}</a>`).join('')}</div>
       <p class="meta" style="margin-top:14px">4. Optional details.</p><div class="controls">
@@ -589,6 +602,22 @@
     if (editId == null) bs = blankBS(); else loadGameIntoBuilder(editId);
     renderAddModal();
   }
+  // Re-sorts bs.picked by VP descending (blank VP sinks to the bottom,
+  // keeping its prior relative order — Array#sort is spec-guaranteed
+  // stable) and recomputes bs.tie from equal consecutive VP values. A
+  // no-op until at least one VP is entered, since there's nothing yet to
+  // sort by.
+  function resortByVP() {
+    const val = n => { const v = bs.vp[n]; return v !== undefined && v !== '' && !isNaN(+v) ? +v : null; };
+    if (!bs.picked.some(n => val(n) != null)) return;
+    bs.picked.sort((a, b) => (val(b) ?? -Infinity) - (val(a) ?? -Infinity));
+    const newTie = {};
+    for (let i = 1; i < bs.picked.length; i++) {
+      const va = val(bs.picked[i - 1]), vb = val(bs.picked[i]);
+      if (va != null && vb != null && va === vb) newTie[bs.picked[i]] = true;
+    }
+    bs.tie = newTie;
+  }
   function wireAdd() {
     const rer = () => renderAddModal();
     const bind = (id, k) => { const el = $(id); el && el.addEventListener('input', () => { bs[k] = el.value; }); };
@@ -615,7 +644,17 @@
       if (dn != null) { const i = +dn; [p[i + 1], p[i]] = [p[i], p[i + 1]]; }
       rer();
     });
-    order && order.addEventListener('change', e => { const t = e.target.dataset.tie; if (t) bs.tie[t] = e.target.checked; });
+    order && order.addEventListener('change', e => {
+      const t = e.target.dataset.tie;
+      if (t) { bs.tie[t] = e.target.checked; return; }
+      // VP drives the finishing order: once a player's score is entered,
+      // re-sort the whole table by VP (ties = equal VP) instead of making
+      // the admin manually drag/click everyone into place. Fires on blur,
+      // not every keystroke, so typing a multi-digit score doesn't yank
+      // focus out from under the cursor. Arrows/tie checkbox stay as a
+      // manual override for whenever VP isn't tracked.
+      if (e.target.dataset.vp) { resortByVP(); rer(); }
+    });
     order && order.addEventListener('input', e => { const v = e.target.dataset.vp; if (v) bs.vp[v] = e.target.value; });
     const msg = t => { const el = $('#bmsg'); if (el) el.textContent = t; };
     const save = $('#bsave');

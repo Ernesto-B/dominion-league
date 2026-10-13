@@ -72,6 +72,11 @@
       .map(t => ({ id: t.id, name: t.name || t.id, icon: t.icon || t.id, min: t.min == null ? -Infinity : +t.min }))
       .sort((a, b) => a.min - b.min);
     const tierIndex = elo => { let k = 0; tiers.forEach((t, i) => { if (Math.round(elo) >= t.min) k = i; }); return k; };
+    // Exposed so a game row can show the tier a player actually had at that
+    // point in time (from that game's own Elo snapshot) instead of their
+    // tier right now — otherwise every past game would silently show
+    // today's tier and a rank-up would be invisible in the history.
+    const tierFor = elo => tiers[tierIndex(elo)];
     const rosterKey = new Map();   // lowercase -> display name
     const roster = [];
     function canon(name) {
@@ -419,7 +424,7 @@
 
     if (!seasons.length) warnings.push('No seasons are set up yet. Games will still count for Elo.');
 
-    return { preview, lastNight, config, E, S, roster, players, ranked, games, seasons, currentSeason, currentSeasonFor, nights, tiers, startTier: tiers[tierIndex(E.start)], warnings, seasonStandings, h2h, records, today };
+    return { preview, lastNight, config, E, S, roster, players, ranked, games, seasons, currentSeason, currentSeasonFor, nights, tiers, tierFor, startTier: tiers[tierIndex(E.start)], warnings, seasonStandings, h2h, records, today };
   }
 
   return { DEFAULT_TIERS, compute, parseCSV, parseFinish, parseISO, fmtDay, todayDay };

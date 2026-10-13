@@ -216,6 +216,21 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;backgroun
      .tablewrap already uses for wide tables on mobile. */
   .chart{overflow-x:auto}
   .chart svg{width:880px;max-width:none}
+
+  /* Add A Game's finishing-order row packs a name, two reorder buttons, a
+     VP input, and a tie checkbox into one line — fine on desktop width, but
+     it has no wrap at all, so on a phone it was overflowing straight past
+     the modal's edge instead of fitting. Reclaim modal padding first, then
+     stack the row into two lines (reorder controls, then VP/tie) instead of
+     relying on flex-wrap, which would order the pieces unpredictably. */
+  .modal-overlay{padding:20px 8px}
+  .modal-box{padding:16px}
+  .order li{display:grid;grid-template-columns:1fr auto auto;grid-template-areas:"nm up dn" "vp vp tie";row-gap:6px;column-gap:8px}
+  .order .nm{grid-area:nm;min-width:0}
+  .order button[data-up]{grid-area:up}
+  .order button[data-dn]{grid-area:dn}
+  .order label.vp{grid-area:vp}
+  .order label.tie{grid-area:tie;justify-self:end}
 }
 @media (prefers-reduced-motion:no-preference){
   .bar i{transition:width .5s ease,left .5s ease}
