@@ -109,7 +109,7 @@ create table if not exists seasons (
 -- Game set picker without touching any already-logged game.
 create table if not exists settings (
   id boolean primary key default true,
-  enabled_sets text[] not null default array['Base','Intrigue','Seaside','Prosperity','Hinterlands','Dark Ages','Cornucopia & Guilds','Adventures','Empires','Renaissance','Plunder'],
+  enabled_sets text[] not null default array['Base','Intrigue','Seaside','Prosperity','Hinterlands','Dark Ages','Cornucopia & Guilds','Adventures','Empires','Renaissance','Menagerie','Plunder','Rising Sun'],
   constraint settings_single_row check (id)
 );
 insert into settings (id) values (true) on conflict (id) do nothing;

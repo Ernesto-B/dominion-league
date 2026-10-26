@@ -57,7 +57,7 @@
   const SET_ICONS = {
     Base: 'base', Intrigue: 'intrigue', Seaside: 'seaside', Prosperity: 'prosperity',
     Hinterlands: 'hinterlands', 'Dark Ages': 'dark-ages', 'Cornucopia & Guilds': 'cornucopia-guilds',
-    Adventures: 'adventures', Empires: 'empires', Renaissance: 'renaissance', Plunder: 'plunder',
+    Adventures: 'adventures', Empires: 'empires', Renaissance: 'renaissance', Menagerie: 'menagerie', Plunder: 'plunder', 'Rising Sun': 'rising-sun',
   };
   const SET_NAMES = Object.keys(SET_ICONS);
   const setIconPath = name => { const slug = SET_ICONS[name]; return slug ? `icons/sets/${slug}.png` : null; };
