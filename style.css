@@ -103,6 +103,7 @@ h3{font-size:18px;font-weight:700;margin:24px 0 8px}
 table{border-collapse:collapse;width:100%;font-size:15px}
 th,td{padding:9px 12px;text-align:right;border-top:1px solid var(--line);white-space:nowrap}
 th:first-child,td:first-child,.l{text-align:left}
+th.c,td.c{text-align:center}
 th{font-weight:600;color:var(--muted);font-size:13px;border-top:0;background:var(--panel);position:sticky;top:0}
 tbody tr:hover{background:var(--bg)}
 td.name{text-align:left;font-weight:600}

@@ -232,6 +232,16 @@
         topHalf: p.rated ? p.results.filter(r => r.pts >= 0.5).length / p.rated : null, lasts: p.results.filter(r => r.pts === 0).length, titles: titles[n] || 0, allGames: p.allGames,
         status: p.rated === 0 ? '' : p.rated < E.provisionalGames ? 'Provisional' : 'Established',
         results: p.results,
+        // Per landscape type: rated games played with it in the kingdom, and wins among them.
+        landscapeStats: (() => {
+          const m = {};
+          p.results.forEach(r => r.game.landscapes.forEach(l => {
+            const e = m[l] || (m[l] = { games: 0, wins: 0 });
+            e.games++; if (r.place === 1) e.wins++;
+          }));
+          Object.values(m).forEach(e => { e.winPct = e.wins / e.games; });
+          return m;
+        })(),
         tier: p.rated ? tiers[tierIndex(p.elo)] : null,
         peakTier: p.rated ? tiers[tierIndex(p.peak)] : null,
         nextTier: p.rated && tierIndex(p.elo) < tiers.length - 1 ? { tier: tiers[tierIndex(p.elo) + 1], need: Math.max(1, tiers[tierIndex(p.elo) + 1].min - Math.round(p.elo)) } : null,
@@ -377,6 +387,35 @@
             });
           });
           return best;
+        })(),
+        // Landscape cards (Events, Projects, ...). Same attribution rule as
+        // sets: a game with several types counts fully toward each.
+        landscapes: countBy([].concat(...withInfo.map(g => g.landscapes))),
+        landscapeTables: withInfo.length,
+        landscapeStats: (() => {
+          const m = {};
+          withInfo.forEach(g => g.landscapes.forEach(l => {
+            const e = m[l] || (m[l] = { games: 0, vpSum: 0, vpN: 0 });
+            e.games++;
+            if (g.vp != null) { e.vpSum += g.vp; e.vpN++; }
+          }));
+          Object.values(m).forEach(e => { e.avgVP = e.vpN ? e.vpSum / e.vpN : null; });
+          return m;
+        })(),
+        // Games with any landscape card vs. none: how do the tables differ?
+        landscapeSplit: (() => {
+          const part = list => ({ games: list.length, avgVP: avg(num(list.map(g => g.vp))), avgTable: avg(list.map(g => g.n)) });
+          return { with: part(withInfo.filter(g => g.landscapes.length)), without: part(withInfo.filter(g => !g.landscapes.length)) };
+        })(),
+        landscapeTypesDist: countBy(withInfo.map(g => g.landscapes.length)),
+        mostLandscapes: (() => { let b = null; withInfo.forEach(g => { if (g.landscapes.length && (!b || g.landscapes.length > b.value)) b = { game: g, value: g.landscapes.length }; }); return b; })(),
+        // Best win % per landscape type among players with enough games using it.
+        bestByLandscape: (() => {
+          const m = {};
+          playerList.forEach(p => Object.entries(p.landscapeStats).forEach(([l, e]) => {
+            if (e.games >= minRec && (!m[l] || e.winPct > m[l].value)) m[l] = { name: p.name, value: e.winPct, games: e.games };
+          }));
+          return m;
         })(),
         sets: countBy([].concat(...gameList.map(g => g.sets))),
         setsLogged: gameList.filter(g => g.sets.length).length,

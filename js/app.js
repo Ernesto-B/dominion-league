@@ -60,7 +60,7 @@
     Adventures: 'adventures', Empires: 'empires', Renaissance: 'renaissance', Menagerie: 'menagerie', Plunder: 'plunder', 'Rising Sun': 'rising-sun',
   };
   const SET_NAMES = Object.keys(SET_ICONS);
-  const LANDSCAPES = ['Events', 'Projects', 'Traits', 'Landmarks'];
+  const LANDSCAPES = ['Events', 'Projects', 'Traits', 'Landmarks', 'Ways'];
   const landscapePills = g => (g.landscapes || []).map(l => `<span class="pill">${esc(l)}</span>`).join(' ');
   const setIconPath = name => { const slug = SET_ICONS[name]; return slug ? `icons/sets/${slug}.png` : null; };
   const setIcon = (name, size) => {
@@ -387,7 +387,7 @@
 
   function resultRow(r) {
     const d = r.after - r.before, g = r.game;
-    return `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td>${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 20) || esc(s)).join(' ')}</td><td>${f2(r.pts)}</td><td>${f0(r.before)} → ${f0(r.after)}</td><td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${sgn(d)}</td></tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="8">${gameDetail(g)}</td></tr>`;
+    return `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td>${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 20) || esc(s)).join(' ')}</td><td class="wrap">${landscapePills(g)}</td><td>${f2(r.pts)}</td><td class="c">${f0(r.before)} → ${f0(r.after)}</td><td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${sgn(d)}</td></tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="9">${gameDetail(g)}</td></tr>`;
   }
   const typePill = t => t === 'Playoff' ? '<span class="pill play">Playoff</span>' : t === 'Friendly' ? '<span class="pill fr">Friendly</span>' : '';
 
@@ -421,6 +421,15 @@
       ${statTile('icons/stats/top-half-finishes.png', pc(p.topHalf), 'top half', null, popText('Share of tables where your points share was 0.5 or better — roughly, finishing in the top half of the table.'))}
       ${statTile('icons/stats/last-place-finishes.png', p.lasts, 'last places', null, popText('Tables where you finished alone in last place. A tie for last doesn\'t count against you.'))}
       ${statTile('icons/stats/longest-without-win.png', p.bestDry, 'longest dry spell', null, popText('Your longest-ever run of rated games without a win.', p.dry > 0 ? `${p.dry} games into one right now` : 'Not in one right now'))}
+      ${(() => {
+        // Best/worst landscape type by win %, only counting types with enough games to mean something.
+        const q = Object.entries(p.landscapeStats).filter(([, e]) => e.games >= D.S.minGamesForRecords);
+        if (q.length < 2) return '';
+        const best = q.reduce((a, b) => b[1].winPct > a[1].winPct ? b : a), worst = q.reduce((a, b) => b[1].winPct < a[1].winPct ? b : a);
+        if (best[1].winPct === worst[1].winPct) return '';
+        const pop = (t, e) => popText(`Your win rate in rated games with ${t} in play, out of ${e.games} games. Only types with at least ${D.S.minGamesForRecords} games count.`, `Overall: ${pc(p.winPct)}`);
+        return statTile(null, esc(best[0]), `best landscape (${pc(best[1].winPct)} wins)`, null, pop(best[0], best[1])) + statTile(null, esc(worst[0]), `worst landscape (${pc(worst[1].winPct)} wins)`, null, pop(worst[0], worst[1]));
+      })()}
       ${setStatTile(mostSet && mostSet[0], 'most played', setsPop)}
       ${setStatTile(leastSet && leastSet[0], 'least played', setsPop)}
       </div>`;
@@ -431,7 +440,7 @@
     h += '<h2>Rating history</h2>' + ratingChart(p.name, rankedHere.map(x => x.name));
     const opp = hh.players.filter(o => o !== p.name).map(o => ({ o, w: hh.ahead[p.name][o], l: hh.ahead[o][p.name] })).filter(x => x.w + x.l > 0).sort((a, b) => (b.w / (b.w + b.l)) - (a.w / (a.w + a.l)) || (b.w + b.l) - (a.w + a.l));
     if (opp.length) h += `<h2>Against each opponent</h2><div class="tablewrap"><table><thead><tr><th class="l">Opponent</th><th>Finished ahead</th><th>Finished behind</th><th>Share ahead</th></tr></thead><tbody>${opp.map(x => `<tr><td class="name">${link(x.o)}</td><td>${x.w}</td><td>${x.l}</td><td>${x.w + x.l ? pc(x.w / (x.w + x.l)) : ''}</td></tr>`).join('')}</tbody></table></div><p class="note">Counts tables where both of you played, rated games only. Tied finishes aren't counted either way.</p>`;
-    h += `<h2>Results</h2><div class="tablewrap"><table><thead><tr><th></th><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>Points</th><th>Elo</th><th>Change</th></tr></thead><tbody>${p.results.slice().reverse().map(resultRow).join('')}</tbody></table></div>`;
+    h += `<h2>Results</h2><div class="tablewrap"><table><thead><tr><th></th><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th class="l">Landscapes</th><th>Points</th><th class="c">Elo</th><th>Change</th></tr></thead><tbody>${p.results.slice().reverse().map(resultRow).join('')}</tbody></table></div>`;
     return h;
   }
 
@@ -487,7 +496,16 @@
     if (R.loss) gr.push(grow('Biggest Elo drop in one game', link(R.loss.name), R.loss.date, sgn(R.loss.value)));
     if (R.bestDry && R.bestDry.value > 1) gr.push(grow('Longest run without a win', link(R.bestDry.name), '', R.bestDry.value + ' games'));
     if (R.topVP) gr.push(grow('Highest winning score', esc(winnerOf(R.topVP.game)), R.topVP.game.date, R.topVP.value + ' VP'));
+    if (R.mostLandscapes) gr.push(grow('Most landscape types in one game', esc(winnerOf(R.mostLandscapes.game)) + ' won', R.mostLandscapes.game.date, R.mostLandscapes.value + ' of ' + LANDSCAPES.length));
     if (gr.length) h += `<h2>Single-game records</h2><div class="tablewrap"><table class="plain"><thead><tr><th class="l">Record</th><th class="l">Who</th><th class="l">When</th><th>Value</th></tr></thead><tbody>${gr.join('')}</tbody></table></div>`;
+    if (O.tables && R.mostLandscapes) {
+      const LS = R.landscapeSplit, dist = R.landscapeTypesDist;
+      const side = (label, x) => `<div class="stat"><b>${x.games}</b><span>${label}${x.avgVP != null ? ` · avg winning VP ${f1(x.avgVP)}` : ''}${x.avgTable ? ` · ${f1(x.avgTable)} players` : ''}</span></div>`;
+      h += `<h2>Landscapes in play</h2><div class="tablewrap"><table><thead><tr><th class="l">Type</th><th>Games</th><th>Share of tables</th><th>Avg winning VP</th><th class="l">Best win % (min ${D.S.minGamesForRecords} games)</th></tr></thead><tbody>${LANDSCAPES.map(l => { const st = R.landscapeStats[l], b = R.bestByLandscape[l]; return `<tr><td class="l">${esc(l)}</td><td>${st ? st.games : 0}</td><td>${pc((st ? st.games : 0) / R.landscapeTables)}</td><td>${st && st.avgVP != null ? f1(st.avgVP) : '—'}</td><td class="l">${b ? `${link(b.name)} <b>${pc(b.value)}</b> <span class="meta">(${b.games} games)</span>` : '—'}</td></tr>`; }).join('')}</tbody></table></div>
+        <div class="stats">${side('games with landscapes', LS.with)}${side('games without', LS.without)}</div>
+        <div class="stats">${[0, 1, 2, 3, 4, 5].filter(k => dist[k]).map(k => `<div class="stat"><b>${dist[k]}</b><span>game${dist[k] === 1 ? '' : 's'} with ${k} landscape type${k === 1 ? '' : 's'}</span></div>`).join('')}</div>
+        <p class="note">Games logged before landscape tracking count as "without". A game with more than one type counts fully toward each.</p>`;
+    }
     h += '<h2>Sets in play</h2>' + (R.setsLogged ? `<div class="tablewrap"><table><thead><tr><th class="l">Set</th><th>Games</th><th>Share</th><th>Avg winning VP</th></tr></thead><tbody>${cnt(R.sets).map(([k, v]) => { const st = R.setStats[k]; return `<tr><td class="l">${setIcon(k, 20)} ${esc(k)}</td><td>${v}</td><td>${pc(v / R.setsLogged)}</td><td>${st && st.avgVP != null ? f1(st.avgVP) : '—'}</td></tr>`; }).join('')}</tbody></table></div><p class="note">A game tagged with more than one set counts fully toward each one — the kingdom was mixed, not split.</p>` : '<p class="empty">Fill the sets field when adding a game (separate sets with semicolons).</p>');
     h += `<h2>Season champions</h2><div class="tablewrap"><table><thead><tr><th class="l">Season</th><th class="l">Champion</th><th class="l">Dates</th></tr></thead><tbody>${D.seasons.map(s => `<tr><td class="l"><a href="${hashFor('season', gid, s.number)}">${esc(s.name)}</a></td><td class="l">${s.champion ? icon('champion', 20, 'Champion') + ' ' + (D.byName[s.champion] ? link(s.champion) : esc(s.champion)) : '<span class="meta">not decided</span>'}</td><td class="l">${s.ok ? Eng.fmtDay(s.start) + ' to ' + Eng.fmtDay(s.end) : ''}</td></tr>`).join('')}</tbody></table></div>`;
     return h;
