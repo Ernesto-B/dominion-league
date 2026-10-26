@@ -587,6 +587,11 @@
   function renderAddModal() {
     const root = $('#modalRoot');
     if (!root) return;
+    // The overlay is the scroll container and gets rebuilt on every state
+    // change, so carry its scroll position across the re-render instead of
+    // snapping back to the top.
+    const oldOverlay = $('#modalOverlay');
+    const scrollTop = oldOverlay ? oldOverlay.scrollTop : 0;
     root.innerHTML = `<div class="modal-overlay" id="modalOverlay"><div class="modal-box" tabindex="-1">
       <button class="modal-close" id="modalClose" type="button" aria-label="Close">×</button>
       ${addFormHTML()}</div></div>`;
@@ -595,7 +600,8 @@
     $('#modalClose').addEventListener('click', closeAddModal);
     $('#modalOverlay').addEventListener('click', e => { if (e.target.id === 'modalOverlay') closeAddModal(); });
     document.addEventListener('keydown', modalEscHandler);
-    const box = $('.modal-box'); if (box) box.focus();
+    $('#modalOverlay').scrollTop = scrollTop;
+    const box = $('.modal-box'); if (box) box.focus({ preventScroll: true });
   }
   function openAddModal(editId) {
     if (!me || !me.is_admin) return;
