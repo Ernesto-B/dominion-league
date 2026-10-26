@@ -42,6 +42,8 @@ create table if not exists games (
 -- a group's games invisible to anyone not in it. Null means "no group" —
 -- the whole-site-is-one-league case when no groups are configured at all.
 alter table games add column if not exists group_id text;
+-- Landscape card types in play (Events/Projects/Traits/Landmarks), '; '-separated like sets.
+alter table games add column if not exists landscapes text;
 create index if not exists games_group_id_idx on games(group_id);
 
 create table if not exists game_results (
@@ -249,10 +251,12 @@ $$;
 -- replacing it — drop the pre-group_id signatures explicitly so re-running
 -- this file doesn't leave a stale duplicate behind.
 drop function if exists add_game(date, text, text, text, int, int, text, jsonb);
+drop function if exists add_game(date, text, text, text, int, int, text, text, jsonb);
 drop function if exists edit_game(bigint, date, text, text, text, int, int, text, jsonb);
+drop function if exists edit_game(bigint, date, text, text, text, int, int, text, text, jsonb);
 
 create or replace function add_game(
-  p_date date, p_type text, p_sets text, p_strategy text,
+  p_date date, p_type text, p_sets text, p_landscapes text, p_strategy text,
   p_winner_vp int, p_minutes int, p_notes text,
   p_group_id text, -- null only valid when no groups are configured at all
   p_results jsonb -- [{"player_id": "...", "place": 1}, ...]
@@ -278,8 +282,8 @@ begin
     end if;
   end if;
 
-  insert into games (date, type, sets, strategy, winner_vp, minutes, notes, group_id, created_by)
-  values (p_date, coalesce(p_type, ''), p_sets, p_strategy, p_winner_vp, p_minutes, p_notes, p_group_id, auth.uid())
+  insert into games (date, type, sets, landscapes, strategy, winner_vp, minutes, notes, group_id, created_by)
+  values (p_date, coalesce(p_type, ''), p_sets, p_landscapes, p_strategy, p_winner_vp, p_minutes, p_notes, p_group_id, auth.uid())
   returning id into v_game_id;
 
   insert into game_results (game_id, player_id, place, vp)
@@ -291,7 +295,7 @@ end;
 $$;
 
 create or replace function edit_game(
-  p_game_id bigint, p_date date, p_type text, p_sets text, p_strategy text,
+  p_game_id bigint, p_date date, p_type text, p_sets text, p_landscapes text, p_strategy text,
   p_winner_vp int, p_minutes int, p_notes text, p_group_id text, p_results jsonb
 ) returns void
 language plpgsql
@@ -315,7 +319,7 @@ begin
   end if;
 
   update games set
-    date = p_date, type = coalesce(p_type, ''), sets = p_sets, strategy = p_strategy,
+    date = p_date, type = coalesce(p_type, ''), sets = p_sets, landscapes = p_landscapes, strategy = p_strategy,
     winner_vp = p_winner_vp, minutes = p_minutes, notes = p_notes, group_id = p_group_id
   where id = p_game_id;
 
@@ -362,8 +366,8 @@ begin
 end;
 $$;
 
-revoke execute on function add_game(date, text, text, text, int, int, text, text, jsonb) from anon;
-revoke execute on function edit_game(bigint, date, text, text, text, int, int, text, text, jsonb) from anon;
+revoke execute on function add_game(date, text, text, text, text, int, int, text, text, jsonb) from anon;
+revoke execute on function edit_game(bigint, date, text, text, text, text, int, int, text, text, jsonb) from anon;
 revoke execute on function delete_game(bigint) from anon;
 revoke execute on function delete_group(text) from anon;
 revoke execute on function mark_password_changed() from anon;

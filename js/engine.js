@@ -142,6 +142,7 @@
       games.push({
         line, day, date: fmtDay(day), type, places, names, n: names.length,
         sets: (r.sets || '').split(/[;|]/).map(x => x.trim()).filter(Boolean),
+        landscapes: (r.landscapes || '').split(/[;|]/).map(x => x.trim()).filter(Boolean),
         vp, playerVP, minutes: r.minutes ? +r.minutes : null,
         notes: r.notes || '', season: seasonOf(day),
       });

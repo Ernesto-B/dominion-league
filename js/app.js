@@ -60,6 +60,8 @@
     Adventures: 'adventures', Empires: 'empires', Renaissance: 'renaissance', Menagerie: 'menagerie', Plunder: 'plunder', 'Rising Sun': 'rising-sun',
   };
   const SET_NAMES = Object.keys(SET_ICONS);
+  const LANDSCAPES = ['Events', 'Projects', 'Traits', 'Landmarks'];
+  const landscapePills = g => (g.landscapes || []).map(l => `<span class="pill">${esc(l)}</span>`).join(' ');
   const setIconPath = name => { const slug = SET_ICONS[name]; return slug ? `icons/sets/${slug}.png` : null; };
   const setIcon = (name, size) => {
     const src = setIconPath(name);
@@ -471,7 +473,7 @@
     const rec = (label, x, fmt, iconSrc) => `<tr><td class="l">${iconSrc ? `<img class="staticon sm" src="${iconSrc}" alt=""> ` : ''}${label}</td><td class="name">${x ? link(x.name) : '—'}</td><td><b>${x ? fmt(x.value) : ''}</b></td></tr>`;
     let h = `<h1>Records</h1><p class="lede">Everything the league has produced so far.</p>${groupSwitcher('records', gid)}${banner()}`;
     h += `<div class="stats"><div class="stat"><b>${O.tables}</b><span>tables logged</span></div><div class="stat"><b>${O.nights}</b><span>game nights</span></div><div class="stat"><b>${O.playersRated}</b><span>rated players</span></div>
-      <div class="stat"><b>${O.avgTable ? f1(O.avgTable) : '—'}</b><span>players per table</span></div><div class="stat"><b>${O.avgMinutes ? f0(O.avgMinutes) : '—'}</b><span>avg minutes</span></div><div class="stat"><b>${O.avgVP ? f1(O.avgVP) : '—'}</b><span>avg winning VP</span></div></div>`;
+      <div class="stat"><b>${O.avgTable ? f1(O.avgTable) : '—'}</b><span>players per table</span></div><div class="stat"><b>${O.avgVP ? f1(O.avgVP) : '—'}</b><span>avg winning VP</span></div></div>`;
     h += `<div class="grid2"><div><h2>Player records</h2><div class="tablewrap"><table><thead><tr><th class="l">Record</th><th class="l">Holder</th><th>Value</th></tr></thead><tbody>
       ${rec('Current Elo leader', R.leader, f0, 'icons/stats/elo.png')}${rec('Highest Elo ever', R.peak, f0, 'icons/stats/peak-elo.png')}${rec('Most rated games', R.mostGames, f0, 'icons/stats/rated-games.png')}${rec('Most wins', R.mostWins, f0, 'icons/stats/wins.png')}
       ${rec('Best win % (min ' + D.S.minGamesForRecords + ' games)', R.bestWinPct, pc)}${rec('Best average points (min ' + D.S.minGamesForRecords + ' games)', R.bestAvgPts, f2, 'icons/stats/average-points.png')}${rec('Longest win streak', R.bestStreak, f0, 'icons/stats/win-streak.png')}${rec('Most season titles', R.mostTitles, f0, 'icons/champion.png')}
@@ -485,10 +487,8 @@
     if (R.loss) gr.push(grow('Biggest Elo drop in one game', link(R.loss.name), R.loss.date, sgn(R.loss.value)));
     if (R.bestDry && R.bestDry.value > 1) gr.push(grow('Longest run without a win', link(R.bestDry.name), '', R.bestDry.value + ' games'));
     if (R.topVP) gr.push(grow('Highest winning score', esc(winnerOf(R.topVP.game)), R.topVP.game.date, R.topVP.value + ' VP'));
-    if (R.longest) gr.push(grow('Longest game', esc(winnerOf(R.longest.game)) + ' won', R.longest.game.date, R.longest.value + ' min'));
-    if (R.shortest) gr.push(grow('Shortest game', esc(winnerOf(R.shortest.game)) + ' won', R.shortest.game.date, R.shortest.value + ' min'));
     if (gr.length) h += `<h2>Single-game records</h2><div class="tablewrap"><table class="plain"><thead><tr><th class="l">Record</th><th class="l">Who</th><th class="l">When</th><th>Value</th></tr></thead><tbody>${gr.join('')}</tbody></table></div>`;
-    h += '<h2>Sets in play</h2>' + (R.setsLogged ? `<div class="tablewrap"><table><thead><tr><th class="l">Set</th><th>Games</th><th>Share</th><th>Avg winning VP</th><th>Avg minutes</th></tr></thead><tbody>${cnt(R.sets).map(([k, v]) => { const st = R.setStats[k]; return `<tr><td class="l">${setIcon(k, 20)} ${esc(k)}</td><td>${v}</td><td>${pc(v / R.setsLogged)}</td><td>${st && st.avgVP != null ? f1(st.avgVP) : '—'}</td><td>${st && st.avgMinutes != null ? f0(st.avgMinutes) : '—'}</td></tr>`; }).join('')}</tbody></table></div><p class="note">A game tagged with more than one set counts fully toward each one — the kingdom was mixed, not split.</p>` : '<p class="empty">Fill the sets field when adding a game (separate sets with semicolons).</p>');
+    h += '<h2>Sets in play</h2>' + (R.setsLogged ? `<div class="tablewrap"><table><thead><tr><th class="l">Set</th><th>Games</th><th>Share</th><th>Avg winning VP</th></tr></thead><tbody>${cnt(R.sets).map(([k, v]) => { const st = R.setStats[k]; return `<tr><td class="l">${setIcon(k, 20)} ${esc(k)}</td><td>${v}</td><td>${pc(v / R.setsLogged)}</td><td>${st && st.avgVP != null ? f1(st.avgVP) : '—'}</td></tr>`; }).join('')}</tbody></table></div><p class="note">A game tagged with more than one set counts fully toward each one — the kingdom was mixed, not split.</p>` : '<p class="empty">Fill the sets field when adding a game (separate sets with semicolons).</p>');
     h += `<h2>Season champions</h2><div class="tablewrap"><table><thead><tr><th class="l">Season</th><th class="l">Champion</th><th class="l">Dates</th></tr></thead><tbody>${D.seasons.map(s => `<tr><td class="l"><a href="${hashFor('season', gid, s.number)}">${esc(s.name)}</a></td><td class="l">${s.champion ? icon('champion', 20, 'Champion') + ' ' + (D.byName[s.champion] ? link(s.champion) : esc(s.champion)) : '<span class="meta">not decided</span>'}</td><td class="l">${s.ok ? Eng.fmtDay(s.start) + ' to ' + Eng.fmtDay(s.end) : ''}</td></tr>`).join('')}</tbody></table></div>`;
     return h;
   }
@@ -515,11 +515,11 @@
         <td class="${sd > 0.0005 ? 'up-t' : sd < -0.0005 ? 'down-t' : ''}">${sd != null ? sgnSc(sd) : ''}</td>
         <td>${vp != null ? vp : '—'}</td></tr>`;
     }).join('');
-    return `<div class="tablewrap"><table class="plain"><thead><tr><th class="l">Player</th><th>Elo</th><th>Change</th><th>Season score</th><th>Change</th><th>VP</th></tr></thead><tbody>${rows}</tbody></table></div>${g.notes ? `<p class="note">${esc(g.notes)}</p>` : ''}`;
+    return `<div class="tablewrap"><table class="plain"><thead><tr><th class="l">Player</th><th>Elo</th><th>Change</th><th>Season score</th><th>Change</th><th>VP</th></tr></thead><tbody>${rows}</tbody></table></div>${(g.landscapes || []).length ? `<p class="note">Landscapes in play: ${landscapePills(g)}</p>` : ''}${g.notes ? `<p class="note">${esc(g.notes)}</p>` : ''}`;
   }
   function gamesTable(list, canEdit) {
     const cols = canEdit ? 9 : 8;
-    return `<div class="tablewrap"><table><thead><tr><th></th><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>VP</th><th>Min</th><th class="l">Notes</th>${canEdit ? '<th></th>' : ''}</tr></thead><tbody>${list.map(g => `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td class="l">${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 22) || esc(s)).join(' ')}</td><td>${g.vp ?? ''}</td><td>${g.minutes ?? ''}</td><td class="wrap">${esc(g.notes)}</td>${canEdit ? `<td><a href="#" data-edit="${g.line}" onclick="event.stopPropagation()">Edit</a></td>` : ''}</tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="${cols}">${gameDetail(g)}</td></tr>`).join('')}</tbody></table></div>`;
+    return `<div class="tablewrap"><table><thead><tr><th></th><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>VP</th><th class="l">Landscapes</th><th class="l">Notes</th>${canEdit ? '<th></th>' : ''}</tr></thead><tbody>${list.map(g => `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td class="l">${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 22) || esc(s)).join(' ')}</td><td>${g.vp ?? ''}</td><td class="wrap">${landscapePills(g)}</td><td class="wrap">${esc(g.notes)}</td>${canEdit ? `<td><a href="#" data-edit="${g.line}" onclick="event.stopPropagation()">Edit</a></td>` : ''}</tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="${cols}">${gameDetail(g)}</td></tr>`).join('')}</tbody></table></div>`;
   }
   const gf = { season: 'all', type: 'all', player: 'all', set: 'all' };
   function pageGames(gid) {
@@ -536,7 +536,7 @@
   }
 
   /* ---------- add / edit a game (admin only) ---------- */
-  const blankBS = () => ({ date: Eng.fmtDay(Eng.todayDay()), type: '', picked: [], tie: {}, sets: [], vp: {}, minutes: '', notes: '', editId: null });
+  const blankBS = () => ({ date: Eng.fmtDay(Eng.todayDay()), type: '', picked: [], tie: {}, sets: [], landscapes: [], vp: {}, notes: '', editId: null });
   let bs = blankBS();
   function previewBlock() {
     const pv = D.preview(bs.picked);
@@ -554,7 +554,7 @@
     });
     bs = {
       date: g.date, type: g.type === 'Regular' ? '' : g.type, picked, tie,
-      sets: g.sets.slice(), vp: Object.assign({}, g.playerVP), minutes: g.minutes || '', notes: g.notes, editId,
+      sets: g.sets.slice(), landscapes: (g.landscapes || []).slice(), vp: Object.assign({}, g.playerVP), notes: g.notes, editId,
     };
   }
   function addFormHTML() {
@@ -568,9 +568,8 @@
       <ol class="order" id="border">${bs.picked.map((n, i) => `<li><span class="nm">${i + 1}. ${esc(n)}</span><button class="ghost" data-up="${i}" type="button" aria-label="Move ${esc(n)} up"${i === 0 ? ' disabled' : ''}>↑</button><button class="ghost" data-dn="${i}" type="button" aria-label="Move ${esc(n)} down"${i === bs.picked.length - 1 ? ' disabled' : ''}>↓</button><label class="f vp">VP <input type="text" data-vp="${esc(n)}" size="3" value="${esc(bs.vp[n] ?? '')}"></label>${i ? `<label class="f tie"><input type="checkbox" data-tie="${esc(n)}"${bs.tie[n] ? ' checked' : ''}> tied with above</label>` : ''}</li>`).join('') || '<li class="meta">No players chosen yet.</li>'}</ol>
       ${previewBlock()}
       <p class="meta">3. Which expansions were in play?</p><div class="pills" id="bsets">${SET_NAMES.filter(n => enabledSets.has(n) || bs.sets.includes(n)).map(n => `<a href="#" data-n="${esc(n)}" ${bs.sets.includes(n) ? 'aria-current="true"' : ''}>${setIcon(n, 18)}${esc(n)}</a>`).join('')}</div>
-      <p class="meta" style="margin-top:14px">4. Optional details.</p><div class="controls">
-      <label class="f">Minutes <input type="text" id="bm" size="4" value="${esc(bs.minutes)}"></label></div>
-      <label class="f">Notes <input type="text" id="bn" size="50" value="${esc(bs.notes)}"></label>
+      <p class="meta" style="margin-top:14px">4. Any landscape cards in play?</p><div class="pills" id="bland">${LANDSCAPES.map(n => `<a href="#" data-n="${esc(n)}" ${bs.landscapes.includes(n) ? 'aria-current="true"' : ''}>${esc(n)}</a>`).join('')}</div>
+      <p class="meta" style="margin-top:14px">5. Optional details.</p>      <label class="f">Notes <input type="text" id="bn" size="50" value="${esc(bs.notes)}"></label>
       <div class="controls" style="margin-top:14px">
       <button id="bsave" type="button">${bs.editId ? 'Save changes' : 'Save game'}</button>
       ${bs.editId ? '<button id="bdel" class="ghost" type="button">Delete game</button><button id="bcancel" class="ghost" type="button">Cancel</button>' : ''}
@@ -627,7 +626,7 @@
   function wireAdd() {
     const rer = () => renderAddModal();
     const bind = (id, k) => { const el = $(id); el && el.addEventListener('input', () => { bs[k] = el.value; }); };
-    bind('#bd', 'date'); bind('#bty', 'type'); bind('#bm', 'minutes'); bind('#bn', 'notes');
+    bind('#bd', 'date'); bind('#bty', 'type'); bind('#bn', 'notes');
     const pick = $('#bpick');
     pick && pick.addEventListener('click', e => {
       const a = e.target.closest('a[data-n]'); if (!a) return; e.preventDefault();
@@ -640,6 +639,13 @@
       const a = e.target.closest('a[data-n]'); if (!a) return; e.preventDefault();
       const n = a.dataset.n, i = bs.sets.indexOf(n);
       if (i >= 0) bs.sets.splice(i, 1); else bs.sets.push(n);
+      rer();
+    });
+    const landPick = $('#bland');
+    landPick && landPick.addEventListener('click', e => {
+      const a = e.target.closest('a[data-n]'); if (!a) return; e.preventDefault();
+      const n = a.dataset.n, i = bs.landscapes.indexOf(n);
+      if (i >= 0) bs.landscapes.splice(i, 1); else bs.landscapes.push(n);
       rer();
     });
     const order = $('#border');
@@ -676,7 +682,8 @@
       });
       const args = {
         p_date: bs.date, p_type: bs.type || '', p_sets: bs.sets.length ? SET_NAMES.filter(n => bs.sets.includes(n)).join('; ') : null, p_strategy: null,
-        p_winner_vp: null, p_minutes: bs.minutes ? +bs.minutes : null, p_notes: bs.notes || null,
+        p_landscapes: bs.landscapes.length ? LANDSCAPES.filter(n => bs.landscapes.includes(n)).join('; ') : null,
+        p_winner_vp: null, p_minutes: null, p_notes: bs.notes || null,
         p_group_id: curGid, p_results: results,
       };
       save.disabled = true; msg('Saving…');
@@ -1074,10 +1081,22 @@
   }
 
   async function loadData() {
+    // PostgREST caps a response at 1000 rows by default, and game_results
+    // has one row per player per game, so page through it (and games) rather
+    // than silently truncating once the league grows past that.
+    const fetchAll = async (table, order) => {
+      const out = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await sb.from(table).select('*').order(order).range(from, from + 999);
+        if (error) return { data: null, error };
+        out.push(...data);
+        if (data.length < 1000) return { data: out, error: null };
+      }
+    };
     const [pr, gr, rr, grp, sr, stg] = await Promise.all([
       sb.from('players').select('*'),
-      sb.from('games').select('*'),
-      sb.from('game_results').select('*'),
+      fetchAll('games', 'id'),
+      fetchAll('game_results', 'id'),
       sb.from('groups').select('*'),
       sb.from('seasons').select('*'),
       sb.from('settings').select('*').maybeSingle(),
@@ -1105,7 +1124,7 @@
       const finish = [...byPlace.keys()].sort((a, b) => a - b).map(p => byPlace.get(p).join(' = ')).join(' > ');
       return {
         _line: g.id, date: g.date, type: g.type, finish,
-        sets: g.sets || '', playerVP, group_id: g.group_id || null,
+        sets: g.sets || '', landscapes: g.landscapes || '', playerVP, group_id: g.group_id || null,
         winner_vp: g.winner_vp ?? '', minutes: g.minutes ?? '', notes: g.notes || '',
       };
     });
@@ -1120,19 +1139,23 @@
   let authWired = false;
   async function boot() {
     try {
-      if (!cfg) {
-        const res = await fetch('data/config.json?v=' + Date.now());
+      // Config and session lookup don't depend on each other, so start both at once.
+      const cfgP = cfg ? null : fetch('data/config.json?v=' + Date.now()).then(res => {
         if (!res.ok) throw new Error('Could not load data/config.json (' + res.status + ').');
-        cfg = await res.json();
-      }
+        return res.json();
+      });
       if (!authWired) {
         authWired = true;
         sb.auth.onAuthStateChange(event => { if (event === 'SIGNED_OUT' && Object.keys(computedByGroup).length) { D = null; computedByGroup = {}; me = null; location.hash = ''; boot(); } });
       }
 
       const { data: { session } } = await sb.auth.getSession();
+      if (cfgP) cfg = await cfgP;
       if (!session) { main.innerHTML = pageLogin(); wireLogin(); setNavVisible(false); return; }
 
+      // The data load doesn't depend on the profile row, so overlap the two round trips.
+      const dataP = loadData();
+      dataP.catch(() => {});
       const { data: meRow, error: meErr } = await sb.from('players').select('*').eq('id', session.user.id).single();
       if (meErr || !meRow) {
         await sb.auth.signOut();
@@ -1142,7 +1165,7 @@
       me = meRow;
       if (me.must_change_password) { main.innerHTML = pagePwChange(); wirePwChange(); setNavVisible(false); return; }
 
-      const { rows, players, groups, seasons, enabledSets: enabled } = await loadData();
+      const { rows, players, groups, seasons, enabledSets: enabled } = await dataP;
       enabledSets = new Set(enabled);
       playerIdByName = new Map(players.map(p => [p.name, p.id]));
       seasonDbIds = seasons.map(s => s._id);
