@@ -138,6 +138,23 @@ create table if not exists public.dominion_artifact_mechanics (
   primary key (object_id, mechanic_id)
 );
 
+-- --------------------------------------------------------------- card text
+-- Printed card text, one row per record. record_id is the data package's own key: it matches a catalog id for
+-- most Kingdom cards, landscapes and Artifacts, but not all (Plunder uses 'dominion-plunder:<name>'), and some
+-- records (Loot, Rewards, Ruins, Shelters, ...) have no catalog row at all — so there is deliberately no foreign
+-- key. The app resolves record_id -> catalog object (src/dominion/model.js).
+create table if not exists public.dominion_card_text (
+  record_id            text primary key,
+  name                 text not null,
+  expansion            text not null,
+  record_kind          text not null,
+  card_text            text not null,
+  text_source          text,
+  text_status          text not null,
+  symbol_normalization text,
+  source_image_group   text
+);
+
 -- ------------------------------------------------- row level security
 -- Public reference data: anyone (anon or signed in) may READ, nobody may write through the API.
 -- Supabase grants ALL on new public tables to anon/authenticated by default, so revoke first.
@@ -147,7 +164,7 @@ begin
   foreach t in array array[
     'dominion_taxonomy', 'dominion_kingdom_piles', 'dominion_kingdom_cards', 'dominion_kingdom_printed_types',
     'dominion_kingdom_mechanics', 'dominion_landscapes', 'dominion_landscape_mechanics',
-    'dominion_artifacts', 'dominion_artifact_mechanics'
+    'dominion_artifacts', 'dominion_artifact_mechanics', 'dominion_card_text'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('revoke all on public.%I from anon, authenticated', t);

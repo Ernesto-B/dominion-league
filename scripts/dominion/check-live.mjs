@@ -29,7 +29,7 @@ for (const [v, n] of [['dominion_card_catalog', expected.dominion_kingdom_cards]
   const r = await count(v); ok(`view ${v} readable = ${n}`, !r.error && r.n === n, r.error ? r.error.message : `got ${r.n}`);
 }
 const { data: cat } = await sb.from('dominion_card_catalog').select('mechanic_ids').limit(1000);
-ok('view carries the mechanic links (sum = 1366)', Array.isArray(cat) && cat.reduce((s, r) => s + r.mechanic_ids.length, 0) === expected.dominion_kingdom_mechanics);
+ok('view carries the mechanic links (sum = 1634)', Array.isArray(cat) && cat.reduce((s, r) => s + r.mechanic_ids.length, 0) === expected.dominion_kingdom_mechanics);
 
 console.log('\nWrites must be refused for the public key (probes that cannot change data even if allowed):');
 const refused = e => !!e && (e.code === '42501' || /permission denied|row-level security|not allowed|JWT|401|403/i.test(`${e.message} ${e.code} ${e.status}`));

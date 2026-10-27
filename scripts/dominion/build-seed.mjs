@@ -26,7 +26,7 @@ function build() {
 -- Source CSV SHA-256:
 ${sums.join('\n')}
 --
--- Run ONLY AFTER 01_schema_and_rls.sql. Safe to re-run: it replaces the contents of the nine dominion_* tables
+-- Run ONLY AFTER 01_schema_and_rls.sql. Safe to re-run: it replaces the contents of the ten dominion_* tables
 -- with this release, in ONE transaction (readers never see a half-loaded catalog, and any failure — including
 -- the row-count assertions at the end — rolls everything back). It never touches the Elo/league tables.
 begin;

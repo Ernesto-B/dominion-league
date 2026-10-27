@@ -2,11 +2,12 @@
   "dominion_kingdom_cards": 331,
   "dominion_kingdom_piles": 310,
   "dominion_kingdom_printed_types": 482,
-  "dominion_kingdom_mechanics": 1366,
+  "dominion_kingdom_mechanics": 1634,
   "dominion_landscapes": 124,
   "dominion_landscape_mechanics": 228,
   "dominion_artifacts": 5,
   "dominion_artifact_mechanics": 6,
+  "dominion_card_text": 500,
   "dominion_taxonomy": 98,
   "mechanics_are_exhaustive": false
 }

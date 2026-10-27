@@ -14,7 +14,7 @@ describe('the committed dataset matches the data package', () => {
     expect(t.dominion_kingdom_piles).toHaveLength(310);
     expect(t.dominion_landscapes).toHaveLength(124);
     expect(t.dominion_artifacts).toHaveLength(5);
-    expect(t.dominion_kingdom_mechanics).toHaveLength(1366);
+    expect(t.dominion_kingdom_mechanics).toHaveLength(1634);
     expect(t.dominion_taxonomy).toHaveLength(98);
   });
   it('every table matches expected_counts.json (the package reference — never edited to fit)', () => {
@@ -86,7 +86,7 @@ describe('generated SQL and source files', () => {
   });
   it('the CSVs still match their recorded SHA-256 checksums', () => {
     const lines = readFileSync(path.join(ROOT, 'supabase/dominion/seed_csv.sha256'), 'utf8').trim().split('\n');
-    expect(lines).toHaveLength(9);
+    expect(lines).toHaveLength(10);
     for (const line of lines) {
       const [sum, file] = line.trim().split(/\s+/);
       expect(createHash('sha256').update(readFileSync(path.join(CSV_DIR, file))).digest('hex'), file).toBe(sum);

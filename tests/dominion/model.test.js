@@ -116,9 +116,9 @@ describe('piles and relations', () => {
 });
 
 describe('mechanics are provisional', () => {
-  it('totals 1,366 recorded relationships across 93 of 98 taxonomy tags', () => {
-    expect(s.mechanics.relationships).toBe(1366);
-    expect(s.mechanics.distinct).toBe(93);
+  it('totals 1,634 recorded relationships across 96 of 98 taxonomy tags', () => {
+    expect(s.mechanics.relationships).toBe(1634);
+    expect(s.mechanics.distinct).toBe(96);
     expect(s.mechanics.taxonomySize).toBe(98);
   });
   it('knows how many cards are still pending detailed verification', () => {

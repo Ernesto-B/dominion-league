@@ -170,8 +170,9 @@ technique is the best way to prove any refactor *doesn't* change what users see:
 - **Supabase silently truncates responses (1,000 rows by default).** Anything that could grow past that goes
   through `fetchAllRows` (count first, page with a stable order, throw on mismatch) — never a bare `.select()`.
   Client-side filtering is only valid because the complete set was fetched and verified.
-- **Never invent card text, artwork, descriptions or strategy.** The dataset has none; the UI omits those
-  sections and says so. The landscape `notes` are a classification summary and are labelled as not official text.
+- **Never invent card text, artwork, descriptions or strategy.** Card text comes only from `dominion_card_text`
+  (a hand transcription, flagged as such on the page); the dataset has no artwork or strategy, so the UI omits those
+  and says so. The landscape `notes` are a classification summary and are labelled as not official text.
 - **Ownership isn't hardcoded.** The owned expansions are whatever the catalog contains; `constants.js` only
   labels and orders the known ones. The schema forbids First Edition rows.
 - The data package is authoritative. Row counts live in `supabase/dominion/expected_counts.json`; if a test fails

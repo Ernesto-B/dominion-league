@@ -18,6 +18,7 @@ export const TABLES = [
   { table: 'dominion_landscape_mechanics',  csv: 'landscape_mechanics.csv',   ints: [] },
   { table: 'dominion_artifacts',            csv: 'artifacts.csv',             ints: ['physical_copies', 'cost_coins'] },
   { table: 'dominion_artifact_mechanics',   csv: 'artifact_mechanics.csv',    ints: [] },
+  { table: 'dominion_card_text',            csv: 'card_text.csv',             ints: [] },
 ];
 
 export function readTable(spec, dir = CSV_DIR) {

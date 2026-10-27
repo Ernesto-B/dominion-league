@@ -6,7 +6,7 @@ import { landscapeHref } from '../links.js';
 import { MECHANICS_NOTE, PLURAL, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
-import { Chip, ExpansionBadge, Section, ExternalLink, statusLabel } from '../components/bits.jsx';
+import { Chip, ExpansionBadge, Section, ExternalLink, statusLabel, rowLink } from '../components/bits.jsx';
 
 const SORTS = [['name', 'Name'], ['type', 'Type'], ['expansion', 'Expansion'], ['trigger', 'When it applies']];
 // table columns that sort: [sort key, heading, th class]
@@ -78,7 +78,7 @@ export default function Landscapes() {
             <caption className="dn-sr">Landscapes matching the current filters</caption>
             <SortHeaders columns={COLUMNS} sort={f.sort} dir={f.dir} onSort={sortBy} />
             <tbody>{rows.map(l => (
-              <tr key={l.id}>
+              <tr key={l.id} {...rowLink(landscapeHref(l.id))}>
                 <td className="l name"><a href={landscapeHref(l.id)}>{l.name}</a><br /><small className="meta"><ExpansionBadge name={l.expansion} size={14} /></small></td>
                 <td className="l"><span className="pill">{l.type}</span></td>
                 <td className="l dn-hide-sm">{l.trigger ? humanize(l.trigger) : '—'}</td>

@@ -3,9 +3,9 @@ import { cardHref, dominionHref } from '../links.js';
 import { presetCardFilters } from '../filterStore.js';
 import { formatCost, pileOf, pileMembers, sharedMechanicCards } from '../model.js';
 import CostIcons from '../components/Cost.jsx';
-import { MECHANICS_NOTE, humanize } from '../constants.js';
+import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
-import { ExpansionBadge, TypePills, Section, Stat, statusLabel } from '../components/bits.jsx';
+import { ExpansionBadge, TypePills, Section, Stat, CardText, statusLabel } from '../components/bits.jsx';
 
 export default function CardDetail({ id }) {
   const { catalog } = useCatalog();
@@ -43,6 +43,10 @@ export default function CardDetail({ id }) {
         <Stat value={card.types.length} label={card.types.length === 1 ? 'printed type' : 'printed types'} />
       </div>
 
+      <Section title="Card text" id="cd-text">
+        <div className="builder"><CardText text={card.text} hasAnyText={catalog.meta.textRecordCount > 0} /></div>
+      </Section>
+
       <Section title="Supply pile" id="cd-pile">
         <div className="builder">
           {pile && pile.names > 1 ? (
@@ -74,7 +78,6 @@ export default function CardDetail({ id }) {
           ) : (
             <p style={{ margin: 0 }}>No mechanics are recorded for this card yet — that does <b>not</b> mean it has none.</p>
           )}
-          <p className="note" style={{ marginBottom: 0 }}>{MECHANICS_NOTE}</p>
         </div>
       </Section>
 
@@ -93,11 +96,8 @@ export default function CardDetail({ id }) {
               ))}</tbody>
             </table>
           </div>
-          <p className="note">Based only on tags that are recorded for both cards — a recorded overlap, not a statement about how the cards play.</p>
         </Section>
       )}
-
-      <p className="note">Card text and artwork aren’t part of this collection data, so they aren’t shown here.</p>
     </>
   );
 }

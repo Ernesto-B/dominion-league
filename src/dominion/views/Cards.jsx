@@ -6,7 +6,7 @@ import { cardHref } from '../links.js';
 import { MECHANICS_NOTE, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
-import { Chip, ExpansionBadge, TypePills } from '../components/bits.jsx';
+import { Chip, ExpansionBadge, TypePills, rowLink } from '../components/bits.jsx';
 import CostIcons, { CoinIcon, DebtIcon, PlainDebtIcon } from '../components/Cost.jsx';
 
 const SORTS = [['name', 'Name'], ['expansion', 'Expansion'], ['types', 'Printed type'], ['cost', 'Cost'], ['copies', 'Copies'], ['pile', 'Shared pile']];
@@ -119,7 +119,7 @@ export default function Cards() {
             <SortHeaders columns={COLUMNS} sort={f.sort} dir={f.dir} onSort={sortBy} />
             <tbody>{rows.map(c => {
               return (
-                <tr key={c.id}>
+                <tr key={c.id} {...rowLink(cardHref(c.id))}>
                   <td className="l name"><a href={cardHref(c.id)}>{c.name}</a>{c.previousName && <small className="meta"> (was {c.previousName})</small>}<br /><small className="meta"><ExpansionBadge name={c.expansion} size={14} /></small></td>
                   <td className="l"><TypePills types={c.types} /></td>
                   <td className="dn-cost-cell"><CostIcons coins={c.coins} debt={c.debt} overpay={c.overpay} size={26} /></td>

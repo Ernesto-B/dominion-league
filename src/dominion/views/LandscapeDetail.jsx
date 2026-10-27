@@ -1,9 +1,9 @@
 import { useCatalog } from '../CatalogContext.jsx';
 import { dominionHref, landscapeHref } from '../links.js';
 import { presetLandscapeFilters } from '../filterStore.js';
-import { MECHANICS_NOTE, humanize } from '../constants.js';
+import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
-import { ExpansionBadge, Section, Stat, ExternalLink, statusLabel } from '../components/bits.jsx';
+import { ExpansionBadge, Section, Stat, CardText } from '../components/bits.jsx';
 
 export default function LandscapeDetail({ id }) {
   const { catalog } = useCatalog();
@@ -35,39 +35,30 @@ export default function LandscapeDetail({ id }) {
         {l.trigger && <Stat value={humanize(l.trigger)} label="when it applies" />}
       </div>
 
-      <div className="grid2">
-        <Section title="Recorded tags" id="ld-tags">
-          <div className="builder">
-            {l.mechanicIds.length ? (
-              <ul className="dn-mech-detail">{l.mechanicIds.map(t => {
-                const def = catalog.taxonomy.get(t);   // only a few landscape tags exist in the Kingdom taxonomy
-                return (
-                  <li key={t}>
-                    <a href={dominionHref('landscapes')} onClick={() => presetLandscapeFilters({ mechanics: [t] })} title="See every landscape recorded with this tag"><b>{humanize(t)}</b></a>
-                    {def && <span className="meta dn-def">{def.definition}</span>}
-                  </li>
-                );
-              })}</ul>
-            ) : <p style={{ margin: 0 }}>No tags are recorded for this landscape yet.</p>}
-            {l.effectCategories.length > 0 && <p className="meta" style={{ marginBottom: 0 }}>Effect categories: {l.effectCategories.map(humanize).join(' · ')}</p>}
-            <p className="note" style={{ marginBottom: 0 }}>{MECHANICS_NOTE}</p>
-          </div>
-        </Section>
+      <Section title="Card text" id="ld-text">
+        <div className="builder"><CardText text={l.text} hasAnyText={catalog.meta.textRecordCount > 0} /></div>
+      </Section>
 
-        <Section title="Verification" id="ld-verify">
-          <div className="builder">
-            <dl className="dn-dl">
-              <dt>Status</dt><dd>{statusLabel(l.verification)}</dd>
-              {l.scope && <><dt>Classification</dt><dd>{statusLabel(l.scope)}</dd></>}
-              {l.sourceUrl && <><dt>Source</dt><dd><ExternalLink href={l.sourceUrl}>Open reference ↗</ExternalLink></dd></>}
-            </dl>
-          </div>
-        </Section>
-      </div>
+      <Section title="Recorded tags" id="ld-tags">
+        <div className="builder">
+          {l.mechanicIds.length ? (
+            <ul className="dn-mech-detail">{l.mechanicIds.map(t => {
+              const def = catalog.taxonomy.get(t);   // only a few landscape tags exist in the Kingdom taxonomy
+              return (
+                <li key={t}>
+                  <a href={dominionHref('landscapes')} onClick={() => presetLandscapeFilters({ mechanics: [t] })} title="See every landscape recorded with this tag"><b>{humanize(t)}</b></a>
+                  {def && <span className="meta dn-def">{def.definition}</span>}
+                </li>
+              );
+            })}</ul>
+          ) : <p style={{ margin: 0 }}>No tags are recorded for this landscape yet.</p>}
+          {l.effectCategories.length > 0 && <p className="meta" style={{ marginBottom: 0 }}>Effect categories: {l.effectCategories.map(humanize).join(' · ')}</p>}
+        </div>
+      </Section>
 
       {l.note && (
         <Section title="Classification note" id="ld-note">
-          <div className="builder"><p style={{ margin: 0 }}>{l.note}</p><p className="note" style={{ marginBottom: 0 }}>A short summary written for this collection’s classification — not the official card text.</p></div>
+          <div className="builder"><p style={{ margin: 0 }}>{l.note}</p></div>
         </Section>
       )}
 
@@ -82,7 +73,6 @@ export default function LandscapeDetail({ id }) {
           </table></div>
         </Section>
       )}
-      <p className="note">Card text and artwork aren’t part of this collection data, so they aren’t shown here.</p>
     </>
   );
 }

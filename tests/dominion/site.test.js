@@ -87,7 +87,7 @@ describe('the Dominion SQL', () => {
   const schema = readFileSync(path.join(dir, '01_schema_and_rls.sql'), 'utf8');
   const seed = readFileSync(path.join(dir, '02_seed_data.sql'), 'utf8');
   const tables = [...schema.matchAll(/create table if not exists public\.(\w+)/g)].map(m => m[1]);
-  it('creates nine tables, all dominion_ prefixed', () => { expect(tables).toHaveLength(9); tables.forEach(t => expect(t).toMatch(/^dominion_/)); });
+  it('creates ten tables, all dominion_ prefixed', () => { expect(tables).toHaveLength(10); tables.forEach(t => expect(t).toMatch(/^dominion_/)); });
   it('puts every table through the RLS loop (enable RLS, revoke all, SELECT-only policy)', () => {
     for (const t of tables) expect(schema, t).toContain(`'${t}'`);
     expect(schema).toMatch(/enable row level security/); expect(schema).toMatch(/revoke all on public\.%I from anon, authenticated/);

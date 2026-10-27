@@ -342,6 +342,8 @@ td.dn-cost-cell{white-space:nowrap}
 .dn-mech-note{margin:10px 0 0}
 .dn-table small{font-size:12px}
 .dn-table td.name{line-height:1.35}
+.dn-table tr.dn-rowlink{cursor:pointer}
+.dn-table tr.dn-rowlink:hover td{background:rgba(127,127,127,.12)}
 .dn-total th,.dn-total td{border-top:2px solid var(--line)}
 .dn-plain-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}
 .dn-dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}
@@ -350,6 +352,12 @@ td.dn-cost-cell{white-space:nowrap}
 .dn-mech-detail{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:10px}
 .dn-mech-detail li{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline}
 .dn-def{flex-basis:100%;font-size:13px}
+.dn-cardtext{white-space:pre-line;max-width:60ch}
+.dn-cardtext p{margin:0 0 .7em}
+.dn-nobr{white-space:nowrap}
+.dn-cardtext-coin{height:1.5em;width:1.5em;vertical-align:middle;margin:-.3em .05em}
+.dn-cardtext-vp{height:1.4em;width:auto;vertical-align:middle;margin:-.3em .05em}
+.dn-cardtext p:last-child{margin-bottom:0}
 .dn-more summary{cursor:pointer;margin:14px 0 10px;font-size:14px}
 .dn-checks{list-style:none;padding:0;margin:0;display:grid;gap:6px;font-size:14px}
 .dn-checks .ok{color:var(--felt)} .dn-checks .bad{color:var(--brick);font-weight:600}

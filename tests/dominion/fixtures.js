@@ -35,6 +35,7 @@ export function rawFromCsv() {
     artifacts: t.dominion_artifacts.map(a => ({ ...Object.fromEntries(Object.entries(a).map(([k, v]) => [k, nul(v)])), physical_copies: int(a.physical_copies), cost_coins: int(a.cost_coins) })),
     artifactMechanics: t.dominion_artifact_mechanics,
     taxonomy: t.dominion_taxonomy,
+    cardText: t.dominion_card_text,
     mechanicRelationshipCount: t.dominion_kingdom_mechanics.length,
   };
 }
@@ -75,7 +76,7 @@ export function fakeClient(tables, { serverMax = 1000, lieAboutCount = null } = 
 export function tablesFromRaw(raw) {
   return {
     dominion_card_catalog: raw.cards, dominion_kingdom_piles: raw.piles, dominion_landscape_catalog: raw.landscapes,
-    dominion_artifacts: raw.artifacts, dominion_artifact_mechanics: raw.artifactMechanics, dominion_taxonomy: raw.taxonomy,
+    dominion_artifacts: raw.artifacts, dominion_artifact_mechanics: raw.artifactMechanics, dominion_taxonomy: raw.taxonomy, dominion_card_text: raw.cardText,
     dominion_kingdom_mechanics: Array.from({ length: raw.mechanicRelationshipCount }, (_, i) => ({ card_id: 'x' + i })),
   };
 }

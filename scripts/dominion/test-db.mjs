@@ -13,6 +13,8 @@ import { ROOT } from './lib/tables.mjs';
 
 const DIR = path.join(ROOT, 'supabase', 'dominion');
 const expected = JSON.parse(readFileSync(path.join(DIR, 'expected_counts.json'), 'utf8'));
+// tables that deliberately differ from the original bundle (Batch 81 mechanics snapshot; card text added later)
+const UPDATED_SINCE_BUNDLE = ['dominion_kingdom_mechanics', 'dominion_card_text'];
 const BUNDLE = process.env.DOMINION_BUNDLE_DIR || path.join(homedir(), 'Downloads', 'dominion_supabase_react_bundle_v1');
 
 // ---- locate postgres binaries
@@ -115,11 +117,11 @@ try {
   }
   const writes = (t, set) => [`insert into public.${t} select * from public.${t} limit 0`, `update public.${t} set ${set}`, `delete from public.${t}`, `truncate public.${t}`];
   let denied = 0, total = 0;
-  for (const role of ['anon', 'authenticated']) for (const t of ['dominion_taxonomy', 'dominion_kingdom_piles', 'dominion_kingdom_cards', 'dominion_kingdom_printed_types', 'dominion_kingdom_mechanics', 'dominion_landscapes', 'dominion_landscape_mechanics', 'dominion_artifacts', 'dominion_artifact_mechanics']) {
-    const set = { dominion_taxonomy: "status='x'", dominion_kingdom_piles: "card_ids='x'", dominion_kingdom_cards: "name='x'", dominion_kingdom_printed_types: "verification_status='x'", dominion_kingdom_mechanics: "scope_note='x'", dominion_landscapes: "name='x'", dominion_landscape_mechanics: "source_url='x'", dominion_artifacts: "name='x'", dominion_artifact_mechanics: "source_url='x'" }[t];
+  for (const role of ['anon', 'authenticated']) for (const t of ['dominion_taxonomy', 'dominion_kingdom_piles', 'dominion_kingdom_cards', 'dominion_kingdom_printed_types', 'dominion_kingdom_mechanics', 'dominion_landscapes', 'dominion_landscape_mechanics', 'dominion_artifacts', 'dominion_artifact_mechanics', 'dominion_card_text']) {
+    const set = { dominion_taxonomy: "status='x'", dominion_kingdom_piles: "card_ids='x'", dominion_kingdom_cards: "name='x'", dominion_kingdom_printed_types: "verification_status='x'", dominion_kingdom_mechanics: "scope_note='x'", dominion_landscapes: "name='x'", dominion_landscape_mechanics: "source_url='x'", dominion_artifacts: "name='x'", dominion_artifact_mechanics: "source_url='x'", dominion_card_text: "card_text='x'" }[t];
     for (const sql of writes(t, set)) { total++; const x = psql('dn', sql, { role }); if (!x.ok && /permission denied/i.test(x.err)) denied++; else console.log(`      UNEXPECTED (${role}): ${sql} -> ${x.ok ? 'allowed' : x.err}`); }
   }
-  check(`anon/authenticated: INSERT/UPDATE/DELETE/TRUNCATE all denied on all 9 tables (${total} attempts)`, denied === total, `${denied}/${total} denied`);
+  check(`anon/authenticated: INSERT/UPDATE/DELETE/TRUNCATE all denied on all 10 tables (${total} attempts)`, denied === total, `${denied}/${total} denied`);
   check('catalog row counts unchanged after the write attempts', must('dn', 'select count(*) from dominion_kingdom_cards') === '331');
   // defence in depth: even if someone later GRANTs write, RLS (no write policy) still blocks it
   const rls = psql('dn', `begin; grant insert on public.dominion_taxonomy to anon; set local role anon; insert into public.dominion_taxonomy values ('zz','zz','zz'); rollback;`);
@@ -131,7 +133,7 @@ try {
 
   // ---- 5. view contents agree with the tables
   check('card view: multi-type cards carry several printed types', Number(must('dn', `select count(*) from dominion_card_catalog where cardinality(printed_types_list) > 1`)) === 122);
-  check('card view: recorded mechanic links total 1,366', must('dn', `select sum(cardinality(mechanic_ids)) from dominion_card_catalog`) === '1366');
+  check('card view: recorded mechanic links total 1,634', must('dn', `select sum(cardinality(mechanic_ids)) from dominion_card_catalog`) === '1634');
   check('card view: printed_types text matches the printed-types table', must('dn', `select count(*) from dominion_card_catalog where array_to_string(printed_types_list,'|') <> printed_types and (select string_agg(x,'|' order by x) from unnest(string_to_array(printed_types,'|')) x) <> array_to_string(printed_types_list,'|')`) === '0');
 
   // ---- 6. equals what the bundle's own schema + seed produce (proof the data wasn't altered)
@@ -139,7 +141,7 @@ try {
     must('postgres', 'create database bundle'); must('bundle', 'grant usage on schema public to public');
     const b1 = loadSql('bundle', path.join(BUNDLE, 'supabase', '01_schema_and_rls.sql')), b2 = loadSql('bundle', path.join(BUNDLE, 'supabase', '02_seed_data.sql'));
     if (!b1.ok || !b2.ok) check('bundle schema/seed load for comparison', false, (b1.err || b2.err).split('\n')[0]);
-    else for (const t of tableKeys) {
+    else for (const t of tableKeys.filter(k => !UPDATED_SINCE_BUNDLE.includes(k))) {
       const h = db => must(db, `select md5(coalesce(string_agg(x::text, E'\\n' order by x::text), '')) from public.${t} x`);
       check(`${t}: contents identical to the bundle's own import`, h('dn') === h('bundle'));
     }

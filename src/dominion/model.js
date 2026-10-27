@@ -38,8 +38,26 @@ function normalizeLandscape(r) {
   };
 }
 
+/* Card text records keep the data package's own record_id. It equals the catalog id except for Plunder, whose
+   records are 'dominion-plunder:<name>' for its cards, Events and Traits alike (the catalog says 'plunder:<name>',
+   'plunder:event:<name>', 'plunder:trait:<name>'). Records with no catalog row (Loot, Rewards, Ruins, ...) are
+   simply never looked up. */
+const TEXT_ALIASES = { 'plunder:jewelled-egg': 'dominion-plunder:jeweled-egg' };   // the two datasets spell it differently
+const textKeys = {
+  card: id => [id, id.replace(/^plunder:/, 'dominion-plunder:'), TEXT_ALIASES[id]],
+  landscape: id => [id, id.replace(/^plunder:(?:event|trait):/, 'dominion-plunder:')],
+  artifact: id => [id],
+};
+
 export function buildCatalog(raw) {
-  const cards = raw.cards.map(normalizeCard);
+  const textRecords = new Map((raw.cardText || []).map(t => [t.record_id, t]));
+  const withText = (kind, obj) => {
+    const rec = textKeys[kind](obj.id).map(k => textRecords.get(k)).find(Boolean);
+    obj.text = rec ? rec.card_text : null;
+    obj.textStatus = rec ? rec.text_status : null;
+    return obj;
+  };
+  const cards = raw.cards.map(r => withText('card', normalizeCard(r)));
   const piles = raw.piles.map(p => ({
     expansion: p.expansion, id: p.pile_id, key: `${p.expansion}::${p.pile_id}`,
     names: num(p.distinct_names), copies: num(p.physical_copies), cardIds: list(p.card_ids),
@@ -47,10 +65,10 @@ export function buildCatalog(raw) {
   // a card in a split/mixed pile (Knights, Castles, "Catapult / Rocks", ...) carries that pile's name; otherwise null
   const pilesByKey0 = new Map(piles.map(p => [p.key, p]));
   cards.forEach(c => { const p = pilesByKey0.get(c.pileKey); c.sharedPile = p && p.names > 1 ? p.id : null; });
-  const landscapes = raw.landscapes.map(normalizeLandscape);
+  const landscapes = raw.landscapes.map(r => withText('landscape', normalizeLandscape(r)));
   const artifactTags = new Map();
   (raw.artifactMechanics || []).forEach(m => { (artifactTags.get(m.object_id) || artifactTags.set(m.object_id, []).get(m.object_id)).push(m.mechanic_id); });
-  const artifacts = raw.artifacts.map(a => ({
+  const artifacts = raw.artifacts.map(a => withText('artifact', {
     id: a.object_id, name: a.name, expansion: a.expansion, kind: a.object_kind, copies: num(a.physical_copies) ?? 1,
     behaviour: a.persistent_or_contested || null, sourceUrl: a.source_url || null, verification: a.verification_status,
     tags: artifactTags.get(a.object_id) || list(a.initial_effect_tags),
@@ -69,7 +87,7 @@ export function buildCatalog(raw) {
     artifacts, taxonomy, expansions,
     ownedExpansions: expansions.filter(e => owned.has(e.name)),
     landscapeTypes: LANDSCAPE_TYPES.filter(t => landscapes.some(l => l.type === t)),
-    meta: { mechanicRelationshipCount: raw.mechanicRelationshipCount ?? null },
+    meta: { mechanicRelationshipCount: raw.mechanicRelationshipCount ?? null, textRecordCount: textRecords.size },
   };
 }
 

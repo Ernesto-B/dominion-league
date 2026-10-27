@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { realCatalog } from './fixtures.js';
 import { CatalogProvider } from '../../src/dominion/CatalogContext.jsx';
 import DominionPage, { DominionView } from '../../src/dominion/DominionPage.jsx';
+import { rowLink } from '../../src/dominion/components/bits.jsx';
 import { ErrorState } from '../../src/dominion/components/States.jsx';
 import CostIcons, { coinIconSrc, debtIconSrc } from '../../src/dominion/components/Cost.jsx';
 import { existsSync } from 'node:fs';
@@ -192,10 +193,10 @@ describe('Card detail', () => {
   it('shows the stored facts for a card and nothing invented', () => {
     const html = render(`cards/${encodeURIComponent('empires:fortune')}`), t = text(html);
     expect(t).toMatch(/Fortune/); expect(html).toContain('aria-label="8 coins and 8 Debt"'); expect(html).toContain('width="40"'); expect(t).toMatch(/Empires/); expect(t).toMatch(/Gladiator \/ Fortune/);
-    expect(t).toMatch(/Recorded mechanics/);
+    expect(t).toMatch(/Recorded mechanics/); expect(t).not.toMatch(/not an exhaustive list/);
     expect(t).not.toMatch(/Verification/); expect(html).not.toContain('cd-verify'); expect(t).not.toMatch(/Open reference|Review note|Secondary reference list/);   // internal provenance isn't shown to visitors
-    expect(t).toMatch(/Card text and artwork aren.t part of this collection data/);
-    expect(html).not.toMatch(/<img[^>]+(card|art)/i);
+    expect(t).toMatch(/Card text/); expect(t).not.toMatch(/Artwork isn.t part of this collection data|Based only on tags that are recorded/);
+    expect(html).not.toMatch(/<img[^>]+src="[^"]*(card|art)/i);   // no card artwork (the inline symbol icons are fine)
   });
   it('lists the cards that share a split pile, as links', () => {
     const t = text(render(`cards/${encodeURIComponent('empires:catapult')}`));
@@ -215,6 +216,63 @@ describe('Card detail', () => {
   it('handles an unknown card id gracefully', () => { expect(text(render('cards/nope%3Anothing'))).toMatch(/Card not found/); });
 });
 
+describe('Card text', () => {
+  it('every Kingdom card, landscape and Artifact in the catalog has its printed text', () => {
+    expect(catalog.cards.filter(c => !c.text).map(c => c.id)).toEqual([]);
+    expect(catalog.landscapes.filter(l => !l.text).map(l => l.id)).toEqual([]);
+    expect(catalog.artifacts.filter(a => !a.text).map(a => a.id)).toEqual([]);
+  });
+  it('resolves Plunder, whose text records use a different id shape', () => {
+    expect(catalog.cardsById.get('plunder:cage').text).toMatch(/\S/);
+    expect(catalog.landscapesById.get('plunder:event:bury').text).toMatch(/\S/);
+    expect(catalog.landscapesById.get('plunder:trait:cheap').text).toMatch(/\S/);
+  });
+  it('shows the text on a card page, one paragraph per printed paragraph, with the transcription caveat', () => {
+    const html = render(`cards/${encodeURIComponent('dominion-base-game:artisan')}`), t = text(html);
+    expect(html).toMatch(/<p>Gain a card to your hand costing up to <span class="dn-nobr"><img[^>]+src="icons\/costs\/coin-5\.png"[^>]+alt="\$5"\/><\/span>\.<\/p><p>Put a card from your hand onto your deck\.<\/p>/);
+    expect(t).not.toMatch(/Transcribed by hand/);
+  });
+  it('keeps a "+" glued to the coin icon that follows it, so the text cannot wrap between them', () => {
+    const html = render(`landscapes/${encodeURIComponent('menagerie:way:way_of_the_chameleon')}`);
+    expect(html).toMatch(/<span class="dn-nobr">\+<img[^>]+alt="\$"\/><\/span>/);
+  });
+  it('shows the VP shield and the blank Debt icon in place of "VP" and "Debt"', () => {
+    const vp = render(`cards/${encodeURIComponent('dominion-base-game:gardens')}`);
+    expect(vp).toMatch(/<img[^>]+src="icons\/costs\/vp\.png"[^>]+alt="VP"/);
+    expect(render(`landscapes/${encodeURIComponent('empires:event:tax')}`)).toMatch(/<img[^>]+src="icons\/costs\/debt\.png"[^>]+alt="Debt"/);
+    expect(render(`landscapes/${encodeURIComponent('renaissance:project:capitalism')}`)).toMatch(/<img[^>]+src="icons\/costs\/coin\.png"[^>]+alt="\$"/);
+    ['vp', 'debt', 'coin'].forEach(n => expect(existsSync(path.join(ROOT, 'public/icons/costs', n + '.png'))).toBe(true));
+  });
+  it('shows the text on landscape pages too', () => {
+    expect(text(render(`landscapes/${encodeURIComponent('plunder:trait:cheap')}`))).toMatch(/Card text/);
+  });
+  it('says so when the text table is not installed, instead of showing an empty section', () => {
+    const bare = { ...catalog, meta: { ...catalog.meta, textRecordCount: 0 }, cardsById: new Map([...catalog.cardsById].map(([k, c]) => [k, { ...c, text: null }])) };
+    const t = text(renderToStaticMarkup(<CatalogProvider catalog={bare}><DominionView arg={`cards/${encodeURIComponent('dominion-base-game:artisan')}`} /></CatalogProvider>));
+    expect(t).toMatch(/Card text isn.t available yet/);
+  });
+});
+
+describe('clickable table rows', () => {
+  it('every row in the Kingdom cards and landscapes tables is a whole-row link', () => {
+    for (const [view, n] of [['cards', 331], ['landscapes', 124]]) {
+      const html = render(view);
+      expect((html.match(/<tr class="dn-rowlink"/g) || []).length).toBe(n);
+    }
+  });
+  it('a click on the row (not on a link or a text selection) goes to the item', () => {
+    const go = (e, selection = '') => {
+      globalThis.window = { location: { hash: '' }, getSelection: () => selection };
+      rowLink('#/dominion/cards/x').onClick({ button: 0, target: { closest: () => null }, ...e });
+      const hash = globalThis.window.location.hash; delete globalThis.window; return hash;
+    };
+    expect(go({})).toBe('#/dominion/cards/x');
+    expect(go({ target: { closest: () => ({}) } })).toBe('');   // on the real <a> (or a button): let it handle itself
+    expect(go({ ctrlKey: true })).toBe('');                       // modified clicks are left to the browser
+    expect(go({}, 'some selected text')).toBe('');                // finishing a text selection isn't a click
+  });
+});
+
 describe('Landscapes', () => {
   const html = render('landscapes'), t = text(html);
   it('lists all 124 landscapes and calls them landscapes, not Kingdom cards', () => { expect(t).toMatch(/Showing 124 of 124 landscapes/); expect(t).toMatch(/aren.t Kingdom cards/); });
@@ -227,7 +285,8 @@ describe('Landscapes', () => {
   it('shows a landscape detail page with its tags, verification, and an honest note label', () => {
     const l = catalog.landscapes.find(x => x.name === 'Triumph');
     const d = text(render(`landscapes/${encodeURIComponent(l.id)}`));
-    expect(d).toMatch(/Triumph/); expect(d).toMatch(/Event/); expect(d).toMatch(/Classification note/); expect(d).toMatch(/not the official card text/);
+    expect(d).not.toMatch(/Verification|Open reference/);
+    expect(d).toMatch(/Triumph/); expect(d).toMatch(/Event/); expect(d).toMatch(/Classification note/); expect(d).not.toMatch(/not the official card text|artwork aren.t part|not an exhaustive list/);
   });
   it('encodes ids that contain underscores and colons round-trip', () => {
     const l = catalog.landscapes.find(x => x.id.includes('_'));
@@ -244,7 +303,7 @@ describe('Statistics', () => {
     expect(t).toMatch(/recorded positive classifications, not an exhaustive list/);
   });
   it('reports the recorded relationship totals and the pending-verification count', () => {
-    expect(t).toMatch(/1,?366 recorded mechanic tags across 93 of the 98 defined mechanics/); expect(t).toMatch(/69 card names are still marked/);
+    expect(t).toMatch(/1,?634 recorded mechanic tags across 96 of the 98 defined mechanics/); expect(t).toMatch(/69 card names are still marked/);
   });
   it('covers the distributions asked for', () => {
     for (const h of ['Physical cards by expansion', 'Printed card types', 'Supply piles', 'Landscapes', 'Coin cost', 'Recorded mechanics', 'Data checks']) expect(t).toContain(h);

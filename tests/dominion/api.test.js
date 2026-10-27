@@ -44,13 +44,22 @@ describe('loadCatalog', () => {
     expect(c.landscapes).toHaveLength(124);
     expect(c.artifacts).toHaveLength(5);
     expect(c.taxonomy.size).toBe(98);
-    expect(c.meta.mechanicRelationshipCount).toBe(1366);
-    expect(c.cards.reduce((s, x) => s + x.mechanicIds.length, 0)).toBe(1366);
+    expect(c.meta.mechanicRelationshipCount).toBe(1634);
+    expect(c.cards.reduce((s, x) => s + x.mechanicIds.length, 0)).toBe(1634);
   });
-  it('does not page the 1,366-row mechanics table (the card view already carries the tags); it only counts it', async () => {
+  it('does not page the 1,634-row mechanics table (the card view already carries the tags); it only counts it', async () => {
     const client = fakeClient(tablesFromRaw(raw));
     await loadCatalog(client);
     expect(client.calls.some(c => c.name === 'dominion_kingdom_mechanics')).toBe(false);
+  });
+  it('loads the card text, and the collection still opens if that table is not installed yet', async () => {
+    const full = await loadCatalog(fakeClient(tablesFromRaw(raw)));
+    expect(full.meta.textRecordCount).toBe(500);
+    const t = tablesFromRaw(raw); delete t.dominion_card_text;
+    const bare = await loadCatalog(fakeClient(t));
+    expect(bare.cards).toHaveLength(331);
+    expect(bare.meta.textRecordCount).toBe(0);
+    expect(bare.cards.every(c => c.text === null)).toBe(true);
   });
   it('fails (rather than showing partial data) if any one table comes back short', async () => {
     const t = tablesFromRaw(raw);

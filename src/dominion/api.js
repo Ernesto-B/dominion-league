@@ -40,12 +40,24 @@ async function countRows(client, source, column) {
   return count;
 }
 
+/* Card text is supplementary: if its table isn't installed yet (the site can deploy before the SQL is applied),
+   the collection still works and the card pages say text isn't available. Any OTHER failure still throws —
+   including a short/truncated response, which fetchAllRows already refuses. */
+async function loadCardText(client) {
+  try {
+    return await fetchAllRows(client, 'dominion_card_text', { order: 'record_id' });
+  } catch (err) {
+    if (describeError(err).kind === 'not-installed') return [];
+    throw err;
+  }
+}
+
 /* One round of reads for the whole catalog — about 700 rows in total, so the browser can filter and chart
    it locally (client-side filtering is only valid because the COMPLETE set was fetched and verified above).
-   The two views already join printed types and mechanic ids onto each card/landscape, so the 1,366-row
+   The two views already join printed types and mechanic ids onto each card/landscape, so the 1,634-row
    mechanics table never has to be paged. Its row count is still fetched, as a cross-check on the join. */
 export async function loadCatalog(client) {
-  const [cards, piles, landscapes, artifacts, artifactMechanics, taxonomy, mechanicRelationshipCount] = await Promise.all([
+  const [cards, piles, landscapes, artifacts, artifactMechanics, taxonomy, mechanicRelationshipCount, cardText] = await Promise.all([
     fetchAllRows(client, 'dominion_card_catalog', { order: 'card_id' }),
     fetchAllRows(client, 'dominion_kingdom_piles', { order: ['expansion', 'pile_id'] }),
     fetchAllRows(client, 'dominion_landscape_catalog', { order: 'object_id' }),
@@ -53,8 +65,9 @@ export async function loadCatalog(client) {
     fetchAllRows(client, 'dominion_artifact_mechanics', { order: ['object_id', 'mechanic_id'] }),
     fetchAllRows(client, 'dominion_taxonomy', { order: 'mechanic_id' }),
     countRows(client, 'dominion_kingdom_mechanics', 'card_id'),
+    loadCardText(client),
   ]);
-  return buildCatalog({ cards, piles, landscapes, artifacts, artifactMechanics, taxonomy, mechanicRelationshipCount });
+  return buildCatalog({ cards, piles, landscapes, artifacts, artifactMechanics, taxonomy, mechanicRelationshipCount, cardText });
 }
 
 /* Turns anything thrown while loading into a short, fixed, user-safe message. The raw error (which can contain
