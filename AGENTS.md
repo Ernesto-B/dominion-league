@@ -27,11 +27,15 @@ src/League.jsx — React context + the session state machine (loading -> login |
                  ready | error). boot() refetches and recomputes while staying 'ready'.
 src/App.jsx, src/components/ — the shell (Header/nav, footer, skip link, document title),
                  Login, PasswordChange, and LegacyPage. src/useHash.js is the hash router.
-src/legacy/pages.js — the old page renderers (pageHome, pageSeason, ..., admin forms, Add Game
-                 modal) as one ES module exporting renderLegacyPage(mainEl, ctx). Pages are
-                 template-literal strings written into <main>; React hands each page its
-                 context (D sources, me, cfg, allGroups, reload) and never touches <main>'s
-                 children. Ported to React one page at a time, then deleted.
+src/pages/, src/components/, src/PageContext.js — ported pages. src/pages/index.js maps route ->
+                 component; App renders those inside PageContext (D already scoped to the group,
+                 gid, arg, me, allGroups, hashFor, reload...) and sends every other route to
+                 LegacyPage. Shared pieces: TierIcon, SetIcon, PlayerLink, GroupSwitcher, Banner,
+                 SortableTable (React replacement for the old DOM-mutating makeSortable).
+src/legacy/pages.js — the pages not yet ported (pageHome, pageSeason, ..., admin forms, Add Game
+                 modal) as one ES module exporting renderLegacyPage(mainEl, ctx). Template-literal
+                 strings written into <main>; React never touches <main>'s children for these
+                 routes. Each ported page deletes its function from here and its entry in render().
 style.css      — one file, CSS custom properties for theming, light/dark via
                  prefers-color-scheme.
 index.html     — static shell + script tags. No per-page HTML files; everything
@@ -92,6 +96,19 @@ the change is genuinely about the math/model itself.
 - **Dark-mode-only visual effects** (the background image, frosted-glass panels) are
   scoped under `@media (prefers-color-scheme:dark)` and placed **last** in `style.css`
   intentionally — see the gotcha below.
+
+## Porting a legacy page to React (the recipe that's been working)
+
+1. Translate the template string to a component in `src/pages/`, reading `usePage()`; reuse
+   `src/components/` rather than re-deriving markup. Register it in `src/pages/index.js`; delete the
+   legacy function and its `pages` entry in `src/legacy/pages.js`.
+2. Prove parity instead of eyeballing it: `git archive <last-commit-with-the-legacy-page> | tar -x`
+   into a scratch dir, build both trees with the fake-Supabase config (see Testing #4) on
+   different ports, and diff `#main` after normalizing (sort attributes, merge adjacent text
+   nodes, ignore `onerror`). Then click every sortable header on both and diff the row order.
+   This caught real bugs the first time: tie-break order (legacy sorts from the *displayed* order)
+   and sort keys (legacy sorts on visible text, e.g. "not decided"). Make the fake data rich enough
+   that every section renders — check the section headings, an identical half-empty page proves nothing.
 
 ## Gotchas already paid for — don't rediscover these
 

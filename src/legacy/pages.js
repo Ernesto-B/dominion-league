@@ -6,8 +6,8 @@
 import * as Eng from '../lib/engine.js';
 import { sb } from '../lib/supabase.js';
 import { esc, f0, f1, f2, f3, pc, sgn, short, long, ord, slugify } from '../lib/format.js';
-import { SET_ICONS, SET_NAMES } from '../lib/sets.js';
-import { NOGROUP } from '../lib/league.js';
+import { SET_NAMES, LANDSCAPES, setIconPath } from '../lib/sets.js';
+import { pickD } from '../lib/league.js';
 import { hashFor as hashForRoute } from '../lib/route.js';
 
   const $ = s => document.querySelector(s);
@@ -47,9 +47,7 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     const fb = explicit ? '' : ` onerror="this.onerror=null;this.src='icons/${esc(id)}.svg'"`;
     return `<img class="tier" src="${esc(src)}" width="${size}" height="${size}" alt="${esc(alt == null ? id : alt)}"${fb}>`;
   };
-  const LANDSCAPES = ['Events', 'Projects', 'Traits', 'Landmarks', 'Ways'];
   const landscapePills = g => (g.landscapes || []).map(l => `<span class="pill">${esc(l)}</span>`).join(' ');
-  const setIconPath = name => { const slug = SET_ICONS[name]; return slug ? `icons/sets/${slug}.png` : null; };
   const setIcon = (name, size) => {
     const src = setIconPath(name);
     return src ? `<img class="tier seticon" src="${src}" width="${size}" height="${size}" alt="${esc(name)}" title="${esc(name)}">` : '';
@@ -461,40 +459,6 @@ import { hashFor as hashForRoute } from '../lib/route.js';
       }).join('') + '</tr>';
     });
     h += '</tbody></table></div><p class="note">Only rated games where both players sat at the same table. Ties are ignored. Small samples swing wildly, so give any cell under five games a pinch of salt.</p>';
-    return h;
-  }
-
-  function pageRecords(gid) {
-    const R = D.records, O = R.overview;
-    const rec = (label, x, fmt, iconSrc) => `<tr><td class="l">${iconSrc ? `<img class="staticon sm" src="${iconSrc}" alt=""> ` : ''}${label}</td><td class="name">${x ? link(x.name) : '—'}</td><td><b>${x ? fmt(x.value) : ''}</b></td></tr>`;
-    let h = `<h1>Records</h1><p class="lede">Everything the league has produced so far.</p>${groupSwitcher('records', gid)}${banner()}`;
-    h += `<div class="stats"><div class="stat"><b>${O.tables}</b><span>tables logged</span></div><div class="stat"><b>${O.nights}</b><span>game nights</span></div><div class="stat"><b>${O.playersRated}</b><span>rated players</span></div>
-      <div class="stat"><b>${O.avgTable ? f1(O.avgTable) : '—'}</b><span>players per table</span></div><div class="stat"><b>${O.avgVP ? f1(O.avgVP) : '—'}</b><span>avg winning VP</span></div></div>`;
-    h += `<div class="grid2"><div><h2>Player records</h2><div class="tablewrap"><table><thead><tr><th class="l">Record</th><th class="l">Holder</th><th>Value</th></tr></thead><tbody>
-      ${rec('Current Elo leader', R.leader, f0, 'icons/stats/elo.png')}${rec('Highest Elo ever', R.peak, f0, 'icons/stats/peak-elo.png')}${rec('Most rated games', R.mostGames, f0, 'icons/stats/rated-games.png')}${rec('Most wins', R.mostWins, f0, 'icons/stats/wins.png')}
-      ${rec('Best win % (min ' + D.S.minGamesForRecords + ' games)', R.bestWinPct, pc)}${rec('Best average points (min ' + D.S.minGamesForRecords + ' games)', R.bestAvgPts, f2, 'icons/stats/average-points.png')}${rec('Longest win streak', R.bestStreak, f0, 'icons/stats/win-streak.png')}${rec('Most season titles', R.mostTitles, f0, 'icons/champion.png')}
-      </tbody></table></div></div>`;
-    const cnt = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-    h += `<div><h2>Table sizes</h2><div class="tablewrap"><table><thead><tr><th class="l">Players at the table</th><th>Tables</th></tr></thead><tbody>${Object.entries(R.tableSizes).map(([k, v]) => `<tr><td class="l">${k}</td><td>${v}</td></tr>`).join('') || '<tr><td colspan="2" class="l">None yet</td></tr>'}</tbody></table></div></div></div>`;
-    const winnerOf = g => g.names.filter(n => g.places[n] === 1).join(' & ');
-    const grow = (label, who, when, val) => `<tr><td class="l">${label}</td><td class="l">${who}</td><td class="l">${when}</td><td><b>${val}</b></td></tr>`;
-    const gr = [];
-    if (R.gain) gr.push(grow('Biggest Elo gain in one game', link(R.gain.name), R.gain.date, sgn(R.gain.value)));
-    if (R.loss) gr.push(grow('Biggest Elo drop in one game', link(R.loss.name), R.loss.date, sgn(R.loss.value)));
-    if (R.bestDry && R.bestDry.value > 1) gr.push(grow('Longest run without a win', link(R.bestDry.name), '', R.bestDry.value + ' games'));
-    if (R.topVP) gr.push(grow('Highest winning score', esc(winnerOf(R.topVP.game)), R.topVP.game.date, R.topVP.value + ' VP'));
-    if (R.mostLandscapes) gr.push(grow('Most landscape types in one game', esc(winnerOf(R.mostLandscapes.game)) + ' won', R.mostLandscapes.game.date, R.mostLandscapes.value + ' of ' + LANDSCAPES.length));
-    if (gr.length) h += `<h2>Single-game records</h2><div class="tablewrap"><table class="plain"><thead><tr><th class="l">Record</th><th class="l">Who</th><th class="l">When</th><th>Value</th></tr></thead><tbody>${gr.join('')}</tbody></table></div>`;
-    if (O.tables && R.mostLandscapes) {
-      const LS = R.landscapeSplit, dist = R.landscapeTypesDist;
-      const side = (label, x) => `<div class="stat"><b>${x.games}</b><span>${label}${x.avgVP != null ? ` · avg winning VP ${f1(x.avgVP)}` : ''}${x.avgTable ? ` · ${f1(x.avgTable)} players` : ''}</span></div>`;
-      h += `<h2>Landscapes in play</h2><div class="tablewrap"><table><thead><tr><th class="l">Type</th><th>Games</th><th>Share of tables</th><th>Avg winning VP</th><th class="l">Best win % (min ${D.S.minGamesForRecords} games)</th></tr></thead><tbody>${LANDSCAPES.map(l => { const st = R.landscapeStats[l], b = R.bestByLandscape[l]; return `<tr><td class="l">${esc(l)}</td><td>${st ? st.games : 0}</td><td>${pc((st ? st.games : 0) / R.landscapeTables)}</td><td>${st && st.avgVP != null ? f1(st.avgVP) : '—'}</td><td class="l">${b ? `${link(b.name)} <b>${pc(b.value)}</b> <span class="meta">(${b.games} games)</span>` : '—'}</td></tr>`; }).join('')}</tbody></table></div>
-        <div class="stats">${side('games with landscapes', LS.with)}${side('games without', LS.without)}</div>
-        <div class="stats">${[0, 1, 2, 3, 4, 5].filter(k => dist[k]).map(k => `<div class="stat"><b>${dist[k]}</b><span>game${dist[k] === 1 ? '' : 's'} with ${k} landscape type${k === 1 ? '' : 's'}</span></div>`).join('')}</div>
-        <p class="note">Games logged before landscape tracking count as "without". A game with more than one type counts fully toward each.</p>`;
-    }
-    h += '<h2>Sets in play</h2>' + (R.setsLogged ? `<div class="tablewrap"><table><thead><tr><th class="l">Set</th><th>Games</th><th>Share</th><th>Avg winning VP</th></tr></thead><tbody>${cnt(R.sets).map(([k, v]) => { const st = R.setStats[k]; return `<tr><td class="l">${setIcon(k, 20)} ${esc(k)}</td><td>${v}</td><td>${pc(v / R.setsLogged)}</td><td>${st && st.avgVP != null ? f1(st.avgVP) : '—'}</td></tr>`; }).join('')}</tbody></table></div><p class="note">A game tagged with more than one set counts fully toward each one — the kingdom was mixed, not split.</p>` : '<p class="empty">Fill the sets field when adding a game (separate sets with semicolons).</p>');
-    h += `<h2>Season champions</h2><div class="tablewrap"><table><thead><tr><th class="l">Season</th><th class="l">Champion</th><th class="l">Dates</th></tr></thead><tbody>${D.seasons.map(s => `<tr><td class="l"><a href="${hashFor('season', gid, s.number)}">${esc(s.name)}</a></td><td class="l">${s.champion ? icon('champion', 20, 'Champion') + ' ' + (D.byName[s.champion] ? link(s.champion) : esc(s.champion)) : '<span class="meta">not decided</span>'}</td><td class="l">${s.ok ? Eng.fmtDay(s.start) + ' to ' + Eng.fmtDay(s.end) : ''}</td></tr>`).join('')}</tbody></table></div>`;
     return h;
   }
 
@@ -977,17 +941,19 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     render();
   }
 
+  // A React page took over the route: drop anything legacy code left floating outside <main>.
+  export function resetLegacyChrome() { closeAddModal(); hidePopLayer(); }
+
   // Re-renders the current page from the same context — used by filters and
   // admin forms that change local state but not the data.
   function render() {
     if (!ctx) return;
     const { route, gid, arg } = ctx;
     curGid = gid;
-    D = computedByGroup[gid == null ? NOGROUP : gid]
-      || computedByGroup[NOGROUP] || computedByGroup[allGroups[0] && allGroups[0].id] || Object.values(computedByGroup)[0];
+    D = pickD(ctx, gid);
     closeAddModal();
     hidePopLayer();
-    const pages = { home: pageHome, season: pageSeason, players: pagePlayers, h2h: pageH2H, records: pageRecords, games: pageGames, admin: pageAdmin };
+    const pages = { home: pageHome, season: pageSeason, players: pagePlayers, h2h: pageH2H, games: pageGames, admin: pageAdmin };
     const fn = pages[route] || pageHome;
     main.innerHTML = fn(gid, arg);
     makeSortable(main);

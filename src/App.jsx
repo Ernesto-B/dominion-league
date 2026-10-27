@@ -1,7 +1,11 @@
 import { useEffect, useMemo } from 'react';
 import { LeagueProvider, useLeague } from './League.jsx';
 import { useHash } from './useHash.js';
-import { parseHash, ROUTES } from './lib/route.js';
+import { parseHash, hashFor, ROUTES } from './lib/route.js';
+import { pickD } from './lib/league.js';
+import { PageContext } from './PageContext.js';
+import { PAGES } from './pages/index.js';
+import { resetLegacyChrome } from './legacy/pages.js';
 import Header from './components/Header.jsx';
 import Login from './components/Login.jsx';
 import PasswordChange from './components/PasswordChange.jsx';
@@ -13,6 +17,15 @@ function Shell() {
   const ready = state.status === 'ready';
   const route = useMemo(() => ready ? parseHash(hash, state.allGroups) : null, [ready, hash, state.allGroups]);
 
+  const page = useMemo(() => ready ? {
+    ...state, ...route, D: pickD(state, route.gid), reload: boot,
+    hashFor: (r, g, rest) => hashFor(r, g, rest, state.allGroups),
+  } : null, [state, ready, route, boot]);
+  const Ported = ready ? PAGES[route.route] : null;
+
+  // Navigating from a legacy page to a ported one must not leave a legacy modal/popup behind.
+  useEffect(() => { if (Ported) resetLegacyChrome(); }, [Ported, route]);
+
   useEffect(() => {
     if (!ready) { document.title = state.cfg?.title || 'Dominion Night'; return; }
     const r = route.route;
@@ -23,7 +36,8 @@ function Shell() {
   const skip = e => { e.preventDefault(); document.getElementById('main')?.focus(); };
 
   let body;
-  if (ready) body = <LegacyPage league={state} boot={boot} route={route} />;
+  if (Ported) body = <PageContext.Provider value={page}><main id="main" tabIndex={-1}><Ported /></main></PageContext.Provider>;
+  else if (ready) body = <LegacyPage league={state} boot={boot} route={route} />;
   else {
     let inner;
     if (state.status === 'login') inner = <Login title={state.cfg?.title} error={state.error} />;

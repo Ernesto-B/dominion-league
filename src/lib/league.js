@@ -47,3 +47,11 @@ export function buildLeague(cfg, loaded, me) {
     enabledSets: new Set(enabledSets),                           // sets the admin has marked as owned
   };
 }
+
+// The computed model for the group being viewed. Pages read this as `D` and never
+// filter by group themselves — it's already scoped (see buildLeague).
+export function pickD(league, gid) {
+  const { computedByGroup, allGroups } = league;
+  return computedByGroup[gid == null ? NOGROUP : gid]
+    || computedByGroup[NOGROUP] || computedByGroup[allGroups[0] && allGroups[0].id] || Object.values(computedByGroup)[0];
+}
