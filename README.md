@@ -16,7 +16,7 @@ A website for our Dominion league: Elo rankings, seasons, head-to-head, records 
 
 The site needs a free [Supabase](https://supabase.com) project for accounts and game data.
 
-1. Create a Supabase project. Under Project Settings → API, copy the **Project URL** and the **anon / publishable key** into `public/js/supabase-config.js` (both are safe to commit — they're meant to be public; real security comes from the database policies, not from hiding them).
+1. Create a Supabase project. Under Project Settings → API, copy the **Project URL** and the **anon / publishable key** into `src/lib/supabase.js` (both are safe to commit — they're meant to be public; real security comes from the database policies, not from hiding them).
 2. Open the SQL editor and run everything in `supabase/schema.sql`. This creates the `players`, `games`, `game_results`, `groups`, `seasons` and `settings` tables, turns on Row Level Security, and adds the admin-only functions the site calls to add/edit/delete games. It's safe to re-run after pulling a newer version of this file — already-applied changes are skipped.
 3. Under Authentication → Providers → Email, you can leave "Confirm email" on — the migration script below confirms each account directly through the Admin API, so players never need a real inbox.
 4. Run the one-time migration script from your own computer (not from the browser):
@@ -98,7 +98,7 @@ Defaults: Peasant under 1040, Knight 1040, Lord 1090, Duke 1150, Emperor 1225. T
 
 - **Elo**: each table is treated as head-to-head matchups; change = K ÷ (players − 1) × sum of (actual − expected). K is 48 for a player's first 10 rated games, then 32.
 - **Season score** = (points + prior × 0.5) ÷ (games + prior), where points run from 1 for a win to 0 for last, so table size doesn't matter and ties split.
-- The calculation code is in `public/js/engine.js` and was checked against the league spreadsheet on randomized multi-season data (Elo, standings, seeds, head-to-head, streaks and attendance all matched).
+- The calculation code is in `src/lib/engine.js` and was checked against the league spreadsheet on randomized multi-season data (Elo, standings, seeds, head-to-head, streaks and attendance all matched).
 
 ## Preview on your computer
 

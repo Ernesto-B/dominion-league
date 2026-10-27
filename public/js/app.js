@@ -1,7 +1,7 @@
 (function () {
   'use strict';
-  const Eng = window.DominionEngine;
-  const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+  const { Engine: Eng, sb, format } = window.DN;  // shared lib, bridged from src/main.jsx
+  const { esc, f0, f1, f2, f3, pc, sgn, short, long, ord, slugify } = format;
   const $ = s => document.querySelector(s);
   const main = $('#main');
   let D = null;        // computed model for the group currently being viewed (computedByGroup[curGid])
@@ -22,18 +22,6 @@
   let rawPlayers = [];       // every player row this viewer can see (admin sees all) — for Admin page only
   let rawSeasons = [];       // every season row this viewer can see, raw (unparsed) — for Admin page only
 
-  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const f0 = x => x == null ? '' : Math.round(x).toString();
-  const f1 = x => x == null ? '' : x.toFixed(1);
-  const f2 = x => x == null ? '' : x.toFixed(2);
-  const f3 = x => x == null ? '' : x.toFixed(3);
-  const pc = x => x == null ? '' : Math.round(x * 100) + '%';
-  const sgn = x => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(Math.round(x));
-  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const short = iso => { const [y, m, d] = iso.split('-'); return MON[+m - 1] + ' ' + (+d); };
-  const long = iso => { const [y, m, d] = iso.split('-'); return MON[+m - 1] + ' ' + (+d) + ', ' + y; };
-  const ord = n => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
-  const slugify = n => String(n).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
   /* ---------- hash helpers (group-aware once more than one group exists) ---------- */
   function hashFor(route, gid, rest) {

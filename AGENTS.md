@@ -15,11 +15,15 @@ A static Dominion board-game league tracker: Elo rankings, seasons, head-to-head
 ## Architecture
 
 ```
-js/engine.js   — pure computation, single-league only (no group concept at all — see
+src/lib/engine.js — pure computation, single-league only (no group concept at all — see
                  Group scoping below). compute(config, rows, today) -> {ranked, seasons,
                  seasonStandings(), h2h(), records, ...}. No DOM, no fetch, runs in
-                 Node or the browser identically. Treat this as the "model" layer.
-js/app.js      — everything else: Supabase client, auth/session handling, the hash
+                 Node or the browser identically (ES module). Treat this as the "model" layer.
+src/lib/       — shared modules: engine.js, format.js (esc/f0/pc/... helpers), supabase.js
+                 (client + public URL/anon key). src/main.jsx exposes them to the legacy
+                 app as window.DN = {Engine, format, sb} and then injects public/js/app.js.
+                 That bridge is temporary — it goes away when app.js does.
+public/js/app.js — (legacy, being ported to React page by page) everything else: Supabase client, auth/session handling, the hash
                  router, one function per page (pageHome, pageSeason, ...), and the
                  admin forms. Pages are template-literal strings re-rendering
                  main.innerHTML; there's no virtual DOM or component tree.
@@ -43,13 +47,13 @@ the change is genuinely about the math/model itself.
 
 ## Conventions that exist for a reason
 
-- **`statTile(iconSrc, big, label, iconClass)`** (`js/app.js`) builds the icon+number+label
+- **`statTile(iconSrc, big, label, iconClass)`** (`public/js/app.js`) builds the icon+number+label
   tiles used across Player/Season/Records pages. Icon is optional — tiles without one
   render identically to plain `.stat` tiles elsewhere, so it's safe to reuse everywhere.
   Icons are **unconditional** even when the stat is 0 (a tile that hides its icon at zero
   looks broken, not clean — this was a real bug, fixed once already).
 - **Group scoping: each group is a fully separate league, not a filtered view of one
-  shared dataset.** `js/app.js`'s `boot()` calls `Eng.compute()` once per group the
+  shared dataset.** `public/js/app.js`'s `boot()` calls `Eng.compute()` once per group the
   viewer belongs to, each time with only that group's players/games/seasons —
   `computedByGroup[groupId]`. `render()` picks the right one into the module-level `D`
   before calling a page function, so page functions read `D.ranked`/`D.players`/
@@ -76,7 +80,7 @@ the change is genuinely about the math/model itself.
   never trust client-side admin checks alone). Single-table writes (`groups`, `seasons`)
   are fine as direct RLS-gated client calls — don't add an RPC for those, it'd be pure
   ceremony.
-- **The modal pattern** (`openAddModal`/`renderAddModal`/`closeAddModal` in `js/app.js`):
+- **The modal pattern** (`openAddModal`/`renderAddModal`/`closeAddModal` in `public/js/app.js`):
   state lives in module-level `bs`, re-renders call `renderAddModal()` directly rather
   than the hash router's `render()`. If you add another modal, follow this shape rather
   than trying to route modal state through the URL hash.
@@ -121,11 +125,12 @@ the change is genuinely about the math/model itself.
 
 ## Testing — what's actually available
 
-There is no browser available to the agent in this environment. What's actually been used
-to verify changes, in order of how often:
+There is no interactive browser available to the agent. What's actually been used
+to verify changes, in order of how often (a real headless Chrome *is* usable for DOM dumps,
+see the end of this list):
 
-1. `node --check js/app.js js/engine.js` — syntax only, every change.
-2. Direct `node -e "..."` scripts requiring `js/engine.js` (it's UMD, works in Node) to
+1. `node --check public/js/app.js src/lib/engine.js` — syntax only, every change; `npm run build` too.
+2. Direct `node -e "..."` scripts importing `src/lib/engine.js` (plain ES module, works in Node) to
    assert on real computed output — e.g. feeding synthetic games through `compute()` and
    checking standings/Elo/records match hand-computed expectations. This is the main way
    engine-layer changes get real verification, not just "it parses."
@@ -135,7 +140,10 @@ to verify changes, in order of how often:
    `test.uid()` to simulate specific users — table-owner sessions silently bypass RLS, so
    testing as `postgres` proves nothing. Always tear the cluster down afterward
    (`pg_ctl stop`, `rm -rf` the data dir) — it's disposable, not part of the repo.
-4. Visual/UX verification is **always** the owner's — say so explicitly rather than
+4. Load-order/boot smoke test: `npm run build`, `npx vite preview --port 4173`, then
+   `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --virtual-time-budget=8000 --dump-dom http://localhost:4173/`
+   and inspect the DOM. (jsdom does **not** run `type=module` scripts, so it can't test this.)
+5. Visual/UX verification is **always** the owner's — say so explicitly rather than
    claiming a styling or layout change "looks right."
 
 ## Deployment
@@ -156,6 +164,6 @@ to verify changes, in order of how often:
 
 - Service-role key: local env var only, for `migrate.mjs` and nothing else. Never in a
   file, never in client code, never in chat.
-- Anon/publishable key (`js/supabase-config.js`) and the project ref are meant to be
+- Anon/publishable key (`src/lib/supabase.js`) and the project ref are meant to be
   public — that's how Supabase's client-side model works. Don't treat them as secrets or
   warn about committing them.
