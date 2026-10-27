@@ -1,19 +1,19 @@
 
 import { useState } from 'react';
 import { usePage } from '../PageContext.js';
-import { openGameModal } from '../legacy/pages.js';
 import { SET_NAMES } from '../lib/sets.js';
 import GroupSwitcher from '../components/GroupSwitcher.jsx';
 import Banner from '../components/Banner.jsx';
 import GamesTable from '../components/GamesTable.jsx';
+import GameModal from '../components/GameModal.jsx';
 
 // Filters live at module level so they survive navigating away and back, as they always have.
 let saved = { season: 'all', type: 'all', player: 'all', set: 'all' };
 
 export default function Games() {
-  const page = usePage();
-  const { D, me, enabledSets } = page;
+  const { D, me, enabledSets } = usePage();
   const [gf, setGf] = useState(saved);
+  const [modal, setModal] = useState(null);   // null, or { editId } (editId null = a new game)
   // Changing a filter resets the sort and collapses expanded rows, as the old full re-render did
   // (the table is re-keyed on the filters below).
   const set = k => e => { saved = { ...gf, [k]: e.target.value }; setGf(saved); };
@@ -27,7 +27,7 @@ export default function Games() {
     <>
       <div className="head">
         <div><h1>Games</h1><p className="lede">Every table we've logged, newest first. Winners in bold.</p></div>
-        {canEdit && <button id="gAddBtn" className="iconbtn" type="button" onClick={() => openGameModal(page, null)}><img src="icons/nav/add-a-game.png" alt="Add a game" /></button>}
+        {canEdit && <button id="gAddBtn" className="iconbtn" type="button" onClick={() => setModal({ editId: null })}><img src="icons/nav/add-a-game.png" alt="Add a game" /></button>}
       </div>
       <GroupSwitcher route="games" />
       <Banner />
@@ -49,7 +49,8 @@ export default function Games() {
         </select></label>
         <span className="meta">{list.length} table{list.length === 1 ? '' : 's'}</span>
       </div>
-      {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}`} games={list} onEdit={canEdit ? id => openGameModal(page, id) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
+      {modal && <GameModal key={String(modal.editId)} editId={modal.editId} onClose={() => setModal(null)} />}
+      {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}`} games={list} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
     </>
   );
 }

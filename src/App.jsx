@@ -5,7 +5,6 @@ import { parseHash, hashFor, ROUTES } from './lib/route.js';
 import { pickD } from './lib/league.js';
 import { PageContext } from './PageContext.js';
 import { PAGES } from './pages/index.js';
-import { resetLegacyChrome } from './legacy/pages.js';
 import Header from './components/Header.jsx';
 import Login from './components/Login.jsx';
 import PasswordChange from './components/PasswordChange.jsx';
@@ -27,9 +26,7 @@ function Shell() {
   const routeName = ready && ROUTES.includes(route.route) ? route.route : 'home';   // unknown routes show Home
   const Ported = ready ? PAGES[routeName] : null;
 
-  // Navigating from a legacy page to a ported one must not leave a legacy modal/popup behind.
   useEffect(() => { popup.hide(); }, [hash]);   // a hover popup must not outlive its page
-  useEffect(() => { if (Ported) resetLegacyChrome(); }, [Ported, routeName, route && route.gid, route && route.arg]);
 
   useEffect(() => {
     if (!ready) { document.title = state.cfg?.title || 'Dominion Night'; return; }

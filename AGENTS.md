@@ -37,10 +37,9 @@ src/pages/, src/components/, src/PageContext.js — ported pages. src/pages/inde
                  RatingChart, StatTile/HoverPopup/PopLayer (the shared hover popup, one node on <body>),
                  TierProgressBar, and SortableTable (React replacement for the old DOM-mutating
                  makeSortable; supports expandable detail rows).
-src/legacy/pages.js — what's left of the old renderers: the Admin page and the Add/Edit Game
-                 modal (opened from React via openGameModal(ctx, editId)). Template-literal strings
-                 written into <main>/#modalRoot. Rankings, Season, Players, Head to head, Records and
-                 Games are all React now; this file shrinks as Admin and the modal are ported.
+src/legacy/pages.js — all that's left of the old renderers: the Admin page (group/season/player/
+                 set management, still template-literal strings written into <main>). Every other
+                 page, and the Add/Edit Game modal, is React; this file goes away when Admin is ported.
 style.css      — one file, CSS custom properties for theming, light/dark via
                  prefers-color-scheme.
 index.html     — static shell + script tags. No per-page HTML files; everything
@@ -94,10 +93,14 @@ the change is genuinely about the math/model itself.
   never trust client-side admin checks alone). Single-table writes (`groups`, `seasons`)
   are fine as direct RLS-gated client calls — don't add an RPC for those, it'd be pure
   ceremony.
-- **The modal pattern** (`openAddModal`/`renderAddModal`/`closeAddModal` in `src/legacy/pages.js`):
-  state lives in module-level `bs`, re-renders call `renderAddModal()` directly rather
-  than the hash router's `render()`. If you add another modal, follow this shape rather
-  than trying to route modal state through the URL hash.
+- **The modal pattern** (`src/components/GameModal.jsx`): the page that opens a modal owns its
+  open/closed state (`const [modal, setModal] = useState(null)`) and renders `<GameModal onClose=…>`
+  itself, which portals into the static `#modalRoot`. Form state is local `useState`, not the URL
+  hash, so a route change unmounts (closes) the modal for free. Escape / overlay click / ✕ all call
+  `onClose`; the body scroll lock is set on mount and released on unmount. Because the portal stays
+  inside the React tree it keeps `PageContext` — unlike `PopLayer`, which doesn't. Writes still go
+  through the `add_game`/`edit_game`/`delete_game` RPCs, then `reload()` refetches. Follow this
+  shape for the next modal rather than routing modal state through the URL hash.
 - **Dark-mode-only visual effects** (the background image, frosted-glass panels) are
   scoped under `@media (prefers-color-scheme:dark)` and placed **last** in `style.css`
   intentionally — see the gotcha below.
@@ -123,7 +126,9 @@ the change is genuinely about the math/model itself.
    that breaks React's node refs), compare `<select>`s by `.value` and `style` by `cssText`, and
    click row chevrons, not row centers (a player link sits in the middle).
 3. Drive the interactions on both builds and snapshot after each step (expand, sort, filter, hover,
-   modals); a static diff alone misses state bugs. Behavior that *intentionally* differs (e.g. an
+   modals); a static diff alone misses state bugs. For anything that writes, make the fake `rpc()`
+   record `(name, args)` (and offer a one-shot `window.__failNext`) and diff the payload log between
+   builds — that is the check that protects data, more than any DOM comparison. Behavior that *intentionally* differs (e.g. an
    unknown route now behaves exactly like Home) gets noted in the commit message.
 
 4. **Popup/portal content has no context.** A React element carries no context with it — context is
