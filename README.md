@@ -105,7 +105,26 @@ Defaults: Peasant under 1040, Knight 1040, Lord 1090, Duke 1150, Emperor 1225. T
 - **Head to head, Records, Games:** the matrix; league and single-game records (biggest Elo swing, longest game, highest score); the full log with season, type and player filters. Admins get Edit/Delete links on each row of the Games page.
 - **Add a game** (admin only): pick who played and in what order, fill in the optional details, and save — it writes straight to the database. The same page shows each player's expected score and the Elo at stake ("Before you play"), which is handy for balancing seating.
 - **Admin** (admin only): add friend groups, and add/edit seasons — see above.
+- **Collection** (everyone, not tied to a friend group): our Dominion card collection — see below.
 - Click any table heading to sort by that column.
+
+## The Collection page
+
+The **Collection** tab (`#/dominion`) is a browsable catalog of the Dominion boxes we own: **Overview** (totals, breakdowns and statistics: cost, card types by expansion, mechanics), **Kingdom cards** (search plus expansion, printed type, coin/Debt cost and recorded-mechanic filters), **Landscapes** (Events, Landmarks, Projects, Ways, Traits, with the Renaissance Artifacts shown separately), and a page for each card and landscape.
+
+The data lives in nine `dominion_*` tables, separate from the Elo/season tables, and is **public to read, read-only through the website** (Row Level Security; nobody can edit it from the browser). The numbers it shows are kept apart on purpose: *card names* (331), *supply piles* (310 — a split pile holds two names), and *physical cards* (3,132); landscapes (124) and Artifacts (5) are never counted as Kingdom cards.
+
+Two honest limits: the **mechanic tags are recorded positives, not an exhaustive list** (a card without a tag may still have that effect, so there is no "without" filter, and the statistics are marked provisional), and the data has no card text or artwork, so none is shown.
+
+**To set it up** (one time — it needs your approval because it changes the live database): follow `supabase/dominion/README.md`. In short: `supabase db query --linked -f supabase/dominion/01_schema_and_rls.sql`, then `…/02_seed_data.sql`, then `npm run dominion:check-live`. Until that's done, the Dominion pages show a polite "isn't available yet" message and the rest of the site is unaffected.
+
+```
+npm test                      # data, data layer, filters, pages, routes, secrets, SQL safety
+npm run dominion:test-db      # schema + seed + RLS in a throwaway local Postgres (never touches Supabase)
+npm run dominion:check-live   # read-only check of the live project with the public key
+npm run dominion:seed         # regenerate the seed SQL after editing a CSV in supabase/dominion/seed_csv/
+npm run check:build           # after `npm run build`: relative asset paths, no secrets in dist/
+```
 
 ## How the numbers work
 

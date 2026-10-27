@@ -32,11 +32,11 @@ export default function Records() {
     rec(`Best win % (min ${min} games)`, R.bestWinPct, pc),
     rec(`Best average points (min ${min} games)`, R.bestAvgPts, f2, 'icons/stats/average-points.png'),
     rec('Longest win streak', R.bestStreak, f0, 'icons/stats/win-streak.png'),
-    rec('Most season titles', R.mostTitles, f0, 'icons/champion.png'),
+    rec('Most season titles', R.mostTitles?.value > 0 ? R.mostTitles : null, f0, 'icons/champion.png'),
   ];
 
   // [label, who, when (a link to that game), value]
-  const when = (date, line) => line == null ? date : <a href={hashFor('games', gid, line)}>{date}</a>;
+  const when = (date, line) => line == null ? date : <a className="gamelink" href={hashFor('games', gid, line)} title="Open this game in the Games page">{date}</a>;
   const single = [];
   if (R.gain) single.push(['Biggest Elo gain in one game', <PlayerLink name={R.gain.name} />, when(R.gain.date, R.gain.line), sgn(R.gain.value)]);
   if (R.loss) single.push(['Biggest Elo drop in one game', <PlayerLink name={R.loss.name} />, when(R.loss.date, R.loss.line), sgn(R.loss.value)]);
@@ -47,8 +47,9 @@ export default function Records() {
 
   return (
     <>
-      <h1>Records</h1>
-      <p className="lede">Everything the league has produced so far.</p>
+      <div className="head">
+        <div><h1>Records</h1><p className="lede">Everything the league has produced so far.</p></div>
+      </div>
       <GroupSwitcher route="records" />
       <Banner />
       <div className="stats">

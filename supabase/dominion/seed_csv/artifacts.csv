@@ -1,0 +1,6 @@
+object_id,expansion,name,object_kind,physical_copies,cost_coins,persistent_or_contested,source_url,initial_effect_tags,verification_status
+renaissance:artifact:flag,Renaissance,Flag,Artifact,1,,exclusive_transferable,https://www.riograndegames.com/wp-content/uploads/2022/03/Dominion-Rules-Renaissance.pdf,draw,initial_positive_tags_not_exhaustive
+renaissance:artifact:horn,Renaissance,Horn,Artifact,1,,exclusive_transferable,https://www.riograndegames.com/wp-content/uploads/2022/03/Dominion-Rules-Renaissance.pdf,topdeck,initial_positive_tags_not_exhaustive
+renaissance:artifact:key,Renaissance,Key,Artifact,1,,exclusive_transferable,https://www.riograndegames.com/wp-content/uploads/2022/03/Dominion-Rules-Renaissance.pdf,plus_coins,initial_positive_tags_not_exhaustive
+renaissance:artifact:lantern,Renaissance,Lantern,Artifact,1,,exclusive_transferable,https://www.riograndegames.com/wp-content/uploads/2022/03/Dominion-Rules-Renaissance.pdf,reveal_to_hand|sifting,initial_positive_tags_not_exhaustive
+renaissance:artifact:treasure-chest,Renaissance,Treasure Chest,Artifact,1,,exclusive_transferable,https://www.riograndegames.com/wp-content/uploads/2022/03/Dominion-Rules-Renaissance.pdf,treasure_gaining,initial_positive_tags_not_exhaustive

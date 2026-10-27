@@ -37,6 +37,14 @@ src/pages/, src/components/, src/PageContext.js — the pages. src/pages/index.j
                  RatingChart, StatTile/HoverPopup/PopLayer (the shared hover popup, one node on <body>),
                  TierProgressBar, GameModal (the Add/Edit Game dialog), and SortableTable (click-to-sort
                  tables; supports expandable detail rows).
+src/dominion/  — the Dominion collection section (#/dominion[/cards[/<id>] | /landscapes[/<id>]]).
+                 api.js is the ONLY file that knows table/view names (fetchAllRows pages with .range() and
+                 THROWS on a count mismatch; describeError turns any failure into a fixed safe message);
+                 model.js normalizes rows; filters.js / stats.js are pure; filterStore.js keeps filter state
+                 across navigation; views/ + components/ are presentational (they read the catalog from
+                 CatalogContext, so tests can render them with real data). Data: supabase/dominion/ (SQL,
+                 generated seed, CSVs). `dominion` is a GLOBAL route like `admin` (route.js GLOBAL_ROUTES): it
+                 never carries a group segment.
 style.css      — one file, CSS custom properties for theming, light/dark via
                  prefers-color-scheme.
 index.html     — the shell Vite builds from: #root (React mounts here), #modalRoot (the
@@ -149,6 +157,32 @@ technique is the best way to prove any refactor *doesn't* change what users see:
    parity matters. Fake-data scenarios in the test harness: `swing` (rank movement), `odd` (undated
    season, no-seasons group, friendly-only player, empty group), `rich` (landscape tiles + both rivals + a tied game), `nogroups` (a site with no groups yet).
 
+## Dominion collection conventions
+
+- **Never conflate the counts.** Card *names* (one per `dominion_kingdom_cards` row), supply *piles* (a split
+  pile, Knights and Castles are ONE pile with several names, so names >= piles), *physical* cards (sum of pile
+  copies), landscapes and Artifacts are five different things. Landscapes and Artifacts are never Kingdom cards.
+- **Mechanic tags are positive-only and non-exhaustive.** A missing tag is NOT a confirmed "no". There is
+  deliberately no "without"/"exclude" filter anywhere (a test enforces this), tag counts are labelled provisional,
+  and the disclaimer (`MECHANICS_NOTE`) appears wherever mechanics are filtered or counted. Landscape/Artifact
+  tags use a *different vocabulary* from the Kingdom taxonomy — never join them to it.
+- **A multi-type card has several printed types** and is listed/counted under each (122 of the 331 names).
+- **Supabase silently truncates responses (1,000 rows by default).** Anything that could grow past that goes
+  through `fetchAllRows` (count first, page with a stable order, throw on mismatch) — never a bare `.select()`.
+  Client-side filtering is only valid because the complete set was fetched and verified.
+- **Never invent card text, artwork, descriptions or strategy.** The dataset has none; the UI omits those
+  sections and says so. The landscape `notes` are a classification summary and are labelled as not official text.
+- **Ownership isn't hardcoded.** The owned expansions are whatever the catalog contains; `constants.js` only
+  labels and orders the known ones. The schema forbids First Edition rows.
+- The data package is authoritative. Row counts live in `supabase/dominion/expected_counts.json`; if a test fails
+  on a count, investigate the data — don't edit the reference to fit.
+- The nav link is labelled **Collection** (the route/URL stays `#/dominion`; the tab title comes from `ROUTE_TITLES` in
+  `route.js`). Its icon is the owner's `public/icons/nav/collection.png` (128×128, like the other nav icons).
+- The "why the numbers differ" explanation is a closed `<details className="help">` (the site's existing ⓘ help pattern)
+  under the title, not a permanent block and not a custom popover.
+- Popup/portal content has no PageContext, and these views read `CatalogContext` — keep that in mind if you
+  ever render catalog content outside `DominionData`/`CatalogProvider`.
+
 ## Gotchas already paid for — don't rediscover these
 
 - **Write `backdrop-filter` once, unprefixed — never also `-webkit-backdrop-filter`.** Vite's CSS
@@ -193,6 +227,13 @@ technique is the best way to prove any refactor *doesn't* change what users see:
 
 ## Testing — what's actually available
 
+**`npm test`** (Vitest, Node only — no browser) runs ~117 tests on the REAL Dominion data: dataset counts and
+integrity, the data layer (including the 1,000-row truncation trap), filters, every Dominion view rendered with
+`react-dom/server`, routing (existing routes included), no-secrets-in-source, and SQL safety. **`npm run
+dominion:test-db`** builds a throwaway local Postgres and tests the schema, seed, constraints and RLS/privileges
+(Postgres < 15 can't make `security_invoker` views, so that one option is skipped locally). There is no linter or
+type checker in this project, so none is run. The browser-level checks below are still ad hoc (not committed).
+
 There is no interactive browser available to the agent. What's actually been used
 to verify changes, in order of how often (a real headless Chrome *is* usable for DOM dumps,
 see the end of this list):
@@ -223,7 +264,7 @@ see the end of this list):
 
 ## Deployment
 
-- `main` → GitHub Pages, auto-published on push. No CI build step.
+- `main` → GitHub Pages, built and published by `.github/workflows/deploy.yml` (Vite build → `dist/`) on every push.
 - `supabase/schema.sql` is meant to be safely re-run in the Supabase SQL editor after any
   change to it (that's the whole point of the `drop policy if exists` pattern and
   `create table if not exists` / `add column if not exists` throughout) — confirm new

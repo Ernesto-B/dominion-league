@@ -143,7 +143,7 @@ function Results({ p }) {
       key: g.line, data: g.line, className: 'grow' + (isOpen ? ' open' : ''), onClick: () => toggle(g.line), open: isOpen, detail: <GameDetail game={g} />,
       cells: [
         { node: '▸', className: 'chev' },
-        { node: <a href={hashFor('games', gid, g.line)} onClick={e => e.stopPropagation()}>{g.date}</a>, text: g.date, className: undefined },
+        { node: <a className="gamelink" href={hashFor('games', gid, g.line)} title="Open this game in the Games page" onClick={e => e.stopPropagation()}>{g.date}</a>, text: g.date, className: undefined },
         { node: <TypePill type={g.type} />, text: g.type === 'Playoff' || g.type === 'Friendly' ? g.type : '', className: undefined },
         { node: <GameFinish game={g} />, text: finishText(g), className: 'wrap' },
         { node: g.sets.map((s, i) => <Fragment key={s}>{i > 0 && ' '}{setIconPath(s) ? <SetIcon name={s} size={20} /> : s}</Fragment>), text: g.sets.map(s => setIconPath(s) ? '' : s).join(' '), className: 'wrap' },

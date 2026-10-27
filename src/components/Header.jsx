@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { sb } from '../lib/supabase.js';
-import { hashFor, ROUTES } from '../lib/route.js';
+import { hashFor, ROUTES, GLOBAL_ROUTES } from '../lib/route.js';
 
 const NAV = [
   ['home', 'Rankings', 'rankings'], ['season', 'Season', 'season'], ['players', 'Players', 'players'],
-  ['h2h', 'Head to head', 'h2h'], ['records', 'Records', 'records'], ['games', 'Games', 'games'], ['admin', 'Admin', 'admin'],
+  ['h2h', 'Head to head', 'h2h'], ['games', 'Games', 'games'],
+  ['dominion', 'Collection', 'collection'],   // the URL stays #/dominion (an id, not a label); the icon file is icons/nav/collection.png
+  ['records', 'Records', 'records'], ['admin', 'Admin', 'admin'],
 ];
 
 // `ready` is null until a league is loaded: the nav is hidden on the loading,
@@ -24,9 +26,9 @@ export default function Header({ ready, hash }) {
         </button>
         <nav id="nav" className={open ? 'nav-open' : undefined} aria-label="Sections" style={show ? undefined : { display: 'none' }}>
           {show && NAV.filter(([r]) => r !== 'admin' || ready.me.is_admin).map(([r, label, icon]) => (
-            <a key={r} href={hashFor(r === 'home' ? '' : r, r === 'admin' ? null : ready.route.gid, undefined, ready.allGroups)}
+            <a key={r} href={hashFor(r === 'home' ? '' : r, GLOBAL_ROUTES.includes(r) ? null : ready.route.gid, undefined, ready.allGroups)}
               aria-current={active === r ? 'page' : undefined}>
-              <img src={`icons/nav/${icon}.png`} alt="" />{label}
+              {icon && <img src={`icons/nav/${icon}.png`} alt="" />}{label}
             </a>
           ))}
         </nav>

@@ -58,15 +58,13 @@ export default function Rankings() {
 
   return (
     <>
-      <div className="head">
-        <StoryCards R={R} ranked={rk} />
-        <div className="chips" style={{ marginLeft: 'auto' }}>
-          <SeasonChip />
-          {last && <span className="chip">Last night <b>{short(last)}</b></span>}
-          <span className="chip"><b>{nights}</b> night{nights === 1 ? '' : 's'} played</span>
-        </div>
-      </div>
       <GroupSwitcher route="" />
+      <div className="chips toprow">
+        <SeasonChip />
+        {last && <span className="chip">Last night <b>{short(last)}</b></span>}
+        <span className="chip"><b>{nights}</b> night{nights === 1 ? '' : 's'} played</span>
+      </div>
+      <StoryCards R={R} ranked={rk} />
       <Banner />
       {!rk.length ? <p className="empty">No rated games yet. Once the admin adds one, the rankings show up here.</p> : <>
         <Ladder ranked={rk} highlight={highlight} setHighlight={setHighlight} />

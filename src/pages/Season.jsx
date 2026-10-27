@@ -53,7 +53,10 @@ export default function Season() {
         </div>
       )}
       {st.rows.length ? <SeasonTable standings={st} /> : <p className="empty">No regular games in this season yet.</p>}
-      <p className="note">Season score = 1000 × (points + {D.S.prior} × 0.5) ÷ (games + {D.S.prior}), so it always lands somewhere between 0 and 1000. Points run from 1 for a win down to 0 for last, so a 3-player table and a 6-player table are worth the same, and ties split. The {D.S.prior} imaginary average games stop one lucky night from topping the table. Missing a night costs nothing. Qualified players rank first; green rows are playoff seeds. Playoff and friendly games don't count toward the table (playoffs still move Elo). This table — not Elo — decides the season champion; Elo is a separate, ongoing skill rating shown on <a href={hashFor('', gid)}>Rankings</a> that never resets.</p>
+      <details className="help">
+        <summary>How is the season score calculated?</summary>
+        <p className="note">Season score = 1000 × (points + {D.S.prior} × 0.5) ÷ (games + {D.S.prior}), so it always lands somewhere between 0 and 1000. Points run from 1 for a win down to 0 for last, so a 3-player table and a 6-player table are worth the same, and ties split. The {D.S.prior} imaginary average games stop one lucky night from topping the table. Missing a night costs nothing. Qualified players rank first; green rows are playoff seeds. Playoff and friendly games don't count toward the table (playoffs still move Elo). This table — not Elo — decides the season champion; Elo is a separate, ongoing skill rating shown on <a href={hashFor('', gid)}>Rankings</a> that never resets.</p>
+      </details>
       {seasonGames.length > 0 && <>
         <h2>Games this season</h2>
         <GamesTable key={num} games={seasonGames} />

@@ -1,0 +1,311 @@
+expansion,pile_id,distinct_names,physical_copies,card_ids
+Cornucopia & Guilds,Advisor,1,10,cornucopia-guilds:advisor
+Cornucopia & Guilds,Baker,1,10,cornucopia-guilds:baker
+Cornucopia & Guilds,Butcher,1,10,cornucopia-guilds:butcher
+Cornucopia & Guilds,Candlestick Maker,1,10,cornucopia-guilds:candlestick-maker
+Cornucopia & Guilds,Carnival,1,10,cornucopia-guilds:carnival
+Cornucopia & Guilds,Fairgrounds,1,12,cornucopia-guilds:fairgrounds
+Cornucopia & Guilds,Farmhands,1,10,cornucopia-guilds:farmhands
+Cornucopia & Guilds,Farrier,1,10,cornucopia-guilds:farrier
+Cornucopia & Guilds,Ferryman,1,10,cornucopia-guilds:ferryman
+Cornucopia & Guilds,Footpad,1,10,cornucopia-guilds:footpad
+Cornucopia & Guilds,Hamlet,1,10,cornucopia-guilds:hamlet
+Cornucopia & Guilds,Herald,1,10,cornucopia-guilds:herald
+Cornucopia & Guilds,Horn of Plenty,1,10,cornucopia-guilds:horn-of-plenty
+Cornucopia & Guilds,Hunting Party,1,10,cornucopia-guilds:hunting-party
+Cornucopia & Guilds,Infirmary,1,10,cornucopia-guilds:infirmary
+Cornucopia & Guilds,Jester,1,10,cornucopia-guilds:jester
+Cornucopia & Guilds,Journeyman,1,10,cornucopia-guilds:journeyman
+Cornucopia & Guilds,Joust,1,10,cornucopia-guilds:joust
+Cornucopia & Guilds,Menagerie,1,10,cornucopia-guilds:menagerie
+Cornucopia & Guilds,Merchant Guild,1,10,cornucopia-guilds:merchant-guild
+Cornucopia & Guilds,Plaza,1,10,cornucopia-guilds:plaza
+Cornucopia & Guilds,Remake,1,10,cornucopia-guilds:remake
+Cornucopia & Guilds,Shop,1,10,cornucopia-guilds:shop
+Cornucopia & Guilds,Soothsayer,1,10,cornucopia-guilds:soothsayer
+Cornucopia & Guilds,Stonemason,1,10,cornucopia-guilds:stonemason
+Cornucopia & Guilds,Young Witch,1,10,cornucopia-guilds:young-witch
+Dark Ages,Altar,1,10,dark-ages:altar
+Dark Ages,Armory,1,10,dark-ages:armory
+Dark Ages,Band of Misfits,1,10,dark-ages:band-of-misfits
+Dark Ages,Bandit Camp,1,10,dark-ages:bandit-camp
+Dark Ages,Beggar,1,10,dark-ages:beggar
+Dark Ages,Catacombs,1,10,dark-ages:catacombs
+Dark Ages,Count,1,10,dark-ages:count
+Dark Ages,Counterfeit,1,10,dark-ages:counterfeit
+Dark Ages,Cultist,1,10,dark-ages:cultist
+Dark Ages,Death Cart,1,10,dark-ages:death-cart
+Dark Ages,Feodum,1,12,dark-ages:feodum
+Dark Ages,Forager,1,10,dark-ages:forager
+Dark Ages,Fortress,1,10,dark-ages:fortress
+Dark Ages,Graverobber,1,10,dark-ages:graverobber
+Dark Ages,Hermit,1,10,dark-ages:hermit
+Dark Ages,Hunting Grounds,1,10,dark-ages:hunting-grounds
+Dark Ages,Ironmonger,1,10,dark-ages:ironmonger
+Dark Ages,Junk Dealer,1,10,dark-ages:junk-dealer
+Dark Ages,Knights,10,10,dark-ages:dame-anna|dark-ages:dame-josephine|dark-ages:dame-molly|dark-ages:dame-natalie|dark-ages:dame-sylvia|dark-ages:sir-bailey|dark-ages:sir-destry|dark-ages:sir-martin|dark-ages:sir-michael|dark-ages:sir-vander
+Dark Ages,Marauder,1,10,dark-ages:marauder
+Dark Ages,Market Square,1,10,dark-ages:market-square
+Dark Ages,Mystic,1,10,dark-ages:mystic
+Dark Ages,Pillage,1,10,dark-ages:pillage
+Dark Ages,Poor House,1,10,dark-ages:poor-house
+Dark Ages,Procession,1,10,dark-ages:procession
+Dark Ages,Rats,1,20,dark-ages:rats
+Dark Ages,Rebuild,1,10,dark-ages:rebuild
+Dark Ages,Rogue,1,10,dark-ages:rogue
+Dark Ages,Sage,1,10,dark-ages:sage
+Dark Ages,Scavenger,1,10,dark-ages:scavenger
+Dark Ages,Squire,1,10,dark-ages:squire
+Dark Ages,Storeroom,1,10,dark-ages:storeroom
+Dark Ages,Urchin,1,10,dark-ages:urchin
+Dark Ages,Vagrant,1,10,dark-ages:vagrant
+Dark Ages,Wandering Minstrel,1,10,dark-ages:wandering-minstrel
+Dominion Base Game,Artisan,1,10,dominion-base-game:artisan
+Dominion Base Game,Bandit,1,10,dominion-base-game:bandit
+Dominion Base Game,Bureaucrat,1,10,dominion-base-game:bureaucrat
+Dominion Base Game,Cellar,1,10,dominion-base-game:cellar
+Dominion Base Game,Chapel,1,10,dominion-base-game:chapel
+Dominion Base Game,Council Room,1,10,dominion-base-game:council-room
+Dominion Base Game,Festival,1,10,dominion-base-game:festival
+Dominion Base Game,Gardens,1,12,dominion-base-game:gardens
+Dominion Base Game,Harbinger,1,10,dominion-base-game:harbinger
+Dominion Base Game,Laboratory,1,10,dominion-base-game:laboratory
+Dominion Base Game,Library,1,10,dominion-base-game:library
+Dominion Base Game,Market,1,10,dominion-base-game:market
+Dominion Base Game,Merchant,1,10,dominion-base-game:merchant
+Dominion Base Game,Militia,1,10,dominion-base-game:militia
+Dominion Base Game,Mine,1,10,dominion-base-game:mine
+Dominion Base Game,Moat,1,10,dominion-base-game:moat
+Dominion Base Game,Moneylender,1,10,dominion-base-game:moneylender
+Dominion Base Game,Poacher,1,10,dominion-base-game:poacher
+Dominion Base Game,Remodel,1,10,dominion-base-game:remodel
+Dominion Base Game,Sentry,1,10,dominion-base-game:sentry
+Dominion Base Game,Smithy,1,10,dominion-base-game:smithy
+Dominion Base Game,Throne Room,1,10,dominion-base-game:throne-room
+Dominion Base Game,Vassal,1,10,dominion-base-game:vassal
+Dominion Base Game,Village,1,10,dominion-base-game:village
+Dominion Base Game,Witch,1,10,dominion-base-game:witch
+Dominion Base Game,Workshop,1,10,dominion-base-game:workshop
+Empires,Archive,1,10,empires:archive
+Empires,Capital,1,10,empires:capital
+Empires,Castles,8,12,empires:humble-castle|empires:crumbling-castle|empires:small-castle|empires:haunted-castle|empires:opulent-castle|empires:sprawling-castle|empires:grand-castle|empires:king-s-castle
+Empires,Catapult / Rocks,2,10,empires:catapult|empires:rocks
+Empires,Chariot Race,1,10,empires:chariot-race
+Empires,Charm,1,10,empires:charm
+Empires,City Quarter,1,10,empires:city-quarter
+Empires,Crown,1,10,empires:crown
+Empires,Encampment / Plunder,2,10,empires:encampment|empires:plunder
+Empires,Enchantress,1,10,empires:enchantress
+Empires,Engineer,1,10,empires:engineer
+Empires,Farmers’ Market,1,10,empires:farmers-market
+Empires,Forum,1,10,empires:forum
+Empires,Gladiator / Fortune,2,10,empires:gladiator|empires:fortune
+Empires,Groundskeeper,1,10,empires:groundskeeper
+Empires,Legionary,1,10,empires:legionary
+Empires,Overlord,1,10,empires:overlord
+Empires,Patrician / Emporium,2,10,empires:patrician|empires:emporium
+Empires,Royal Blacksmith,1,10,empires:royal-blacksmith
+Empires,Sacrifice,1,10,empires:sacrifice
+Empires,Settlers / Bustling Village,2,10,empires:settlers|empires:bustling-village
+Empires,Temple,1,10,empires:temple
+Empires,Villa,1,10,empires:villa
+Empires,Wild Hunt,1,10,empires:wild-hunt
+Hinterlands,Berserker,1,10,hinterlands:berserker
+Hinterlands,Border Village,1,10,hinterlands:border-village
+Hinterlands,Cartographer,1,10,hinterlands:cartographer
+Hinterlands,Cauldron,1,10,hinterlands:cauldron
+Hinterlands,Crossroads,1,10,hinterlands:crossroads
+Hinterlands,Develop,1,10,hinterlands:develop
+Hinterlands,Farmland,1,12,hinterlands:farmland
+Hinterlands,Fool's Gold,1,10,hinterlands:fool-s-gold
+Hinterlands,Guard Dog,1,10,hinterlands:guard-dog
+Hinterlands,Haggler,1,10,hinterlands:haggler
+Hinterlands,Highway,1,10,hinterlands:highway
+Hinterlands,Inn,1,10,hinterlands:inn
+Hinterlands,Jack of All Trades,1,10,hinterlands:jack-of-all-trades
+Hinterlands,Margrave,1,10,hinterlands:margrave
+Hinterlands,Nomads,1,10,hinterlands:nomads
+Hinterlands,Oasis,1,10,hinterlands:oasis
+Hinterlands,Scheme,1,10,hinterlands:scheme
+Hinterlands,Souk,1,10,hinterlands:souk
+Hinterlands,Spice Merchant,1,10,hinterlands:spice-merchant
+Hinterlands,Stables,1,10,hinterlands:stables
+Hinterlands,Trader,1,10,hinterlands:trader
+Hinterlands,Trail,1,10,hinterlands:trail
+Hinterlands,Tunnel,1,12,hinterlands:tunnel
+Hinterlands,Weaver,1,10,hinterlands:weaver
+Hinterlands,Wheelwright,1,10,hinterlands:wheelwright
+Hinterlands,Witch's Hut,1,10,hinterlands:witch-s-hut
+Intrigue,Baron,1,10,intrigue:baron
+Intrigue,Bridge,1,10,intrigue:bridge
+Intrigue,Conspirator,1,10,intrigue:conspirator
+Intrigue,Courtier,1,10,intrigue:courtier
+Intrigue,Courtyard,1,10,intrigue:courtyard
+Intrigue,Diplomat,1,10,intrigue:diplomat
+Intrigue,Duke,1,12,intrigue:duke
+Intrigue,Farm,1,12,intrigue:farm
+Intrigue,Ironworks,1,10,intrigue:ironworks
+Intrigue,Lurker,1,10,intrigue:lurker
+Intrigue,Masquerade,1,10,intrigue:masquerade
+Intrigue,Mill,1,12,intrigue:mill
+Intrigue,Mining Village,1,10,intrigue:mining-village
+Intrigue,Minion,1,10,intrigue:minion
+Intrigue,Nobles,1,12,intrigue:nobles
+Intrigue,Patrol,1,10,intrigue:patrol
+Intrigue,Pawn,1,10,intrigue:pawn
+Intrigue,Replace,1,10,intrigue:replace
+Intrigue,Secret Passage,1,10,intrigue:secret-passage
+Intrigue,Shanty Town,1,10,intrigue:shanty-town
+Intrigue,Steward,1,10,intrigue:steward
+Intrigue,Swindler,1,10,intrigue:swindler
+Intrigue,Torturer,1,10,intrigue:torturer
+Intrigue,Trading Post,1,10,intrigue:trading-post
+Intrigue,Upgrade,1,10,intrigue:upgrade
+Intrigue,Wishing Well,1,10,intrigue:wishing-well
+Menagerie,Animal Fair,1,10,menagerie:animal-fair
+Menagerie,Barge,1,10,menagerie:barge
+Menagerie,Black Cat,1,10,menagerie:black-cat
+Menagerie,Bounty Hunter,1,10,menagerie:bounty-hunter
+Menagerie,Camel Train,1,10,menagerie:camel-train
+Menagerie,Cardinal,1,10,menagerie:cardinal
+Menagerie,Cavalry,1,10,menagerie:cavalry
+Menagerie,Coven,1,10,menagerie:coven
+Menagerie,Destrier,1,10,menagerie:destrier
+Menagerie,Displace,1,10,menagerie:displace
+Menagerie,Falconer,1,10,menagerie:falconer
+Menagerie,Fisherman,1,10,menagerie:fisherman
+Menagerie,Gatekeeper,1,10,menagerie:gatekeeper
+Menagerie,Goatherd,1,10,menagerie:goatherd
+Menagerie,Groom,1,10,menagerie:groom
+Menagerie,Hostelry,1,10,menagerie:hostelry
+Menagerie,Hunting Lodge,1,10,menagerie:hunting-lodge
+Menagerie,Kiln,1,10,menagerie:kiln
+Menagerie,Livery,1,10,menagerie:livery
+Menagerie,Mastermind,1,10,menagerie:mastermind
+Menagerie,Paddock,1,10,menagerie:paddock
+Menagerie,Sanctuary,1,10,menagerie:sanctuary
+Menagerie,Scrap,1,10,menagerie:scrap
+Menagerie,Sheepdog,1,10,menagerie:sheepdog
+Menagerie,Sleigh,1,10,menagerie:sleigh
+Menagerie,Snowy Village,1,10,menagerie:snowy-village
+Menagerie,Stockpile,1,10,menagerie:stockpile
+Menagerie,Supplies,1,10,menagerie:supplies
+Menagerie,Village Green,1,10,menagerie:village-green
+Menagerie,Wayfarer,1,10,menagerie:wayfarer
+Plunder,Abundance,1,10,plunder:abundance
+Plunder,Buried Treasure,1,10,plunder:buried-treasure
+Plunder,Cabin Boy,1,10,plunder:cabin-boy
+Plunder,Cage,1,10,plunder:cage
+Plunder,Crew,1,10,plunder:crew
+Plunder,Crucible,1,10,plunder:crucible
+Plunder,Cutthroat,1,10,plunder:cutthroat
+Plunder,Enlarge,1,10,plunder:enlarge
+Plunder,Figurine,1,10,plunder:figurine
+Plunder,First Mate,1,10,plunder:first-mate
+Plunder,Flagship,1,10,plunder:flagship
+Plunder,Fortune Hunter,1,10,plunder:fortune-hunter
+Plunder,Frigate,1,10,plunder:frigate
+Plunder,Gondola,1,10,plunder:gondola
+Plunder,Grotto,1,10,plunder:grotto
+Plunder,Harbor Village,1,10,plunder:harbor-village
+Plunder,Jewelled Egg,1,10,plunder:jewelled-egg
+Plunder,King's Cache,1,10,plunder:king-s-cache
+Plunder,Landing Party,1,10,plunder:landing-party
+Plunder,Longship,1,10,plunder:longship
+Plunder,Mapmaker,1,10,plunder:mapmaker
+Plunder,Maroon,1,10,plunder:maroon
+Plunder,Mining Road,1,10,plunder:mining-road
+Plunder,Pendant,1,10,plunder:pendant
+Plunder,Pickaxe,1,10,plunder:pickaxe
+Plunder,Pilgrim,1,10,plunder:pilgrim
+Plunder,Quartermaster,1,10,plunder:quartermaster
+Plunder,Rope,1,10,plunder:rope
+Plunder,Sack of Loot,1,10,plunder:sack-of-loot
+Plunder,Search,1,10,plunder:search
+Plunder,Secluded Shrine,1,10,plunder:secluded-shrine
+Plunder,Shaman,1,10,plunder:shaman
+Plunder,Silver Mine,1,10,plunder:silver-mine
+Plunder,Siren,1,10,plunder:siren
+Plunder,Stowaway,1,10,plunder:stowaway
+Plunder,Swamp Shacks,1,10,plunder:swamp-shacks
+Plunder,Taskmaster,1,10,plunder:taskmaster
+Plunder,Tools,1,10,plunder:tools
+Plunder,Trickster,1,10,plunder:trickster
+Plunder,Wealthy Village,1,10,plunder:wealthy-village
+Prosperity,Anvil,1,10,prosperity:anvil
+Prosperity,Bank,1,10,prosperity:bank
+Prosperity,Bishop,1,10,prosperity:bishop
+Prosperity,Charlatan,1,10,prosperity:charlatan
+Prosperity,City,1,10,prosperity:city
+Prosperity,Clerk,1,10,prosperity:clerk
+Prosperity,Collection,1,10,prosperity:collection
+Prosperity,Crystal Ball,1,10,prosperity:crystal-ball
+Prosperity,Expand,1,10,prosperity:expand
+Prosperity,Forge,1,10,prosperity:forge
+Prosperity,Grand Market,1,10,prosperity:grand-market
+Prosperity,Hoard,1,10,prosperity:hoard
+Prosperity,Investment,1,10,prosperity:investment
+Prosperity,King's Court,1,10,prosperity:king-s-court
+Prosperity,Magnate,1,10,prosperity:magnate
+Prosperity,Mint,1,10,prosperity:mint
+Prosperity,Monument,1,10,prosperity:monument
+Prosperity,Peddler,1,10,prosperity:peddler
+Prosperity,Quarry,1,10,prosperity:quarry
+Prosperity,Rabble,1,10,prosperity:rabble
+Prosperity,Tiara,1,10,prosperity:tiara
+Prosperity,Vault,1,10,prosperity:vault
+Prosperity,War Chest,1,10,prosperity:war-chest
+Prosperity,Watchtower,1,10,prosperity:watchtower
+Prosperity,Worker's Village,1,10,prosperity:worker-s-village
+Renaissance,Acting Troupe,1,10,renaissance:acting-troupe
+Renaissance,Border Guard,1,10,renaissance:border-guard
+Renaissance,Cargo Ship,1,10,renaissance:cargo-ship
+Renaissance,Ducat,1,10,renaissance:ducat
+Renaissance,Experiment,1,10,renaissance:experiment
+Renaissance,Flag Bearer,1,10,renaissance:flag-bearer
+Renaissance,Hideout,1,10,renaissance:hideout
+Renaissance,Improve,1,10,renaissance:improve
+Renaissance,Inventor,1,10,renaissance:inventor
+Renaissance,Lackeys,1,10,renaissance:lackeys
+Renaissance,Mountain Village,1,10,renaissance:mountain-village
+Renaissance,Old Witch,1,10,renaissance:old-witch
+Renaissance,Patron,1,10,renaissance:patron
+Renaissance,Priest,1,10,renaissance:priest
+Renaissance,Recruiter,1,10,renaissance:recruiter
+Renaissance,Research,1,10,renaissance:research
+Renaissance,Scepter,1,10,renaissance:scepter
+Renaissance,Scholar,1,10,renaissance:scholar
+Renaissance,Sculptor,1,10,renaissance:sculptor
+Renaissance,Seer,1,10,renaissance:seer
+Renaissance,Silk Merchant,1,10,renaissance:silk-merchant
+Renaissance,Spices,1,10,renaissance:spices
+Renaissance,Swashbuckler,1,10,renaissance:swashbuckler
+Renaissance,Treasurer,1,10,renaissance:treasurer
+Renaissance,Villain,1,10,renaissance:villain
+Seaside,Astrolabe,1,10,seaside:astrolabe
+Seaside,Bazaar,1,10,seaside:bazaar
+Seaside,Blockade,1,10,seaside:blockade
+Seaside,Caravan,1,10,seaside:caravan
+Seaside,Corsair,1,10,seaside:corsair
+Seaside,Cutpurse,1,10,seaside:cutpurse
+Seaside,Fishing Village,1,10,seaside:fishing-village
+Seaside,Haven,1,10,seaside:haven
+Seaside,Island,1,12,seaside:island
+Seaside,Lighthouse,1,10,seaside:lighthouse
+Seaside,Lookout,1,10,seaside:lookout
+Seaside,Merchant Ship,1,10,seaside:merchant-ship
+Seaside,Monkey,1,10,seaside:monkey
+Seaside,Native Village,1,10,seaside:native-village
+Seaside,Outpost,1,10,seaside:outpost
+Seaside,Pirate,1,10,seaside:pirate
+Seaside,Sailor,1,10,seaside:sailor
+Seaside,Salvager,1,10,seaside:salvager
+Seaside,Sea Chart,1,10,seaside:sea-chart
+Seaside,Sea Witch,1,10,seaside:sea-witch
+Seaside,Smugglers,1,10,seaside:smugglers
+Seaside,Tactician,1,10,seaside:tactician
+Seaside,Tide Pools,1,10,seaside:tide-pools
+Seaside,Treasure Map,1,10,seaside:treasure-map
+Seaside,Treasury,1,10,seaside:treasury
+Seaside,Warehouse,1,10,seaside:warehouse
+Seaside,Wharf,1,10,seaside:wharf
