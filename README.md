@@ -16,7 +16,7 @@ A website for our Dominion league: Elo rankings, seasons, head-to-head, records 
 
 The site needs a free [Supabase](https://supabase.com) project for accounts and game data.
 
-1. Create a Supabase project. Under Project Settings → API, copy the **Project URL** and the **anon / publishable key** into `js/supabase-config.js` (both are safe to commit — they're meant to be public; real security comes from the database policies, not from hiding them).
+1. Create a Supabase project. Under Project Settings → API, copy the **Project URL** and the **anon / publishable key** into `public/js/supabase-config.js` (both are safe to commit — they're meant to be public; real security comes from the database policies, not from hiding them).
 2. Open the SQL editor and run everything in `supabase/schema.sql`. This creates the `players`, `games`, `game_results`, `groups`, `seasons` and `settings` tables, turns on Row Level Security, and adds the admin-only functions the site calls to add/edit/delete games. It's safe to re-run after pulling a newer version of this file — already-applied changes are skipped.
 3. Under Authentication → Providers → Email, you can leave "Confirm email" on — the migration script below confirms each account directly through the Admin API, so players never need a real inbox.
 4. Run the one-time migration script from your own computer (not from the browser):
@@ -25,7 +25,7 @@ The site needs a free [Supabase](https://supabase.com) project for accounts and 
    SUPABASE_SERVICE_ROLE_KEY=paste-it-here-only-for-this-one-command \
    node scripts/migrate.mjs
    ```
-   This creates a login for everyone listed in the `PLAYERS` array at the top of `scripts/migrate.mjs` (edit that list first — names, friend group, and which one is the admin), gives them the preset password `dominion`, seeds the starting friend group and season (edit the `GROUPS`/`SEASONS` arrays in the same file if yours differ), and imports the rows already in `data/games.csv`. The **service-role key** (Project Settings → API) bypasses all security — use it for this one local command and nowhere else. Never commit it, never put it in `js/`, never paste it in a chat.
+   This creates a login for everyone listed in the `PLAYERS` array at the top of `scripts/migrate.mjs` (edit that list first — names, friend group, and which one is the admin), gives them the preset password `dominion`, seeds the starting friend group and season (edit the `GROUPS`/`SEASONS` arrays in the same file if yours differ), and imports the rows already in `data/games.csv`. The **service-role key** (Project Settings → API) bypasses all security — use it for this one local command and nowhere else. Never commit it, never put it in `public/js/`, never paste it in a chat.
 5. Tell everyone their name and the preset password. The site forces a real password on first sign-in.
 
 Once this is done, `data/games.csv` is no longer read by the live site — it only matters for the one-time import above.
@@ -98,7 +98,7 @@ Defaults: Peasant under 1040, Knight 1040, Lord 1090, Duke 1150, Emperor 1225. T
 
 - **Elo**: each table is treated as head-to-head matchups; change = K ÷ (players − 1) × sum of (actual − expected). K is 48 for a player's first 10 rated games, then 32.
 - **Season score** = (points + prior × 0.5) ÷ (games + prior), where points run from 1 for a win to 0 for last, so table size doesn't matter and ties split.
-- The calculation code is in `js/engine.js` and was checked against the league spreadsheet on randomized multi-season data (Elo, standings, seeds, head-to-head, streaks and attendance all matched).
+- The calculation code is in `public/js/engine.js` and was checked against the league spreadsheet on randomized multi-season data (Elo, standings, seeds, head-to-head, streaks and attendance all matched).
 
 ## Preview on your computer
 
@@ -107,6 +107,6 @@ Browsers block data loading from `file://`, so run `python3 -m http.server` in t
 ## Good to know
 
 - Only the admin can change game data, seasons or groups; everyone else can view once signed in, and nobody can view anything signed out.
-- The static files (`index.html`, `js/`, `data/config.json`) are still technically public on GitHub Pages the way any static site is — but they contain no player names or results. All of that lives behind Supabase's Row Level Security and requires a real session to read.
+- The static files (`index.html`, `public/js/`, `public/data/config.json`) are still technically public on GitHub Pages the way any static site is — but they contain no player names or results. All of that lives behind Supabase's Row Level Security and requires a real session to read.
 - The only outside requests are Google Fonts and Supabase; the page works without Google Fonts, but it does need Supabase to do anything at all.
 - GitHub Pages can take up to ten minutes to refresh the static files after a commit, and your browser may cache for a moment — reload if you don't see a change. Game data itself updates immediately, since it's never cached in the repo.

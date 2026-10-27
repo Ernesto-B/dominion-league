@@ -9,7 +9,7 @@ A static Dominion board-game league tracker: Elo rankings, seasons, head-to-head
 ## Hard constraints — read before changing architecture
 
 - **GitHub Pages only, by explicit owner preference.** Never introduce another hosting/deploy target. Any server-side need goes through Supabase (Postgres RLS/RPCs, or an Edge Function), not a separate platform — Edge Functions deploy to Supabase's own infrastructure, not GitHub Pages, so they don't conflict with this.
-- **No build step.** No npm, no bundler, no JSX, no TypeScript in the browser code (the one exception is the Edge Function, which runs on Deno and is genuinely TypeScript — that's a different runtime, not the site). If a change would require `npm install` to view the site, it's the wrong approach.
+- **Migrating to React + Vite (branch `react-migration`).** The owner has chosen to drop the old "no build step" rule. `npm run build` now produces `dist/`, deployed to GitHub Pages by `.github/workflows/deploy.yml` (Pages source must be set to "GitHub Actions"). Still no TypeScript in the browser code, and still hash routing (`#/<route>`), which keeps GitHub Pages working without a 404 fallback. The migration is incremental: the legacy `public/js/app.js` keeps rendering everything not yet ported, while React (`src/`) takes over page by page. Static assets (`icons/`, `images/`, `data/`, legacy `js/`) live in `public/` and are copied through untouched.
 - **Icons are never invented.** The owner generates all icon/image assets themselves and drops them in `~/Downloads/...`; an agent's job is to resize (`sips -Z <px>`) and wire them in. Never substitute a default emoji as a placeholder — ask, or leave the slot as plain text until an asset exists.
 
 ## Architecture

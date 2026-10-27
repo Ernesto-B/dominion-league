@@ -35,7 +35,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--text
     position:fixed;
     inset:0;
     z-index:-1;
-    background:linear-gradient(rgba(8,10,14,.6),rgba(8,10,14,.82)),url('images/background.jpg') center/cover no-repeat;
+    background:linear-gradient(rgba(8,10,14,.6),rgba(8,10,14,.82)),url('/images/background.jpg') center/cover no-repeat;
   }
 }
 a{color:inherit}
