@@ -37,6 +37,10 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--text
     z-index:-1;
     background:linear-gradient(rgba(8,10,14,.6),rgba(8,10,14,.82)),url('/images/background.jpg') center/cover no-repeat;
   }
+  /* a phone gets a lighter copy of the same picture (a third of the download) */
+  @media (max-width:720px){
+    body::before{background:linear-gradient(rgba(8,10,14,.6),rgba(8,10,14,.82)),url('/images/background-sm.jpg') center/cover no-repeat}
+  }
 }
 a{color:inherit}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:3px}
@@ -125,6 +129,10 @@ td.chev{width:18px;color:var(--muted);transition:transform .15s}
 tr.grow.open td.chev{transform:rotate(90deg)}
 tr.gdetail td{background:var(--bg);padding:14px 16px}
 tr.gdetail:hover{background:none}
+/* an expanded game must not stretch the whole table to fit its own wide inner table: the cell takes the width the other rows give
+   it (max-width:0 makes it ask for none) and the inner table scrolls on its own */
+tr.gdetail>td{max-width:0}
+tr.gdetail .tablewrap{max-width:100%}
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;background:var(--line)}
 .pill.ok{background:var(--felt-soft);color:var(--felt)} .pill.warn{background:var(--brass-soft);color:var(--brass)}
 .pill.play{background:var(--brass-soft);color:var(--brass)} .pill.fr{background:var(--line);color:var(--muted)}
@@ -284,7 +292,7 @@ th.sortable[data-dir=desc]::after{content:" \25BC";font-size:10px}
 .tierbar{display:flex;align-items:center;gap:10px;margin:10px 0 18px}
 .tierbar .progress{flex:1;margin:0}
 .tieranchor{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none}
-.tieranchor span{font-size:11px;color:var(--muted);white-space:nowrap}
+.tieranchor span{font-size:12px;color:var(--muted);white-space:nowrap}
 .tierbarwrap,.popwrap{position:relative}
 .popwrap{display:inline-block;width:100%}
 .tierpopup{display:none}
@@ -345,17 +353,17 @@ td.dn-cost-cell{white-space:nowrap}
 .pill.t-event{background:rgba(var(--t-event),.4)}
 .pill.t-way{background:rgba(var(--t-way),.45)}
 .pill.t-landmark{background:rgba(var(--t-landmark),.55)}
-.dn-chip.t-project{border-color:rgba(var(--t-project),.9)}
-.dn-chip.t-trait{border-color:rgba(var(--t-trait),.9)}
-.dn-chip.t-event{border-color:rgba(var(--t-event),.9)}
-.dn-chip.t-way{border-color:rgba(var(--t-way),.9)}
-.dn-chip.t-landmark{border-color:rgba(var(--t-landmark),.9)}
-.dn-chip.t-action{border-color:rgba(var(--t-action),.9)}
-.dn-chip.t-treasure{border-color:rgba(var(--t-treasure),.9)}
-.dn-chip.t-duration{border-color:rgba(var(--t-duration),.9)}
-.dn-chip.t-attack{border-color:rgba(var(--t-attack),.9)}
-.dn-chip.t-reaction{border-color:rgba(var(--t-reaction),.9)}
-.dn-chip.t-victory{border-color:rgba(var(--t-victory),.9)}
+.dn-chip.t-project,.dn-kchip.t-project{border-color:rgba(var(--t-project),.9)}
+.dn-chip.t-trait,.dn-kchip.t-trait{border-color:rgba(var(--t-trait),.9)}
+.dn-chip.t-event,.dn-kchip.t-event{border-color:rgba(var(--t-event),.9)}
+.dn-chip.t-way,.dn-kchip.t-way{border-color:rgba(var(--t-way),.9)}
+.dn-chip.t-landmark,.dn-kchip.t-landmark{border-color:rgba(var(--t-landmark),.9)}
+.dn-chip.t-action,.dn-kchip.t-action{border-color:rgba(var(--t-action),.9)}
+.dn-chip.t-treasure,.dn-kchip.t-treasure{border-color:rgba(var(--t-treasure),.9)}
+.dn-chip.t-duration,.dn-kchip.t-duration{border-color:rgba(var(--t-duration),.9)}
+.dn-chip.t-attack,.dn-kchip.t-attack{border-color:rgba(var(--t-attack),.9)}
+.dn-chip.t-reaction,.dn-kchip.t-reaction{border-color:rgba(var(--t-reaction),.9)}
+.dn-chip.t-victory,.dn-kchip.t-victory{border-color:rgba(var(--t-victory),.9)}
 .dn-types-lg .dn-types{gap:6px}
 /* inside a .stat tile the generic ".stat span" rule (muted, 13px) would otherwise win over .pill */
 .stat .dn-types-lg,.stat .dn-types-lg .dn-types,.stat .dn-types-lg .pill{color:inherit}
@@ -371,6 +379,80 @@ td.dn-cost-cell{white-space:nowrap}
 .dn-mech-note{margin:10px 0 0}
 .dn-table small{font-size:12px}
 .dn-table td.name{line-height:1.35}
+.dn-itemnav{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 18px;margin:0 0 12px}
+.dn-itemnav-steps{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.dn-itemnav-off{opacity:.45}
+.dn-snippet{display:block;margin-top:2px;font-size:12px}
+.dn-kchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.dn-kchip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:2px 10px 2px 6px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);font:500 14px var(--text);text-decoration:none}
+a.dn-kchip:hover{border-color:var(--muted)}
+.dn-kchip-name{min-width:0}
+.dn-kchip-on{font-size:12px}
+.dn-kchip-missing{padding-left:10px;opacity:.7;font-style:italic}
+.dn-kchip-x{min-height:0;border:0;background:transparent;color:var(--muted);font-size:18px;line-height:1;padding:0 2px 1px 4px;cursor:pointer}
+.dn-kchip-x:hover{color:var(--ink)}
+.dn-kingdom{margin:12px 0}
+.dn-kingdom-h{margin:0 0 2px}
+.dn-kpicker{display:grid;gap:8px}
+.dn-kpicker-count{margin:0}
+.dn-kpicker-search input{min-width:min(100%,320px)}
+.dn-kpicker-note{margin:0;color:var(--brass)}
+.dn-kresults{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;max-height:280px;overflow-y:auto}
+.dn-kresults li+li{border-top:1px solid var(--line)}
+.dn-kresults button{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:6px 12px;border:0;border-radius:0;background:var(--panel);color:var(--ink);font:500 14px var(--text);text-align:left;cursor:pointer}
+.dn-kresults button:hover,.dn-kresults button:focus-visible{background:var(--line)}
+.dn-kresults-name{flex:1;min-width:0}
+.dn-check{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:14px}
+.dn-check input{margin:0}
+.dn-check.dn-off{opacity:.55;cursor:default}
+.dn-rz-details{margin-top:12px}
+.dn-rz-rules{display:grid;gap:12px;margin-top:8px;padding:4px 0 4px 2px}
+.dn-rz-require{display:grid;gap:8px;margin:0}
+.dn-rz-lists{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:8px}
+.dn-rz-listh{margin:0 0 4px}
+.dn-rz-opts .controls{margin-top:16px}
+.dn-rz-go{margin:16px 0 0}
+.dn-rz-go button[type=submit]{min-height:44px;padding:10px 22px;font-size:16px}
+.dn-rz-msg{margin:12px 0 0;padding:10px 12px;border:1px solid var(--line);border-left:4px solid rgb(var(--t-attack));border-radius:8px;background:var(--panel)}
+.dn-rz-empty{margin:28px 0;color:var(--muted)}
+.dn-rz-result{margin-top:28px;scroll-margin-top:12px}
+.dn-rz-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 18px;margin-bottom:12px}
+.dn-rz-bar h2{margin:0}
+.dn-rz-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.dn-rz-sub{margin:22px 0 8px}
+.dn-rzgrid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;align-items:start}
+.dn-rztile{display:flex;flex-direction:column;gap:10px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:10px}
+.dn-rztile.locked{box-shadow:inset 0 0 0 1px var(--muted)}
+.dn-rztile-body{display:flex;gap:12px;align-items:flex-start;min-width:0}
+.dn-rztile-btns{display:flex;gap:8px}
+.dn-rztile-btns button{min-height:34px;padding:5px 12px;font-size:14px}
+.dn-rztile-btns button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.dn-rztile-btns button:disabled{opacity:.45;cursor:default}
+.dn-rz-cost{flex:none}
+.dn-rz-main{min-width:0;flex:1}
+.dn-rz-main p{margin:0 0 4px}
+.dn-rz-name{font:700 17px var(--display);line-height:1.25}
+.dn-rz-name a{color:inherit}
+.dn-rz-members{font-size:13px}
+.dn-rz-exp{margin-top:6px}
+.dn-rz-text{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:14px}
+.dn-rz-textname{margin:0 0 2px;font-weight:600}
+.dn-rz-setup .dn-plain-list{gap:8px}
+.dn-rztile.t-action{border-left-color:rgb(var(--t-action))}
+.dn-rztile.t-treasure{border-left-color:rgb(var(--t-treasure))}
+.dn-rztile.t-duration{border-left-color:rgb(var(--t-duration))}
+.dn-rztile.t-attack{border-left-color:rgb(var(--t-attack))}
+.dn-rztile.t-reaction{border-left-color:rgb(var(--t-reaction))}
+.dn-rztile.t-victory{border-left-color:rgb(var(--t-victory))}
+.dn-rztile.t-project{border-left-color:rgb(var(--t-project))}
+.dn-rztile.t-trait{border-left-color:rgb(var(--t-trait))}
+.dn-rztile.t-event{border-left-color:rgb(var(--t-event))}
+.dn-rztile.t-way{border-left-color:rgb(var(--t-way))}
+.dn-rztile.t-landmark{border-left-color:rgb(var(--t-landmark))}
+@keyframes dn-fresh{from{background:rgba(var(--t-treasure),.35)}to{background:var(--panel)}}
+.dn-rztile.fresh{animation:dn-fresh 1.6s ease-out}
+@media (prefers-reduced-motion:reduce){.dn-rztile.fresh{animation:none;box-shadow:0 0 0 2px rgb(var(--t-treasure))}}
+@media (max-width:600px){.dn-rzgrid{grid-template-columns:1fr}.dn-rz-bar{align-items:flex-start}}
 .dn-pager{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-top:12px}
 .dn-pager-nav{display:inline-flex;align-items:center;gap:10px;margin-left:auto}
 .dn-table tr.dn-rowlink{cursor:pointer}
@@ -445,3 +527,31 @@ tr.grow.hl td.chev + td{box-shadow:inset 3px 0 0 var(--brass),inset 0 1px 0 var(
 .totop:hover{border-color:var(--felt);color:var(--felt)}
 .totop:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.totop{transition:none}}
+
+/* ---------- Phones and other touch screens. Last in the file on purpose, so it wins over the earlier size rules.
+   A thumb needs ~44px; most controls here were 34-38px. */
+.dn-only-sm,.th-short{display:none}
+.dn-fold>summary{cursor:pointer;font-size:14px;padding:4px 0;margin-top:10px}
+@media (max-width:720px){
+  .dn-only-sm{display:block}
+  .th-short{display:inline}.th-full{display:none}
+  /* a crowded list shows just the set's icon (its name is the icon's alt text and title) */
+  .dn-browse .dn-exp-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .dn-browse td:first-child,.dn-browse th:first-child{padding-right:2px}
+  .dn-browse th:first-child{min-width:44px}
+}
+@media (pointer:coarse){
+  button,.btn,select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea{min-height:44px}
+  .nav-toggle{width:44px;height:44px}
+  .pills a{padding:11px 14px}
+  .dn-chip{min-height:40px}
+  .dn-kchip-x{min-height:0;padding:10px 12px;margin:-10px -12px -10px -4px}
+  th.sortable{height:44px}
+  summary,.dn-fold>summary,.dn-mech summary,details.help summary{padding-top:12px;padding-bottom:12px;margin-top:0}
+  .modal-close{width:44px;height:44px;font-size:26px}
+  .dn-itemnav a{display:inline-block;padding:11px 2px}
+  a.lname{min-height:44px;box-sizing:border-box}
+  .dn-check{min-height:44px}
+  a.pl,.lname a{display:inline-block;padding:11px 4px;margin:-11px -4px}
+  .dn-rztile-btns button{min-height:44px}
+}

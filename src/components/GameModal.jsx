@@ -8,8 +8,10 @@ import { SET_NAMES, LANDSCAPES } from '../lib/sets.js';
 import NameIcon from './NameIcon.jsx';
 import PlayerLink from './PlayerLink.jsx';
 import SetIcon from './SetIcon.jsx';
+import KingdomPicker from './KingdomPicker.jsx';
+import { toPayload } from '../dominion/kingdom.js';
 
-const blank = () => ({ date: Eng.fmtDay(Eng.todayDay()), type: '', picked: [], tie: {}, sets: [], landscapes: [], vp: {}, notes: '', editId: null });
+const blank = () => ({ date: Eng.fmtDay(Eng.todayDay()), type: '', picked: [], tie: {}, sets: [], landscapes: [], kingdom: [], kingdomTouched: false, vp: {}, notes: '', editId: null });
 
 // Form state for editing an existing game: players in finishing order, with `tie` marking everyone
 // who shares a place with the player above them.
@@ -22,7 +24,7 @@ function fromGame(D, editId) {
   Object.keys(byPlace).map(Number).sort((a, b) => a - b).forEach(place => {
     byPlace[place].forEach((n, i) => { picked.push(n); if (i > 0) tie[n] = true; });
   });
-  return { date: g.date, type: g.type === 'Regular' ? '' : g.type, picked, tie, sets: g.sets.slice(), landscapes: (g.landscapes || []).slice(), vp: Object.assign({}, g.playerVP), notes: g.notes, editId };
+  return { date: g.date, type: g.type === 'Regular' ? '' : g.type, picked, tie, sets: g.sets.slice(), landscapes: (g.landscapes || []).slice(), kingdom: (g.kingdom || []).map(k => ({ ...k })), kingdomTouched: false, vp: Object.assign({}, g.playerVP), notes: g.notes, editId };
 }
 
 // Re-sorts picked by VP descending (blank VP sinks to the bottom, keeping its prior relative order —
@@ -61,9 +63,11 @@ function Preview({ picked }) {
 }
 
 // Add / edit a game (admin only; the server re-checks via the add_game / edit_game / delete_game RPCs).
-export default function GameModal({ editId, onClose }) {
+// `draft` ({ items, sets, landscapes }) pre-fills a NEW game, e.g. with a kingdom from the Randomizer.
+export default function GameModal({ editId, draft, onClose }) {
   const { D, gid, allGroups, enabledSets, playerIdByName, reload } = usePage();
-  const [bs, setBs] = useState(() => editId == null ? blank() : fromGame(D, editId));
+  const [bs, setBs] = useState(() => editId != null ? fromGame(D, editId)
+    : draft ? { ...blank(), kingdom: draft.items, kingdomTouched: true, sets: draft.sets || [], landscapes: draft.landscapes || [] } : blank());
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
   const boxRef = useRef(null);
@@ -104,6 +108,8 @@ export default function GameModal({ editId, onClose }) {
       p_landscapes: bs.landscapes.length ? LANDSCAPES.filter(n => bs.landscapes.includes(n)).join('; ') : null,
       p_winner_vp: null, p_minutes: null, p_notes: bs.notes || null,
       p_group_id: gid, p_results: results,
+      // sent only when there is something to say: an edit that never touched the kingdom leaves it alone on the server
+      ...(bs.kingdomTouched || (!bs.editId && bs.kingdom.length) ? { p_kingdom: toPayload(bs.kingdom) } : {}),
     };
     setSaving(true); setMsg('Saving…');
     const { error } = bs.editId ? await sb.rpc('edit_game', { p_game_id: bs.editId, ...args }) : await sb.rpc('add_game', args);
@@ -160,7 +166,12 @@ export default function GameModal({ editId, onClose }) {
         <div className="pills" id="bland">
           {LANDSCAPES.map(n => <a key={n} href="#" data-n={n} aria-current={bs.landscapes.includes(n) ? 'true' : undefined} onClick={pick('landscapes', n)}>{n}</a>)}
         </div>
-        <p className="meta" style={{ marginTop: 14 }}>5. Optional details.</p>
+        <p className="meta" style={{ marginTop: 14 }}>5. The Kingdom — optional. Which cards and landscapes did you play with?</p>
+        <KingdomPicker items={bs.kingdom} onChange={(kingdom, implied) => setBs(b => ({
+          ...b, kingdom, kingdomTouched: true,
+          sets: [...new Set([...b.sets, ...implied.sets])], landscapes: [...new Set([...b.landscapes, ...implied.landscapes])],
+        }))} />
+        <p className="meta" style={{ marginTop: 14 }}>6. Optional details.</p>
         <label className="f">Notes <input type="text" id="bn" size={50} value={bs.notes} onChange={e => set({ notes: e.target.value })} /></label>
         <div className="controls" style={{ marginTop: 14 }}>
           <button id="bsave" type="button" disabled={saving} onClick={save}>{bs.editId ? 'Save changes' : 'Save game'}</button>

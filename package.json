@@ -12,6 +12,8 @@
     "dominion:seed": "node scripts/dominion/build-seed.mjs",
     "dominion:validate": "vitest run tests/dominion/data.test.js",
     "dominion:test-db": "node scripts/dominion/test-db.mjs",
+    "kingdom:test-db": "node scripts/dominion/test-kingdom-db.mjs",
+    "db:apply": "node scripts/db-apply.mjs",
     "dominion:check-live": "node scripts/dominion/check-live.mjs",
     "check:build": "node scripts/dominion/check-build.mjs"
   },

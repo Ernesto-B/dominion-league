@@ -96,11 +96,25 @@ Edit a CSV in `seed_csv/`, then `npm run dominion:seed` (regenerates `02_seed_da
 - The site tolerates the text table being absent (card pages say text isn't available yet), so deploying the site
   before applying the SQL is safe.
 
+## Game kingdoms (in the league schema, not this folder)
+
+Logging which cards a game was played with is part of the league schema: **re-run `supabase/schema.sql`** (it is safe to
+re-run) to add the `game_kingdom` table and the new optional `p_kingdom` argument of `add_game`/`edit_game`. It needs the
+Collection tables from this folder to exist, because it validates the ids against them.
+
+```bash
+npm run db:apply -- league      # asks you to type "apply" first, then runs supabase/schema.sql on the linked project
+```
+
+`npm run kingdom:test-db` proves it first on a throwaway local Postgres. `npm run db:apply -- catalog` (Collection schema + seed)
+and `-- all` (both, Collection first) work the same way; add `--dry-run` to see what would run.
+
 ## Checks
 
 | Command | What it proves |
 |---|---|
 | `npm test` | The data package's counts and integrity, the data layer (pagination can't truncate), filters, the pages, routes, secrets and SQL safety. |
 | `npm run dominion:test-db` | Applies schema + seed (twice) to a throwaway local Postgres and tests constraints, RLS and privileges as `anon`/`authenticated`, and that the data equals the original bundle's own import. Needs `initdb`/`psql`. Postgres < 15 can't create `security_invoker` views, so on an older local Postgres that one option is skipped — check the views on the real project (step 2 above does). |
+| `npm run kingdom:test-db` | The league schema's game-kingdom table and RPCs: atomic validation, older-client compatibility, who can read/write it, and that re-seeding the catalog isn't blocked. |
 | `npm run dominion:check-live` | Read-only, anon-key check of the live project: row counts, and that writes are refused. |
 | `npm run check:build` | After `npm run build`: relative asset paths, no secrets in `dist/`. |

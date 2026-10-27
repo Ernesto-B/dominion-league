@@ -1,6 +1,9 @@
 import { useCatalog } from '../CatalogContext.jsx';
-import { cardHref, dominionHref } from '../links.js';
-import { presetCardFilters } from '../filterStore.js';
+import { cardHref, dominionHref, cardsFilterHref } from '../links.js';
+import { DEFAULT_CARD_FILTERS, browseCards, cardFiltersFromQuery, cardFiltersToQuery, neighbors, pickRandom } from '../filters.js';
+import ItemNav from '../components/ItemNav.jsx';
+import PlayHistory from '../components/PlayHistory.jsx';
+import { useLeagueGames } from '../useLeagueGames.js';
 import { useState } from 'react';
 import { formatCost, pileOf, pileMembers, sharedMechanicCards, pageSlice, PAGE_SIZES } from '../model.js';
 import CostIcons from '../components/Cost.jsx';
@@ -8,22 +11,32 @@ import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import { ExpansionBadge, TypePills, Section, Stat, CardText, rowLink } from '../components/bits.jsx';
 
-export default function CardDetail({ id }) {
+export default function CardDetail({ id, query = '' }) {
   const { catalog } = useCatalog();
+  const lg = useLeagueGames();
   const card = catalog.cardsById.get(id);
   if (!card) return (
     <>
       <h1>Card not found</h1>
       <EmptyState>There’s no Kingdom card with that id in the collection.</EmptyState>
-      <p><a href={dominionHref('cards')}>← Back to Kingdom cards</a></p>
+      <p><a href={dominionHref('cards', null, query)}>← Back to Kingdom cards</a></p>
     </>
   );
   const pile = pileOf(catalog, card);
   const related = sharedMechanicCards(catalog, card, { limit: Infinity });
+  // Previous/Next/Random walk the list the viewer came from (its filters travel in the URL); a card that list doesn't
+  // contain (a stale or hand-made link) falls back to every card, A–Z
+  const filters = cardFiltersFromQuery(query);
+  const ctx = { plays: lg?.stats?.piles };   // so Previous/Next follow the same order as a list sorted by times played
+  let list = browseCards(catalog.cards, filters, ctx), qs = cardFiltersToQuery(filters);
+  if (!list.some(c => c.id === card.id)) { list = browseCards(catalog.cards, DEFAULT_CARD_FILTERS, ctx); qs = ''; }
+  const plays = lg?.stats ? lg.stats.piles.get(card.pileKey) : undefined;
+  const nav = neighbors(list, card.id);
+  const random = () => { const c = pickRandom(list, card.id); if (c) window.location.hash = cardHref(c.id, qs); };
 
   return (
     <>
-      <p style={{ margin: '0 0 12px' }}><a href={dominionHref('cards')}>← All Kingdom cards</a></p>
+      <ItemNav backHref={dominionHref('cards', null, qs)} backLabel="← All Kingdom cards" nav={nav} hrefFor={c => cardHref(c.id, qs)} onRandom={random} randomLabel="Random card" />
       <div className="head">
         <div>
           <h1>{card.name}</h1>
@@ -41,11 +54,18 @@ export default function CardDetail({ id }) {
         <Stat value={card.copies} label="physical copies" />
         <Stat value={pile ? pile.id : card.pileId} label={pile && pile.names > 1 ? 'shared supply pile' : 'supply pile'} />
         <Stat value={<span className="dn-types-lg"><TypePills types={card.types} /></span>} label={`printed types (${new Set(card.types).size})`} />
+        {lg && lg.stats && <Stat value={plays ? plays.games : 0} label={plays && plays.games === 1 ? 'logged game' : 'logged games'} title="Logged games this card was in" />}
       </div>
 
       <Section title="Card text" id="cd-text">
         <div className="builder"><CardText text={card.text} hasAnyText={catalog.meta.textRecordCount > 0} /></div>
       </Section>
+
+      {lg && lg.stats && (
+        <Section title="In our games" id="cd-plays">
+          <div className="builder"><PlayHistory entry={plays} lg={lg} /></div>
+        </Section>
+      )}
 
       <Section title="Supply pile" id="cd-pile">
         <div className="builder">
@@ -69,7 +89,7 @@ export default function CardDetail({ id }) {
               const def = catalog.taxonomy.get(m.id);
               return (
                 <li key={m.id}>
-                  <a href={dominionHref('cards')} onClick={() => presetCardFilters({ mechanics: [m.id] })} title="See every card recorded with this mechanic"><b>{humanize(m.id)}</b></a>
+                  <a href={cardsFilterHref({ mechanics: [m.id] })} title="See every card recorded with this mechanic"><b>{humanize(m.id)}</b></a>
                   {def && <span className="meta dn-def">{def.definition}</span>}
                 </li>
               );

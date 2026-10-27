@@ -40,8 +40,14 @@ src/pages/, src/components/, src/PageContext.js — the pages. src/pages/index.j
 src/dominion/  — the Dominion collection section (#/dominion[/cards[/<id>] | /landscapes[/<id>]]).
                  api.js is the ONLY file that knows table/view names (fetchAllRows pages with .range() and
                  THROWS on a count mismatch; describeError turns any failure into a fixed safe message);
-                 model.js normalizes rows; filters.js / stats.js are pure; filterStore.js keeps filter state
-                 across navigation; views/ + components/ are presentational (they read the catalog from
+                 model.js normalizes rows; filters.js / stats.js are pure; the browsers' filter state lives in the URL
+                 hash query (`#/dominion/cards?type=Attack`; filters.js has the codec, urlState.js writes it with
+                 replaceState, useUrlFilters.js is the hook, scrollMemory.js restores the list scroll on return);
+                 randomizer.js is the PURE Kingdom draw (rules, locks, re-rolls, the link codec, setup notes);
+                 kingdom.js (a game's kingdom items, name search), kingdomDraft.js (the Randomizer -> Add Game hand-off),
+                 playStats.js (pure play counts / insights) and useLeagueGames.js (the viewer's group's games, from
+                 PageContext; null outside the league) tie the Collection to the league;
+                 views/ + components/ are presentational (they read the catalog from
                  CatalogContext, so tests can render them with real data). Data: supabase/dominion/ (SQL,
                  generated seed, CSVs). `dominion` is a GLOBAL route like `admin` (route.js GLOBAL_ROUTES): it
                  never carries a group segment.
@@ -157,6 +163,38 @@ technique is the best way to prove any refactor *doesn't* change what users see:
    parity matters. Fake-data scenarios in the test harness: `swing` (rank movement), `odd` (undated
    season, no-seasons group, friendly-only player, empty group), `rich` (landscape tiles + both rivals + a tied game), `nogroups` (a site with no groups yet).
 
+## Phones (most visitors use one)
+
+- The touch-size rules are the **last block of `style.css`** (`@media (pointer:coarse)`: 44px targets) so they beat the earlier
+  size rules — keep new controls at 44px there rather than in each component's rule. Layout rules for a narrow screen live in
+  the `max-width:720px` blocks; that is also where `.dn-hide-sm` hides non-essential columns.
+- Phone patterns already in use: browser filters fold into `<FilterFold>` (open on desktop, closed on a phone); a crowded
+  list shows just the set's icon (`.dn-browse` hides `.dn-exp-label`; `SortHeaders` takes a short heading); a game's less
+  important columns move into its expanded row; an expanded row must never widen its table (`tr.gdetail>td{max-width:0}`).
+- Headless Chrome will not go below 500px wide, so `--window-size=390` silently tests 500. Drive it over the DevTools protocol
+  instead (`Emulation.setDeviceMetricsOverride` with `mobile:true`, touch on, a phone user agent; Node's built-in
+  `WebSocket` is enough, no packages). Useful audit per page: horizontal overflow (`documentElement.scrollWidth`), interactive
+  elements under 40px, text under 12px, tables that still scroll sideways.
+- The Collection catalog is cached in `localStorage` (`catalogStore.js`, stale-while-revalidate, key `dl.catalog.v1`): bump the
+  key whenever the shape of the raw catalog rows changes. `React.lazy` splits the Collection, Admin, the Add Game dialog and a
+  game's kingdom list out of the main bundle; `vite.config.js` gives React and the Supabase client their own long-cached chunks.
+
+## Game kingdoms (the Collection <-> the league)
+
+- A game's kingdom lives in `game_kingdom` (`supabase/schema.sql`): one row per card/landscape, `item_id` a Dominion catalog
+  id, `on_id` the card a Plunder Trait sits on. **No foreign key to the catalog**: the catalog is re-seeded by delete-then-
+  insert, which a FK would block. `write_game_kingdom` (internal, not callable by clients) validates the ids and the caps
+  (12 cards, 6 landscapes) inside `add_game`/`edit_game`, so a bad id fails the whole save atomically.
+- `p_kingdom` is an optional trailing argument: omitted/null = leave as is, `[]` = clear. The client therefore **sends it
+  only when there is something to say** (a new game with cards, or an edit that touched the kingdom), which keeps an older
+  database working with a newer site. The game rows the engine sees carry `kingdom` (display only, never read by the maths).
+- A split pile (Knights, Gladiator / Fortune) is ONE kingdom slot and is logged as one card id; `displayName()` shows the pile.
+- The randomizer's rules: *excluding* uses printed types (complete); *requiring* uses mechanic tags (positive-only — a card can
+  be missed, never wrongly counted). Keep it that way. Setup notes (Bane, Platinum/Colony, Shelters, Ruins) follow the official rules.
+- Filters AND the rolled kingdom live in the URL hash query (`urlState.js` writes with `replaceState`; `useHash` only scrolls
+  to the top when the *path* changes). Anything new on the Collection that has state worth sharing should follow suit.
+- Play counts/insights are for the group the viewer last picked (`page.gid`); the Collection itself has no group in its URL.
+
 ## Dominion collection conventions
 
 - **Never conflate the counts.** Card *names* (one per `dominion_kingdom_cards` row), supply *piles* (a split
@@ -228,11 +266,13 @@ technique is the best way to prove any refactor *doesn't* change what users see:
 
 ## Testing — what's actually available
 
-**`npm test`** (Vitest, Node only — no browser) runs ~117 tests on the REAL Dominion data: dataset counts and
+**`npm test`** (Vitest, Node only — no browser) runs ~265 tests on the REAL Dominion data: dataset counts and
 integrity, the data layer (including the 1,000-row truncation trap), filters, every Dominion view rendered with
 `react-dom/server`, routing (existing routes included), no-secrets-in-source, and SQL safety. **`npm run
 dominion:test-db`** builds a throwaway local Postgres and tests the schema, seed, constraints and RLS/privileges
-(Postgres < 15 can't make `security_invoker` views, so that one option is skipped locally). There is no linter or
+(Postgres < 15 can't make `security_invoker` views, so that one option is skipped locally). **`npm run kingdom:test-db`** builds a throwaway Postgres with Supabase's `auth` schema stubbed and tests `game_kingdom`, the
+`p_kingdom` argument of `add_game`/`edit_game` (atomic rejection, older-client compatibility), who can read/write it, and that
+re-seeding the catalog isn't blocked. There is no linter or
 type checker in this project, so none is run. The browser-level checks below are still ad hoc (not committed).
 
 There is no interactive browser available to the agent. What's actually been used
@@ -260,6 +300,11 @@ see the end of this list):
    repo): click through the nav, groups, modal, mobile menu, login, and check for page errors.
    For a quick look without clicks, `Google Chrome --headless=new --virtual-time-budget=8000
    --dump-dom <url>` works too. (jsdom does **not** run `type=module` scripts.)
+   For the Collection, a faster variant worked well: a throwaway harness INSIDE the repo (a `.harness/` folder, deleted
+   afterwards) whose Vite plugin swaps `src/lib/supabase.js` for an in-memory fake built from the seed CSVs, mounting the
+   REAL `src/main.jsx`, plus a scenario script that drives the live DOM and writes PASS/FAIL lines into the page; run it with
+   `Google Chrome --headless=new --virtual-time-budget=90000 --dump-dom <url>` and grep the lines. Headless Chrome barely
+   fires `scroll` events, so record scroll positions at navigation time, not from scroll listeners.
 5. Visual/UX verification is **always** the owner's — say so explicitly rather than
    claiming a styling or layout change "looks right."
 
@@ -270,6 +315,8 @@ see the end of this list):
   change to it (that's the whole point of the `drop policy if exists` pattern and
   `create table if not exists` / `add column if not exists` throughout) — confirm new
   additions keep that property before committing.
+- `npm run db:apply -- <catalog|league|all>` applies the SQL files to the linked project (confirmation prompt, `--dry-run`, then the
+  read-only live check). It uses the Supabase CLI's own login; `supabase/.temp/` (the CLI's link state) is gitignored and untracked.
 - `supabase/functions/create-player/` deploys via the Supabase CLI
   (`supabase functions deploy create-player`), separately from the site. Already linked
   locally (`supabase/.temp/` holds the CLI's link state — not secret, but not meant to be

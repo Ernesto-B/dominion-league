@@ -1,25 +1,27 @@
 import { useMemo, useState } from 'react';
 import { useCatalog } from '../CatalogContext.jsx';
-import { browseLandscapes, activeLandscapeFilters, DEFAULT_LANDSCAPE_FILTERS, toggle, norm } from '../filters.js';
-import { getLandscapeFilters, setLandscapeFilters } from '../filterStore.js';
+import { browseLandscapes, activeLandscapeFilters, DEFAULT_LANDSCAPE_FILTERS, landscapeFiltersFromQuery, landscapeFiltersToQuery, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
+import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
 import { landscapeHref } from '../links.js';
 import { PLURAL, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
-import { Chip, ExpansionBadge, Section, ExternalLink, LandscapePill, statusLabel, rowLink } from '../components/bits.jsx';
+import { Chip, ExpansionBadge, FilterFold, Section, ExternalLink, LandscapePill, statusLabel, rowLink } from '../components/bits.jsx';
 
 const SORTS = [['name', 'Name'], ['type', 'Type'], ['expansion', 'Expansion'], ['trigger', 'When it applies']];
 // table columns that sort: [sort key, heading, th class]
-const COLUMNS = [['expansion', 'Expansion', 'l'], ['name', 'Landscape', 'l'], ['type', 'Type', 'l'], ['trigger', 'When it applies', 'l dn-hide-sm']];
+const COLUMNS = [['expansion', 'Expansion', 'l', 'Set'], ['name', 'Landscape', 'l'], ['type', 'Type', 'l'], ['trigger', 'When it applies', 'l dn-hide-sm']];
 
-export default function Landscapes() {
+export default function Landscapes({ query = '' }) {
   const { catalog } = useCatalog();
-  const [f, setF] = useState(getLandscapeFilters);
+  const { f, update, qText, onQ, clear: clearFilters } = useUrlFilters(query, { fromQuery: landscapeFiltersFromQuery, toQuery: landscapeFiltersToQuery, defaults: DEFAULT_LANDSCAPE_FILTERS });
+  useListScroll();
   const [mq, setMq] = useState('');
-  const update = patch => { const next = { ...f, ...patch }; setLandscapeFilters(next); setF(next); };
+  const qs = landscapeFiltersToQuery(f);   // carried into each landscape's page (Previous/Next, back to the list)
   // header clicks share state with the "Sort by" menu: the active column flips direction, another column starts ascending
   const sortBy = key => update(f.sort === key ? { dir: f.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: 'asc' });
-  const clear = () => { const next = { ...DEFAULT_LANDSCAPE_FILTERS }; setLandscapeFilters(next); setF(next); setMq(''); };
+  const clear = () => { clearFilters(); setMq(''); };
+  const random = () => { const l = pickRandom(rows); if (l) window.location.hash = landscapeHref(l.id, qs); };
 
   const rows = useMemo(() => browseLandscapes(catalog.landscapes, f), [catalog, f]);
   const active = activeLandscapeFilters(f);
@@ -36,10 +38,12 @@ export default function Landscapes() {
 
       <form className="builder dn-filters" role="search" aria-label="Filter landscapes" onSubmit={e => e.preventDefault()}>
         <div className="controls">
-          <label className="f">Search by name <input type="search" value={f.q} onChange={e => update({ q: e.target.value })} placeholder="e.g. Way of the" autoComplete="off" /></label>
+          <label className="f">Search <input type="search" value={qText} onChange={e => onQ(e.target.value)} placeholder="e.g. Way of the" autoComplete="off" /></label>
+          <label className="f dn-check"><input type="checkbox" checked={f.text} onChange={e => update({ text: e.target.checked })} /> Include card text</label>
           <label className="f">Sort by <select value={f.sort} onChange={e => update({ sort: e.target.value })}>{SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
           <button type="button" className="ghost" onClick={() => update({ dir: f.dir === 'asc' ? 'desc' : 'asc' })} aria-label={`Sort direction: ${f.dir === 'asc' ? 'ascending' : 'descending'}. Activate to reverse.`}>{f.dir === 'asc' ? '↑ Ascending' : '↓ Descending'}</button>
         </div>
+        <FilterFold active={active - (f.q.trim() ? 1 : 0)}>
         <fieldset className="dn-fieldset"><legend>Type</legend>
           <div className="dn-chips">{catalog.landscapeTypes.map(t => <Chip key={t} tone={t.toLowerCase()} pressed={f.types.includes(t)} count={typeCount(t)} onClick={() => update({ types: toggle(f.types, t) })}>{PLURAL[t] || t}</Chip>)}</div>
         </fieldset>
@@ -65,21 +69,23 @@ export default function Landscapes() {
             </div>
           )}
         </fieldset>
+        </FilterFold>
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>
           <button type="button" className="ghost" onClick={clear} disabled={!active}>Clear filters{active ? ` (${active})` : ''}</button>
+          <button type="button" className="ghost" onClick={random} disabled={!rows.length}>Random landscape</button>
           <span className="meta" role="status" aria-live="polite">Showing <b>{rows.length}</b> of {catalog.landscapes.length} landscapes{active ? ' (filtered)' : ''}</span>
         </div>
       </form>
 
       {rows.length ? (
         <div className="tablewrap">
-          <table className="plain dn-table">
+          <table className="plain dn-table dn-browse">
             <caption className="dn-sr">Landscapes matching the current filters</caption>
             <SortHeaders columns={COLUMNS} sort={f.sort} dir={f.dir} onSort={sortBy} />
             <tbody>{rows.map(l => (
-              <tr key={l.id} {...rowLink(landscapeHref(l.id))}>
+              <tr key={l.id} {...rowLink(landscapeHref(l.id, qs))}>
                 <td className="l"><ExpansionBadge name={l.expansion} size={18} /></td>
-                <td className="l name"><a href={landscapeHref(l.id)}>{l.name}</a></td>
+                <td className="l name"><a href={landscapeHref(l.id, qs)}>{l.name}</a>{f.text && f.q.trim() && !nameMatches(l, f.q) && <small className="meta dn-snippet">{textSnippet(l.text, f.q)}</small>}</td>
                 <td className="l"><LandscapePill type={l.type} /></td>
                 <td className="l dn-hide-sm">{l.trigger ? humanize(l.trigger) : '—'}</td>
               </tr>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { LeagueProvider, useLeague } from './League.jsx';
 import { useHash } from './useHash.js';
 import { parseHash, hashFor, ROUTES, ROUTE_TITLES } from './lib/route.js';
@@ -44,7 +44,7 @@ function Shell() {
   const skip = e => { e.preventDefault(); document.getElementById('main')?.focus(); };
 
   let body;
-  if (Ported) body = <PageContext.Provider value={page}><main id="main" tabIndex={-1}><PageBoundary resetKey={hash}><Ported /></PageBoundary></main></PageContext.Provider>;
+  if (Ported) body = <PageContext.Provider value={page}><main id="main" tabIndex={-1}><PageBoundary resetKey={hash}><Suspense fallback={<p className="loading">Loading…</p>}><Ported /></Suspense></PageBoundary></main></PageContext.Provider>;
   else {
     let inner;
     if (state.status === 'login') inner = <Login title={state.cfg?.title} error={state.error} />;

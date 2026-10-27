@@ -1,11 +1,8 @@
 import { useState } from 'react';
 import { sortMatrixRows } from '../stats.js';
-import { dominionHref } from '../links.js';
-import { presetCardFilters } from '../filterStore.js';
+import { cardsFilterHref } from '../links.js';
 import { ExpansionBadge } from './bits.jsx';
 import SortHeaders from './SortHeaders.jsx';
-
-const cardsHref = dominionHref('cards');
 
 /* Card names of each printed type in each expansion, as one table so expansions and types can be compared. Click a heading
    to sort the expansions by it (a number column starts with the biggest); click a number to see those exact cards. The
@@ -19,7 +16,7 @@ export default function TypeMatrix({ matrix, names }) {
   const sortKey = sort.key === null ? null : (sort.key === 'expansion' || sort.key === 'names' ? sort.key : 't:' + sort.key);
   const show = (expansion, type, n, label) => (n === 0
     ? <span className="dn-zero" aria-label={`No ${type} cards in ${label}`}>0</span>
-    : <a href={cardsHref} title={`${n} ${type} ${n === 1 ? 'card' : 'cards'} in ${label} — show them`} onClick={() => presetCardFilters(expansion ? { expansions: [expansion], types: [type] } : { types: [type] })}>{n}</a>);
+    : <a href={cardsFilterHref(expansion ? { expansions: [expansion], types: [type] } : { types: [type] })} title={`${n} ${type} ${n === 1 ? 'card' : 'cards'} in ${label} — show them`}>{n}</a>);
   const shade = (n, t) => (n ? { background: `color-mix(in srgb, var(--felt) ${Math.round(8 + 40 * (n / top[t]))}%, transparent)` } : undefined);
 
   return (

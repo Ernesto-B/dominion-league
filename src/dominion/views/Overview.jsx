@@ -1,6 +1,5 @@
 import { useCatalog } from '../CatalogContext.jsx';
-import { dominionHref } from '../links.js';
-import { presetCardFilters, presetLandscapeFilters } from '../filterStore.js';
+import { dominionHref, cardsFilterHref, landscapesFilterHref } from '../links.js';
 import { MECHANICS_PROVISIONAL, MECHANICS_NOTE, PLURAL, humanize } from '../constants.js';
 import BarChart from '../components/BarChart.jsx';
 import { ExpansionBadge, Section, Stat, statusLabel } from '../components/bits.jsx';
@@ -10,7 +9,6 @@ import SetIcon from '../../components/SetIcon.jsx';
 
 const pct = (n, d) => (d ? `${Math.round((n / d) * 100)}%` : '—');
 const TOP = 20;
-const cardsHref = dominionHref('cards');
 
 // An average cost is shown as the nearest whole-coin icon (the artwork only exists for whole costs); the exact value is the tooltip.
 const AvgCost = ({ n }) => {
@@ -24,7 +22,7 @@ export default function Overview() {
   const total = k => s.byExpansion.reduce((a, e) => a + e[k], 0);
   const m = s.mechanics;
   const shown = m.frequency.slice(0, TOP), rest = m.frequency.slice(TOP);
-  const mechItem = x => ({ key: x.id, label: humanize(x.id), value: x.count, href: cardsHref, onClick: () => presetCardFilters({ mechanics: [x.id] }) });
+  const mechItem = x => ({ key: x.id, label: humanize(x.id), value: x.count, href: cardsFilterHref({ mechanics: [x.id] }) });
 
   return (
     <>
@@ -58,7 +56,7 @@ export default function Overview() {
           <Section title="Card names by expansion" id="ov-exp">
             <div className="builder">
               <BarChart label="Kingdom card names per expansion"
-                items={s.byExpansion.map(e => ({ key: e.name, label: e.label, value: e.names, icon: e.icon && <SetIcon name={e.icon} size={18} />, href: dominionHref('cards'), onClick: () => presetCardFilters({ expansions: [e.name] }) }))} />
+                items={s.byExpansion.map(e => ({ key: e.name, label: e.label, value: e.names, icon: e.icon && <SetIcon name={e.icon} size={18} />, href: cardsFilterHref({ expansions: [e.name] }) }))} />
             </div>
           </Section>
         </div>
@@ -66,7 +64,7 @@ export default function Overview() {
           <Section title="Printed card types" id="ov-types">
             <div className="builder">
               <BarChart label="Kingdom card names per printed type"
-                items={s.byType.map(t => ({ key: t.key, label: t.key, value: t.count, href: dominionHref('cards'), onClick: () => presetCardFilters({ types: [t.key] }) }))} />
+                items={s.byType.map(t => ({ key: t.key, label: t.key, value: t.count, href: cardsFilterHref({ types: [t.key] }) }))} />
               <p className="note" style={{ marginBottom: 0 }}>A card can have several printed types (like Action – Attack), so it is counted once under each — these bars add up to {s.byType.reduce((a, t) => a + t.count, 0)}, more than the {s.names} names. {s.multiType} cards have more than one type.</p>
             </div>
           </Section>
@@ -85,7 +83,7 @@ export default function Overview() {
             <tbody>
               {s.byExpansion.map(e => (
                 <tr key={e.name}>
-                  <td className="l"><a href={dominionHref('cards')} onClick={() => presetCardFilters({ expansions: [e.name] })}><ExpansionBadge name={e.name} /></a></td>
+                  <td className="l"><a href={cardsFilterHref({ expansions: [e.name] })}><ExpansionBadge name={e.name} /></a></td>
                   <td>{e.names}</td><td className="dn-hide-sm">{e.piles}</td><td>{e.copies.toLocaleString()}</td>
                   <td className="dn-hide-sm"><AvgCost n={e.avgCoins} /></td>
                   <td className="dn-hide-sm">{e.landscapes || '—'}</td><td className="dn-hide-sm">{e.artifacts || '—'}</td>
@@ -138,7 +136,7 @@ export default function Overview() {
         <Section title="Landscapes" id="st-land">
           <div className="builder">
             <p className="meta" style={{ marginTop: 0 }}>By type</p>
-            <BarChart label="Landscape designs per type" items={s.landscapeByType.map(t => ({ key: t.key, label: PLURAL[t.key] || t.key, value: t.count, href: dominionHref('landscapes'), onClick: () => presetLandscapeFilters({ types: [t.key] }) }))} />
+            <BarChart label="Landscape designs per type" items={s.landscapeByType.map(t => ({ key: t.key, label: PLURAL[t.key] || t.key, value: t.count, href: landscapesFilterHref({ types: [t.key] }) }))} />
             <p className="meta">By expansion</p>
             <BarChart label="Landscape designs per expansion" items={s.landscapeByExpansion.map(x => { const e = s.byExpansion.find(b => b.name === x.key); return { key: x.key, label: e ? e.label : x.key, value: x.count, icon: e?.icon && <SetIcon name={e.icon} size={18} /> }; })} />
             <p className="note" style={{ marginBottom: 0 }}>{s.landscapes} landscape designs, one card each. Not Kingdom cards.</p>
@@ -159,7 +157,7 @@ export default function Overview() {
       <Section title="Coin cost" id="st-cost">
         <div className="builder">
           <BarChart label="Kingdom card names per coin cost" labelWidth="34px" items={[
-            ...s.coinCosts.map(c => ({ key: 'c' + c.key, label: <CostIcons coins={c.key} size={24} />, value: c.count, href: cardsHref, onClick: () => presetCardFilters({ costs: [c.key] }) })),
+            ...s.coinCosts.map(c => ({ key: 'c' + c.key, label: <CostIcons coins={c.key} size={24} />, value: c.count, href: cardsFilterHref({ costs: [c.key] }) })),
             { key: 'debt-only', label: <span className="dn-cost" role="img" aria-label="Debt only: cards that cost only Debt" title="Cards that cost only Debt"><PlainDebtIcon size={24} /></span>, value: s.debtOnly.length },
           ]} />
           <p className="note" style={{ marginBottom: 0 }}>

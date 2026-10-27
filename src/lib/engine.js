@@ -141,6 +141,7 @@ function compute(config, csvRows, today) {
       landscapes: (r.landscapes || '').split(/[;|]/).map(x => x.trim()).filter(Boolean),
       vp, playerVP, minutes: r.minutes ? +r.minutes : null,
       notes: r.notes || '', season: seasonOf(day),
+      kingdom: r.kingdom || [],   // [{kind: 'card'|'landscape', id, on?}] — catalog ids, display only (the Elo maths never reads it)
     });
   });
   games = games.map((g, i) => ({ g, i })).sort((a, b) => a.g.day - b.g.day || a.i - b.i).map(x => x.g);

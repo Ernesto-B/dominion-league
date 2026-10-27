@@ -1,11 +1,14 @@
 
-import { useLayoutEffect, useState } from 'react';
+import { Suspense, lazy, useLayoutEffect, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { SET_NAMES } from '../lib/sets.js';
 import GroupSwitcher from '../components/GroupSwitcher.jsx';
 import Banner from '../components/Banner.jsx';
 import GamesTable from '../components/GamesTable.jsx';
-import GameModal from '../components/GameModal.jsx';
+import { takeKingdomDraft } from '../dominion/kingdomDraft.js';
+
+// the Add/Edit dialog (with the kingdom picker and its catalog code) is only needed once someone opens it
+const GameModal = lazy(() => import('../components/GameModal.jsx'));
 
 // Filters live at module level so they survive navigating away and back, as they always have.
 let saved = { season: 'all', type: 'all', player: 'all', set: 'all' };
@@ -13,7 +16,8 @@ let saved = { season: 'all', type: 'all', player: 'all', set: 'all' };
 export default function Games() {
   const { D, me, enabledSets, arg } = usePage();
   const [gf, setGf] = useState(saved);
-  const [modal, setModal] = useState(null);   // null, or { editId } (editId null = a new game)
+  // null, or { editId, draft? } (editId null = a new game). Arriving from the Randomizer's "Use this kingdom" opens a new game already filled in.
+  const [modal, setModal] = useState(() => { const d = me && me.is_admin ? takeKingdomDraft() : null; return d ? { editId: null, draft: d } : null; });
   // Changing a filter resets the sort and collapses expanded rows, as the old full re-render did
   // (the table is re-keyed on the filters below).
   const set = k => e => { saved = { ...gf, [k]: e.target.value }; setGf(saved); };
@@ -57,7 +61,7 @@ export default function Games() {
         </select></label>
         <span className="meta">{list.length} table{list.length === 1 ? '' : 's'}</span>
       </div>
-      {modal && <GameModal key={String(modal.editId)} editId={modal.editId} onClose={() => setModal(null)} />}
+      {modal && <Suspense fallback={null}><GameModal key={String(modal.editId)} editId={modal.editId} draft={modal.draft} onClose={() => setModal(null)} /></Suspense>}
       {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${target ? target.line : ''}`} games={list} highlight={target ? target.line : undefined} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
     </>
   );

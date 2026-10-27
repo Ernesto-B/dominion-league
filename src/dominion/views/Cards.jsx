@@ -1,28 +1,35 @@
 import { useMemo, useState } from 'react';
 import { useCatalog } from '../CatalogContext.jsx';
-import { browseCards, activeCardFilters, DEFAULT_CARD_FILTERS, toggle, norm } from '../filters.js';
-import { getCardFilters, setCardFilters } from '../filterStore.js';
+import { browseCards, activeCardFilters, DEFAULT_CARD_FILTERS, cardFiltersFromQuery, cardFiltersToQuery, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
+import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
+import { useLeagueGames } from '../useLeagueGames.js';
 import { cardHref } from '../links.js';
 import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
-import { Chip, ExpansionBadge, TypePills, rowLink } from '../components/bits.jsx';
+import { Chip, ExpansionBadge, FilterFold, TypePills, rowLink } from '../components/bits.jsx';
 import CostIcons, { CoinIcon, DebtIcon, PlainDebtIcon } from '../components/Cost.jsx';
 
 const SORTS = [['name', 'Name'], ['expansion', 'Expansion'], ['types', 'Printed type'], ['cost', 'Cost'], ['pile', 'Shared pile']];
+const PLAYED_SORT = ['plays', 'Times played'];
 // table columns that sort: [sort key, heading, th class]
-const COLUMNS = [['expansion', 'Expansion', 'l'], ['name', 'Card', 'l'], ['types', 'Types', 'l'], ['cost', 'Cost', ''], ['pile', 'Shared Pile', 'l dn-hide-sm']];
+const COLUMNS = [['expansion', 'Expansion', 'l', 'Set'], ['name', 'Card', 'l'], ['types', 'Types', 'l'], ['cost', 'Cost', ''], ['pile', 'Shared Pile', 'l dn-hide-sm']];
+const PLAYED_COLUMN = ['plays', 'Played', 'dn-hide-sm'];   // only once games with a kingdom are logged
 
-export default function Cards() {
+export default function Cards({ query = '' }) {
   const { catalog, summary: s } = useCatalog();
-  const [f, setF] = useState(getCardFilters);
+  const { f, update, qText, onQ, clear: clearFilters } = useUrlFilters(query, { fromQuery: cardFiltersFromQuery, toQuery: cardFiltersToQuery, defaults: DEFAULT_CARD_FILTERS });
+  useListScroll();
+  const lg = useLeagueGames();
+  const plays = lg && lg.stats ? lg.stats.piles : null;   // pile key -> { games, ... }; null until a kingdom has been logged
   const [mq, setMq] = useState('');
-  const update = patch => { const next = { ...f, ...patch }; setCardFilters(next); setF(next); };
+  const qs = cardFiltersToQuery(f);   // carried into each card's page, so Previous/Next and "back to the list" keep the filters
   // a header click uses the same sort state as the "Sort by" menu: the active column flips direction, another column starts ascending
   const sortBy = key => update(f.sort === key ? { dir: f.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: 'asc' });
-  const clear = () => { const next = { ...DEFAULT_CARD_FILTERS }; setCardFilters(next); setF(next); setMq(''); };
+  const clear = () => { clearFilters(); setMq(''); };
+  const random = () => { const c = pickRandom(rows); if (c) window.location.hash = cardHref(c.id, qs); };
 
-  const rows = useMemo(() => browseCards(catalog.cards, f), [catalog, f]);
+  const rows = useMemo(() => browseCards(catalog.cards, f, { plays }), [catalog, f, plays]);
   const active = activeCardFilters(f);
   const nameCount = Object.fromEntries(s.byExpansion.map(e => [e.name, e.names]));
   const debtCount = d => catalog.cards.filter(c => c.debt === d).length;
@@ -35,11 +42,14 @@ export default function Cards() {
 
       <form className="builder dn-filters" role="search" aria-label="Filter Kingdom cards" onSubmit={e => e.preventDefault()}>
         <div className="controls">
-          <label className="f">Search by name <input type="search" value={f.q} onChange={e => update({ q: e.target.value })} placeholder="e.g. Village" autoComplete="off" /></label>
-          <label className="f">Sort by <select value={f.sort} onChange={e => update({ sort: e.target.value })}>{SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+          <label className="f">Search <input type="search" value={qText} onChange={e => onQ(e.target.value)} placeholder="e.g. Village" autoComplete="off" /></label>
+          <label className="f dn-check"><input type="checkbox" checked={f.text} onChange={e => update({ text: e.target.checked })} /> Include card text</label>
+          {plays && <label className="f dn-check"><input type="checkbox" checked={f.unplayed} onChange={e => update({ unplayed: e.target.checked })} /> Not played yet</label>}
+          <label className="f">Sort by <select value={f.sort} onChange={e => update({ sort: e.target.value })}>{(plays ? [...SORTS, PLAYED_SORT] : SORTS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
           <button type="button" className="ghost" onClick={() => update({ dir: f.dir === 'asc' ? 'desc' : 'asc' })} aria-label={`Sort direction: ${f.dir === 'asc' ? 'ascending' : 'descending'}. Activate to reverse.`}>{f.dir === 'asc' ? '↑ Ascending' : '↓ Descending'}</button>
         </div>
 
+        <FilterFold active={active - (f.q.trim() ? 1 : 0)}>
         <fieldset className="dn-fieldset"><legend>Expansion</legend>
           <div className="dn-chips">{catalog.ownedExpansions.map(e => (
             <Chip key={e.name} pressed={f.expansions.includes(e.name)} count={nameCount[e.name]} onClick={() => update({ expansions: toggle(f.expansions, e.name) })}><ExpansionBadge name={e.name} /></Chip>
@@ -104,26 +114,29 @@ export default function Cards() {
             </div>
           )}
         </fieldset>
+        </FilterFold>
 
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>
           <button type="button" className="ghost" onClick={clear} disabled={!active}>Clear filters{active ? ` (${active})` : ''}</button>
+          <button type="button" className="ghost" onClick={random} disabled={!rows.length}>Random card</button>
           <span className="meta" role="status" aria-live="polite">Showing <b>{rows.length}</b> of {catalog.cards.length} card names{active ? ' (filtered)' : ''}</span>
         </div>
       </form>
 
       {rows.length ? (
         <div className="tablewrap">
-          <table className="plain dn-table">
+          <table className="plain dn-table dn-browse">
             <caption className="dn-sr">Kingdom cards matching the current filters</caption>
-            <SortHeaders columns={COLUMNS} sort={f.sort} dir={f.dir} onSort={sortBy} />
+            <SortHeaders columns={plays ? [...COLUMNS, PLAYED_COLUMN] : COLUMNS} sort={f.sort} dir={f.dir} onSort={sortBy} />
             <tbody>{rows.map(c => {
               return (
-                <tr key={c.id} {...rowLink(cardHref(c.id))}>
+                <tr key={c.id} {...rowLink(cardHref(c.id, qs))}>
                   <td className="l"><ExpansionBadge name={c.expansion} size={18} /></td>
-                  <td className="l name"><a href={cardHref(c.id)}>{c.name}</a>{c.previousName && <small className="meta"> (was {c.previousName})</small>}</td>
+                  <td className="l name"><a href={cardHref(c.id, qs)}>{c.name}</a>{c.previousName && <small className="meta"> (was {c.previousName})</small>}{f.text && f.q.trim() && !nameMatches(c, f.q) && <small className="meta dn-snippet">{textSnippet(c.text, f.q)}</small>}</td>
                   <td className="l"><TypePills types={c.types} /></td>
                   <td className="dn-cost-cell"><CostIcons coins={c.coins} debt={c.debt} overpay={c.overpay} size={26} /></td>
                   <td className="l dn-hide-sm">{c.sharedPile || '—'}</td>
+                  {plays && <td className="dn-hide-sm">{plays.get(c.pileKey)?.games || '—'}</td>}
                 </tr>
               );
             })}</tbody>

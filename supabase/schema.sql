@@ -56,6 +56,20 @@ create table if not exists game_results (
 );
 alter table game_results add column if not exists vp int;
 
+-- The Kingdom a game was played with: one row per Kingdom card or landscape (Event/Landmark/Project/Way/Trait).
+-- item_id is a Dominion catalog id (dominion_kingdom_cards.card_id / dominion_landscapes.object_id) with NO foreign
+-- key on purpose: the catalog is re-seeded by delete-then-insert, which a foreign key would block. add_game/edit_game
+-- validate the ids (via write_game_kingdom below) at write time. on_id is for a Plunder Trait: the Kingdom card it sits on.
+create table if not exists game_kingdom (
+  game_id bigint not null references games(id) on delete cascade,
+  kind text not null check (kind in ('card', 'landscape')),
+  item_id text not null,
+  position int not null default 0,        -- the order it was entered / shown in
+  on_id text,
+  primary key (game_id, kind, item_id)
+);
+create index if not exists game_kingdom_item_idx on game_kingdom(item_id);
+
 -- One-time best-effort backfill for games logged before games.group_id
 -- existed: a game gets the one group every one of its players shares, if
 -- there's exactly one. Ambiguous (shares more than one, or none) is left
@@ -124,6 +138,7 @@ create index if not exists seasons_group_id_idx on seasons(group_id);
 alter table players enable row level security;
 alter table games enable row level security;
 alter table game_results enable row level security;
+alter table game_kingdom enable row level security;
 alter table groups enable row level security;
 alter table seasons enable row level security;
 alter table settings enable row level security;
@@ -205,6 +220,12 @@ create policy game_results_select on game_results for select to authenticated
     select 1 from games g where g.id = game_id
       and ((g.group_id is null and no_groups_configured()) or g.group_id = any(my_groups()))
   ));
+drop policy if exists game_kingdom_select on game_kingdom;
+create policy game_kingdom_select on game_kingdom for select to authenticated
+  using (is_admin() or exists (
+    select 1 from games g where g.id = game_id
+      and ((g.group_id is null and no_groups_configured()) or g.group_id = any(my_groups()))
+  ));
 drop policy if exists groups_select on groups;
 create policy groups_select on groups for select to authenticated
   using (is_admin() or id = any(my_groups()));
@@ -223,6 +244,8 @@ drop policy if exists games_write on games;
 create policy games_write on games for all to authenticated using (is_admin()) with check (is_admin());
 drop policy if exists game_results_write on game_results;
 create policy game_results_write on game_results for all to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists game_kingdom_write on game_kingdom;
+create policy game_kingdom_write on game_kingdom for all to authenticated using (is_admin()) with check (is_admin());
 
 -- groups and seasons are single-row writes (no child table to keep in sync),
 -- so the RLS policy alone is the right place to gate them — no RPC wrapper
@@ -254,12 +277,52 @@ drop function if exists add_game(date, text, text, text, int, int, text, jsonb);
 drop function if exists add_game(date, text, text, text, int, int, text, text, jsonb);
 drop function if exists edit_game(bigint, date, text, text, text, int, int, text, jsonb);
 drop function if exists edit_game(bigint, date, text, text, text, int, int, text, text, jsonb);
+-- the signatures from before game_kingdom (p_kingdom added as a trailing optional argument, so an older client that
+-- doesn't send it keeps working)
+drop function if exists add_game(date, text, text, text, text, int, int, text, text, jsonb);
+drop function if exists edit_game(bigint, date, text, text, text, text, int, int, text, text, jsonb);
+
+-- Replaces a game's Kingdom. Internal: only add_game/edit_game call it, never a client. Validates against the catalog,
+-- which is why a bad id fails the whole game save instead of leaving a half-written game.
+create or replace function write_game_kingdom(p_game_id bigint, p_kingdom jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_cards int; v_lands int; v_bad int;
+begin
+  if jsonb_typeof(p_kingdom) is distinct from 'array' then
+    raise exception 'the kingdom must be a list';
+  end if;
+  select count(*) filter (where e->>'kind' = 'card'),
+         count(*) filter (where e->>'kind' = 'landscape'),
+         count(*) filter (where coalesce(e->>'kind', '') not in ('card', 'landscape') or coalesce(e->>'id', '') = '')
+    into v_cards, v_lands, v_bad
+  from jsonb_array_elements(p_kingdom) e;
+  if v_bad > 0 then raise exception 'every kingdom entry needs a kind (card or landscape) and an id'; end if;
+  if v_cards > 12 or v_lands > 6 then raise exception 'too many cards or landscapes in the kingdom'; end if;
+
+  select count(*) into v_bad from jsonb_array_elements(p_kingdom) e
+  where (e->>'kind' = 'card' and not exists (select 1 from dominion_kingdom_cards c where c.card_id = e->>'id'))
+     or (e->>'kind' = 'landscape' and not exists (select 1 from dominion_landscapes l where l.object_id = e->>'id'));
+  if v_bad > 0 then raise exception 'unknown card or landscape in the kingdom'; end if;
+
+  delete from game_kingdom where game_id = p_game_id;
+  insert into game_kingdom (game_id, kind, item_id, position, on_id)
+  select p_game_id, e->>'kind', e->>'id', (ord - 1)::int, nullif(e->>'on', '')
+  from jsonb_array_elements(p_kingdom) with ordinality as t(e, ord)
+  on conflict do nothing;
+end;
+$$;
 
 create or replace function add_game(
   p_date date, p_type text, p_sets text, p_landscapes text, p_strategy text,
   p_winner_vp int, p_minutes int, p_notes text,
   p_group_id text, -- null only valid when no groups are configured at all
-  p_results jsonb -- [{"player_id": "...", "place": 1}, ...]
+  p_results jsonb, -- [{"player_id": "...", "place": 1}, ...]
+  p_kingdom jsonb default null -- [{"kind": "card"|"landscape", "id": "<catalog id>", "on": "<card id, for a Trait>"}, ...]; null = none given
 ) returns bigint
 language plpgsql
 security definer
@@ -290,13 +353,16 @@ begin
   select v_game_id, (r->>'player_id')::uuid, (r->>'place')::int, (r->>'vp')::int
   from jsonb_array_elements(p_results) r;
 
+  if p_kingdom is not null then perform write_game_kingdom(v_game_id, p_kingdom); end if;
+
   return v_game_id;
 end;
 $$;
 
 create or replace function edit_game(
   p_game_id bigint, p_date date, p_type text, p_sets text, p_landscapes text, p_strategy text,
-  p_winner_vp int, p_minutes int, p_notes text, p_group_id text, p_results jsonb
+  p_winner_vp int, p_minutes int, p_notes text, p_group_id text, p_results jsonb,
+  p_kingdom jsonb default null -- null = leave the kingdom as it is; [] = clear it
 ) returns void
 language plpgsql
 security definer
@@ -328,6 +394,8 @@ begin
   insert into game_results (game_id, player_id, place, vp)
   select p_game_id, (r->>'player_id')::uuid, (r->>'place')::int, (r->>'vp')::int
   from jsonb_array_elements(p_results) r;
+
+  if p_kingdom is not null then perform write_game_kingdom(p_game_id, p_kingdom); end if;
 end;
 $$;
 
@@ -366,8 +434,9 @@ begin
 end;
 $$;
 
-revoke execute on function add_game(date, text, text, text, text, int, int, text, text, jsonb) from anon;
-revoke execute on function edit_game(bigint, date, text, text, text, text, int, int, text, text, jsonb) from anon;
+revoke execute on function add_game(date, text, text, text, text, int, int, text, text, jsonb, jsonb) from anon;
+revoke execute on function edit_game(bigint, date, text, text, text, text, int, int, text, text, jsonb, jsonb) from anon;
+revoke execute on function write_game_kingdom(bigint, jsonb) from public, anon, authenticated;
 revoke execute on function delete_game(bigint) from anon;
 revoke execute on function delete_group(text) from anon;
 revoke execute on function mark_password_changed() from anon;

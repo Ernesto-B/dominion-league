@@ -1,12 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo, useSyncExternalStore } from 'react';
 import { sb } from '../lib/supabase.js';
-import { loadCatalog } from './api.js';
+import { storeFor } from './catalogStore.js';
 import { summarize } from './stats.js';
 import { LoadingState, ErrorState } from './components/States.jsx';
 
-/* The catalog (cards, piles, landscapes, ...) is small and read-only, so it is fetched once per page load, verified
-   complete, cached at module level, and shared by every Dominion view — moving between Overview, Cards and a card
-   page never refetches. Views read it from context, which also lets tests supply a catalog directly. */
+/* The catalog (cards, piles, landscapes, ...) is small and read-only, so it is loaded once per page load, verified
+   complete, and shared by every Dominion view — moving between Overview, Cards and a card page never refetches.
+   Views read it from context, which also lets tests supply a catalog directly. */
 const CatalogContext = createContext(null);
 export const useCatalog = () => { const v = useContext(CatalogContext); if (!v) throw new Error('useCatalog must be used inside <CatalogProvider>'); return v; };
 
@@ -15,25 +15,13 @@ export function CatalogProvider({ catalog, children }) {
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;
 }
 
-let cached = null;                  // { promise, catalog? }
-export const resetCatalogCache = () => { cached = null; };
-
+/* The catalog comes from catalogStore.js: shown from the browser's saved copy at once when there is one, refreshed in the
+   background; fetched with a loading screen the first time. Every component that asks shares the one store. */
 export function useCatalogLoad(client = sb) {
-  const [state, setState] = useState(() => (cached && cached.catalog ? { status: 'ready', catalog: cached.catalog } : { status: 'loading' }));
-  const load = useCallback(() => {
-    setState({ status: 'loading' });
-    const entry = cached = { promise: loadCatalog(client) };
-    entry.promise.then(
-      catalog => { entry.catalog = catalog; if (cached === entry) setState({ status: 'ready', catalog }); },
-      error => { if (cached === entry) cached = null; console.error('Dominion catalog failed to load:', error); setState({ status: 'error', error }); },
-    );
-  }, [client]);
-  useEffect(() => {
-    if (cached && cached.catalog) { setState({ status: 'ready', catalog: cached.catalog }); return; }
-    if (cached && cached.promise) { cached.promise.then(c => setState({ status: 'ready', catalog: c }), e => setState({ status: 'error', error: e })); return; }
-    load();
-  }, [load]);
-  return { ...state, retry: load };
+  const store = storeFor(client);
+  store.load();   // idempotent; called while rendering (not in an effect) so a saved copy is on screen in the very first paint
+  const state = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  return { ...state, retry: store.retry };
 }
 
 // Fetches the catalog, then renders children with it available through useCatalog().

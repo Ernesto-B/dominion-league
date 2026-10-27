@@ -1,27 +1,36 @@
 import { useCatalog } from '../CatalogContext.jsx';
-import { dominionHref, landscapeHref } from '../links.js';
-import { presetLandscapeFilters } from '../filterStore.js';
+import { dominionHref, landscapeHref, landscapesFilterHref } from '../links.js';
+import { DEFAULT_LANDSCAPE_FILTERS, browseLandscapes, landscapeFiltersFromQuery, landscapeFiltersToQuery, neighbors, pickRandom } from '../filters.js';
+import ItemNav from '../components/ItemNav.jsx';
+import PlayHistory from '../components/PlayHistory.jsx';
+import { useLeagueGames } from '../useLeagueGames.js';
 import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import { ExpansionBadge, LandscapePill, Section, Stat, CardText } from '../components/bits.jsx';
 
-export default function LandscapeDetail({ id }) {
+export default function LandscapeDetail({ id, query = '' }) {
   const { catalog } = useCatalog();
+  const lg = useLeagueGames();
   const l = catalog.landscapesById.get(id);
   if (!l) return (
     <>
       <h1>Landscape not found</h1>
       <EmptyState>There’s no landscape with that id in the collection.</EmptyState>
-      <p><a href={dominionHref('landscapes')}>← Back to landscapes</a></p>
+      <p><a href={dominionHref('landscapes', null, query)}>← Back to landscapes</a></p>
     </>
   );
+  const filters = landscapeFiltersFromQuery(query);
+  let list = browseLandscapes(catalog.landscapes, filters), qs = landscapeFiltersToQuery(filters);
+  if (!list.some(o => o.id === l.id)) { list = browseLandscapes(catalog.landscapes, DEFAULT_LANDSCAPE_FILTERS); qs = ''; }
+  const nav = neighbors(list, l.id);
+  const random = () => { const o = pickRandom(list, l.id); if (o) window.location.hash = landscapeHref(o.id, qs); };
   const mine = new Set(l.mechanicIds);
   const related = catalog.landscapes.filter(o => o.id !== l.id).map(o => ({ o, shared: o.mechanicIds.filter(t => mine.has(t)) }))
     .filter(x => x.shared.length).sort((a, b) => b.shared.length - a.shared.length || a.o.name.localeCompare(b.o.name)).slice(0, 8);
 
   return (
     <>
-      <p style={{ margin: '0 0 12px' }}><a href={dominionHref('landscapes')}>← All landscapes</a></p>
+      <ItemNav backHref={dominionHref('landscapes', null, qs)} backLabel="← All landscapes" nav={nav} hrefFor={o => landscapeHref(o.id, qs)} onRandom={random} randomLabel="Random landscape" />
       <div className="head">
         <div>
           <h1>{l.name}</h1>
@@ -33,11 +42,18 @@ export default function LandscapeDetail({ id }) {
         <Stat value={l.type} label="landscape type" />
         <Stat value={l.copies} label={l.copies === 1 ? 'physical card' : 'physical cards'} />
         {l.trigger && <Stat value={humanize(l.trigger)} label="when it applies" />}
+        {lg && lg.stats && <Stat value={(lg.stats.landscapes.get(l.id) || { games: 0 }).games} label="logged games" title="Logged games this landscape was in" />}
       </div>
 
       <Section title="Card text" id="ld-text">
         <div className="builder"><CardText text={l.text} hasAnyText={catalog.meta.textRecordCount > 0} /></div>
       </Section>
+
+      {lg && lg.stats && (
+        <Section title="In our games" id="ld-plays">
+          <div className="builder"><PlayHistory entry={lg.stats.landscapes.get(l.id)} lg={lg} /></div>
+        </Section>
+      )}
 
       <Section title="Recorded tags" id="ld-tags">
         <div className="builder">
@@ -46,7 +62,7 @@ export default function LandscapeDetail({ id }) {
               const def = catalog.taxonomy.get(t);   // only a few landscape tags exist in the Kingdom taxonomy
               return (
                 <li key={t}>
-                  <a href={dominionHref('landscapes')} onClick={() => presetLandscapeFilters({ mechanics: [t] })} title="See every landscape recorded with this tag"><b>{humanize(t)}</b></a>
+                  <a href={landscapesFilterHref({ mechanics: [t] })} title="See every landscape recorded with this tag"><b>{humanize(t)}</b></a>
                   {def && <span className="meta dn-def">{def.definition}</span>}
                 </li>
               );

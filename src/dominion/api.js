@@ -56,7 +56,7 @@ async function loadCardText(client) {
    it locally (client-side filtering is only valid because the COMPLETE set was fetched and verified above).
    The two views already join printed types and mechanic ids onto each card/landscape, so the 1,634-row
    mechanics table never has to be paged. Its row count is still fetched, as a cross-check on the join. */
-export async function loadCatalog(client) {
+export async function fetchRawCatalog(client) {
   const [cards, piles, landscapes, artifacts, artifactMechanics, taxonomy, mechanicRelationshipCount, cardText] = await Promise.all([
     fetchAllRows(client, 'dominion_card_catalog', { order: 'card_id' }),
     fetchAllRows(client, 'dominion_kingdom_piles', { order: ['expansion', 'pile_id'] }),
@@ -67,8 +67,10 @@ export async function loadCatalog(client) {
     countRows(client, 'dominion_kingdom_mechanics', 'card_id'),
     loadCardText(client),
   ]);
-  return buildCatalog({ cards, piles, landscapes, artifacts, artifactMechanics, taxonomy, mechanicRelationshipCount, cardText });
+  return { cards, piles, landscapes, artifacts, artifactMechanics, taxonomy, mechanicRelationshipCount, cardText };
 }
+
+export async function loadCatalog(client) { return buildCatalog(await fetchRawCatalog(client)); }
 
 /* Turns anything thrown while loading into a short, fixed, user-safe message. The raw error (which can contain
    SQL fragments, table names or hints) goes to the console only — never into the page. */

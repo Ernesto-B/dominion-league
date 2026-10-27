@@ -19,23 +19,24 @@ export default function GamesTable({ games, onEdit, highlight }) {
     if (row) row.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [highlight]);
   const toggle = line => setOpen(o => { const n = new Set(o); n.has(line) ? n.delete(line) : n.add(line); return n; });
-  const head = [{ label: '' }, { label: 'Date', cls: 'l' }, { label: '' }, { label: 'Finish', cls: 'l' }, { label: 'Sets', cls: 'l' },
-    { label: 'VP' }, { label: 'Landscapes', cls: 'l' }, { label: 'Notes', cls: 'l' }, ...(onEdit ? [{ label: '' }] : [])];
+  // on a phone only the date and the finish order stay as columns; sets, VP, landscapes and notes live in the expanded row
+  const head = [{ label: '' }, { label: 'Date', cls: 'l' }, { label: '' }, { label: 'Finish', cls: 'l' }, { label: 'Sets', cls: 'l dn-hide-sm' },
+    { label: 'VP', cls: 'dn-hide-sm' }, { label: 'Landscapes', cls: 'l dn-hide-sm' }, { label: 'Notes', cls: 'l dn-hide-sm' }, ...(onEdit ? [{ label: '', cls: 'dn-hide-sm' }] : [])];
   const rows = games.map(g => {
     const isOpen = open.has(g.line);
     return {
       key: g.line, data: g.line, className: 'grow' + (isOpen ? ' open' : '') + (g.line === highlight ? ' hl' : ''), onClick: () => toggle(g.line), open: isOpen,
-      detail: <GameDetail game={g} />,
+      detail: <GameDetail game={g} onEdit={onEdit} />,
       cells: [
         { node: '▸', className: 'chev' },
         g.date,
         { node: <TypePill type={g.type} />, text: g.type === 'Playoff' || g.type === 'Friendly' ? g.type : '' },
         { node: <GameFinish game={g} />, text: finishText(g), className: 'wrap' },
-        { node: g.sets.map((s, i) => <Fragment key={s}>{i > 0 && ' '}{setIconPath(s) ? <SetIcon name={s} size={22} /> : s}</Fragment>), text: g.sets.map(s => setIconPath(s) ? '' : s).join(' '), className: 'wrap' },
+        { node: g.sets.map((s, i) => <Fragment key={s}>{i > 0 && ' '}{setIconPath(s) ? <SetIcon name={s} size={22} /> : s}</Fragment>), text: g.sets.map(s => setIconPath(s) ? '' : s).join(' '), className: 'wrap dn-hide-sm' },
         g.vp ?? '',
-        { node: <LandscapePills game={g} />, text: (g.landscapes || []).join(' '), className: 'wrap' },
-        { node: g.notes, text: g.notes, className: 'wrap' },
-        ...(onEdit ? [{ node: <a href="#" data-edit={g.line} onClick={e => { e.preventDefault(); e.stopPropagation(); onEdit(g.line); }}>Edit</a>, text: '' }] : []),
+        { node: <LandscapePills game={g} />, text: (g.landscapes || []).join(' '), className: 'wrap dn-hide-sm' },
+        { node: g.notes, text: g.notes, className: 'wrap dn-hide-sm' },
+        ...(onEdit ? [{ node: <a href="#" data-edit={g.line} onClick={e => { e.preventDefault(); e.stopPropagation(); onEdit(g.line); }}>Edit</a>, text: '', className: 'dn-hide-sm' }] : []),
       ],
     };
   });

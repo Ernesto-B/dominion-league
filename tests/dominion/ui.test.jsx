@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { realCatalog } from './fixtures.js';
 import { CatalogProvider } from '../../src/dominion/CatalogContext.jsx';
@@ -13,11 +13,12 @@ import { ROOT } from '../../scripts/dominion/lib/tables.mjs';
 import Header from '../../src/components/Header.jsx';
 import { ROUTE_TITLES } from '../../src/lib/route.js';
 import { parseDominionArg, tabFor, cardHref, landscapeHref, dominionHref } from '../../src/dominion/links.js';
-import { DEFAULT_CARD_FILTERS, DEFAULT_LANDSCAPE_FILTERS } from '../../src/dominion/filters.js';
-import { setCardFilters, setLandscapeFilters } from '../../src/dominion/filterStore.js';
+import { DEFAULT_CARD_FILTERS, DEFAULT_LANDSCAPE_FILTERS, cardFiltersToQuery, cardFiltersFromQuery, landscapeFiltersToQuery, landscapeFiltersFromQuery, browseCards, neighbors, pickRandom, textSnippet } from '../../src/dominion/filters.js';
+import { forgetListScroll, navigated, restoreListScroll } from '../../src/dominion/scrollMemory.js';
+const cardsWith = patch => render('cards' + cardFiltersToQuery({ ...DEFAULT_CARD_FILTERS, ...patch }));
 
 const catalog = realCatalog();
-const render = arg => { setCardFilters({ ...DEFAULT_CARD_FILTERS }); setLandscapeFilters({ ...DEFAULT_LANDSCAPE_FILTERS }); return renderToStaticMarkup(<CatalogProvider catalog={catalog}><DominionView arg={arg} /></CatalogProvider>); };
+const render = arg => renderToStaticMarkup(<CatalogProvider catalog={catalog}><DominionView arg={arg} /></CatalogProvider>);
 const text = html => html.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, ' ');
 const rows = html => (html.match(/<tbody>[\s\S]*?<\/tbody>/)?.[0].match(/<tr[ >]/g) || []).length;
 const N = n => new RegExp(String(n).replace(/(\d)(?=(\d{3})+$)/g, '$1[,.   ]?'));   // tolerate locale digit grouping
@@ -102,17 +103,13 @@ describe('Kingdom cards browser', () => {
   });
   it('links every card to its own detail page', () => { expect((html.match(/href="#\/dominion\/cards\/[^"]+"/g) || []).length).toBe(331); });
   it('shows an empty state (not a crash) when filters match nothing', () => {
-    setCardFilters({ ...DEFAULT_CARD_FILTERS, q: 'zzzz-no-such-card' });
-    const h = renderToStaticMarkup(<CatalogProvider catalog={catalog}><DominionView arg="cards" /></CatalogProvider>);
+    const h = cardsWith({ q: 'zzzz-no-such-card' });
     expect(text(h)).toMatch(/No cards match these filters/); expect(text(h)).toMatch(/Showing 0 of 331/); expect(rows(h)).toBe(0);
-    setCardFilters({ ...DEFAULT_CARD_FILTERS });
   });
-  it('restores persisted filters (so Back from a card returns to the same list)', () => {
-    setCardFilters({ ...DEFAULT_CARD_FILTERS, expansions: ['Plunder'], types: ['Duration'], typeMode: 'all' });
-    const h = renderToStaticMarkup(<CatalogProvider catalog={catalog}><DominionView arg="cards" /></CatalogProvider>);
+  it('restores the filters from the URL (so Back from a card, or a shared link, returns to the same list)', () => {
+    const h = cardsWith({ expansions: ['Plunder'], types: ['Duration'], typeMode: 'all' });
     const expected = catalog.cards.filter(c => c.expansion === 'Plunder' && c.types.includes('Duration')).length;
     expect(rows(h)).toBe(expected); expect(expected).toBeGreaterThan(0); expect(text(h)).toMatch(new RegExp(`Showing ${expected} of 331`));
-    setCardFilters({ ...DEFAULT_CARD_FILTERS });
   });
 });
 
@@ -124,7 +121,7 @@ describe('sortable table headers', () => {
   const html = render('cards');
   const head = html.match(/<thead>[\s\S]*?<\/thead>/)[0], cols = ths(head);
   it('makes every column heading sortable the way the rest of the site does (the heading cell, no button inside)', () => {
-    expect(cols.map(c => c.label)).toEqual(['Expansion', 'Card', 'Types', 'Cost', 'Shared Pile']);
+    expect(cols.map(c => c.label)).toEqual(['Expansion Set', 'Card', 'Types', 'Cost', 'Shared Pile']);   // "Set" is the short heading a phone shows, hidden from screen readers
     for (const c of cols) { expect(c.attrs, c.label).toMatch(/class="[^"]*\bsortable\b/); expect(c.attrs).toMatch(/role="button"/); expect(c.attrs).toMatch(/tabindex="0"/); expect(c.inner, c.label).not.toMatch(/<button|<svg|<img/); }
     expect(head).not.toContain('<button');                     // no big buttons in the header row
   });
@@ -135,11 +132,9 @@ describe('sortable table headers', () => {
     expect(card.inner).not.toMatch(/[▲▼]/);
   });
   it('shows the reversed direction on the active column', () => {
-    setCardFilters({ ...DEFAULT_CARD_FILTERS, sort: 'cost', dir: 'desc' });
-    const h = renderToStaticMarkup(<CatalogProvider catalog={catalog}><DominionView arg="cards" /></CatalogProvider>);
+    const h = cardsWith({ sort: 'cost', dir: 'desc' });
     const cost = ths(h.match(/<thead>[\s\S]*?<\/thead>/)[0]).find(c => c.label === 'Cost');
     expect(cost.attrs).toMatch(/aria-sort="descending"/); expect(dir(cost)).toBe('desc');
-    setCardFilters({ ...DEFAULT_CARD_FILTERS });
   });
   it('the "Sort by" menu offers every sortable column, so a phone (where some columns are hidden) can sort by them too', () => {
     const sel = html.match(/Sort by <select[\s\S]*?<\/select>/)[0];
@@ -152,7 +147,7 @@ describe('sortable landscape headers', () => {
   const head = html.match(/<thead>[\s\S]*?<\/thead>/)[0];   // the first table is the landscapes (the second is the Artifacts)
   const cols = ths(head);
   it('makes Expansion, Landscape, Type and "When it applies" sortable like the rest of the site, with no button in the heading', () => {
-    expect(cols.map(c => c.label)).toEqual(['Expansion', 'Landscape', 'Type', 'When it applies']);
+    expect(cols.map(c => c.label)).toEqual(['Expansion Set', 'Landscape', 'Type', 'When it applies']);
     for (const c of cols) { expect(c.attrs, c.label).toMatch(/class="[^"]*\bsortable\b/); expect(c.attrs).toMatch(/role="button"/); }
     expect(head).not.toContain('<button');
     expect((head.match(/aria-sort=/g) || []).length).toBe(1); expect(cols[1].attrs).toMatch(/aria-sort="ascending"/); expect(dir(cols[1])).toBe('asc');   // sorted by Landscape (name)
@@ -253,6 +248,100 @@ describe('Card text', () => {
   });
 });
 
+describe('shareable filters, text search, and moving between cards', () => {
+  const f = patch => ({ ...DEFAULT_CARD_FILTERS, ...patch });
+  it('round-trips every card filter through the URL, writing only what differs from the default', () => {
+    expect(cardFiltersToQuery(DEFAULT_CARD_FILTERS)).toBe('');
+    const all = f({ q: 'gold coin', text: true, expansions: ['Dark Ages', 'Cornucopia & Guilds'], types: ['Action', 'Attack'], typeMode: 'any', mechanics: ['draw'], mechanicMode: 'any', costs: [3, 10], debt: '4', sort: 'cost', dir: 'desc' });
+    expect(cardFiltersFromQuery(cardFiltersToQuery(all))).toEqual(all);
+    expect(cardFiltersToQuery(f({ types: ['Attack'] }))).toBe('?type=Attack');
+  });
+  it('ignores junk in a hand-edited link instead of breaking', () => {
+    expect(cardFiltersFromQuery('?sort=banana&dir=sideways&cost=abc&cost=2&debt=lots&tmode=maybe')).toEqual(f({ costs: [2] }));
+    expect(cardFiltersFromQuery('?q=%E0%A4%A')).toBeTruthy();   // a malformed escape must not throw
+  });
+  it('round-trips the landscape filters too', () => {
+    const l = { ...DEFAULT_LANDSCAPE_FILTERS, q: 'way', text: true, types: ['Way', 'Event'], expansions: ['Menagerie'], mechanics: ['gain_card'], mechanicMode: 'all', sort: 'trigger', dir: 'desc' };
+    expect(landscapeFiltersFromQuery(landscapeFiltersToQuery(l))).toEqual(l);
+    expect(landscapeFiltersToQuery(DEFAULT_LANDSCAPE_FILTERS)).toBe('');
+  });
+  it('reads the filters from the URL on the list pages, and carries them into each card link', () => {
+    const h = cardsWith({ types: ['Attack'] }), n = catalog.cards.filter(c => c.types.includes('Attack')).length;
+    expect(rows(h)).toBe(n);
+    expect((h.match(/href="#\/dominion\/cards\/[^"?]+\?type=Attack"/g) || []).length).toBe(n);
+    expect(h).toMatch(/aria-pressed="true"[^>]*>Attack/);
+  });
+  it('parses a query off a route without confusing it with an id', () => {
+    expect(parseDominionArg('cards?type=Attack')).toEqual({ view: 'cards', id: null, query: '?type=Attack' });
+    expect(parseDominionArg('cards/intrigue%3Acourtyard?type=Attack&sort=cost')).toEqual({ view: 'card', id: 'intrigue:courtyard', query: '?type=Attack&sort=cost' });
+  });
+  it('can search the card text too, showing an excerpt only for cards matched by text alone', () => {
+    const names = rows(cardsWith({ q: 'trash' })), withText = cardsWith({ q: 'trash', text: true });
+    expect(rows(withText)).toBeGreaterThan(names);
+    expect(withText).toMatch(/class="meta dn-snippet"/);
+    const t = text(withText); expect(t).toMatch(/Include card text/);
+    expect(textSnippet('Gain a card costing up to $4. Trash a card from your hand.', 'trash')).toBe('Gain a card costing up to $4. Trash a card from your hand.');
+    expect(textSnippet('x'.repeat(200) + ' trash ' + 'y'.repeat(200), 'TRASH')).toMatch(/^….*trash.*…$/);
+    expect(textSnippet('nothing here', 'trash')).toBeNull();
+    expect(textSnippet(null, 'trash')).toBeNull();
+  });
+  it('gives each card page Previous/Next/Random over the list it came from, keeping the filters', () => {
+    const list = browseCards(catalog.cards, f({ types: ['Attack'], sort: 'cost' }));
+    const mid = list[5], q = cardFiltersToQuery(f({ types: ['Attack'], sort: 'cost' }));
+    const h = render(`cards/${encodeURIComponent(mid.id)}${q}`), attr = href => `href="${href.replace(/&/g, '&amp;')}"`;   // the markup escapes & in attributes
+    expect(h).toContain(attr(cardHref(list[4].id, q))); expect(h).toContain(attr(cardHref(list[6].id, q)));
+    expect(h).toContain(attr(dominionHref('cards', null, q)));
+    expect(text(h)).toContain(`6 of ${list.length}`); expect(text(h)).toMatch(/Random card/);
+  });
+  it('disables Previous on the first card and Next on the last, and falls back to all cards for a stale filter', () => {
+    const all = browseCards(catalog.cards, DEFAULT_CARD_FILTERS);
+    expect(render(`cards/${encodeURIComponent(all[0].id)}`)).toMatch(/dn-itemnav-off[^>]*>← Previous/);
+    expect(render(`cards/${encodeURIComponent(all.at(-1).id)}`)).toMatch(/dn-itemnav-off[^>]*>Next →/);
+    expect(text(render(`cards/${encodeURIComponent(all[0].id)}?type=Victory`))).toContain(`1 of ${all.length}`);   // the card isn't a Victory card
+  });
+  it('landscape pages get the same strip', () => {
+    const l = catalog.landscapes.find(x => x.type === 'Way'), h = render(`landscapes/${encodeURIComponent(l.id)}?type=Way`);
+    expect(text(h)).toMatch(/Random landscape/); expect(h).toContain('href="#/dominion/landscapes?type=Way"');
+  });
+  it('neighbors() and pickRandom() behave at the edges', () => {
+    const l = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    expect(neighbors(l, 'a')).toMatchObject({ index: 0, total: 3, prev: null, next: { id: 'b' } });
+    expect(neighbors(l, 'c')).toMatchObject({ index: 2, prev: { id: 'b' }, next: null });
+    expect(neighbors(l, 'zz')).toMatchObject({ index: -1, prev: null, next: null });
+    expect(pickRandom(l, 'b', () => 0).id).toBe('a'); expect(pickRandom(l, 'b', () => 0.99).id).toBe('c');
+    expect(pickRandom([{ id: 'only' }], 'only').id).toBe('only'); expect(pickRandom([], null)).toBeNull();
+    for (let i = 0; i < 50; i++) expect(pickRandom(l, 'b').id).not.toBe('b');
+  });
+});
+
+describe('back to your place (scroll memory)', () => {
+  const setup = () => { const win = { scrollTo: vi.fn() }; globalThis.window = win; globalThis.location = { hash: '' }; return win; };
+  afterEach(() => { forgetListScroll(); delete globalThis.window; delete globalThis.location; });
+  const list = '#/dominion/cards?type=Attack', detail = '#/dominion/cards/intrigue%3Acourtyard?type=Attack';
+  it('restores the position when the same list URL comes back after a detail page', () => {
+    const win = setup();
+    navigated(list, detail, 1234);
+    navigated(detail, list, 0); location.hash = list;
+    restoreListScroll(); expect(win.scrollTo).toHaveBeenLastCalledWith(0, 1234);
+  });
+  it('keeps the position while moving between detail pages (Previous/Next/Random)', () => {
+    const win = setup();
+    navigated(list, detail, 800); navigated(detail, '#/dominion/cards/x?type=Attack', 0); navigated('#/dominion/cards/x?type=Attack', detail, 0);
+    navigated(detail, list, 0); location.hash = list; restoreListScroll(); expect(win.scrollTo).toHaveBeenLastCalledWith(0, 800);
+  });
+  it('forgets it once the viewer leaves the list/detail pages, and for a different list URL', () => {
+    const win = setup();
+    navigated(list, detail, 500); navigated(detail, '#/dominion', 0);   // off to the Overview
+    location.hash = list; restoreListScroll(); expect(win.scrollTo).not.toHaveBeenCalled();
+    navigated(list, detail, 700); location.hash = '#/dominion/cards?type=Victory'; restoreListScroll(); expect(win.scrollTo).not.toHaveBeenCalled();
+  });
+  it('does not record a position for a filter change (same page) or for the landscapes list', () => {
+    const win = setup();
+    navigated('#/dominion/cards', list, 300); location.hash = list; restoreListScroll(); expect(win.scrollTo).not.toHaveBeenCalled();
+    navigated('#/dominion/landscapes', '#/dominion/landscapes/x', 640); location.hash = '#/dominion/landscapes'; restoreListScroll(); expect(win.scrollTo).toHaveBeenLastCalledWith(0, 640);
+  });
+});
+
 describe('type pill tints', () => {
   it('gives each of the six main printed types its own class, and the other types none', () => {
     const html = render('cards');
@@ -269,7 +358,7 @@ describe('type filter chips', () => {
     const html = render('cards');
     for (const t of ['action', 'treasure', 'duration', 'attack', 'reaction', 'victory']) expect(html, t).toMatch(new RegExp(`class="dn-chip t-${t}"`));
     const css = readFileSync(path.join(ROOT, 'style.css'), 'utf8');
-    for (const t of ['action', 'treasure', 'duration', 'attack', 'reaction', 'victory']) expect(css, t).toContain(`.dn-chip.t-${t}{`);
+    for (const t of ['action', 'treasure', 'duration', 'attack', 'reaction', 'victory']) expect(css, t).toContain(`.dn-chip.t-${t},`);
   });
 });
 
@@ -286,7 +375,7 @@ describe('landscape type tints', () => {
     const list = render('landscapes');
     for (const k of kinds) { expect(list, k).toMatch(new RegExp(`class="pill t-${k}"`)); expect(list, k).toMatch(new RegExp(`class="dn-chip t-${k}"`)); }
     expect(render(`landscapes/${encodeURIComponent('plunder:trait:cheap')}`)).toMatch(/class="pill t-trait">Trait</);
-    for (const k of kinds) { expect(css, k).toContain(`.pill.t-${k}{`); expect(css, k).toContain(`.dn-chip.t-${k}{`); }
+    for (const k of kinds) { expect(css, k).toContain(`.pill.t-${k}{`); expect(css, k).toContain(`.dn-chip.t-${k},`); }
   });
 });
 
@@ -348,7 +437,7 @@ describe('Landscapes', () => {
   });
   it('encodes ids that contain underscores and colons round-trip', () => {
     const l = catalog.landscapes.find(x => x.id.includes('_'));
-    expect(parseDominionArg(`landscapes/${encodeURIComponent(l.id)}`)).toEqual({ view: 'landscape', id: l.id });
+    expect(parseDominionArg(`landscapes/${encodeURIComponent(l.id)}`)).toEqual({ view: 'landscape', id: l.id, query: '' });
     expect(text(render(`landscapes/${encodeURIComponent(l.id)}`))).toContain(l.name);
   });
   it('handles an unknown landscape id gracefully', () => { expect(text(render('landscapes/zz%3Anone'))).toMatch(/Landscape not found/); });
@@ -407,14 +496,14 @@ describe('the card-types-by-expansion table on Statistics', () => {
 
 describe('routing inside the section', () => {
   it('parses every Dominion URL', () => {
-    expect(parseDominionArg('')).toEqual({ view: 'overview', id: null });
-    expect(parseDominionArg('cards')).toEqual({ view: 'cards', id: null });
-    expect(parseDominionArg('cards/intrigue%3Acourtyard')).toEqual({ view: 'card', id: 'intrigue:courtyard' });
-    expect(parseDominionArg('landscapes')).toEqual({ view: 'landscapes', id: null });
-    expect(parseDominionArg('stats')).toEqual({ view: 'overview', id: null });   // the old Statistics tab
-    expect(parseDominionArg('nonsense')).toEqual({ view: 'notfound', id: null });
-    expect(parseDominionArg('stats/extra')).toEqual({ view: 'notfound', id: null });
-    expect(parseDominionArg('cards/%E0%A4%A')).toEqual({ view: 'notfound', id: null });   // malformed escape must not throw
+    expect(parseDominionArg('')).toEqual({ view: 'overview', id: null, query: '' });
+    expect(parseDominionArg('cards')).toEqual({ view: 'cards', id: null, query: '' });
+    expect(parseDominionArg('cards/intrigue%3Acourtyard')).toEqual({ view: 'card', id: 'intrigue:courtyard', query: '' });
+    expect(parseDominionArg('landscapes')).toEqual({ view: 'landscapes', id: null, query: '' });
+    expect(parseDominionArg('stats')).toEqual({ view: 'overview', id: null, query: '' });   // the old Statistics tab
+    expect(parseDominionArg('nonsense')).toEqual({ view: 'notfound', id: null, query: '' });
+    expect(parseDominionArg('stats/extra')).toEqual({ view: 'notfound', id: null, query: '' });
+    expect(parseDominionArg('cards/%E0%A4%A')).toEqual({ view: 'notfound', id: null, query: '' });   // malformed escape must not throw
   });
   it('builds links that parse back to the same thing', () => {
     expect(cardHref('intrigue:courtyard')).toBe('#/dominion/cards/intrigue%3Acourtyard');

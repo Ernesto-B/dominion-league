@@ -4,6 +4,8 @@ import path from 'node:path';
 import { ROOT } from '../../scripts/dominion/lib/tables.mjs';
 import { parseHash, hashFor, ROUTES, GLOBAL_ROUTES } from '../../src/lib/route.js';
 import { PAGES } from '../../src/pages/index.js';
+// a page is a component: a function, or a React.lazy() one (an object tagged with this symbol) for the pages that load on demand
+const isComponent = c => typeof c === 'function' || (c && c.$$typeof === Symbol.for('react.lazy'));
 import viteConfig from '../../vite.config.js';
 
 const groups2 = [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], group1 = [{ id: 'a', name: 'A' }];
@@ -23,14 +25,14 @@ describe('existing routes still work (nothing about the league pages changed)', 
     expect(hashFor('games', 'b', 12, groups2)).toBe('#/games/b/12');
   });
   it('still has a page for every route, the old ones included', () => {
-    for (const r of ['home', 'season', 'players', 'h2h', 'records', 'games', 'admin']) expect(PAGES[r], r).toBeTypeOf('function');
-    for (const r of ROUTES) expect(PAGES[r], `a page for ${r}`).toBeTypeOf('function');
+    for (const r of ['home', 'season', 'players', 'h2h', 'records', 'games', 'admin']) expect(isComponent(PAGES[r]), r).toBe(true);
+    for (const r of ROUTES) expect(isComponent(PAGES[r]), `a page for ${r}`).toBe(true);
   });
 });
 
 describe('the Dominion route', () => {
   it('is registered and site-wide (never takes a group segment)', () => {
-    expect(ROUTES).toContain('dominion'); expect(GLOBAL_ROUTES).toContain('dominion'); expect(PAGES.dominion).toBeTypeOf('function');
+    expect(ROUTES).toContain('dominion'); expect(GLOBAL_ROUTES).toContain('dominion'); expect(isComponent(PAGES.dominion)).toBe(true);
   });
   it('does not mistake the first path part for a group when several groups exist', () => {
     expect(parseHash('#/dominion', groups2)).toMatchObject({ route: 'dominion', gid: 'a', arg: '' });

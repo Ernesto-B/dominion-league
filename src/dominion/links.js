@@ -1,18 +1,31 @@
 /* URLs for the Dominion section: #/dominion[/<view>[/<id>]]. Ids contain ':' and '_' (e.g. "intrigue:courtyard",
    "menagerie:way:way_of_the_frog"), so they are encoded on the way out and decoded on the way in. */
-export const dominionHref = (view = '', id = null) => '#/dominion' + (view ? '/' + view : '') + (id != null ? '/' + encodeURIComponent(id) : '');
-export const cardHref = id => dominionHref('cards', id);
-export const landscapeHref = id => dominionHref('landscapes', id);
+import { DEFAULT_CARD_FILTERS, DEFAULT_LANDSCAPE_FILTERS, cardFiltersToQuery, landscapeFiltersToQuery } from './filters.js';
+
+// `query` is the filter state ("?type=Attack"), carried through to a card's page so Previous/Next and "back to the list" keep it
+export const dominionHref = (view = '', id = null, query = '') => '#/dominion' + (view ? '/' + view : '') + (id != null ? '/' + encodeURIComponent(id) : '') + query;
+export const cardHref = (id, query = '') => dominionHref('cards', id, query);
+export const landscapeHref = (id, query = '') => dominionHref('landscapes', id, query);
+// the browser, already filtered: cardsFilterHref({ types: ['Attack'] })
+export const cardsFilterHref = patch => dominionHref('cards', null, cardFiltersToQuery({ ...DEFAULT_CARD_FILTERS, ...patch }));
+export const landscapesFilterHref = patch => dominionHref('landscapes', null, landscapeFiltersToQuery({ ...DEFAULT_LANDSCAPE_FILTERS, ...patch }));
 
 export const VIEWS = [
   { view: 'overview', label: 'Overview', href: dominionHref() },
   { view: 'cards', label: 'Kingdom cards', href: dominionHref('cards') },
   { view: 'landscapes', label: 'Landscapes', href: dominionHref('landscapes') },
+  { view: 'randomizer', label: 'Randomizer', href: dominionHref('randomizer') },
+  { view: 'insights', label: 'Insights', href: dominionHref('insights') },
 ];
 
 // `arg` is everything after "dominion/" in the hash: '' | 'cards' | 'cards/<id>' | 'landscapes' | 'landscapes/<id>' (old: 'stats' → Overview)
 export function parseDominionArg(arg) {
-  const parts = String(arg || '').split('/');
+  const [path, ...rest] = String(arg || '').split('?');   // an id never contains a raw '?', it is encoded
+  const query = rest.length ? '?' + rest.join('?') : '';
+  return { ...parsePath(path), query };
+}
+function parsePath(path) {
+  const parts = path.split('/');
   const view = parts[0] || 'overview';
   let id = null;
   if (parts.length > 1 && parts.slice(1).join('/')) {
@@ -22,6 +35,8 @@ export function parseDominionArg(arg) {
   if (view === 'overview' || view === 'stats') return id == null ? { view: 'overview', id: null } : { view: 'notfound', id: null };
   if (view === 'cards') return id == null ? { view: 'cards', id: null } : { view: 'card', id };
   if (view === 'landscapes') return id == null ? { view: 'landscapes', id: null } : { view: 'landscape', id };
+  if (view === 'insights') return id == null ? { view: 'insights', id: null } : { view: 'notfound', id: null };
+  if (view === 'randomizer') return id == null ? { view: 'randomizer', id: null } : { view: 'notfound', id: null };
   return { view: 'notfound', id: null };
 }
 // which top-level tab a view belongs to (a card's detail page lives under "Kingdom cards")
