@@ -100,13 +100,6 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     // group — there's no cross-group "their real page" to resolve anymore.
     return `<a class="pl" href="${hashFor('players', curGid, encodeURIComponent(n))}">${nameIcon(n, 20)}<span>${esc(n)}</span></a>`;
   };
-  function tierLegend() {
-    return `<div class="tiers" role="list" aria-label="Rank tiers">${D.tiers.map((t, i) => {
-      const hi = D.tiers[i + 1] ? D.tiers[i + 1].min - 1 : null;
-      const range = t.min === -Infinity ? `under ${D.tiers[i + 1].min}` : hi == null ? `${t.min}+` : `${t.min}–${hi}`;
-      return `<div class="tierkey" role="listitem">${icon(t.icon, 40, '')}<b>${esc(t.name)}</b><span>${range}</span></div>`;
-    }).join('')}<div class="tierkey" role="listitem">${icon('champion', 40, '')}<b>Champion</b><span>won a season</span></div></div>`;
-  }
   function tierAnchor(tier) {
     return `<div class="tieranchor">${tier ? icon(tier.icon, 28, tier.name) : ''}<span>${tier ? esc(tier.name) : 'Top tier'}</span></div>`;
   }
@@ -130,23 +123,9 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     const pct = Math.max(0, Math.min(1, (p.elo - lower) / (upper - lower))) * 100;
     return `<div class="tierbarwrap" tabindex="0">${tierPopup()}<div class="tierbar">${tierAnchor(p.tier)}<div class="progress" role="img" aria-label="${Math.round(pct)}% of the way to ${esc(p.nextTier.tier.name)}"><i style="width:${pct}%"></i></div>${tierAnchor(p.nextTier.tier)}</div></div>`;
   }
-  function storyCards(R, rk) {
-    const cards = [];
-    if (R.closestRace) cards.push(`<div class="story"><span class="slabel">Closest race</span>${link(R.closestRace.a)} leads ${link(R.closestRace.b)} by just <b>${f0(R.closestRace.gap)}</b> Elo</div>`);
-    if (R.biggestUpset) cards.push(`<div class="story"><span class="slabel">Biggest upset</span>${link(R.biggestUpset.winner)} beat ${link(R.biggestUpset.loser)} despite trailing by <b>${f0(R.biggestUpset.deficit)}</b> Elo <span class="meta">(${short(R.biggestUpset.date)})</span></div>`);
-    const streaker = (rk || []).filter(p => p.streak >= 3).sort((a, b) => b.streak - a.streak)[0];
-    if (streaker) cards.push(`<div class="story"><span class="slabel">Hot streak</span>${link(streaker.name)} has won <b>${streaker.streak}</b> in a row 🔥</div>`);
-    return cards.length ? `<div class="storyrow">${cards.join('')}</div>` : '';
-  }
   function banner() {
     if (!D.warnings.length) return '';
     return `<div class="banner" role="status"><b>${D.warnings.length} thing${D.warnings.length > 1 ? 's' : ''} to fix in the data</b><ul>${D.warnings.slice(0, 8).map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
-  }
-  function seasonChip() {
-    const s = D.seasons[D.currentSeasonFor() - 1];
-    if (!s) return '';
-    const live = s.status === 'In progress';
-    return `<span class="chip ${live ? 'live' : ''}"><b>${esc(s.name)}</b> ${live ? 'in progress' : s.status.toLowerCase()}${live && s.weeksLeft ? `, ${s.weeksLeft} week${s.weeksLeft > 1 ? 's' : ''} left` : ''}</span>`;
   }
   function seasonOptions(sel, withAll) {
     return (withAll ? `<option value="all"${sel === 'all' ? ' selected' : ''}>All seasons</option>` : '') +
@@ -258,48 +237,6 @@ import { hashFor as hashForRoute } from '../lib/route.js';
   }
 
   /* ---------- pages ---------- */
-  function pageHome(gid) {
-    const rk = D.ranked;
-    const gl = D.games.filter(g => g.n >= 2);
-    const last = gl.length ? gl[gl.length - 1].date : null;
-    const R = D.records;
-    let h = `<div class="head">${storyCards(R, rk)}
-      <div class="chips" style="margin-left:auto">${seasonChip()}${last ? `<span class="chip">Last night <b>${short(last)}</b></span>` : ''}<span class="chip"><b>${R.overview.nights}</b> night${R.overview.nights === 1 ? '' : 's'} played</span></div></div>${groupSwitcher('', gid)}${banner()}`;
-    if (!rk.length) return h + '<p class="empty">No rated games yet. Once the admin adds one, the rankings show up here.</p>';
-    const mx = Math.max(60, ...rk.map(p => Math.abs(p.elo - D.E.start))) * 1.08;
-    h += `<div class="ladder" role="table" aria-label="Elo rankings"><div class="lhead" role="row"><span>Rank</span><span>Player</span><span>Rating vs ${D.E.start} start</span><span>Elo</span><span>Last</span><span>Recent form</span></div>`;
-    rk.forEach(p => {
-      const d = p.elo - D.E.start, wpx = Math.abs(d) / mx * 50;
-      const lastR = p.results[p.results.length - 1];
-      const dl = lastR ? lastR.after - lastR.before : 0;
-      const form = p.results.slice(-5).map(r => `<i class="${r.pts >= 0.67 ? 'w' : r.pts <= 0.33 ? 'l' : 'm'}" title="${esc(r.game.date)}: ${ord(r.place)} of ${r.game.n}"></i>`).join('');
-      const rank = p.rank;
-      const rm = p.rankDelta;
-      const rmHtml = !rm ? '' : rm > 0 ? `<span class="rankmove up-t" title="Up ${rm} spot${rm === 1 ? '' : 's'} since last night">▲${rm}</span>` : `<span class="rankmove down-t" title="Down ${-rm} spot${-rm === 1 ? '' : 's'} since last night">▼${-rm}</span>`;
-      h += `<div class="lrow" data-p="${esc(p.name)}" role="row"><span class="lrank">${rank}${rmHtml}</span>
-        <a class="lname" href="${hashFor('players', gid, encodeURIComponent(p.name))}">${icon(p.tier.icon, 28, p.tier.name + ' tier')}${esc(p.name)}${p.titles ? `<span class="crown" title="${p.titles} season title${p.titles > 1 ? 's' : ''}">${icon('champion', 20, 'Season champion')}${p.titles > 1 ? '×' + p.titles : ''}</span>` : ''}${p.streak >= 3 ? `<span class="pill hot" title="${p.streak}-game win streak">🔥 ${p.streak}</span>` : ''}${p.status === 'Provisional' ? '<span class="tag">provisional</span>' : ''}</a>
-        <span class="bar" aria-hidden="true"><i class="${d >= 0 ? 'up' : 'down'}" style="width:${wpx}%;${d >= 0 ? 'left:50%' : 'left:' + (50 - wpx) + '%'}"></i></span>
-        <span class="lelo">${f0(p.elo)}</span><span class="ldelta ${dl > 0.5 ? 'up-t' : dl < -0.5 ? 'down-t' : ''}">${sgn(dl)}</span><span class="form" aria-label="Recent form">${form}</span></div>`;
-    });
-    h += '</div>' + lastNightPanel(gl) + '<h2>Rank tiers</h2>' + tierLegend() + '<p class="note">Your tier follows your current Elo, so it can go down as well as up. The trophy is for winning a season and never goes away.</p><p class="note">Everyone starts at ' + D.E.start + ' as a ' + D.startTier.name + ' and climbs from there. Elo carries across seasons; friendly games never count. New players move faster for their first ' + D.E.provisionalGames + ' games (provisional).</p>' + `<p class="note">This ladder is Elo — a lifetime skill rating that never resets. It's not what decides a season's winner; that's points, on the <a href="${hashFor('season', gid)}">Season page</a>.</p>`;
-    h += '<h2>Rating history</h2>' + ratingChart(null, rk.map(p => p.name));
-    return h;
-  }
-
-  function lastNightPanel(gl) {
-    if (!gl.length) return '';
-    const day = gl[gl.length - 1].day, date = gl[gl.length - 1].date;
-    // Newest first, matching every other game list on the site; reusing
-    // gameDetail(g) in a click-to-expand row too, same as the Games and
-    // Season pages — wireGameRows() already wires any .grow/.gdetail pair
-    // on the page, so no new JS is needed for the click behavior itself.
-    const todays = gl.filter(g => g.day === day).slice().reverse();
-    return `<h2>Last night, ${long(date)}</h2><div class="tablewrap"><table class="plain"><thead><tr><th></th><th class="l">Finish</th><th></th><th class="l">Elo change</th></tr></thead><tbody>${todays.map(g => {
-      const names = g.names.slice().sort((x, y) => g.places[x] - g.places[y]);
-      const ch = names.filter(n => g.elo[n]).map(n => { const d = g.elo[n].after - g.elo[n].before; return `<span class="chg">${esc(n)} <b class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${sgn(d)}</b></span>`; }).join('');
-      return `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td class="wrap">${finishText(g)}</td><td>${typePill(g.type)}</td><td class="wrap chgs">${ch || '<span class="meta">No rating change</span>'}</td></tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="4">${gameDetail(g)}</td></tr>`;
-    }).join('')}</tbody></table></div>`;
-  }
   function seasonTable(st, limit) {
     const s = st.season, rows = limit ? st.rows.slice(0, limit) : st.rows;
     return `<div class="tablewrap"><table><thead><tr><th>Rank</th><th class="l">Player</th><th>Games</th><th>Wins</th><th>Win %</th><th>Avg points</th><th>Season score</th><th>Qualified</th><th>Seed</th><th>Elo change</th><th>Nights</th><th>Attendance</th></tr></thead><tbody>` +
@@ -950,12 +887,12 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     D = pickD(ctx, gid);
     closeAddModal();
     hidePopLayer();
-    const pages = { home: pageHome, season: pageSeason, players: pagePlayers, h2h: pageH2H, admin: pageAdmin };
-    const fn = pages[route] || pageHome;
+    const pages = { season: pageSeason, players: pagePlayers, h2h: pageH2H, admin: pageAdmin };
+    const fn = pages[route];   // unknown routes are mapped to Home (ported) by App before they get here
     main.innerHTML = fn(gid, arg);
     makeSortable(main);
     wireGameRows(main);
-    if (route === 'home' || route === 'players') wireHighlight(main);
+    if (route === 'players') wireHighlight(main);
     if (route === 'players') wireHoverPopups(main);
     if (route === 'admin') wireAdmin();
     const hs = $('#h2hsel'); if (hs) hs.addEventListener('change', () => { location.hash = hashFor('h2h', curGid, hs.value); });

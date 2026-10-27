@@ -21,10 +21,11 @@ function Shell() {
     ...state, ...route, D: pickD(state, route.gid), reload: boot,
     hashFor: (r, g, rest) => hashFor(r, g, rest, state.allGroups),
   } : null, [state, ready, route, boot]);
-  const Ported = ready ? PAGES[route.route] : null;
+  const routeName = ready && ROUTES.includes(route.route) ? route.route : 'home';   // unknown routes show Home
+  const Ported = ready ? PAGES[routeName] : null;
 
   // Navigating from a legacy page to a ported one must not leave a legacy modal/popup behind.
-  useEffect(() => { if (Ported) resetLegacyChrome(); }, [Ported, route]);
+  useEffect(() => { if (Ported) resetLegacyChrome(); }, [Ported, routeName, route && route.gid, route && route.arg]);
 
   useEffect(() => {
     if (!ready) { document.title = state.cfg?.title || 'Dominion Night'; return; }

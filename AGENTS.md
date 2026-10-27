@@ -99,6 +99,9 @@ the change is genuinely about the math/model itself.
 
 ## Porting a legacy page to React (the recipe that's been working)
 
+0. Port in this order of dependency: shared components first, then pages. Legacy helpers that
+   other legacy pages still call (`finishText`, `gameDetail`, `gamesTable`, `ratingChart`, ...)
+   must stay until their last caller is ported — grep before deleting.
 1. Translate the template string to a component in `src/pages/`, reading `usePage()`; reuse
    `src/components/` rather than re-deriving markup. Register it in `src/pages/index.js`; delete the
    legacy function and its `pages` entry in `src/legacy/pages.js`.
@@ -109,6 +112,14 @@ the change is genuinely about the math/model itself.
    This caught real bugs the first time: tie-break order (legacy sorts from the *displayed* order)
    and sort keys (legacy sorts on visible text, e.g. "not decided"). Make the fake data rich enough
    that every section renders — check the section headings, an identical half-empty page proves nothing.
+   Count the conditional bits too (`querySelectorAll` for crowns, rank arrows, ...): e.g. rank-move
+   arrows need >= 2 game nights *and* a rank change on the last one, so the fake has an opt-in
+   `?data=swing` scenario. Serialize the **live** DOM without mutating it (never `normalize()` it —
+   that breaks React's node refs), compare `<select>`s by `.value` and `style` by `cssText`, and
+   click row chevrons, not row centers (a player link sits in the middle).
+3. Drive the interactions on both builds and snapshot after each step (expand, sort, filter, hover,
+   modals); a static diff alone misses state bugs. Behavior that *intentionally* differs (e.g. an
+   unknown route now behaves exactly like Home) gets noted in the commit message.
 
 ## Gotchas already paid for — don't rediscover these
 
