@@ -1,0 +1,12 @@
+export const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+export const f0 = x => x == null ? '' : Math.round(x).toString();
+export const f1 = x => x == null ? '' : x.toFixed(1);
+export const f2 = x => x == null ? '' : x.toFixed(2);
+export const f3 = x => x == null ? '' : x.toFixed(3);
+export const pc = x => x == null ? '' : Math.round(x * 100) + '%';
+export const sgn = x => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(Math.round(x));
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const short = iso => { const [y, m, d] = iso.split('-'); return MON[+m - 1] + ' ' + (+d); };
+export const long = iso => { const [y, m, d] = iso.split('-'); return MON[+m - 1] + ' ' + (+d) + ', ' + y; };
+export const ord = n => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+export const slugify = n => String(n).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');

@@ -18,7 +18,7 @@
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
+import * as Eng from '../src/lib/engine.js';
 import path from 'node:path';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -29,11 +29,9 @@ if (!SUPABASE_URL || !SERVICE_KEY) {
 }
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const require = createRequire(import.meta.url);
-const Eng = require(path.join(ROOT, 'js', 'engine.js'));
 const PRESET_PASSWORD = 'dominion';
 
-// Keep this identical to the slugify() in js/app.js's login screen — it's
+// Keep this identical to the slugify() in src/lib/format.js's login screen — it's
 // how a typed name turns into this account's fixed, internal-only login
 // email. Add a disambiguator (e.g. 'jose-m') here AND there if two players
 // ever share a first name; never try to rename an email after the fact.
@@ -114,7 +112,7 @@ function sharedGroupFor(names, groupsByLowerName) {
 }
 
 async function importGames(idByLowerName, groupsByLowerName, adminId) {
-  const csvText = readFileSync(path.join(ROOT, 'data', 'games.csv'), 'utf8');
+  const csvText = readFileSync(path.join(ROOT, 'public', 'data', 'games.csv'), 'utf8');
   const rows = Eng.parseCSV(csvText);
   let imported = 0, skipped = 0;
   for (const r of rows) {

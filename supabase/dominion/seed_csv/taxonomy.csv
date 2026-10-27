@@ -1,0 +1,99 @@
+mechanic_id,definition,status
+action_filtering,Can skip or set aside Action cards while drawing.,draft_v1
+action_multiplier,Plays an Action more than once.,draft_v1
+alternate_victory,Kingdom Victory card beyond basic Estates/Duchies/Provinces.,draft_v1
+artifact_acquisition,Allows taking or transferring an Artifact.,draft_v2
+artifact_contested,Unique Artifact that can be transferred between players; not a Kingdom card.,draft_v2
+attack,Card has Attack printed type and effects opponents.,draft_v1
+attack_defense,Protects against an Attack.,draft_v1
+cantrip,Provides at least +1 Card and +1 Action (not necessarily exactly one each).,draft_v1
+choice,Player selects among explicit card options.,draft_v1
+coffers_generation,Produces Coffers tokens that can be spent for coins later.,draft_v2
+conditional_draw,Draws cards only when a condition or choice is satisfied.,draft_v2
+conditional_next_time,Effect remains active until a specified future condition occurs.,provisional_taxonomy_extension
+cost_reduction,Reduces costs of cards (possibly conditional).,draft_v2
+cost_variable,Printed cost modified by situational condition.,draft_v2_source_grounded
+deck_reordering,Lets player arrange looked-at cards in chosen order.,draft_v3
+deck_reposition,Puts card(s) into a chosen location in the deck.,draft_v2
+delayed_effect,Effect occurs in a later turn or at start of next turn.,draft_v2_source_grounded
+discard_for_benefit,Offers a benefit conditional on discarding.,draft_v1
+discard_from_deck,Effect discards card(s) directly from the deck/revealed deck cards.,draft_v3
+discard_from_hand,Effect explicitly discards card(s) from your hand (possibly conditional).,draft_v3
+discard_trigger,An effect can trigger when this card is discarded.,draft_v2
+discard_whole_hand,Discards entire hand as part of effect.,draft_v2_source_grounded
+draw,Directly draws at least one card; may be conditional.,draft_v1
+draw_to_hand_size,Draws up to a target hand size.,draft_v1
+duration,Provides a delayed effect as a printed Duration card.,draft_v2
+end_buy_phase_trigger,Effect triggers at the end of the Buy phase.,draft_v5_official_example
+end_cleanup_trigger,Triggers a benefit or effect during Clean-up.,draft_v2
+exile_from_hand,Exiles a card from hand.,draft_v2_source_grounded
+exile_from_supply,Exiles a card directly from Supply.,draft_v2_source_grounded
+exile_opponent,Forces or causes another player to exile a card.,draft_v2_source_grounded
+extra_setup_pile,Adds or uses a specially chosen extra pile during setup.,provisional_taxonomy_extension
+gain_from_trash,Gains a card from the Trash.,draft_v1
+gain_replacement,An effect replaces or alters what is gained.,draft_v2
+gain_to_exile,Redirects gained card to Exile.,draft_v2_source_grounded
+gain_to_hand,A gained card is placed in the hand.,draft_v1
+gain_to_topdeck,Places a newly gained card on top of deck.,draft_v2
+gain_trigger,An effect can trigger when this card is gained.,draft_v2
+gaining,Gains card(s) by instruction rather than buying.,draft_v1
+hand_discard,Discards own hand or cards from own hand by instruction.,draft_v2
+hand_size_reduction,Reduces opponent hand size.,draft_v1
+horse_gaining,Gains one or more Horses from non-Supply pile.,draft_v2_source_grounded
+loot_gaining,Gains a card from the shuffled non-Supply Loot pile.,provisional_taxonomy_extension
+on_buy_trigger,A benefit triggers from buying a card.,draft_v2
+on_gain_self_trigger,Has a triggered effect when this card itself is gained.,draft_v2
+opponent_draw,Draws cards for opponents.,draft_v1
+opponent_junking,Causes opponent(s) to gain junk cards.,draft_v1
+opponent_topdeck,Forces opponent to put card on top of their deck.,draft_v3
+opponent_trashing,Forces opponent(s) to trash card(s).,draft_v2
+overpay,Extra payment when buying triggers an additional benefit.,provisional_taxonomy_extension
+passing,Passes cards between players.,draft_v1
+play_action_from_deck,Can play an Action card directly from top of deck or revealed from deck.,draft_v1_added_batch26
+play_action_from_discard,Allows playing a discarded Action card without the ordinary action-play procedure.,draft_v3
+play_action_from_hand,Plays an Action card from hand without spending an Action play; distinct from +Actions.,draft_v5_official_example
+play_multiple_actions,"Plays multiple different physical Action cards from hand in one resolution, without replaying an individual card.",draft_v4_card_text_checked
+play_treasure_extra,Plays another Treasure or produces an effect based on another Treasure.,draft_v2
+plus_action,Provides +1 Action.,draft_v1
+plus_buy,Provides one or more additional Buys.,draft_v1
+plus_coins,Provides spendable coins (possibly conditionally).,draft_v1
+project_persistent,Purchased Project providing a lasting ability; not a Kingdom card.,draft_v2
+reaction_play,A reaction can cause this card to be played in response to a triggering event.,draft_v2
+replay_treasure,Plays a Treasure card an additional time.,draft_v2
+reveal_to_hand,Reveals cards from deck and selectively puts them in hand; not the same as drawing.,draft_v5_official_example
+rewards_gaining,Gains a Reward from the non-Supply Reward pile.,provisional_taxonomy_extension
+self_trashing,Can trash itself.,draft_v1
+set_aside,Sets aside a card for later use or placement.,draft_v2
+sifting,"Filters/reveals/reorders cards from deck, allowing selective access.",draft_v2
+terminal_draw,Draw effect on an Action that does not intrinsically replace its spent Action.,draft_v1
+topdeck,Places a card on top of the deck.,draft_v2
+topdeck_from_discard,"Moves card from discard pile onto deck, not a gain.",draft_v3
+trash_trigger,An effect can trigger when this card is trashed.,draft_v2
+trashing_from_deck,Trashes card(s) revealed or viewed from the deck.,draft_v3
+trashing_from_hand,Trashes card(s) from the playing player’s hand.,draft_v1
+trashing_from_play,"Trashes card(s) already in play, distinct from trashing from hand or deck.",draft_v1_added_batch26
+trashing_from_supply,Trashes card(s) directly from the Supply.,draft_v1
+trashing_gained_card,Can trash a card immediately after it is gained (e.g. Watchtower Reaction).,draft_v1_added_batch26
+treasure_gaining,Gains Treasure card(s).,draft_v1
+treasure_multiplier,Plays another Treasure more than once.,draft_v2_source_grounded
+trigger_on_other_gain,Triggered when another player gains a card.,draft_v2_source_grounded
+variable_scoring,Victory scoring depends on deck/game state.,draft_v1
+village,Provides at least +2 Actions when played.,draft_v1
+villager_generation,Produces Villager tokens that can be spent for Actions later.,draft_v2
+vp_token_generation,Awards VP tokens directly or conditionally.,draft_v2_source_grounded
+exile_from_play,Exiles the played card from play (distinct from Exile from hand or Supply).,draft_v1_batch29_official_menagerie_example
+return_to_supply,Returns itself to its Supply pile when played.,draft_v1
+reveal_trigger,Gains a benefit when explicitly revealed by an effect.,draft_v1
+gain_from_discard_to_hand,Puts a card from the discard pile into hand without gaining it.,draft_v1
+gain_from_set_aside_to_hand,Moves cards set aside into hand; not a gain event.,draft_v1
+trash_for_villagers,Generates Villagers based on the cost of a trashed card.,draft_v1
+conditional_coffers,Generates Coffers only when a stated condition holds.,draft_v1
+opponent_hand_discard,Forces an opponent to discard from hand under stated conditions.,draft_v1
+type_modification,Temporarily alters the printed/gameplay types of qualifying cards.,draft_v1
+extra_turn,Provides an extra turn under a specified condition.,draft_v1
+play_action_on_gain,May play a newly gained Action immediately.,draft_v1
+gathering_pile,Adds or collects VP tokens accumulated on a shared Gathering supply pile.,draft_v1
+debt_on_discard,Causes Debt tokens when discarded from play.,draft_v1
+duration_next_turn,Provides a specified effect at the start of a later turn.,draft_v1
+trashing_from_discard,Trashes a card directly from the discard pile.,draft_v1_batch36
+deck_to_discard,"Moves the whole remaining deck to discard pile, not a card-by-card discard event; does not trigger when-discarded abilities.",draft_v7_source_checked

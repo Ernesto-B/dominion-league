@@ -1,0 +1,28 @@
+{
+  "name": "dominion-night",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dominion:seed": "node scripts/dominion/build-seed.mjs",
+    "dominion:validate": "vitest run tests/dominion/data.test.js",
+    "dominion:test-db": "node scripts/dominion/test-db.mjs",
+    "dominion:check-live": "node scripts/dominion/check-live.mjs",
+    "check:build": "node scripts/dominion/check-build.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

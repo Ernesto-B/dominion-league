@@ -1,6 +1,6 @@
 # Dominion Night
 
-A website for our Dominion league: Elo rankings, seasons, head-to-head, records and a full game log. It's still a static site with no build step and no server of its own — the page does all the maths in the visitor's browser — but the roster and the game log now live in [Supabase](https://supabase.com) (a hosted Postgres database) instead of a CSV file, and the whole site requires signing in.
+A website for our Dominion league: Elo rankings, seasons, head-to-head, records and a full game log. It's a static React site (built with Vite, hosted on GitHub Pages) with no server of its own — the page does all the maths in the visitor's browser — but the roster and the game log now live in [Supabase](https://supabase.com) (a hosted Postgres database) instead of a CSV file, and the whole site requires signing in.
 
 - **Everyone gets their own account.** No anonymous visitors — names and results aren't exposed to scrapers or randoms who stumble onto the URL.
 - **Only the admin can add, edit or delete games**, from a page on the site itself.
@@ -8,15 +8,28 @@ A website for our Dominion league: Elo rankings, seasons, head-to-head, records 
 
 ## Publish on GitHub Pages (one time)
 
-1. Create a new repository on GitHub (public, since free Pages needs that) and upload everything in this folder, keeping the `data`, `js`, `icons` and `supabase` folders. **Do not** upload a `.env` file or anything containing your Supabase service-role key — see the setup below.
-2. Open Settings, then Pages. Under "Build and deployment" choose "Deploy from a branch", pick `main` and `/ (root)`, and save.
-3. After a minute the site is live at `https://YOUR-NAME.github.io/REPO-NAME/`.
+The site is a [Vite](https://vite.dev) + React app. GitHub builds it for you on every push to `main` (see `.github/workflows/deploy.yml`) and publishes the result — there's nothing to build or upload by hand.
+
+1. Create a new repository on GitHub (public, since free Pages needs that) and push everything in this folder, including `src`, `public`, `supabase` and `.github`. **Do not** commit a `.env` file or anything containing your Supabase service-role key — see the setup below.
+2. Open Settings, then Pages. Under "Build and deployment", set **Source** to **GitHub Actions** (not "Deploy from a branch" — that would publish the unbuilt source and show a blank page).
+3. Push to `main`. The "Deploy to GitHub Pages" workflow runs (watch it on the Actions tab); after a minute or two the site is live at `https://YOUR-NAME.github.io/REPO-NAME/`.
+
+## Working on it locally
+
+You need [Node.js](https://nodejs.org) 20.19+ or 22.12+ (the range this version of Vite supports; GitHub's build uses 22).
+
+```
+npm install        # once
+npm run dev        # live-reloading dev server (http://localhost:5173)
+npm run build      # the same production build GitHub runs; output goes to dist/
+npm run preview    # serve dist/ locally to check the built site
+```
 
 ## One-time Supabase setup
 
 The site needs a free [Supabase](https://supabase.com) project for accounts and game data.
 
-1. Create a Supabase project. Under Project Settings → API, copy the **Project URL** and the **anon / publishable key** into `js/supabase-config.js` (both are safe to commit — they're meant to be public; real security comes from the database policies, not from hiding them).
+1. Create a Supabase project. Under Project Settings → API, copy the **Project URL** and the **anon / publishable key** into `src/lib/supabase.js` (both are safe to commit — they're meant to be public; real security comes from the database policies, not from hiding them).
 2. Open the SQL editor and run everything in `supabase/schema.sql`. This creates the `players`, `games`, `game_results`, `groups`, `seasons` and `settings` tables, turns on Row Level Security, and adds the admin-only functions the site calls to add/edit/delete games. It's safe to re-run after pulling a newer version of this file — already-applied changes are skipped.
 3. Under Authentication → Providers → Email, you can leave "Confirm email" on — the migration script below confirms each account directly through the Admin API, so players never need a real inbox.
 4. Run the one-time migration script from your own computer (not from the browser):
@@ -25,7 +38,7 @@ The site needs a free [Supabase](https://supabase.com) project for accounts and 
    SUPABASE_SERVICE_ROLE_KEY=paste-it-here-only-for-this-one-command \
    node scripts/migrate.mjs
    ```
-   This creates a login for everyone listed in the `PLAYERS` array at the top of `scripts/migrate.mjs` (edit that list first — names, friend group, and which one is the admin), gives them the preset password `dominion`, seeds the starting friend group and season (edit the `GROUPS`/`SEASONS` arrays in the same file if yours differ), and imports the rows already in `data/games.csv`. The **service-role key** (Project Settings → API) bypasses all security — use it for this one local command and nowhere else. Never commit it, never put it in `js/`, never paste it in a chat.
+   This creates a login for everyone listed in the `PLAYERS` array at the top of `scripts/migrate.mjs` (edit that list first — names, friend group, and which one is the admin), gives them the preset password `dominion`, seeds the starting friend group and season (edit the `GROUPS`/`SEASONS` arrays in the same file if yours differ), and imports the rows already in `data/games.csv`. The **service-role key** (Project Settings → API) bypasses all security — use it for this one local command and nowhere else. Never commit it, never put it in client code (`src/`), never paste it in a chat.
 5. Tell everyone their name and the preset password. The site forces a real password on first sign-in.
 
 Once this is done, `data/games.csv` is no longer read by the live site — it only matters for the one-time import above.
@@ -92,13 +105,32 @@ Defaults: Peasant under 1040, Knight 1040, Lord 1090, Duke 1150, Emperor 1225. T
 - **Head to head, Records, Games:** the matrix; league and single-game records (biggest Elo swing, longest game, highest score); the full log with season, type and player filters. Admins get Edit/Delete links on each row of the Games page.
 - **Add a game** (admin only): pick who played and in what order, fill in the optional details, and save — it writes straight to the database. The same page shows each player's expected score and the Elo at stake ("Before you play"), which is handy for balancing seating.
 - **Admin** (admin only): add friend groups, and add/edit seasons — see above.
+- **Collection** (everyone, not tied to a friend group): our Dominion card collection — see below.
 - Click any table heading to sort by that column.
+
+## The Collection page
+
+The **Collection** tab (`#/dominion`) is a browsable catalog of the Dominion boxes we own: **Overview** (totals, breakdowns and statistics: cost, card types by expansion, mechanics), **Kingdom cards** (search plus expansion, printed type, coin/Debt cost and recorded-mechanic filters), **Landscapes** (Events, Landmarks, Projects, Ways, Traits, with the Renaissance Artifacts shown separately), and a page for each card and landscape.
+
+The data lives in nine `dominion_*` tables, separate from the Elo/season tables, and is **public to read, read-only through the website** (Row Level Security; nobody can edit it from the browser). The numbers it shows are kept apart on purpose: *card names* (331), *supply piles* (310 — a split pile holds two names), and *physical cards* (3,132); landscapes (124) and Artifacts (5) are never counted as Kingdom cards.
+
+Two honest limits: the **mechanic tags are recorded positives, not an exhaustive list** (a card without a tag may still have that effect, so there is no "without" filter, and the statistics are marked provisional), and the data has no card text or artwork, so none is shown.
+
+**To set it up** (one time — it needs your approval because it changes the live database): follow `supabase/dominion/README.md`. In short: `supabase db query --linked -f supabase/dominion/01_schema_and_rls.sql`, then `…/02_seed_data.sql`, then `npm run dominion:check-live`. Until that's done, the Dominion pages show a polite "isn't available yet" message and the rest of the site is unaffected.
+
+```
+npm test                      # data, data layer, filters, pages, routes, secrets, SQL safety
+npm run dominion:test-db      # schema + seed + RLS in a throwaway local Postgres (never touches Supabase)
+npm run dominion:check-live   # read-only check of the live project with the public key
+npm run dominion:seed         # regenerate the seed SQL after editing a CSV in supabase/dominion/seed_csv/
+npm run check:build           # after `npm run build`: relative asset paths, no secrets in dist/
+```
 
 ## How the numbers work
 
 - **Elo**: each table is treated as head-to-head matchups; change = K ÷ (players − 1) × sum of (actual − expected). K is 48 for a player's first 10 rated games, then 32.
 - **Season score** = (points + prior × 0.5) ÷ (games + prior), where points run from 1 for a win to 0 for last, so table size doesn't matter and ties split.
-- The calculation code is in `js/engine.js` and was checked against the league spreadsheet on randomized multi-season data (Elo, standings, seeds, head-to-head, streaks and attendance all matched).
+- The calculation code is in `src/lib/engine.js` and was checked against the league spreadsheet on randomized multi-season data (Elo, standings, seeds, head-to-head, streaks and attendance all matched).
 
 ## Preview on your computer
 
@@ -107,6 +139,6 @@ Browsers block data loading from `file://`, so run `python3 -m http.server` in t
 ## Good to know
 
 - Only the admin can change game data, seasons or groups; everyone else can view once signed in, and nobody can view anything signed out.
-- The static files (`index.html`, `js/`, `data/config.json`) are still technically public on GitHub Pages the way any static site is — but they contain no player names or results. All of that lives behind Supabase's Row Level Security and requires a real session to read.
+- The static files (`index.html`, the built JS bundle, `public/data/config.json`) are still technically public on GitHub Pages the way any static site is — but they contain no player names or results. All of that lives behind Supabase's Row Level Security and requires a real session to read.
 - The only outside requests are Google Fonts and Supabase; the page works without Google Fonts, but it does need Supabase to do anything at all.
 - GitHub Pages can take up to ten minutes to refresh the static files after a commit, and your browser may cache for a moment — reload if you don't see a change. Game data itself updates immediately, since it's never cached in the repo.

@@ -9,31 +9,54 @@ A static Dominion board-game league tracker: Elo rankings, seasons, head-to-head
 ## Hard constraints — read before changing architecture
 
 - **GitHub Pages only, by explicit owner preference.** Never introduce another hosting/deploy target. Any server-side need goes through Supabase (Postgres RLS/RPCs, or an Edge Function), not a separate platform — Edge Functions deploy to Supabase's own infrastructure, not GitHub Pages, so they don't conflict with this.
-- **No build step.** No npm, no bundler, no JSX, no TypeScript in the browser code (the one exception is the Edge Function, which runs on Deno and is genuinely TypeScript — that's a different runtime, not the site). If a change would require `npm install` to view the site, it's the wrong approach.
+- **React + Vite, built and deployed by GitHub Actions.** The site used to be no-build vanilla JS; the owner chose to move it to React (branch `react-migration`). `npm run build` produces `dist/`, which `.github/workflows/deploy.yml` publishes to GitHub Pages (Pages source must be set to "GitHub Actions" — "Deploy from a branch" would publish unbuilt source). Still no TypeScript in the browser code, and still hash routing (`#/<route>`), which keeps GitHub Pages working without a 404 fallback. `vite.config.js` uses `base: './'` so it works from a repo subpath or a custom domain. Static assets (`icons/`, `images/`, `data/`) live in `public/` and are copied through untouched.
 - **Icons are never invented.** The owner generates all icon/image assets themselves and drops them in `~/Downloads/...`; an agent's job is to resize (`sips -Z <px>`) and wire them in. Never substitute a default emoji as a placeholder — ask, or leave the slot as plain text until an asset exists.
 
 ## Architecture
 
 ```
-js/engine.js   — pure computation, single-league only (no group concept at all — see
+src/lib/engine.js — pure computation, single-league only (no group concept at all — see
                  Group scoping below). compute(config, rows, today) -> {ranked, seasons,
                  seasonStandings(), h2h(), records, ...}. No DOM, no fetch, runs in
-                 Node or the browser identically. Treat this as the "model" layer.
-js/app.js      — everything else: Supabase client, auth/session handling, the hash
-                 router, one function per page (pageHome, pageSeason, ...), and the
-                 admin forms. Pages are template-literal strings re-rendering
-                 main.innerHTML; there's no virtual DOM or component tree.
+                 Node or the browser identically (ES module). Treat this as the "model" layer.
+src/lib/       — framework-free modules: engine.js, format.js (esc/f0/pc/... helpers),
+                 supabase.js (client + public URL/anon key), data.js (fetchConfig/loadData:
+                 Supabase queries -> engine row shape), league.js (buildLeague: one
+                 Eng.compute() per group), route.js (parseHash/hashFor), sets.js.
+src/League.jsx — React context + the session state machine (loading -> login | pwchange |
+                 ready | error). boot() refetches and recomputes while staying 'ready'.
+src/App.jsx, src/components/ — the shell (Header/nav, footer, skip link, document title),
+                 Login, PasswordChange. src/useHash.js is the hash router.
+src/pages/, src/components/, src/PageContext.js — the pages. src/pages/index.js maps route ->
+                 component; App renders the current one inside PageContext (D already scoped to the
+                 group, gid, arg, me, allGroups, hashFor, reload...). Pages run inside PageBoundary,
+                 so a render error shows a message
+                 in <main> instead of unmounting the whole app. Shared pieces: TierIcon, SetIcon,
+                 NameIcon, PlayerLink, GroupSwitcher, Banner, TypePill, LandscapePills, DateAnchor,
+                 GameFinish/GameDetail/GamesTable (expandable game rows), SeasonTable/SeasonRecap,
+                 RatingChart, StatTile/HoverPopup/PopLayer (the shared hover popup, one node on <body>),
+                 TierProgressBar, GameModal (the Add/Edit Game dialog), and SortableTable (click-to-sort
+                 tables; supports expandable detail rows).
+src/dominion/  — the Dominion collection section (#/dominion[/cards[/<id>] | /landscapes[/<id>]]).
+                 api.js is the ONLY file that knows table/view names (fetchAllRows pages with .range() and
+                 THROWS on a count mismatch; describeError turns any failure into a fixed safe message);
+                 model.js normalizes rows; filters.js / stats.js are pure; filterStore.js keeps filter state
+                 across navigation; views/ + components/ are presentational (they read the catalog from
+                 CatalogContext, so tests can render them with real data). Data: supabase/dominion/ (SQL,
+                 generated seed, CSVs). `dominion` is a GLOBAL route like `admin` (route.js GLOBAL_ROUTES): it
+                 never carries a group segment.
 style.css      — one file, CSS custom properties for theming, light/dark via
                  prefers-color-scheme.
-index.html     — static shell + script tags. No per-page HTML files; everything
-                 routes through #/<route>/<arg> in app.js.
+index.html     — the shell Vite builds from: #root (React mounts here), #modalRoot (the
+                 modal's portal target) and one module script. No per-page HTML files;
+                 everything routes through #/<route>/<arg> in src/App.jsx.
 ```
 
-**Data flow**: `boot()` in `app.js` → Supabase queries (`players`, `games`,
+**Data flow**: `boot()` in `src/League.jsx` → Supabase queries (`loadData()` in `src/lib/data.js`) (`players`, `games`,
 `game_results`, `groups`, `seasons`) → `loadData()` reconstructs them into the exact
 row shape `engine.js` has always expected (a `finish` string like `"Jose > Bob = Cara"`,
-reconstructed from the normalized `game_results.place` column) → `Eng.compute(cfg, rows)`
-→ `render()` picks a page function from the hash and swaps `main.innerHTML`.
+reconstructed from the normalized `game_results.place` column) → `buildLeague()` → `Eng.compute(cfg, rows)`
+→ `App` parses the hash and renders that route's page component, which reads the scoped model through `usePage()`.
 
 This adapter-in-the-middle design is deliberate: `engine.js` was written once, verified
 against a spreadsheet, and has never needed to change for any of the Supabase/auth/admin
@@ -43,22 +66,27 @@ the change is genuinely about the math/model itself.
 
 ## Conventions that exist for a reason
 
-- **`statTile(iconSrc, big, label, iconClass)`** (`js/app.js`) builds the icon+number+label
-  tiles used across Player/Season/Records pages. Icon is optional — tiles without one
-  render identically to plain `.stat` tiles elsewhere, so it's safe to reuse everywhere.
-  Icons are **unconditional** even when the stat is 0 (a tile that hides its icon at zero
-  looks broken, not clean — this was a real bug, fixed once already).
+- **`<StatTile icon big label popup>`** (`src/components/StatTile.jsx`) builds the icon+number+label
+  tiles used across the Players/Season/Records pages. `icon` is optional — a tile without one
+  renders identically to a plain `.stat` tile, so it's safe to reuse everywhere. Icons are
+  **unconditional** even when the stat is 0 (a tile that hides its icon at zero looks broken, not
+  clean — this was a real bug, fixed once already).
+- **Every game has a permanent id** — `games.id` in the database, exposed as `game.line` everywhere
+  in the model. A link to one game is `hashFor('games', gid, game.line)` → `#/games/<group>/<id>`:
+  the Games page clears any filter that would hide it (on arrival only), opens the row, scrolls to
+  it and tints it (`tr.grow.hl`). Records and Players link their dates this way; do the same for any
+  new "this game" mention. Engine records that point at a game must carry `line` (Elo gain/drop do).
 - **Group scoping: each group is a fully separate league, not a filtered view of one
-  shared dataset.** `js/app.js`'s `boot()` calls `Eng.compute()` once per group the
+  shared dataset.** `buildLeague()` in `src/lib/league.js` calls `Eng.compute()` once per group the
   viewer belongs to, each time with only that group's players/games/seasons —
   `computedByGroup[groupId]`. `render()` picks the right one into the module-level `D`
   before calling a page function, so page functions read `D.ranked`/`D.players`/
   `D.records`/etc. directly with **no group filtering of their own** — if you're adding
   a new per-group view, trust that `D` is already scoped; filtering it again is a sign
   something's wrong upstream, not a thing to add. `engine.js` itself has zero concept of
-  groups — don't reintroduce one there; group-splitting belongs in `boot()`. The one
+  groups — don't reintroduce one there; group-splitting belongs in `buildLeague()`. The one
   cross-group page is **Admin** (`pageAdmin`), which manages the whole site and reads
-  `allGroups`/`rawPlayers`/`rawSeasons` (unfiltered, built once in `boot()`) instead of
+  `allGroups`/`rawPlayers`/`rawSeasons` (unfiltered, built once by `buildLeague()`) instead of
   `D`. A game belongs to exactly one group (`games.group_id`, chosen implicitly by
   `curGid` when the admin logs it, validated server-side in `add_game`/`edit_game`) —
   not inferred from who's at the table. Group membership (`players.group_ids`, an
@@ -76,15 +104,93 @@ the change is genuinely about the math/model itself.
   never trust client-side admin checks alone). Single-table writes (`groups`, `seasons`)
   are fine as direct RLS-gated client calls — don't add an RPC for those, it'd be pure
   ceremony.
-- **The modal pattern** (`openAddModal`/`renderAddModal`/`closeAddModal` in `js/app.js`):
-  state lives in module-level `bs`, re-renders call `renderAddModal()` directly rather
-  than the hash router's `render()`. If you add another modal, follow this shape rather
-  than trying to route modal state through the URL hash.
+- **The modal pattern** (`src/components/GameModal.jsx`): the page that opens a modal owns its
+  open/closed state (`const [modal, setModal] = useState(null)`) and renders `<GameModal onClose=…>`
+  itself, which portals into the static `#modalRoot`. Form state is local `useState`, not the URL
+  hash, so a route change unmounts (closes) the modal for free. Escape / overlay click / ✕ all call
+  `onClose`; the body scroll lock is set on mount and released on unmount. Because the portal stays
+  inside the React tree it keeps `PageContext` — unlike `PopLayer`, which doesn't. Writes still go
+  through the `add_game`/`edit_game`/`delete_game` RPCs, then `reload()` refetches. Follow this
+  shape for the next modal rather than routing modal state through the URL hash.
 - **Dark-mode-only visual effects** (the background image, frosted-glass panels) are
   scoped under `@media (prefers-color-scheme:dark)` and placed **last** in `style.css`
   intentionally — see the gotcha below.
 
+## Verifying a change by parity (how the React migration was checked)
+
+The whole migration was done page by page, each checked against the page it replaced. The same
+technique is the best way to prove any refactor *doesn't* change what users see:
+
+1. Use the previous commit as the oracle: `git archive <commit> | tar -x` into a scratch dir, build
+   both trees with the fake-Supabase config (see Testing #4) on different ports, and diff `#main`
+   after normalizing (sort attributes, merge adjacent text nodes, ignore `onerror`/`onclick`).
+   Then click every sortable header on both and diff the row order. Two real bugs this caught the
+   first time: tie-break order (the old sorter sorts from the *displayed* order) and sort keys (it
+   sorts on visible text, e.g. "not decided"). Make the fake data rich enough that every section
+   renders — check the section headings, an identical half-empty page proves nothing. Count the
+   conditional bits too (`querySelectorAll` for crowns, rank arrows, ...): e.g. rank-move arrows
+   need >= 2 game nights *and* a rank change on the last one, so the fake has an opt-in `?data=swing`
+   scenario. Serialize the **live** DOM without mutating it (never `normalize()` it — that breaks
+   React's node refs), compare `<select>`s by `.value`, inputs by live value, and `style` by
+   `cssText`, and click row chevrons, not row centers (a player link sits in the middle).
+2. Drive the interactions on both builds and snapshot after each step (expand, sort, filter, hover,
+   modals, forms); a static diff alone misses state bugs. For anything that writes, make the fake
+   record every write — `rpc(name, args)`, `from(t).insert/update`, `functions.invoke` — and offer a
+   one-shot `window.__failNext`, then diff the payload logs between builds. That is the check that
+   protects data, more than any DOM comparison. Behavior that *intentionally* differs gets noted in
+   the commit message.
+3. Type like a browser: set input values through the **native** value setter and dispatch `input`
+   (and `change` for selects). Assigning `el.value = …` bypasses what React tracks, so React rightly
+   ignores it.
+
+4. **Popup/portal content has no context.** A React element carries no context with it — context is
+   resolved where it is *rendered*. `PopLayer` renders popup content outside `PageContext`, so a
+   component used as popup content must not call `usePage()`; pass what it needs as props. (This
+   crashed the whole app on hover until a parity run caught it.)
+5. **Deleting dead helpers:** `node --check` can't see a missing identifier, and a word-count of
+   references is fooled by comments, prose, and long template strings. After deleting, diff the set
+   of top-level definitions against the previous version and search every removed name for a
+   *call site per line* (`name(`), including inside `${...}`. Then exercise the paths that used them
+   (open Add Game and pick players so the preview renders; open every Admin section).
+6. Adjacent text nodes shape separately in the browser: `{n} game{s}` can be a pixel wider than the
+   same text as one string. Build short label strings with a template literal when exact layout
+   parity matters. Fake-data scenarios in the test harness: `swing` (rank movement), `odd` (undated
+   season, no-seasons group, friendly-only player, empty group), `rich` (landscape tiles + both rivals + a tied game), `nogroups` (a site with no groups yet).
+
+## Dominion collection conventions
+
+- **Never conflate the counts.** Card *names* (one per `dominion_kingdom_cards` row), supply *piles* (a split
+  pile, Knights and Castles are ONE pile with several names, so names >= piles), *physical* cards (sum of pile
+  copies), landscapes and Artifacts are five different things. Landscapes and Artifacts are never Kingdom cards.
+- **Mechanic tags are positive-only and non-exhaustive.** A missing tag is NOT a confirmed "no". There is
+  deliberately no "without"/"exclude" filter anywhere (a test enforces this), tag counts are labelled provisional,
+  and the disclaimer (`MECHANICS_NOTE`) appears wherever mechanics are filtered or counted. Landscape/Artifact
+  tags use a *different vocabulary* from the Kingdom taxonomy — never join them to it.
+- **A multi-type card has several printed types** and is listed/counted under each (122 of the 331 names).
+- **Supabase silently truncates responses (1,000 rows by default).** Anything that could grow past that goes
+  through `fetchAllRows` (count first, page with a stable order, throw on mismatch) — never a bare `.select()`.
+  Client-side filtering is only valid because the complete set was fetched and verified.
+- **Never invent card text, artwork, descriptions or strategy.** The dataset has none; the UI omits those
+  sections and says so. The landscape `notes` are a classification summary and are labelled as not official text.
+- **Ownership isn't hardcoded.** The owned expansions are whatever the catalog contains; `constants.js` only
+  labels and orders the known ones. The schema forbids First Edition rows.
+- The data package is authoritative. Row counts live in `supabase/dominion/expected_counts.json`; if a test fails
+  on a count, investigate the data — don't edit the reference to fit.
+- The nav link is labelled **Collection** (the route/URL stays `#/dominion`; the tab title comes from `ROUTE_TITLES` in
+  `route.js`). Its icon is the owner's `public/icons/nav/collection.png` (128×128, like the other nav icons).
+- The "why the numbers differ" explanation is a closed `<details className="help">` (the site's existing ⓘ help pattern)
+  under the title, not a permanent block and not a custom popover.
+- Popup/portal content has no PageContext, and these views read `CatalogContext` — keep that in mind if you
+  ever render catalog content outside `DominionData`/`CatalogProvider`.
+
 ## Gotchas already paid for — don't rediscover these
+
+- **Write `backdrop-filter` once, unprefixed — never also `-webkit-backdrop-filter`.** Vite's CSS
+  minifier (lightningcss) keeps the hand-written `-webkit-` line and silently drops the standard one,
+  so the built site had *no blur* in Chrome and Firefox while looking fine in `npm run dev`
+  and in Safari. The build adds the `-webkit-` prefix itself. After touching glass/blur CSS, check
+  the **built** output: `grep -o "[^}]*backdrop-filter[^}]*}" dist/assets/*.css` should show both,
+  and `getComputedStyle(el).backdropFilter` in a real Chrome should not be `none`.
 
 - **`CREATE POLICY` has no `IF NOT EXISTS`.** Re-running `schema.sql` against an
   already-migrated database used to abort partway through on a "policy already exists"
@@ -121,11 +227,20 @@ the change is genuinely about the math/model itself.
 
 ## Testing — what's actually available
 
-There is no browser available to the agent in this environment. What's actually been used
-to verify changes, in order of how often:
+**`npm test`** (Vitest, Node only — no browser) runs ~117 tests on the REAL Dominion data: dataset counts and
+integrity, the data layer (including the 1,000-row truncation trap), filters, every Dominion view rendered with
+`react-dom/server`, routing (existing routes included), no-secrets-in-source, and SQL safety. **`npm run
+dominion:test-db`** builds a throwaway local Postgres and tests the schema, seed, constraints and RLS/privileges
+(Postgres < 15 can't make `security_invoker` views, so that one option is skipped locally). There is no linter or
+type checker in this project, so none is run. The browser-level checks below are still ad hoc (not committed).
 
-1. `node --check js/app.js js/engine.js` — syntax only, every change.
-2. Direct `node -e "..."` scripts requiring `js/engine.js` (it's UMD, works in Node) to
+There is no interactive browser available to the agent. What's actually been used
+to verify changes, in order of how often (a real headless Chrome *is* usable for DOM dumps,
+see the end of this list):
+
+1. `npm run build` — catches syntax and import errors, every change. (`node --check` can't see a
+   missing identifier; see gotcha 5 below.)
+2. Direct `node -e "..."` scripts importing `src/lib/engine.js` (plain ES module, works in Node) to
    assert on real computed output — e.g. feeding synthetic games through `compute()` and
    checking standings/Elo/records match hand-computed expectations. This is the main way
    engine-layer changes get real verification, not just "it parses."
@@ -135,12 +250,21 @@ to verify changes, in order of how often:
    `test.uid()` to simulate specific users — table-owner sessions silently bypass RLS, so
    testing as `postgres` proves nothing. Always tear the cluster down afterward
    (`pg_ctl stop`, `rm -rf` the data dir) — it's disposable, not part of the repo.
-4. Visual/UX verification is **always** the owner's — say so explicitly rather than
+4. Real-browser tests without a Supabase login: build a throwaway variant (config kept
+   **outside** the repo, e.g. in the scratchpad) whose Vite plugin `resolveId`-swaps
+   `src/lib/supabase.js` for an in-memory fake (`getSession`, `from().select/order/range/eq/
+   single/maybeSingle/insert`, `rpc`). A plain `resolve.alias` is NOT enough — it matches the
+   import *specifier*, so relative imports slip past it. Serve that build, then drive it with
+   `puppeteer-core` pointed at `/Applications/Google Chrome.app` (npm-installed outside the
+   repo): click through the nav, groups, modal, mobile menu, login, and check for page errors.
+   For a quick look without clicks, `Google Chrome --headless=new --virtual-time-budget=8000
+   --dump-dom <url>` works too. (jsdom does **not** run `type=module` scripts.)
+5. Visual/UX verification is **always** the owner's — say so explicitly rather than
    claiming a styling or layout change "looks right."
 
 ## Deployment
 
-- `main` → GitHub Pages, auto-published on push. No CI build step.
+- `main` → GitHub Pages, built and published by `.github/workflows/deploy.yml` (Vite build → `dist/`) on every push.
 - `supabase/schema.sql` is meant to be safely re-run in the Supabase SQL editor after any
   change to it (that's the whole point of the `drop policy if exists` pattern and
   `create table if not exists` / `add column if not exists` throughout) — confirm new
@@ -156,6 +280,6 @@ to verify changes, in order of how often:
 
 - Service-role key: local env var only, for `migrate.mjs` and nothing else. Never in a
   file, never in client code, never in chat.
-- Anon/publishable key (`js/supabase-config.js`) and the project ref are meant to be
+- Anon/publishable key (`src/lib/supabase.js`) and the project ref are meant to be
   public — that's how Supabase's client-side model works. Don't treat them as secrets or
   warn about committing them.

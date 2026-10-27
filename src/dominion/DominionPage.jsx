@@ -1,0 +1,41 @@
+import { DominionData } from './CatalogContext.jsx';
+import { VIEWS, parseDominionArg, tabFor } from './links.js';
+import { EmptyState } from './components/States.jsx';
+import Overview from './views/Overview.jsx';
+import Cards from './views/Cards.jsx';
+import CardDetail from './views/CardDetail.jsx';
+import Landscapes from './views/Landscapes.jsx';
+import LandscapeDetail from './views/LandscapeDetail.jsx';
+
+export function DominionNav({ active }) {
+  return (
+    // a landmark div, not <nav>: the site's header styles are keyed on the nav TAG and would restyle these links
+    <div className="pills dn-tabs" role="navigation" aria-label="Collection sections">
+      {VIEWS.map(v => <a key={v.view} href={v.href} aria-current={v.view === active ? 'true' : undefined}>{v.label}</a>)}
+    </div>
+  );
+}
+
+// The view for a route. Needs a catalog in context (see CatalogProvider / DominionData).
+export function DominionView({ arg }) {
+  const r = parseDominionArg(arg);
+  switch (r.view) {
+    case 'overview': return <Overview />;
+    case 'cards': return <Cards />;
+    case 'card': return <CardDetail id={r.id} />;
+    case 'landscapes': return <Landscapes />;
+    case 'landscape': return <LandscapeDetail id={r.id} />;
+    default: return <><h1>Not found</h1><EmptyState>There’s no such page in the collection.</EmptyState></>;
+  }
+}
+
+// Navigation always shows (even while loading or after an error); the data loads once and is shared by every view.
+export default function DominionPage({ arg, client }) {
+  const r = parseDominionArg(arg);
+  return (
+    <>
+      <DominionNav active={tabFor(r.view)} />
+      <DominionData client={client}><DominionView arg={arg} /></DominionData>
+    </>
+  );
+}
