@@ -3,14 +3,14 @@ import { useCatalog } from '../CatalogContext.jsx';
 import { browseLandscapes, activeLandscapeFilters, DEFAULT_LANDSCAPE_FILTERS, toggle, norm } from '../filters.js';
 import { getLandscapeFilters, setLandscapeFilters } from '../filterStore.js';
 import { landscapeHref } from '../links.js';
-import { MECHANICS_NOTE, PLURAL, humanize } from '../constants.js';
+import { PLURAL, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
-import { Chip, ExpansionBadge, Section, ExternalLink, statusLabel, rowLink } from '../components/bits.jsx';
+import { Chip, ExpansionBadge, Section, ExternalLink, LandscapePill, statusLabel, rowLink } from '../components/bits.jsx';
 
 const SORTS = [['name', 'Name'], ['type', 'Type'], ['expansion', 'Expansion'], ['trigger', 'When it applies']];
 // table columns that sort: [sort key, heading, th class]
-const COLUMNS = [['name', 'Landscape', 'l'], ['type', 'Type', 'l'], ['trigger', 'When it applies', 'l dn-hide-sm']];
+const COLUMNS = [['expansion', 'Expansion', 'l'], ['name', 'Landscape', 'l'], ['type', 'Type', 'l'], ['trigger', 'When it applies', 'l dn-hide-sm']];
 
 export default function Landscapes() {
   const { catalog } = useCatalog();
@@ -41,7 +41,7 @@ export default function Landscapes() {
           <button type="button" className="ghost" onClick={() => update({ dir: f.dir === 'asc' ? 'desc' : 'asc' })} aria-label={`Sort direction: ${f.dir === 'asc' ? 'ascending' : 'descending'}. Activate to reverse.`}>{f.dir === 'asc' ? '↑ Ascending' : '↓ Descending'}</button>
         </div>
         <fieldset className="dn-fieldset"><legend>Type</legend>
-          <div className="dn-chips">{catalog.landscapeTypes.map(t => <Chip key={t} pressed={f.types.includes(t)} count={typeCount(t)} onClick={() => update({ types: toggle(f.types, t) })}>{PLURAL[t] || t}</Chip>)}</div>
+          <div className="dn-chips">{catalog.landscapeTypes.map(t => <Chip key={t} tone={t.toLowerCase()} pressed={f.types.includes(t)} count={typeCount(t)} onClick={() => update({ types: toggle(f.types, t) })}>{PLURAL[t] || t}</Chip>)}</div>
         </fieldset>
         <fieldset className="dn-fieldset"><legend>Expansion</legend>
           <div className="dn-chips">{expansions.map(e => <Chip key={e.name} pressed={f.expansions.includes(e.name)} count={expCount(e.name)} onClick={() => update({ expansions: toggle(f.expansions, e.name) })}><ExpansionBadge name={e.name} /></Chip>)}</div>
@@ -64,7 +64,6 @@ export default function Landscapes() {
               <Chip pressed={f.mechanicMode === 'any'} onClick={() => update({ mechanicMode: 'any' })}>any selected</Chip>
             </div>
           )}
-          <p className="note dn-mech-note">{MECHANICS_NOTE} Landscape tags use their own vocabulary, separate from the Kingdom card mechanics.</p>
         </fieldset>
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>
           <button type="button" className="ghost" onClick={clear} disabled={!active}>Clear filters{active ? ` (${active})` : ''}</button>
@@ -79,8 +78,9 @@ export default function Landscapes() {
             <SortHeaders columns={COLUMNS} sort={f.sort} dir={f.dir} onSort={sortBy} />
             <tbody>{rows.map(l => (
               <tr key={l.id} {...rowLink(landscapeHref(l.id))}>
-                <td className="l name"><a href={landscapeHref(l.id)}>{l.name}</a><br /><small className="meta"><ExpansionBadge name={l.expansion} size={14} /></small></td>
-                <td className="l"><span className="pill">{l.type}</span></td>
+                <td className="l"><ExpansionBadge name={l.expansion} size={18} /></td>
+                <td className="l name"><a href={landscapeHref(l.id)}>{l.name}</a></td>
+                <td className="l"><LandscapePill type={l.type} /></td>
                 <td className="l dn-hide-sm">{l.trigger ? humanize(l.trigger) : '—'}</td>
               </tr>
             ))}</tbody>

@@ -3,15 +3,15 @@ import { useCatalog } from '../CatalogContext.jsx';
 import { browseCards, activeCardFilters, DEFAULT_CARD_FILTERS, toggle, norm } from '../filters.js';
 import { getCardFilters, setCardFilters } from '../filterStore.js';
 import { cardHref } from '../links.js';
-import { MECHANICS_NOTE, humanize } from '../constants.js';
+import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
 import { Chip, ExpansionBadge, TypePills, rowLink } from '../components/bits.jsx';
 import CostIcons, { CoinIcon, DebtIcon, PlainDebtIcon } from '../components/Cost.jsx';
 
-const SORTS = [['name', 'Name'], ['expansion', 'Expansion'], ['types', 'Printed type'], ['cost', 'Cost'], ['copies', 'Copies'], ['pile', 'Shared pile']];
+const SORTS = [['name', 'Name'], ['expansion', 'Expansion'], ['types', 'Printed type'], ['cost', 'Cost'], ['pile', 'Shared pile']];
 // table columns that sort: [sort key, heading, th class]
-const COLUMNS = [['name', 'Card', 'l'], ['types', 'Types', 'l'], ['cost', 'Cost', ''], ['copies', 'Copies', 'dn-hide-sm'], ['pile', 'Shared pile', 'l dn-hide-sm']];
+const COLUMNS = [['expansion', 'Expansion', 'l'], ['name', 'Card', 'l'], ['types', 'Types', 'l'], ['cost', 'Cost', ''], ['pile', 'Shared Pile', 'l dn-hide-sm']];
 
 export default function Cards() {
   const { catalog, summary: s } = useCatalog();
@@ -48,7 +48,7 @@ export default function Cards() {
 
         <fieldset className="dn-fieldset"><legend>Printed type</legend>
           <div className="dn-chips">{s.byType.map(t => (
-            <Chip key={t.key} pressed={f.types.includes(t.key)} count={t.count} onClick={() => update({ types: toggle(f.types, t.key) })}>{t.key}</Chip>
+            <Chip key={t.key} tone={t.key.toLowerCase()} pressed={f.types.includes(t.key)} count={t.count} onClick={() => update({ types: toggle(f.types, t.key) })}>{t.key}</Chip>
           ))}</div>
           {f.types.length > 1 && (
             <div className="dn-mode" role="group" aria-label="How to match the selected printed types">
@@ -103,7 +103,6 @@ export default function Cards() {
               <Chip pressed={f.mechanicMode === 'any'} onClick={() => update({ mechanicMode: 'any' })}>any selected</Chip>
             </div>
           )}
-          <p className="note dn-mech-note">{MECHANICS_NOTE}</p>
         </fieldset>
 
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>
@@ -120,10 +119,10 @@ export default function Cards() {
             <tbody>{rows.map(c => {
               return (
                 <tr key={c.id} {...rowLink(cardHref(c.id))}>
-                  <td className="l name"><a href={cardHref(c.id)}>{c.name}</a>{c.previousName && <small className="meta"> (was {c.previousName})</small>}<br /><small className="meta"><ExpansionBadge name={c.expansion} size={14} /></small></td>
+                  <td className="l"><ExpansionBadge name={c.expansion} size={18} /></td>
+                  <td className="l name"><a href={cardHref(c.id)}>{c.name}</a>{c.previousName && <small className="meta"> (was {c.previousName})</small>}</td>
                   <td className="l"><TypePills types={c.types} /></td>
                   <td className="dn-cost-cell"><CostIcons coins={c.coins} debt={c.debt} overpay={c.overpay} size={26} /></td>
-                  <td className="dn-hide-sm">{c.copies}</td>
                   <td className="l dn-hide-sm">{c.sharedPile || '—'}</td>
                 </tr>
               );

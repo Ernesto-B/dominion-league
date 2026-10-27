@@ -3,7 +3,7 @@ import { dominionHref, landscapeHref } from '../links.js';
 import { presetLandscapeFilters } from '../filterStore.js';
 import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
-import { ExpansionBadge, Section, Stat, CardText } from '../components/bits.jsx';
+import { ExpansionBadge, LandscapePill, Section, Stat, CardText } from '../components/bits.jsx';
 
 export default function LandscapeDetail({ id }) {
   const { catalog } = useCatalog();
@@ -25,7 +25,7 @@ export default function LandscapeDetail({ id }) {
       <div className="head">
         <div>
           <h1>{l.name}</h1>
-          <p className="lede dn-line"><span className="pill">{l.type}</span><span className="dn-sep" aria-hidden="true">·</span><ExpansionBadge name={l.expansion} /></p>
+          <p className="lede dn-line"><LandscapePill type={l.type} /><span className="dn-sep" aria-hidden="true">·</span><ExpansionBadge name={l.expansion} /></p>
         </div>
       </div>
 
@@ -52,7 +52,6 @@ export default function LandscapeDetail({ id }) {
               );
             })}</ul>
           ) : <p style={{ margin: 0 }}>No tags are recorded for this landscape yet.</p>}
-          {l.effectCategories.length > 0 && <p className="meta" style={{ marginBottom: 0 }}>Effect categories: {l.effectCategories.map(humanize).join(' · ')}</p>}
         </div>
       </Section>
 
@@ -68,7 +67,7 @@ export default function LandscapeDetail({ id }) {
             <caption className="dn-sr">Landscapes that share recorded tags with {l.name}</caption>
             <thead><tr><th className="l" scope="col">Landscape</th><th className="l" scope="col">Type</th><th className="l" scope="col">Recorded in common</th></tr></thead>
             <tbody>{related.map(({ o, shared }) => (
-              <tr key={o.id}><td className="l name"><a href={landscapeHref(o.id)}>{o.name}</a></td><td className="l"><span className="pill">{o.type}</span></td><td className="l">{shared.map(humanize).join(', ')}</td></tr>
+              <tr key={o.id}><td className="l name"><a href={landscapeHref(o.id)}>{o.name}</a></td><td className="l"><LandscapePill type={o.type} /></td><td className="l">{shared.map(humanize).join(', ')}</td></tr>
             ))}</tbody>
           </table></div>
         </Section>

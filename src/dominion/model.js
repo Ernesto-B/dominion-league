@@ -108,6 +108,17 @@ export function sharedMechanicCards(catalog, card, { min = 2, limit = 8 } = {}) 
     .slice(0, limit);
 }
 
+export const PAGE_SIZES = [10, 20, 50];
+
+/* One page of a list. The page number is clamped, so a stale page (after the page size grows) lands on the last
+   real page instead of an empty one. */
+export function pageSlice(items, page, size) {
+  const pages = Math.max(1, Math.ceil(items.length / size));
+  const p = Math.min(Math.max(1, page), pages);
+  const start = p === 1 ? 0 : (p - 1) * size;   // size may be Infinity ("all"), and 0 * Infinity is NaN
+  return { items: items.slice(start, start + size), page: p, pages, from: items.length ? start + 1 : 0, to: Math.min(start + size, items.length), total: items.length };
+}
+
 /* Does the cost have a COIN part? Cards that cost only Debt (Engineer, City Quarter, ...) are stored with
    cost_coins = 0 but have no coin cost at all — they must not be counted as "$0" cards. */
 export const hasCoin = card => card.coins > 0 || card.debt === 0;

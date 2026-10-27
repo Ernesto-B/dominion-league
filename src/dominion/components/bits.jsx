@@ -7,12 +7,16 @@ export function ExpansionBadge({ name, size = 18 }) {
   return <span className="dn-exp">{m.icon && <SetIcon name={m.icon} size={size} />}{m.label}</span>;
 }
 
-export const TypePills = ({ types }) => <span className="dn-types">{types.map(t => <span className="pill" key={t}>{t}</span>)}</span>;
+// the class (pill t-action, ...) lets style.css tint the six main types; every other type keeps the plain pill
+// a landscape's type as one pill, tinted like the printed-type pills (see t-event ... t-landmark in style.css)
+export const LandscapePill = ({ type }) => <span className={`pill t-${type.toLowerCase()}`}>{type}</span>;
+
+export const TypePills = ({ types }) => <span className="dn-types">{types.map(t => <span className={`pill t-${t.toLowerCase()}`} key={t}>{t}</span>)}</span>;
 
 // a toggle button for a filter value (aria-pressed so assistive tech announces on/off)
-export function Chip({ pressed, onClick, children, count, label }) {
+export function Chip({ pressed, onClick, children, count, label, tone }) {
   return (
-    <button type="button" className="dn-chip" aria-pressed={pressed} onClick={onClick} aria-label={label} title={label}>
+    <button type="button" className={tone ? `dn-chip t-${tone}` : 'dn-chip'} aria-pressed={pressed} onClick={onClick} aria-label={label} title={label}>
       {children}{count != null && <span className="n">{count}</span>}
     </button>
   );

@@ -3,10 +3,11 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { realCatalog } from './fixtures.js';
 import { CatalogProvider } from '../../src/dominion/CatalogContext.jsx';
 import DominionPage, { DominionView } from '../../src/dominion/DominionPage.jsx';
+import { pageSlice, sharedMechanicCards } from '../../src/dominion/model.js';
 import { rowLink } from '../../src/dominion/components/bits.jsx';
 import { ErrorState } from '../../src/dominion/components/States.jsx';
 import CostIcons, { coinIconSrc, debtIconSrc } from '../../src/dominion/components/Cost.jsx';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ROOT } from '../../scripts/dominion/lib/tables.mjs';
 import Header from '../../src/components/Header.jsx';
@@ -72,9 +73,8 @@ describe('Kingdom cards browser', () => {
     for (const l of ['Expansion', 'Printed type', 'Cost', 'Recorded mechanics', 'Sort by', 'Debt', 'Clear filters']) expect(t).toContain(l);
     expect(html).toMatch(/aria-pressed="false"/);   // expansion/type toggles announce their state
   });
-  it('says mechanic filters are recorded positive classifications and offers no "without"/"exclude" control', () => {
-    expect(t).toMatch(/recorded positive classifications, not an exhaustive list/);
-    expect(t).toMatch(/missing tag is not a confirmed "no"/);
+  it('offers no "without"/"exclude" mechanic control, and no longer carries the long disclaimer under the filter', () => {
+    expect(t).not.toMatch(/not an exhaustive list|missing tag is not a confirmed/);
     // the controls (buttons, options, labels, legends) — not the prose, which legitimately says "a card without a tag may still..."
     const controls = [...html.matchAll(/<(?:button|option|label|legend|summary)\b[^>]*>([\s\S]*?)<\/(?:button|option|label|legend|summary)>/g)].map(m => text(m[1])).join(' | ');
     expect(controls.length).toBeGreaterThan(200);
@@ -82,7 +82,7 @@ describe('Kingdom cards browser', () => {
   });
   it('shows each card\'s printed types (several for a multi-type card), cost, and a shared pile where there is one', () => {
     const lurk = catalog.cards.find(c => c.types.length === 3);
-    for (const ty of lurk.types) expect(html).toContain(`<span class="pill">${ty}</span>`);
+    for (const ty of lurk.types) expect(html).toContain(`<span class="pill t-${ty.toLowerCase()}">${ty}</span>`);
     expect(t).toMatch(/Catapult.*Catapult \/ Rocks/);
     expect(html).toContain('aria-label="8 coins and 8 Debt"');
   });
@@ -124,14 +124,14 @@ describe('sortable table headers', () => {
   const html = render('cards');
   const head = html.match(/<thead>[\s\S]*?<\/thead>/)[0], cols = ths(head);
   it('makes every column heading sortable the way the rest of the site does (the heading cell, no button inside)', () => {
-    expect(cols.map(c => c.label)).toEqual(['Card', 'Types', 'Cost', 'Copies', 'Shared pile']);
+    expect(cols.map(c => c.label)).toEqual(['Expansion', 'Card', 'Types', 'Cost', 'Shared Pile']);
     for (const c of cols) { expect(c.attrs, c.label).toMatch(/class="[^"]*\bsortable\b/); expect(c.attrs).toMatch(/role="button"/); expect(c.attrs).toMatch(/tabindex="0"/); expect(c.inner, c.label).not.toMatch(/<button|<svg|<img/); }
     expect(head).not.toContain('<button');                     // no big buttons in the header row
   });
   it('marks only the active column, with the ▲/▼ coming from the site\'s data-dir styling (not extra markup)', () => {
     expect((head.match(/aria-sort=/g) || []).length).toBe(1);
-    const card = cols[0]; expect(card.attrs).toMatch(/aria-sort="ascending"/); expect(dir(card)).toBe('asc');
-    expect(cols.slice(1).every(c => dir(c) === undefined)).toBe(true);
+    const card = cols.find(c => c.label === 'Card'); expect(card.attrs).toMatch(/aria-sort="ascending"/); expect(dir(card)).toBe('asc');
+    expect(cols.filter(c => c !== card).every(c => dir(c) === undefined)).toBe(true);
     expect(card.inner).not.toMatch(/[▲▼]/);
   });
   it('shows the reversed direction on the active column', () => {
@@ -143,7 +143,7 @@ describe('sortable table headers', () => {
   });
   it('the "Sort by" menu offers every sortable column, so a phone (where some columns are hidden) can sort by them too', () => {
     const sel = html.match(/Sort by <select[\s\S]*?<\/select>/)[0];
-    for (const l of ['Name', 'Expansion', 'Printed type', 'Cost', 'Copies', 'Shared pile']) expect(text(sel)).toContain(l);
+    for (const l of ['Name', 'Expansion', 'Printed type', 'Cost', 'Shared pile']) expect(text(sel)).toContain(l);
   });
 });
 
@@ -151,18 +151,18 @@ describe('sortable landscape headers', () => {
   const html = render('landscapes');
   const head = html.match(/<thead>[\s\S]*?<\/thead>/)[0];   // the first table is the landscapes (the second is the Artifacts)
   const cols = ths(head);
-  it('makes Landscape, Type and "When it applies" sortable like the rest of the site, with no button in the heading', () => {
-    expect(cols.map(c => c.label)).toEqual(['Landscape', 'Type', 'When it applies']);
+  it('makes Expansion, Landscape, Type and "When it applies" sortable like the rest of the site, with no button in the heading', () => {
+    expect(cols.map(c => c.label)).toEqual(['Expansion', 'Landscape', 'Type', 'When it applies']);
     for (const c of cols) { expect(c.attrs, c.label).toMatch(/class="[^"]*\bsortable\b/); expect(c.attrs).toMatch(/role="button"/); }
     expect(head).not.toContain('<button');
-    expect((head.match(/aria-sort=/g) || []).length).toBe(1); expect(cols[0].attrs).toMatch(/aria-sort="ascending"/); expect(dir(cols[0])).toBe('asc');
+    expect((head.match(/aria-sort=/g) || []).length).toBe(1); expect(cols[1].attrs).toMatch(/aria-sort="ascending"/); expect(dir(cols[1])).toBe('asc');   // sorted by Landscape (name)
   });
   it('the "Sort by" menu offers the same columns (so a phone, which hides one, can use them too)', () => {
     const sel = html.match(/Sort by <select[\s\S]*?<\/select>/)[0];
     for (const l of ['Name', 'Type', 'Expansion', 'When it applies']) expect(text(sel)).toContain(l);
   });
   it('does not make the Artifacts table sortable (it is not a landscape list)', () => {
-    expect((html.match(/class="[^"]*\bsortable\b/g) || []).length).toBe(3);
+    expect((html.match(/class="[^"]*\bsortable\b/g) || []).length).toBe(4);   // the four landscape headings only
   });
   it('uses the very same header component as the Kingdom cards table', () => {
     const cards = ths(render('cards').match(/<thead>[\s\S]*?<\/thead>/)[0]);
@@ -193,7 +193,7 @@ describe('Card detail', () => {
   it('shows the stored facts for a card and nothing invented', () => {
     const html = render(`cards/${encodeURIComponent('empires:fortune')}`), t = text(html);
     expect(t).toMatch(/Fortune/); expect(html).toContain('aria-label="8 coins and 8 Debt"'); expect(html).toContain('width="40"'); expect(t).toMatch(/Empires/); expect(t).toMatch(/Gladiator \/ Fortune/);
-    expect(t).toMatch(/Recorded mechanics/); expect(t).not.toMatch(/not an exhaustive list/);
+    expect(t).toMatch(/Recorded mechanics/); expect(t).not.toMatch(/not an exhaustive list/); expect(t).not.toMatch(/batch\d+/i);   // review-batch provenance isn't shown to visitors
     expect(t).not.toMatch(/Verification/); expect(html).not.toContain('cd-verify'); expect(t).not.toMatch(/Open reference|Review note|Secondary reference list/);   // internal provenance isn't shown to visitors
     expect(t).toMatch(/Card text/); expect(t).not.toMatch(/Artwork isn.t part of this collection data|Based only on tags that are recorded/);
     expect(html).not.toMatch(/<img[^>]+src="[^"]*(card|art)/i);   // no card artwork (the inline symbol icons are fine)
@@ -253,6 +253,64 @@ describe('Card text', () => {
   });
 });
 
+describe('type pill tints', () => {
+  it('gives each of the six main printed types its own class, and the other types none', () => {
+    const html = render('cards');
+    for (const t of ['action', 'treasure', 'duration', 'attack', 'reaction', 'victory']) expect(html, t).toMatch(new RegExp(`class="pill t-${t}"`));
+    // Command, Knight, Castle, Gathering and Looter have no tint rule, so they render as the plain pill
+    const css = readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+    for (const t of ['action', 'treasure', 'duration', 'attack', 'reaction', 'victory']) expect(css, t).toContain(`.pill.t-${t}{`);
+    for (const t of ['command', 'knight', 'castle', 'gathering', 'looter']) expect(css, t).not.toContain(`.pill.t-${t}`);
+  });
+});
+
+describe('type filter chips', () => {
+  it('carry the printed-type class, so style.css can colour their edges (only the six main types have a rule)', () => {
+    const html = render('cards');
+    for (const t of ['action', 'treasure', 'duration', 'attack', 'reaction', 'victory']) expect(html, t).toMatch(new RegExp(`class="dn-chip t-${t}"`));
+    const css = readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+    for (const t of ['action', 'treasure', 'duration', 'attack', 'reaction', 'victory']) expect(css, t).toContain(`.dn-chip.t-${t}{`);
+  });
+});
+
+describe('Landscapes filter panel', () => {
+  it('has no tag disclaimer under the tags filter', () => {
+    expect(text(render('landscapes'))).not.toMatch(/not an exhaustive list|own vocabulary/);
+  });
+});
+
+describe('landscape type tints', () => {
+  const kinds = ['project', 'trait', 'event', 'way', 'landmark'];
+  const css = readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+  it('tints the type pill in the table and on the detail page, and the type chips\' edges, for all five landscape types', () => {
+    const list = render('landscapes');
+    for (const k of kinds) { expect(list, k).toMatch(new RegExp(`class="pill t-${k}"`)); expect(list, k).toMatch(new RegExp(`class="dn-chip t-${k}"`)); }
+    expect(render(`landscapes/${encodeURIComponent('plunder:trait:cheap')}`)).toMatch(/class="pill t-trait">Trait</);
+    for (const k of kinds) { expect(css, k).toContain(`.pill.t-${k}{`); expect(css, k).toContain(`.dn-chip.t-${k}{`); }
+  });
+});
+
+describe('related cards (same recorded mechanics)', () => {
+  it('lists every match, 10 to a page by default, and says how many there are', () => {
+    const c = catalog.cards.find(x => x.id === 'dominion-base-game:village') || catalog.cards[0];
+    const total = sharedMechanicCards(catalog, c, { limit: Infinity }).length;
+    expect(total).toBeGreaterThan(10);
+    const html = render(`cards/${encodeURIComponent(c.id)}`);
+    expect(rows(html.slice(html.indexOf('cd-related')))).toBe(10);
+    expect(text(html)).toContain(`Showing 1–10 of ${total} cards`);
+    expect(html).toMatch(/<option value="10" selected="">10<\/option><option value="20">20<\/option><option value="50">50<\/option><option value="all">All<\/option>/);
+  });
+  it('pages without overlap, clamps a stale page, and never invents rows', () => {
+    const items = Array.from({ length: 23 }, (_, i) => i);
+    expect(pageSlice(items, 1, 10).items).toEqual(items.slice(0, 10));
+    expect(pageSlice(items, 3, 10)).toMatchObject({ items: [20, 21, 22], from: 21, to: 23, pages: 3 });
+    expect(pageSlice(items, 9, 10).page).toBe(3);
+    expect(pageSlice(items, 1, 50)).toMatchObject({ pages: 1, from: 1, to: 23 });
+    expect(pageSlice(items, 1, Infinity)).toMatchObject({ items, pages: 1, from: 1, to: 23, total: 23 });   // the "All" option
+    expect(pageSlice([], 1, 10)).toMatchObject({ items: [], from: 0, to: 0, pages: 1 });
+  });
+});
+
 describe('clickable table rows', () => {
   it('every row in the Kingdom cards and landscapes tables is a whole-row link', () => {
     for (const [view, n] of [['cards', 331], ['landscapes', 124]]) {
@@ -286,7 +344,7 @@ describe('Landscapes', () => {
     const l = catalog.landscapes.find(x => x.name === 'Triumph');
     const d = text(render(`landscapes/${encodeURIComponent(l.id)}`));
     expect(d).not.toMatch(/Verification|Open reference/);
-    expect(d).toMatch(/Triumph/); expect(d).toMatch(/Event/); expect(d).toMatch(/Classification note/); expect(d).not.toMatch(/not the official card text|artwork aren.t part|not an exhaustive list/);
+    expect(d).toMatch(/Triumph/); expect(d).toMatch(/Event/); expect(d).toMatch(/Classification note/); expect(d).not.toMatch(/Effect categories/); expect(d).not.toMatch(/not the official card text|artwork aren.t part|not an exhaustive list/);
   });
   it('encodes ids that contain underscores and colons round-trip', () => {
     const l = catalog.landscapes.find(x => x.id.includes('_'));
