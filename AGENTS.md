@@ -63,6 +63,11 @@ the change is genuinely about the math/model itself.
   renders identically to a plain `.stat` tile, so it's safe to reuse everywhere. Icons are
   **unconditional** even when the stat is 0 (a tile that hides its icon at zero looks broken, not
   clean — this was a real bug, fixed once already).
+- **Every game has a permanent id** — `games.id` in the database, exposed as `game.line` everywhere
+  in the model. A link to one game is `hashFor('games', gid, game.line)` → `#/games/<group>/<id>`:
+  the Games page clears any filter that would hide it (on arrival only), opens the row, scrolls to
+  it and tints it (`tr.grow.hl`). Records and Players link their dates this way; do the same for any
+  new "this game" mention. Engine records that point at a game must carry `line` (Elo gain/drop do).
 - **Group scoping: each group is a fully separate league, not a filtered view of one
   shared dataset.** `buildLeague()` in `src/lib/league.js` calls `Eng.compute()` once per group the
   viewer belongs to, each time with only that group's players/games/seasons —
@@ -145,6 +150,13 @@ technique is the best way to prove any refactor *doesn't* change what users see:
    season, no-seasons group, friendly-only player, empty group), `rich` (landscape tiles + both rivals + a tied game), `nogroups` (a site with no groups yet).
 
 ## Gotchas already paid for — don't rediscover these
+
+- **Write `backdrop-filter` once, unprefixed — never also `-webkit-backdrop-filter`.** Vite's CSS
+  minifier (lightningcss) keeps the hand-written `-webkit-` line and silently drops the standard one,
+  so the built site had *no blur* in Chrome and Firefox while looking fine in `npm run dev`
+  and in Safari. The build adds the `-webkit-` prefix itself. After touching glass/blur CSS, check
+  the **built** output: `grep -o "[^}]*backdrop-filter[^}]*}" dist/assets/*.css` should show both,
+  and `getComputedStyle(el).backdropFilter` in a real Chrome should not be `none`.
 
 - **`CREATE POLICY` has no `IF NOT EXISTS`.** Re-running `schema.sql` against an
   already-migrated database used to abort partway through on a "policy already exists"

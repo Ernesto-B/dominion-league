@@ -132,6 +132,7 @@ export default function Players() {
 
 // This player's rated games, newest first, each expandable into the full table's breakdown.
 function Results({ p }) {
+  const { gid, hashFor } = usePage();
   const [open, setOpen] = useState(() => new Set());
   const toggle = line => setOpen(o => { const n = new Set(o); n.has(line) ? n.delete(line) : n.add(line); return n; });
   const head = [{ label: '' }, { label: 'Date', cls: 'l' }, { label: '' }, { label: 'Finish', cls: 'l' }, { label: 'Sets', cls: 'l' },
@@ -142,7 +143,7 @@ function Results({ p }) {
       key: g.line, data: g.line, className: 'grow' + (isOpen ? ' open' : ''), onClick: () => toggle(g.line), open: isOpen, detail: <GameDetail game={g} />,
       cells: [
         { node: '▸', className: 'chev' },
-        { node: g.date, text: g.date, className: undefined },
+        { node: <a href={hashFor('games', gid, g.line)} onClick={e => e.stopPropagation()}>{g.date}</a>, text: g.date, className: undefined },
         { node: <TypePill type={g.type} />, text: g.type === 'Playoff' || g.type === 'Friendly' ? g.type : '', className: undefined },
         { node: <GameFinish game={g} />, text: finishText(g), className: 'wrap' },
         { node: g.sets.map((s, i) => <Fragment key={s}>{i > 0 && ' '}{setIconPath(s) ? <SetIcon name={s} size={20} /> : s}</Fragment>), text: g.sets.map(s => setIconPath(s) ? '' : s).join(' '), className: 'wrap' },

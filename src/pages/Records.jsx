@@ -35,13 +35,13 @@ export default function Records() {
     rec('Most season titles', R.mostTitles, f0, 'icons/champion.png'),
   ];
 
-  // [label, who, when, value]
+  // [label, who, when (a link to that game), value]
+  const when = (date, line) => line == null ? date : <a href={hashFor('games', gid, line)}>{date}</a>;
   const single = [];
-  if (R.gain) single.push(['Biggest Elo gain in one game', <PlayerLink name={R.gain.name} />, R.gain.date, sgn(R.gain.value)]);
-  if (R.loss) single.push(['Biggest Elo drop in one game', <PlayerLink name={R.loss.name} />, R.loss.date, sgn(R.loss.value)]);
-  if (R.bestDry && R.bestDry.value > 1) single.push(['Longest run without a win', <PlayerLink name={R.bestDry.name} />, '', R.bestDry.value + ' games']);
-  if (R.topVP) single.push(['Highest winning score', winnerOf(R.topVP.game), R.topVP.game.date, R.topVP.value + ' VP']);
-  if (R.mostLandscapes) single.push(['Most landscape types in one game', winnerOf(R.mostLandscapes.game) + ' won', R.mostLandscapes.game.date, R.mostLandscapes.value + ' of ' + LANDSCAPES.length]);
+  if (R.gain) single.push(['Biggest Elo gain in one game', <PlayerLink name={R.gain.name} />, when(R.gain.date, R.gain.line), sgn(R.gain.value)]);
+  if (R.loss) single.push(['Biggest Elo drop in one game', <PlayerLink name={R.loss.name} />, when(R.loss.date, R.loss.line), sgn(R.loss.value)]);
+  if (R.topVP) single.push(['Highest winning score', winnerOf(R.topVP.game), when(R.topVP.game.date, R.topVP.game.line), R.topVP.value + ' VP']);
+  if (R.mostLandscapes) single.push(['Most landscape types in one game', winnerOf(R.mostLandscapes.game) + ' won', when(R.mostLandscapes.game.date, R.mostLandscapes.game.line), R.mostLandscapes.value + ' of ' + LANDSCAPES.length]);
 
   const setRows = Object.entries(R.sets).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 

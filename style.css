@@ -178,7 +178,7 @@ button.iconbtn img{display:block;height:72px;width:auto}
 .order{list-style:none;margin:10px 0;padding:0}
 
 /* add/edit game modal */
-.modal-overlay{position:fixed;inset:0;background:rgba(10,14,18,.6);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:40px 16px;z-index:100}
+.modal-overlay{position:fixed;inset:0;background:rgba(6,9,13,.74);backdrop-filter:blur(6px);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:40px 16px;z-index:100}
 .modal-box{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;max-width:720px;width:100%;outline:none}
 .modal-close{position:absolute;top:12px;right:12px;background:transparent;border:1px solid var(--line);color:var(--muted);width:32px;height:32px;min-height:0;border-radius:8px;font-size:18px;line-height:1;padding:0}
 .modal-close:hover{color:var(--ink)}
@@ -290,9 +290,18 @@ a.pl{vertical-align:middle}
    and e.g. the Player page alone renders 10+ .stat tiles, so one blurred
    surface per card instead of a dozen-plus keeps this cheap to render. */
 @media (prefers-color-scheme:dark){
-  .top,.ladder,.tablewrap,.stats,.chip,.builder,.story,.modal-box,.tierpopup,.popbox,.tierkey,th{
+  .top,.ladder,.tablewrap,.stats,.chip,.builder,.story,.tierpopup,.popbox,.tierkey,th{
     background:rgba(23,32,42,.55);
-    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    backdrop-filter:blur(14px);
   }
   .stat{background:transparent}
+  /* The dialog sits over a busy page, so unlike the other panels it is nearly opaque: a see-through
+     one let the Games table show through the text. The overlay behind it dims and blurs the page. */
+  .modal-box{background:rgba(20,28,37,.97)}
 }
+
+/* A game reached from a link (#/games/<group>/<id>): tint its row and pulse once so the eye finds it. */
+tr.grow.hl td{background:color-mix(in srgb, var(--brass) 22%, transparent);box-shadow:inset 0 1px 0 var(--brass),inset 0 -1px 0 var(--brass)}
+tr.grow.hl td:first-child{box-shadow:inset 3px 0 0 var(--brass),inset 0 1px 0 var(--brass),inset 0 -1px 0 var(--brass)}
+@media (prefers-reduced-motion:no-preference){tr.grow.hl td{animation:hlpulse 1.6s ease-out 1}}
+@keyframes hlpulse{0%{background:color-mix(in srgb, var(--brass) 60%, transparent)}100%{background:color-mix(in srgb, var(--brass) 22%, transparent)}}
