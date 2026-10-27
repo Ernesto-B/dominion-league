@@ -10,6 +10,7 @@ import Header from './components/Header.jsx';
 import Login from './components/Login.jsx';
 import PasswordChange from './components/PasswordChange.jsx';
 import LegacyPage from './components/LegacyPage.jsx';
+import PageBoundary from './components/PageBoundary.jsx';
 
 function Shell() {
   const { state, boot } = useLeague();
@@ -37,7 +38,7 @@ function Shell() {
   const skip = e => { e.preventDefault(); document.getElementById('main')?.focus(); };
 
   let body;
-  if (Ported) body = <PageContext.Provider value={page}><main id="main" tabIndex={-1}><Ported /></main></PageContext.Provider>;
+  if (Ported) body = <PageContext.Provider value={page}><main id="main" tabIndex={-1}><PageBoundary resetKey={hash}><Ported /></PageBoundary></main></PageContext.Provider>;
   else if (ready) body = <LegacyPage league={state} boot={boot} route={route} />;
   else {
     let inner;

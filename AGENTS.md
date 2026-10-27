@@ -30,8 +30,12 @@ src/App.jsx, src/components/ — the shell (Header/nav, footer, skip link, docum
 src/pages/, src/components/, src/PageContext.js — ported pages. src/pages/index.js maps route ->
                  component; App renders those inside PageContext (D already scoped to the group,
                  gid, arg, me, allGroups, hashFor, reload...) and sends every other route to
-                 LegacyPage. Shared pieces: TierIcon, SetIcon, PlayerLink, GroupSwitcher, Banner,
-                 SortableTable (React replacement for the old DOM-mutating makeSortable).
+                 LegacyPage. Ported pages run inside PageBoundary, so a render error shows a message
+                 in <main> instead of unmounting the whole app. Shared pieces: TierIcon, SetIcon,
+                 NameIcon, PlayerLink, GroupSwitcher, Banner, TypePill, LandscapePills, DateAnchor,
+                 GameFinish/GameDetail/GamesTable (expandable game rows), SeasonTable/SeasonRecap,
+                 RatingChart, and SortableTable (React replacement for the old DOM-mutating
+                 makeSortable; supports expandable detail rows).
 src/legacy/pages.js — the pages not yet ported (pageHome, pageSeason, ..., admin forms, Add Game
                  modal) as one ES module exporting renderLegacyPage(mainEl, ctx). Template-literal
                  strings written into <main>; React never touches <main>'s children for these

@@ -103,10 +103,6 @@ import { hashFor as hashForRoute } from '../lib/route.js';
   function tierAnchor(tier) {
     return `<div class="tieranchor">${tier ? icon(tier.icon, 28, tier.name) : ''}<span>${tier ? esc(tier.name) : 'Top tier'}</span></div>`;
   }
-  function dateAnchor(day, label) {
-    const iso = Eng.fmtDay(day);
-    return `<div class="tieranchor"><b title="${esc(iso)}">${short(iso)}</b><span>${esc(label)}</span></div>`;
-  }
   function tierPopup() {
     const rows = D.tiers.map((t, i) => {
       const hi = D.tiers[i + 1] ? D.tiers[i + 1].min - 1 : null;
@@ -127,11 +123,6 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     if (!D.warnings.length) return '';
     return `<div class="banner" role="status"><b>${D.warnings.length} thing${D.warnings.length > 1 ? 's' : ''} to fix in the data</b><ul>${D.warnings.slice(0, 8).map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
   }
-  function seasonOptions(sel, withAll) {
-    return (withAll ? `<option value="all"${sel === 'all' ? ' selected' : ''}>All seasons</option>` : '') +
-      D.seasons.map(s => `<option value="${s.number}"${String(sel) === String(s.number) ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
-  }
-
   /* ---------- rating chart ---------- */
   function ratingChart(hot, names) {
     const nights = D.nights;
@@ -237,74 +228,6 @@ import { hashFor as hashForRoute } from '../lib/route.js';
   }
 
   /* ---------- pages ---------- */
-  function seasonTable(st, limit) {
-    const s = st.season, rows = limit ? st.rows.slice(0, limit) : st.rows;
-    return `<div class="tablewrap"><table><thead><tr><th>Rank</th><th class="l">Player</th><th>Games</th><th>Wins</th><th>Win %</th><th>Avg points</th><th>Season score</th><th>Qualified</th><th>Seed</th><th>Elo change</th><th>Nights</th><th>Attendance</th></tr></thead><tbody>` +
-      rows.map(r => `<tr class="${r.seed ? 'seed' : ''}"><td>${r.rank}</td><td class="name">${link(r.name)}</td><td>${r.games}</td><td>${r.wins}</td><td>${pc(r.winPct)}</td><td>${f2(r.avgPts)}</td><td><b>${f0(r.score * 1000)}</b></td>
-        <td>${r.qualified ? '<span class="pill ok">Yes</span>' : `<span class="pill warn">${r.need} more</span>`}</td><td>${r.seed || ''}</td><td class="${r.eloChange > 0.5 ? 'up-t' : r.eloChange < -0.5 ? 'down-t' : ''}">${sgn(r.eloChange)}</td><td>${r.nights}</td><td>${pc(r.attendance)}</td></tr>`).join('') + '</tbody></table></div>';
-  }
-
-  function seasonRecap(st) {
-    const s = st.season;
-    if (s.status !== 'Complete' || !st.rows.length) return '';
-    const riser = st.rows.reduce((b, r) => (!b || r.eloChange > b.eloChange) ? r : b, null);
-    const best = st.rows.reduce((b, r) => (!b || r.winPct > b.winPct) ? r : b, null);
-    const tables = st.games.filter(g => g.n >= 2).length;
-    const ironman = st.rows.reduce((b, r) => (!b || (r.attendance ?? -1) > (b.attendance ?? -1)) ? r : b, null);
-    // Same deficit-of-the-loser-who-won algorithm as the all-time
-    // `biggestUpset` record in engine.js, just scoped to this season's games.
-    let upset = null;
-    st.games.forEach(g => {
-      if (!g.elo || g.n < 2) return;
-      g.names.forEach(w => {
-        if (g.places[w] !== 1 || !g.elo[w]) return;
-        g.names.forEach(o => {
-          if (o === w || g.places[o] === g.places[w] || !g.elo[o]) return;
-          const deficit = g.elo[o].before - g.elo[w].before;
-          if (deficit > 0 && (!upset || deficit > upset.deficit)) upset = { winner: w, loser: o, deficit };
-        });
-      });
-    });
-    let topVP = null;
-    st.games.forEach(g => { if (g.vp && (!topVP || g.vp > topVP.value)) topVP = { who: g.names.filter(n => g.places[n] === 1).join(' & '), value: g.vp }; });
-    const setCounts = {};
-    st.games.forEach(g => g.sets.forEach(nm => { setCounts[nm] = (setCounts[nm] || 0) + 1; }));
-    const setEntries = Object.entries(setCounts);
-    const topSet = setEntries.length ? setEntries.reduce((a, b) => b[1] > a[1] ? b : a) : null;
-    return `<h2>Hall of Fame</h2><div class="recap"><div class="recapchamp">${icon('champion', 56, '')}<div><span class="slabel">Season champion</span><h3>${s.champion ? link(s.champion) : 'Not decided'}</h3></div></div>
-      <div class="stats">
-      ${riser ? `<div class="stat has-icon"><img class="staticon" src="icons/stats/elo.png" alt=""><div class="stat-body"><b class="${riser.eloChange > 0.5 ? 'up-t' : riser.eloChange < -0.5 ? 'down-t' : ''}">${sgn(riser.eloChange)}</b><span>biggest riser: ${esc(riser.name)}</span></div></div>` : ''}
-      ${best ? `<div class="stat"><b>${pc(best.winPct)}</b><span>best record: ${esc(best.name)}</span></div>` : ''}
-      <div class="stat"><b>${tables}</b><span>tables played</span></div>
-      ${upset ? `<div class="stat"><b>${f0(upset.deficit)}</b><span>biggest upset: ${esc(upset.winner)} over ${esc(upset.loser)}</span></div>` : ''}
-      ${topVP ? `<div class="stat"><b>${topVP.value} VP</b><span>highest score: ${esc(topVP.who)}</span></div>` : ''}
-      ${topSet ? `<div class="stat seticon-stat">${setIcon(topSet[0], 24)}<span>most played: ${esc(topSet[0])}</span></div>` : ''}
-      ${ironman && ironman.attendance != null ? `<div class="stat"><b>${pc(ironman.attendance)}</b><span>best attendance: ${esc(ironman.name)}</span></div>` : ''}
-      </div></div>`;
-  }
-  function pageSeason(gid, arg) {
-    if (!D.seasons.length) return `<h1>Season</h1>${groupSwitcher('season', gid)}<p class="empty">No seasons are set up yet.${me && me.is_admin ? ' Add one from the <a href="#/admin">Admin page</a>.' : ''}</p>`;
-    const num = +arg || D.currentSeasonFor();
-    const st = D.seasonStandings(num); const s = st.season;
-    const wk = s.status === 'In progress' ? Math.floor((D.today - s.start) / 7) + 1 : null;
-    const frac = !s.ok ? 0 : Math.max(0, Math.min(1, (D.today - s.start + 1) / (7 * s.weeks)));
-    let h = `<div class="head"><div><h1>${esc(s.name)}</h1>${!s.ok ? `<p class="lede">Start date or length is missing.${me && me.is_admin ? ' Fix it from the <a href="#/admin">Admin page</a>.' : ''}</p>` : ''}</div>
-      <div class="pills" aria-label="Choose a season">${D.seasons.map(x => `<a href="${hashFor('season', gid, x.number)}" ${x.number === num ? 'aria-current="true"' : ''}>${esc(x.name)}</a>`).join('')}</div></div>${groupSwitcher('season', gid)}${banner()}${seasonRecap(st)}`;
-    h += `<div class="stats">
-      <div class="stat"><b>${wk ? 'Week ' + wk + ' of ' + s.weeks : s.status}</b><span>${wk ? s.weeksLeft + ' week' + (s.weeksLeft === 1 ? '' : 's') + ' left' : 'status'}</span></div>
-      <div class="stat"><b>${s.regularGames}</b><span>regular games</span></div>
-      <div class="stat"><b>${s.nightsHeld}</b><span>nights held</span></div>
-      <div class="stat"><b>${s.minGames}</b><span>games to qualify (${s.target} target)</span></div>
-      <div class="stat"><b>${s.spots}</b><span>playoff spots</span></div>
-      <div class="stat"><b>${esc(s.champion) || '—'}</b><span>champion</span></div></div>`;
-    if (s.ok) h += `<div class="tierbar">${dateAnchor(s.start, 'Start')}<div class="progress" role="img" aria-label="${Math.round(frac * 100)} percent of the season has passed"><i style="width:${frac * 100}%"></i></div>${dateAnchor(s.end, 'End')}</div>`;
-    h += st.rows.length ? seasonTable(st) : '<p class="empty">No regular games in this season yet.</p>';
-    h += `<p class="note">Season score = 1000 × (points + ${D.S.prior} × 0.5) ÷ (games + ${D.S.prior}), so it always lands somewhere between 0 and 1000. Points run from 1 for a win down to 0 for last, so a 3-player table and a 6-player table are worth the same, and ties split. The ${D.S.prior} imaginary average games stop one lucky night from topping the table. Missing a night costs nothing. Qualified players rank first; green rows are playoff seeds. Playoff and friendly games don't count toward the table (playoffs still move Elo). This table — not Elo — decides the season champion; Elo is a separate, ongoing skill rating shown on <a href="${hashFor('', gid)}">Rankings</a> that never resets.</p>`;
-    const sg = st.games.filter(g => g.n >= 2).slice().reverse();
-    if (sg.length) h += '<h2>Games this season</h2>' + gamesTable(sg);
-    return h;
-  }
-
   function resultRow(r) {
     const d = r.after - r.before, g = r.game;
     return `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td>${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 20) || esc(s)).join(' ')}</td><td class="wrap">${landscapePills(g)}</td><td>${f2(r.pts)}</td><td class="c">${f0(r.before)} → ${f0(r.after)}</td><td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${sgn(d)}</td></tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="9">${gameDetail(g)}</td></tr>`;
@@ -361,39 +284,6 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     const opp = hh.players.filter(o => o !== p.name).map(o => ({ o, w: hh.ahead[p.name][o], l: hh.ahead[o][p.name] })).filter(x => x.w + x.l > 0).sort((a, b) => (b.w / (b.w + b.l)) - (a.w / (a.w + a.l)) || (b.w + b.l) - (a.w + a.l));
     if (opp.length) h += `<h2>Against each opponent</h2><div class="tablewrap"><table><thead><tr><th class="l">Opponent</th><th>Finished ahead</th><th>Finished behind</th><th>Share ahead</th></tr></thead><tbody>${opp.map(x => `<tr><td class="name">${link(x.o)}</td><td>${x.w}</td><td>${x.l}</td><td>${x.w + x.l ? pc(x.w / (x.w + x.l)) : ''}</td></tr>`).join('')}</tbody></table></div><p class="note">Counts tables where both of you played, rated games only. Tied finishes aren't counted either way.</p>`;
     h += `<h2>Results</h2><div class="tablewrap"><table><thead><tr><th></th><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th class="l">Landscapes</th><th>Points</th><th class="c">Elo</th><th>Change</th></tr></thead><tbody>${p.results.slice().reverse().map(resultRow).join('')}</tbody></table></div>`;
-    return h;
-  }
-
-  function pageH2H(gid, arg) {
-    const sel = arg === 'all' || !arg ? null : +arg;
-    const hh = D.h2h(sel);
-    let h = `<div class="head"><div><h1>Head to head</h1><p class="lede">Each cell shows how often the row player finished ahead of the column player.</p></div>
-      <label class="f">Show <select id="h2hsel">${seasonOptions(sel == null ? 'all' : sel, true)}</select></label></div>${groupSwitcher('h2h', gid)}${banner()}`;
-    if (hh.players.length < 2) return h + '<p class="empty">Needs at least two players who shared a table.</p>';
-    let mostPlayed = null, closest = null;
-    for (let i = 0; i < hh.players.length; i++) {
-      for (let j = i + 1; j < hh.players.length; j++) {
-        const a = hh.players[i], b = hh.players[j], w = hh.ahead[a][b], l = hh.ahead[b][a], t = w + l;
-        if (!t) continue;
-        if (!mostPlayed || t > mostPlayed.t) mostPlayed = { a, b, t };
-        if (t >= 3) { const gap = Math.abs(w - l); if (!closest || gap < closest.gap || (gap === closest.gap && t > closest.t)) closest = { a, b, w, l, t, gap }; }
-      }
-    }
-    if (mostPlayed || closest) h += `<div class="storyrow">
-      ${mostPlayed ? `<div class="story"><span class="slabel">Most played rivalry</span>${link(mostPlayed.a)} and ${link(mostPlayed.b)} have shared <b>${mostPlayed.t}</b> tables</div>` : ''}
-      ${closest ? `<div class="story"><span class="slabel">Closest rivalry</span>${link(closest.a)} and ${link(closest.b)} are split <b>${closest.w}–${closest.l}</b></div>` : ''}
-      </div>`;
-    h += `<div class="tablewrap"><table class="matrix"><thead><tr><th>Row vs column</th>${hh.players.map(n => `<th>${nameIcon(n, 26)}<br>${esc(n)}</th>`).join('')}</tr></thead><tbody>`;
-    hh.players.forEach(a => {
-      h += `<tr><td>${link(a)}</td>` + hh.players.map(b => {
-        if (a === b) return '<td class="self">–</td>';
-        const w = hh.ahead[a][b], l = hh.ahead[b][a], t = w + l;
-        if (!t) return '<td></td>';
-        const r = w / t, col = r >= 0.5 ? 'var(--felt)' : 'var(--brick)', a8 = Math.round(Math.abs(r - 0.5) * 2 * 55);
-        return `<td style="background:color-mix(in srgb, ${col} ${a8}%, transparent)" title="${esc(a)} finished ahead of ${esc(b)} ${w} of ${t} times"><b>${pc(r)}</b><br><span class="meta">${w}–${l}</span></td>`;
-      }).join('') + '</tr>';
-    });
-    h += '</tbody></table></div><p class="note">Only rated games where both players sat at the same table. Ties are ignored. Small samples swing wildly, so give any cell under five games a pinch of salt.</p>';
     return h;
   }
 
@@ -887,7 +777,7 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     D = pickD(ctx, gid);
     closeAddModal();
     hidePopLayer();
-    const pages = { season: pageSeason, players: pagePlayers, h2h: pageH2H, admin: pageAdmin };
+    const pages = { players: pagePlayers, admin: pageAdmin };
     const fn = pages[route];   // unknown routes are mapped to Home (ported) by App before they get here
     main.innerHTML = fn(gid, arg);
     makeSortable(main);
@@ -895,5 +785,4 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     if (route === 'players') wireHighlight(main);
     if (route === 'players') wireHoverPopups(main);
     if (route === 'admin') wireAdmin();
-    const hs = $('#h2hsel'); if (hs) hs.addEventListener('change', () => { location.hash = hashFor('h2h', curGid, hs.value); });
   }
