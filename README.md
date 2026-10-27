@@ -25,7 +25,7 @@ The site needs a free [Supabase](https://supabase.com) project for accounts and 
    SUPABASE_SERVICE_ROLE_KEY=paste-it-here-only-for-this-one-command \
    node scripts/migrate.mjs
    ```
-   This creates a login for everyone listed in the `PLAYERS` array at the top of `scripts/migrate.mjs` (edit that list first — names, friend group, and which one is the admin), gives them the preset password `dominion`, seeds the starting friend group and season (edit the `GROUPS`/`SEASONS` arrays in the same file if yours differ), and imports the rows already in `data/games.csv`. The **service-role key** (Project Settings → API) bypasses all security — use it for this one local command and nowhere else. Never commit it, never put it in `public/js/`, never paste it in a chat.
+   This creates a login for everyone listed in the `PLAYERS` array at the top of `scripts/migrate.mjs` (edit that list first — names, friend group, and which one is the admin), gives them the preset password `dominion`, seeds the starting friend group and season (edit the `GROUPS`/`SEASONS` arrays in the same file if yours differ), and imports the rows already in `data/games.csv`. The **service-role key** (Project Settings → API) bypasses all security — use it for this one local command and nowhere else. Never commit it, never put it in client code (`src/`), never paste it in a chat.
 5. Tell everyone their name and the preset password. The site forces a real password on first sign-in.
 
 Once this is done, `data/games.csv` is no longer read by the live site — it only matters for the one-time import above.
@@ -107,6 +107,6 @@ Browsers block data loading from `file://`, so run `python3 -m http.server` in t
 ## Good to know
 
 - Only the admin can change game data, seasons or groups; everyone else can view once signed in, and nobody can view anything signed out.
-- The static files (`index.html`, `public/js/`, `public/data/config.json`) are still technically public on GitHub Pages the way any static site is — but they contain no player names or results. All of that lives behind Supabase's Row Level Security and requires a real session to read.
+- The static files (`index.html`, the built JS bundle, `public/data/config.json`) are still technically public on GitHub Pages the way any static site is — but they contain no player names or results. All of that lives behind Supabase's Row Level Security and requires a real session to read.
 - The only outside requests are Google Fonts and Supabase; the page works without Google Fonts, but it does need Supabase to do anything at all.
 - GitHub Pages can take up to ten minutes to refresh the static files after a commit, and your browser may cache for a moment — reload if you don't see a change. Game data itself updates immediately, since it's never cached in the repo.

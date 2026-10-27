@@ -1,9 +1,18 @@
-(function () {
-  'use strict';
-  const { Engine: Eng, sb, format } = window.DN;  // shared lib, bridged from src/main.jsx
-  const { esc, f0, f1, f2, f3, pc, sgn, short, long, ord, slugify } = format;
+/* LEGACY page renderers (template-literal strings written into <main>), kept
+   running while pages are ported to React one at a time. React owns the data,
+   auth, routing and shell now; it calls renderLegacyPage() with everything a
+   page needs. Indentation is left as it was inside the old IIFE on purpose —
+   this file is being deleted piece by piece, not maintained. */
+import * as Eng from '../lib/engine.js';
+import { sb } from '../lib/supabase.js';
+import { esc, f0, f1, f2, f3, pc, sgn, short, long, ord, slugify } from '../lib/format.js';
+import { SET_ICONS, SET_NAMES } from '../lib/sets.js';
+import { NOGROUP } from '../lib/league.js';
+import { hashFor as hashForRoute } from '../lib/route.js';
+
   const $ = s => document.querySelector(s);
-  const main = $('#main');
+  let main = null;     // the <main> element React hands us (see renderLegacyPage)
+  let ctx = null;      // latest context from React
   let D = null;        // computed model for the group currently being viewed (computedByGroup[curGid])
   let cfg = null;       // data/config.json
   let me = null;         // signed-in player's own players row
@@ -17,17 +26,13 @@
   // into D before calling a page function, so page functions below read D
   // exactly as if there were only ever one group.
   let computedByGroup = {};
-  const NOGROUP = '__nogroup__';  // bucket key when no groups are configured at all
   let allGroups = [];       // groups this viewer can see: [{id, name}]
   let rawPlayers = [];       // every player row this viewer can see (admin sees all) — for Admin page only
   let rawSeasons = [];       // every season row this viewer can see, raw (unparsed) — for Admin page only
 
 
   /* ---------- hash helpers (group-aware once more than one group exists) ---------- */
-  function hashFor(route, gid, rest) {
-    const multi = allGroups.length > 1;
-    return '#/' + route + (multi && gid ? '/' + encodeURIComponent(gid) : '') + (rest != null && rest !== '' ? '/' + rest : '');
-  }
+  const hashFor = (route, gid, rest) => hashForRoute(route, gid, rest, allGroups);
   function groupSwitcher(route, gid, rest) {
     if (allGroups.length <= 1) return '';
     return `<div class="pills" aria-label="Choose a group">${allGroups.map(g => `<a href="${hashFor(route, g.id, rest)}" ${g.id === gid ? 'aria-current="true"' : ''}>${esc(g.name)}</a>`).join('')}</div>`;
@@ -42,12 +47,6 @@
     const fb = explicit ? '' : ` onerror="this.onerror=null;this.src='icons/${esc(id)}.svg'"`;
     return `<img class="tier" src="${esc(src)}" width="${size}" height="${size}" alt="${esc(alt == null ? id : alt)}"${fb}>`;
   };
-  const SET_ICONS = {
-    Base: 'base', Intrigue: 'intrigue', Seaside: 'seaside', Prosperity: 'prosperity',
-    Hinterlands: 'hinterlands', 'Dark Ages': 'dark-ages', 'Cornucopia & Guilds': 'cornucopia-guilds',
-    Adventures: 'adventures', Empires: 'empires', Renaissance: 'renaissance', Menagerie: 'menagerie', Plunder: 'plunder', 'Rising Sun': 'rising-sun',
-  };
-  const SET_NAMES = Object.keys(SET_ICONS);
   const LANDSCAPES = ['Events', 'Projects', 'Traits', 'Landmarks', 'Ways'];
   const landscapePills = g => (g.landscapes || []).map(l => `<span class="pill">${esc(l)}</span>`).join(' ');
   const setIconPath = name => { const slug = SET_ICONS[name]; return slug ? `icons/sets/${slug}.png` : null; };
@@ -925,53 +924,6 @@
     });
   }
 
-  /* ---------- auth screens ---------- */
-  function pageLogin(err) {
-    return `<div class="builder" style="max-width:360px;margin:60px auto 0"><h1 style="font-size:28px">Sign in</h1>
-      <p class="lede">${esc((cfg && cfg.title) || 'Dominion Night')}</p>
-      ${err ? `<p class="note" style="color:var(--brick)">${esc(err)}</p>` : ''}
-      <div class="controls" style="flex-direction:column;align-items:stretch">
-        <label class="f">Name <input type="text" id="liName" autocomplete="username"></label>
-        <label class="f">Password <input type="password" id="liPw" autocomplete="current-password"></label>
-      </div>
-      <button id="liGo" type="button">Sign in</button></div>`;
-  }
-  function wireLogin() {
-    const go = async () => {
-      const name = ($('#liName').value || '').trim(), pw = $('#liPw').value;
-      if (!name || !pw) return;
-      const email = slugify(name) + '@dominion.local';
-      $('#liGo').disabled = true;
-      const { error } = await sb.auth.signInWithPassword({ email, password: pw });
-      if (error) { main.innerHTML = pageLogin('Could not sign in. Check the name and password.'); wireLogin(); return; }
-      boot();
-    };
-    $('#liGo').addEventListener('click', go);
-    $('#liPw').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
-  }
-  function pagePwChange(err) {
-    return `<div class="builder" style="max-width:360px;margin:60px auto 0"><h1 style="font-size:28px">Set a password</h1>
-      <p class="lede">Signed in as ${esc(me.name)}. Pick a new password — the one you used to sign in just now was only a placeholder.</p>
-      ${err ? `<p class="note" style="color:var(--brick)">${esc(err)}</p>` : ''}
-      <div class="controls" style="flex-direction:column;align-items:stretch">
-        <label class="f">New password <input type="password" id="pwNew" autocomplete="new-password"></label>
-        <label class="f">Confirm <input type="password" id="pwConf" autocomplete="new-password"></label>
-      </div>
-      <button id="pwGo" type="button">Save and continue</button></div>`;
-  }
-  function wirePwChange() {
-    $('#pwGo').addEventListener('click', async () => {
-      const a = $('#pwNew').value, b = $('#pwConf').value;
-      if (a.length < 8) { main.innerHTML = pagePwChange('Use at least 8 characters.'); wirePwChange(); return; }
-      if (a !== b) { main.innerHTML = pagePwChange('Passwords do not match.'); wirePwChange(); return; }
-      $('#pwGo').disabled = true;
-      const { error } = await sb.auth.updateUser({ password: a });
-      if (error) { main.innerHTML = pagePwChange(error.message); wirePwChange(); return; }
-      await sb.rpc('mark_password_changed');
-      boot();
-    });
-  }
-
   /* ---------- sortable tables ---------- */
   function makeSortable(root) {
     root.querySelectorAll('.tablewrap table:not(.matrix):not(.plain)').forEach(t => {
@@ -1013,208 +965,36 @@
     });
   }
 
-  /* ---------- router ---------- */
+  /* ---------- entry point (called by src/components/LegacyPage.jsx) ---------- */
+  // Data writes (admin forms, add/edit/delete game) call boot() to refetch
+  // and recompute; that now means asking React to reload, which re-renders
+  // this page with fresh data.
+  const boot = () => ctx.reload();
+
+  export function renderLegacyPage(el, c) {
+    main = el; ctx = c;
+    ({ cfg, me, allGroups, computedByGroup, rawPlayers, rawSeasons, playerIdByName, seasonDbIds, enabledSets } = c);
+    render();
+  }
+
+  // Re-renders the current page from the same context — used by filters and
+  // admin forms that change local state but not the data.
   function render() {
-    if (!Object.keys(computedByGroup).length) return;
-    const parts = location.hash.replace(/^#\/?/, '').split('/');
-    const route = parts[0] || 'home';
-    // Admin manages the whole site, so its URLs never carry a group segment
-    // even when other routes do — #/admin/season/edit/5 always means
-    // exactly that, not "group 'season', page edit/5".
-    const multi = route !== 'admin' && allGroups.length > 1;
-    const gid = allGroups.length ? (multi ? (parts[1] || allGroups[0].id) : allGroups[0].id) : null;
-    const arg = (multi ? parts.slice(2) : parts.slice(1)).join('/');
+    if (!ctx) return;
+    const { route, gid, arg } = ctx;
     curGid = gid;
     D = computedByGroup[gid == null ? NOGROUP : gid]
       || computedByGroup[NOGROUP] || computedByGroup[allGroups[0] && allGroups[0].id] || Object.values(computedByGroup)[0];
-    // The top nav's links live in the static index.html shell (never
-    // touched by main.innerHTML), so without this they'd always point at
-    // whichever group's hash they were written with — stay on #/players
-    // with no group segment and clicking it would silently reset you to
-    // the default group instead of keeping the one you're viewing.
-    document.querySelectorAll('#nav a[data-r]').forEach(a => {
-      const r = a.dataset.r;
-      a.href = hashFor(r === 'home' ? '' : r, r === 'admin' ? null : gid);
-    });
     closeAddModal();
     hidePopLayer();
-    closeNavMenu();
     const pages = { home: pageHome, season: pageSeason, players: pagePlayers, h2h: pageH2H, records: pageRecords, games: pageGames, admin: pageAdmin };
     const fn = pages[route] || pageHome;
     main.innerHTML = fn(gid, arg);
     makeSortable(main);
     wireGameRows(main);
-    document.querySelectorAll('#nav a').forEach(a => { if (a.dataset.r === (pages[route] ? route : 'home')) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-    document.title = (route === 'home' ? '' : route.charAt(0).toUpperCase() + route.slice(1) + ' · ') + (cfg.title || 'Dominion Night');
     if (route === 'home' || route === 'players') wireHighlight(main);
     if (route === 'players') wireHoverPopups(main);
     if (route === 'admin') wireAdmin();
     const hs = $('#h2hsel'); if (hs) hs.addEventListener('change', () => { location.hash = hashFor('h2h', curGid, hs.value); });
     [['#gfs', 'season'], ['#gft', 'type'], ['#gfp', 'player'], ['#gfset', 'set']].forEach(([id, k]) => { const el = $(id); if (el) el.addEventListener('change', () => { gf[k] = el.value; render(); const again = $(id); if (again) again.focus(); }); });
   }
-  window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
-
-  /* ---------- auth / data boot ---------- */
-  // Mobile hamburger: #navToggle/#nav live in the static index.html shell,
-  // never touched by render()'s main.innerHTML swap, so this is wired once
-  // rather than per-render. closeNavMenu() runs on every route change so
-  // tapping a link collapses the menu back instead of leaving it open.
-  function closeNavMenu() {
-    const nav = $('#nav'), btn = $('#navToggle');
-    if (nav) nav.classList.remove('nav-open');
-    if (btn) btn.setAttribute('aria-expanded', 'false');
-  }
-  function wireNavToggle() {
-    const btn = $('#navToggle'), nav = $('#nav');
-    if (!btn || !nav) return;
-    btn.addEventListener('click', () => {
-      const open = nav.classList.toggle('nav-open');
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
-  }
-  function setNavVisible(show) {
-    $('#nav').style.display = show ? '' : 'none';
-    const toggle = $('#navToggle'); if (toggle) toggle.style.display = show ? '' : 'none';
-    const isAdmin = show && me && me.is_admin;
-    const adminLink = document.querySelector('#nav a[data-r="admin"]');
-    if (adminLink) adminLink.style.display = isAdmin ? '' : 'none';
-    const nu = $('#navuser');
-    if (nu) {
-      nu.innerHTML = show && me ? `<span>${esc(me.name)}</span><a href="#" id="logoutLink">Log out</a>` : '';
-      const lo = $('#logoutLink');
-      if (lo) lo.addEventListener('click', async e => { e.preventDefault(); await sb.auth.signOut(); });
-    }
-  }
-
-  async function loadData() {
-    // PostgREST caps a response at 1000 rows by default, and game_results
-    // has one row per player per game, so page through it (and games) rather
-    // than silently truncating once the league grows past that.
-    const fetchAll = async (table, order) => {
-      const out = [];
-      for (let from = 0; ; from += 1000) {
-        const { data, error } = await sb.from(table).select('*').order(order).range(from, from + 999);
-        if (error) return { data: null, error };
-        out.push(...data);
-        if (data.length < 1000) return { data: out, error: null };
-      }
-    };
-    const [pr, gr, rr, grp, sr, stg] = await Promise.all([
-      sb.from('players').select('*'),
-      fetchAll('games', 'id'),
-      fetchAll('game_results', 'id'),
-      sb.from('groups').select('*'),
-      sb.from('seasons').select('*'),
-      sb.from('settings').select('*').maybeSingle(),
-    ]);
-    if (pr.error) throw pr.error;
-    if (gr.error) throw gr.error;
-    if (rr.error) throw rr.error;
-    if (grp.error) throw grp.error;
-    if (sr.error) throw sr.error;
-    // Missing row/table (e.g. schema.sql not yet re-run) just means every
-    // known set is treated as owned — never blocks the rest of the site.
-    const enabled = stg.data && stg.data.enabled_sets ? stg.data.enabled_sets : SET_NAMES;
-    const nameById = new Map(pr.data.map(p => [p.id, p.name]));
-    const byGame = new Map();
-    rr.data.forEach(r => { if (!byGame.has(r.game_id)) byGame.set(r.game_id, []); byGame.get(r.game_id).push(r); });
-    const rows = gr.data.map(g => {
-      const byPlace = new Map();
-      const playerVP = {};
-      (byGame.get(g.id) || []).forEach(r => {
-        const nm = nameById.get(r.player_id); if (!nm) return;
-        if (!byPlace.has(r.place)) byPlace.set(r.place, []);
-        byPlace.get(r.place).push(nm);
-        if (r.vp != null) playerVP[nm] = r.vp;
-      });
-      const finish = [...byPlace.keys()].sort((a, b) => a - b).map(p => byPlace.get(p).join(' = ')).join(' > ');
-      return {
-        _line: g.id, date: g.date, type: g.type, finish,
-        sets: g.sets || '', landscapes: g.landscapes || '', playerVP, group_id: g.group_id || null,
-        winner_vp: g.winner_vp ?? '', minutes: g.minutes ?? '', notes: g.notes || '',
-      };
-    });
-    const seasonRows = sr.data.slice().sort((a, b) => a.id - b.id).map(s => ({
-      _id: s.id, name: s.name, group: s.group_id, start: s.start_date, weeks: s.weeks,
-      targetGames: s.target_games, qualifyPct: s.qualify_pct, playoffSpots: s.playoff_spots,
-      champion: s.champion_player_id ? (nameById.get(s.champion_player_id) || '') : '', notes: s.notes || '',
-    }));
-    return { rows, players: pr.data, groups: grp.data, seasons: seasonRows, enabledSets: enabled };
-  }
-
-  let authWired = false;
-  async function boot() {
-    try {
-      // Config and session lookup don't depend on each other, so start both at once.
-      const cfgP = cfg ? null : fetch('data/config.json?v=' + Date.now()).then(res => {
-        if (!res.ok) throw new Error('Could not load data/config.json (' + res.status + ').');
-        return res.json();
-      });
-      if (!authWired) {
-        authWired = true;
-        sb.auth.onAuthStateChange(event => { if (event === 'SIGNED_OUT' && Object.keys(computedByGroup).length) { D = null; computedByGroup = {}; me = null; location.hash = ''; boot(); } });
-      }
-
-      const { data: { session } } = await sb.auth.getSession();
-      if (cfgP) cfg = await cfgP;
-      if (!session) { main.innerHTML = pageLogin(); wireLogin(); setNavVisible(false); return; }
-
-      // The data load doesn't depend on the profile row, so overlap the two round trips.
-      const dataP = loadData();
-      dataP.catch(() => {});
-      const { data: meRow, error: meErr } = await sb.from('players').select('*').eq('id', session.user.id).single();
-      if (meErr || !meRow) {
-        await sb.auth.signOut();
-        main.innerHTML = pageLogin('That account isn’t set up yet. Ask the admin to add you.');
-        wireLogin(); setNavVisible(false); return;
-      }
-      me = meRow;
-      if (me.must_change_password) { main.innerHTML = pagePwChange(); wirePwChange(); setNavVisible(false); return; }
-
-      const { rows, players, groups, seasons, enabledSets: enabled } = await dataP;
-      enabledSets = new Set(enabled);
-      playerIdByName = new Map(players.map(p => [p.name, p.id]));
-      seasonDbIds = seasons.map(s => s._id);
-      rawPlayers = players;
-      rawSeasons = seasons;
-      allGroups = groups.map(g => ({ id: g.id, name: g.name }));
-
-      // Each group is its own completely independent league: a separate
-      // Eng.compute() call seeing only that group's players, games, and
-      // seasons, so a player in two groups gets two unrelated results
-      // rather than one shared Elo/stat track. RLS has already done the
-      // real access-control work (rows for groups this viewer can't see
-      // never arrive here at all) — this loop just organizes what came back.
-      computedByGroup = {};
-      if (!allGroups.length) {
-        // No groups configured anywhere: the whole site is one league, same
-        // as before groups existed at all.
-        const c = Object.assign({}, cfg, { players: players.map(p => p.name), seasons, groups: undefined });
-        computedByGroup[NOGROUP] = Eng.compute(c, rows);
-        computedByGroup[NOGROUP].byName = Object.fromEntries(computedByGroup[NOGROUP].players.map(p => [p.name, p]));
-      } else {
-        allGroups.forEach(g => {
-          const groupPlayers = players.filter(p => (p.group_ids || []).includes(g.id)).map(p => p.name);
-          const groupRows = rows.filter(r => r.group_id === g.id);
-          const groupSeasons = seasons.filter(s => s.group === g.id);
-          const c = Object.assign({}, cfg, { players: groupPlayers, seasons: groupSeasons, groups: undefined });
-          const cd = Eng.compute(c, groupRows);
-          cd.byName = Object.fromEntries(cd.players.map(p => [p.name, p]));
-          computedByGroup[g.id] = cd;
-        });
-        const unassigned = rows.filter(r => r.group_id == null).length;
-        if (unassigned && me.is_admin) {
-          const firstD = computedByGroup[allGroups[0].id];
-          firstD.warnings.push(`${unassigned} game${unassigned === 1 ? '' : 's'} logged before groups existed (or genuinely spanning groups) ${unassigned === 1 ? 'has' : 'have'} no group assigned — only visible to you as admin, and not counted toward anyone's standings until fixed via Edit Game.`);
-        }
-      }
-      $('#foot').textContent = 'Ratings are recalculated in your browser each time the page loads.';
-      setNavVisible(true);
-      render();
-    } catch (e) {
-      main.innerHTML = `<h1>Can't load the data</h1><p class="lede">${esc(e.message || String(e))}</p>`;
-    }
-  }
-  wireNavToggle();
-  boot();
-})();

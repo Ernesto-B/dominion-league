@@ -9,7 +9,7 @@ A static Dominion board-game league tracker: Elo rankings, seasons, head-to-head
 ## Hard constraints — read before changing architecture
 
 - **GitHub Pages only, by explicit owner preference.** Never introduce another hosting/deploy target. Any server-side need goes through Supabase (Postgres RLS/RPCs, or an Edge Function), not a separate platform — Edge Functions deploy to Supabase's own infrastructure, not GitHub Pages, so they don't conflict with this.
-- **Migrating to React + Vite (branch `react-migration`).** The owner has chosen to drop the old "no build step" rule. `npm run build` now produces `dist/`, deployed to GitHub Pages by `.github/workflows/deploy.yml` (Pages source must be set to "GitHub Actions"). Still no TypeScript in the browser code, and still hash routing (`#/<route>`), which keeps GitHub Pages working without a 404 fallback. The migration is incremental: the legacy `public/js/app.js` keeps rendering everything not yet ported, while React (`src/`) takes over page by page. Static assets (`icons/`, `images/`, `data/`, legacy `js/`) live in `public/` and are copied through untouched.
+- **Migrating to React + Vite (branch `react-migration`).** The owner has chosen to drop the old "no build step" rule. `npm run build` now produces `dist/`, deployed to GitHub Pages by `.github/workflows/deploy.yml` (Pages source must be set to "GitHub Actions"). Still no TypeScript in the browser code, and still hash routing (`#/<route>`), which keeps GitHub Pages working without a 404 fallback. The migration is incremental: the legacy `src/legacy/pages.js` keeps rendering everything not yet ported, while React (`src/`) takes over page by page. Static assets (`icons/`, `images/`, `data/`, legacy `js/`) live in `public/` and are copied through untouched.
 - **Icons are never invented.** The owner generates all icon/image assets themselves and drops them in `~/Downloads/...`; an agent's job is to resize (`sips -Z <px>`) and wire them in. Never substitute a default emoji as a placeholder — ask, or leave the slot as plain text until an asset exists.
 
 ## Architecture
@@ -19,25 +19,30 @@ src/lib/engine.js — pure computation, single-league only (no group concept at 
                  Group scoping below). compute(config, rows, today) -> {ranked, seasons,
                  seasonStandings(), h2h(), records, ...}. No DOM, no fetch, runs in
                  Node or the browser identically (ES module). Treat this as the "model" layer.
-src/lib/       — shared modules: engine.js, format.js (esc/f0/pc/... helpers), supabase.js
-                 (client + public URL/anon key). src/main.jsx exposes them to the legacy
-                 app as window.DN = {Engine, format, sb} and then injects public/js/app.js.
-                 That bridge is temporary — it goes away when app.js does.
-public/js/app.js — (legacy, being ported to React page by page) everything else: Supabase client, auth/session handling, the hash
-                 router, one function per page (pageHome, pageSeason, ...), and the
-                 admin forms. Pages are template-literal strings re-rendering
-                 main.innerHTML; there's no virtual DOM or component tree.
+src/lib/       — framework-free modules: engine.js, format.js (esc/f0/pc/... helpers),
+                 supabase.js (client + public URL/anon key), data.js (fetchConfig/loadData:
+                 Supabase queries -> engine row shape), league.js (buildLeague: one
+                 Eng.compute() per group), route.js (parseHash/hashFor), sets.js.
+src/League.jsx — React context + the session state machine (loading -> login | pwchange |
+                 ready | error). boot() refetches and recomputes while staying 'ready'.
+src/App.jsx, src/components/ — the shell (Header/nav, footer, skip link, document title),
+                 Login, PasswordChange, and LegacyPage. src/useHash.js is the hash router.
+src/legacy/pages.js — the old page renderers (pageHome, pageSeason, ..., admin forms, Add Game
+                 modal) as one ES module exporting renderLegacyPage(mainEl, ctx). Pages are
+                 template-literal strings written into <main>; React hands each page its
+                 context (D sources, me, cfg, allGroups, reload) and never touches <main>'s
+                 children. Ported to React one page at a time, then deleted.
 style.css      — one file, CSS custom properties for theming, light/dark via
                  prefers-color-scheme.
 index.html     — static shell + script tags. No per-page HTML files; everything
                  routes through #/<route>/<arg> in app.js.
 ```
 
-**Data flow**: `boot()` in `app.js` → Supabase queries (`players`, `games`,
+**Data flow**: `boot()` in `src/League.jsx` → Supabase queries (`loadData()` in `src/lib/data.js`) (`players`, `games`,
 `game_results`, `groups`, `seasons`) → `loadData()` reconstructs them into the exact
 row shape `engine.js` has always expected (a `finish` string like `"Jose > Bob = Cara"`,
-reconstructed from the normalized `game_results.place` column) → `Eng.compute(cfg, rows)`
-→ `render()` picks a page function from the hash and swaps `main.innerHTML`.
+reconstructed from the normalized `game_results.place` column) → `buildLeague()` → `Eng.compute(cfg, rows)`
+→ `App` parses the hash and `LegacyPage` calls `renderLegacyPage()`, which picks a page function and swaps `main.innerHTML`.
 
 This adapter-in-the-middle design is deliberate: `engine.js` was written once, verified
 against a spreadsheet, and has never needed to change for any of the Supabase/auth/admin
@@ -47,22 +52,22 @@ the change is genuinely about the math/model itself.
 
 ## Conventions that exist for a reason
 
-- **`statTile(iconSrc, big, label, iconClass)`** (`public/js/app.js`) builds the icon+number+label
+- **`statTile(iconSrc, big, label, iconClass)`** (`src/legacy/pages.js`) builds the icon+number+label
   tiles used across Player/Season/Records pages. Icon is optional — tiles without one
   render identically to plain `.stat` tiles elsewhere, so it's safe to reuse everywhere.
   Icons are **unconditional** even when the stat is 0 (a tile that hides its icon at zero
   looks broken, not clean — this was a real bug, fixed once already).
 - **Group scoping: each group is a fully separate league, not a filtered view of one
-  shared dataset.** `public/js/app.js`'s `boot()` calls `Eng.compute()` once per group the
+  shared dataset.** `buildLeague()` in `src/lib/league.js` calls `Eng.compute()` once per group the
   viewer belongs to, each time with only that group's players/games/seasons —
   `computedByGroup[groupId]`. `render()` picks the right one into the module-level `D`
   before calling a page function, so page functions read `D.ranked`/`D.players`/
   `D.records`/etc. directly with **no group filtering of their own** — if you're adding
   a new per-group view, trust that `D` is already scoped; filtering it again is a sign
   something's wrong upstream, not a thing to add. `engine.js` itself has zero concept of
-  groups — don't reintroduce one there; group-splitting belongs in `boot()`. The one
+  groups — don't reintroduce one there; group-splitting belongs in `buildLeague()`. The one
   cross-group page is **Admin** (`pageAdmin`), which manages the whole site and reads
-  `allGroups`/`rawPlayers`/`rawSeasons` (unfiltered, built once in `boot()`) instead of
+  `allGroups`/`rawPlayers`/`rawSeasons` (unfiltered, built once by `buildLeague()`) instead of
   `D`. A game belongs to exactly one group (`games.group_id`, chosen implicitly by
   `curGid` when the admin logs it, validated server-side in `add_game`/`edit_game`) —
   not inferred from who's at the table. Group membership (`players.group_ids`, an
@@ -80,7 +85,7 @@ the change is genuinely about the math/model itself.
   never trust client-side admin checks alone). Single-table writes (`groups`, `seasons`)
   are fine as direct RLS-gated client calls — don't add an RPC for those, it'd be pure
   ceremony.
-- **The modal pattern** (`openAddModal`/`renderAddModal`/`closeAddModal` in `public/js/app.js`):
+- **The modal pattern** (`openAddModal`/`renderAddModal`/`closeAddModal` in `src/legacy/pages.js`):
   state lives in module-level `bs`, re-renders call `renderAddModal()` directly rather
   than the hash router's `render()`. If you add another modal, follow this shape rather
   than trying to route modal state through the URL hash.
@@ -129,7 +134,7 @@ There is no interactive browser available to the agent. What's actually been use
 to verify changes, in order of how often (a real headless Chrome *is* usable for DOM dumps,
 see the end of this list):
 
-1. `node --check public/js/app.js src/lib/engine.js` — syntax only, every change; `npm run build` too.
+1. `node --check src/legacy/pages.js src/lib/*.js` — syntax only, every change; `npm run build` too.
 2. Direct `node -e "..."` scripts importing `src/lib/engine.js` (plain ES module, works in Node) to
    assert on real computed output — e.g. feeding synthetic games through `compute()` and
    checking standings/Elo/records match hand-computed expectations. This is the main way
@@ -140,9 +145,15 @@ see the end of this list):
    `test.uid()` to simulate specific users — table-owner sessions silently bypass RLS, so
    testing as `postgres` proves nothing. Always tear the cluster down afterward
    (`pg_ctl stop`, `rm -rf` the data dir) — it's disposable, not part of the repo.
-4. Load-order/boot smoke test: `npm run build`, `npx vite preview --port 4173`, then
-   `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --virtual-time-budget=8000 --dump-dom http://localhost:4173/`
-   and inspect the DOM. (jsdom does **not** run `type=module` scripts, so it can't test this.)
+4. Real-browser tests without a Supabase login: build a throwaway variant (config kept
+   **outside** the repo, e.g. in the scratchpad) whose Vite plugin `resolveId`-swaps
+   `src/lib/supabase.js` for an in-memory fake (`getSession`, `from().select/order/range/eq/
+   single/maybeSingle/insert`, `rpc`). A plain `resolve.alias` is NOT enough — it matches the
+   import *specifier*, so relative imports slip past it. Serve that build, then drive it with
+   `puppeteer-core` pointed at `/Applications/Google Chrome.app` (npm-installed outside the
+   repo): click through the nav, groups, modal, mobile menu, login, and check for page errors.
+   For a quick look without clicks, `Google Chrome --headless=new --virtual-time-budget=8000
+   --dump-dom <url>` works too. (jsdom does **not** run `type=module` scripts.)
 5. Visual/UX verification is **always** the owner's — say so explicitly rather than
    claiming a styling or layout change "looks right."
 
