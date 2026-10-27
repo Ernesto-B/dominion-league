@@ -11,6 +11,8 @@ import Login from './components/Login.jsx';
 import PasswordChange from './components/PasswordChange.jsx';
 import LegacyPage from './components/LegacyPage.jsx';
 import PageBoundary from './components/PageBoundary.jsx';
+import PopLayer from './components/PopLayer.jsx';
+import { popup } from './components/popup.js';
 
 function Shell() {
   const { state, boot } = useLeague();
@@ -26,6 +28,7 @@ function Shell() {
   const Ported = ready ? PAGES[routeName] : null;
 
   // Navigating from a legacy page to a ported one must not leave a legacy modal/popup behind.
+  useEffect(() => { popup.hide(); }, [hash]);   // a hover popup must not outlive its page
   useEffect(() => { if (Ported) resetLegacyChrome(); }, [Ported, routeName, route && route.gid, route && route.arg]);
 
   useEffect(() => {
@@ -54,6 +57,7 @@ function Shell() {
       <a className="skip" href="#main" onClick={skip}>Skip to content</a>
       <Header ready={ready ? { ...state, route } : null} hash={hash} />
       {body}
+      <PopLayer />
       <footer className="foot"><span id="foot">{ready ? 'Ratings are recalculated in your browser each time the page loads.' : ''}</span></footer>
     </>
   );

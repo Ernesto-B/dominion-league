@@ -33,10 +33,6 @@ import { hashFor as hashForRoute } from '../lib/route.js';
 
   /* ---------- hash helpers (group-aware once more than one group exists) ---------- */
   const hashFor = (route, gid, rest) => hashForRoute(route, gid, rest, allGroups);
-  function groupSwitcher(route, gid, rest) {
-    if (allGroups.length <= 1) return '';
-    return `<div class="pills" aria-label="Choose a group">${allGroups.map(g => `<a href="${hashFor(route, g.id, rest)}" ${g.id === gid ? 'aria-current="true"' : ''}>${esc(g.name)}</a>`).join('')}</div>`;
-  }
 
   /* ---------- shared bits ---------- */
   // A tier icon is icons/<id>.png (drop in your own artwork). 'champion' is the bundled trophy SVG.
@@ -47,274 +43,20 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     const fb = explicit ? '' : ` onerror="this.onerror=null;this.src='icons/${esc(id)}.svg'"`;
     return `<img class="tier" src="${esc(src)}" width="${size}" height="${size}" alt="${esc(alt == null ? id : alt)}"${fb}>`;
   };
-  const landscapePills = g => (g.landscapes || []).map(l => `<span class="pill">${esc(l)}</span>`).join(' ');
   const setIcon = (name, size) => {
     const src = setIconPath(name);
     return src ? `<img class="tier seticon" src="${src}" width="${size}" height="${size}" alt="${esc(name)}" title="${esc(name)}">` : '';
   };
-  // withPopup(): wraps a tile's markup with a follow-the-mouse popup, same
-  // mechanism as the tier progress bar's (see wireHoverPopups). Pass no
-  // popupHtml and a tile renders exactly as before — a no-op wrapper.
-  function withPopup(bodyHtml, popupHtml) {
-    return popupHtml ? `<div class="popwrap" tabindex="0">${bodyHtml}<div class="popbox">${popupHtml}</div></div>` : bodyHtml;
-  }
-  const popText = (text, extra) => `<div class="popdesc">${text}${extra ? `<b>${extra}</b>` : ''}</div>`;
-  // statTile(): a .stat tile with an optional leading category icon. Tiles
-  // built without one (icon = null/undefined) render byte-for-byte like the
-  // plain .stat tiles used everywhere else on the site (Season/Records/Admin),
-  // since .stat-body has no styling of its own — it's a no-op wrapper then.
-  function statTile(iconSrc, big, label, iconClass, popupHtml) {
-    const body = `<div class="stat${iconSrc ? ' has-icon' : ''}">${iconSrc ? `<img class="staticon${iconClass ? ' ' + iconClass : ''}" src="${iconSrc}" alt="">` : ''}<div class="stat-body"><b>${big}</b><span>${label}</span></div></div>`;
-    return withPopup(body, popupHtml);
-  }
-  // Just the set's icon and a caption — no count. A raw number here (table
-  // count) isn't a meaningful stat the way the other tiles' numbers are.
-  function setStatTile(setName, label, popupHtml) {
-    if (!setName) return '';
-    const src = setIconPath(setName);
-    const body = `<div class="stat seticon-stat">${src ? `<img class="seticon" src="${src}" alt="${esc(setName)}">` : ''}<span>${label}: ${esc(setName)}</span></div>`;
-    return withPopup(body, popupHtml);
-  }
-  // Full breakdown of every currently-owned set (not just ones this player
-  // has used), for the most/least-played set tiles — shows what's missing
-  // as much as what's played. A set unticked in Admin > Sets drops out of
-  // this list entirely, same as it does from the Add A Game picker.
-  function setBreakdownPopup(setCounts) {
-    const rows = SET_NAMES.filter(nm => enabledSets.has(nm)).sort((a, b) => (setCounts[b] || 0) - (setCounts[a] || 0) || a.localeCompare(b)).map(nm => {
-      const n = setCounts[nm] || 0;
-      return `<div class="poprow">${setIcon(nm, 20)}<b>${esc(nm)}</b><span>${n} game${n === 1 ? '' : 's'}</span></div>`;
-    }).join('');
-    return rows;
-  }
   const tierOf = n => { const p = D && D.byName && D.byName[n]; return p && p.tier; };
   const nameIcon = (n, size) => { const t = tierOf(n); return t ? icon(t.icon, size || 18, t.name + ' tier') : ''; };
-  // For a specific game's row, not "right now": a past game should show the
-  // tier the player actually had immediately after that game, so a rank-up
-  // is visible as an icon change between two games in their history instead
-  // of every old game silently wearing today's tier.
-  const nameIconAt = (n, elo, size) => { const t = D.tierFor(elo); return t ? icon(t.icon, size || 18, t.name + ' tier') : ''; };
-  const linkAt = (n, elo) => `<a class="pl" href="${hashFor('players', curGid, encodeURIComponent(n))}">${nameIconAt(n, elo, 20)}<span>${esc(n)}</span></a>`;
   const link = n => {
     // Every page is rendered within one group's context (D is already
     // scoped to curGid), so a link to a player always stays in that same
     // group — there's no cross-group "their real page" to resolve anymore.
     return `<a class="pl" href="${hashFor('players', curGid, encodeURIComponent(n))}">${nameIcon(n, 20)}<span>${esc(n)}</span></a>`;
   };
-  function tierAnchor(tier) {
-    return `<div class="tieranchor">${tier ? icon(tier.icon, 28, tier.name) : ''}<span>${tier ? esc(tier.name) : 'Top tier'}</span></div>`;
-  }
-  function tierPopup() {
-    const rows = D.tiers.map((t, i) => {
-      const hi = D.tiers[i + 1] ? D.tiers[i + 1].min - 1 : null;
-      const range = t.min === -Infinity ? `under ${D.tiers[i + 1].min}` : hi == null ? `${t.min}+` : `${t.min}–${hi}`;
-      return `<div class="tierpoprow">${icon(t.icon, 22, t.name)}<b>${esc(t.name)}</b><span>${range}</span></div>`;
-    }).join('');
-    return `<div class="tierpopup">${rows}</div>`;
-  }
-  function tierProgressBar(p) {
-    if (!p.tier) return '';
-    if (!p.nextTier) return `<div class="tierbarwrap" tabindex="0">${tierPopup()}<div class="tierbar">${tierAnchor(p.tier)}<div class="progress" role="img" aria-label="Top tier reached"><i style="width:100%;background:var(--brass)"></i></div>${tierAnchor(null)}</div></div>`;
-    const lower = p.tier.min === -Infinity ? D.E.start : p.tier.min;
-    const upper = p.nextTier.tier.min;
-    const pct = Math.max(0, Math.min(1, (p.elo - lower) / (upper - lower))) * 100;
-    return `<div class="tierbarwrap" tabindex="0">${tierPopup()}<div class="tierbar">${tierAnchor(p.tier)}<div class="progress" role="img" aria-label="${Math.round(pct)}% of the way to ${esc(p.nextTier.tier.name)}"><i style="width:${pct}%"></i></div>${tierAnchor(p.nextTier.tier)}</div></div>`;
-  }
-  function banner() {
-    if (!D.warnings.length) return '';
-    return `<div class="banner" role="status"><b>${D.warnings.length} thing${D.warnings.length > 1 ? 's' : ''} to fix in the data</b><ul>${D.warnings.slice(0, 8).map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
-  }
-  /* ---------- rating chart ---------- */
-  function ratingChart(hot, names) {
-    const nights = D.nights;
-    if (nights.length < 1) return '<p class="empty">The rating history appears after the first night is logged.</p>';
-    const start = D.E.start;
-    const series = names.map(n => ({ name: n, pts: [start].concat(nights.map(x => x.snapshot[n] ?? start)) }));
-    const W = 880, H = 330, L = 46, R = 112, T = 12, B = 28;
-    let lo = Infinity, hi = -Infinity;
-    series.forEach(s => s.pts.forEach(v => { lo = Math.min(lo, v); hi = Math.max(hi, v); }));
-    lo = Math.min(lo, start - 20); hi = Math.max(hi, start + 20);
-    const step = (hi - lo) > 200 ? 50 : (hi - lo) > 80 ? 25 : 10;
-    lo = Math.floor((lo - 5) / step) * step; hi = Math.ceil((hi + 5) / step) * step;
-    const N = nights.length;
-    const x = i => L + (N === 0 ? 0 : i / N) * (W - L - R);
-    const y = v => T + (hi - v) / (hi - lo) * (H - T - B);
-    let g = '';
-    for (let v = lo; v <= hi; v += step) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
-    g += `<line class="base" x1="${L}" x2="${W - R}" y1="${y(start)}" y2="${y(start)}"/>`;
-    const ticks = Math.min(N, 6);
-    for (let t = 1; t <= ticks; t++) {
-      const i = Math.round(t / ticks * N);
-      g += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${short(nights[i - 1].date)}</text>`;
-    }
-    if (!series.length) return '<p class="empty">No one in this group has a rated game yet.</p>';
-    const sorted = series.slice().sort((a, b) => a.pts[N] - b.pts[N]);
-    const ly = {}; let last = -Infinity;
-    for (let i = sorted.length - 1; i >= 0; i--) { const ty = Math.max(y(sorted[i].pts[N]), last + 13); ly[sorted[i].name] = ty; last = ty; }
-    series.slice().sort((a, b) => (a.name === hot) - (b.name === hot)).forEach(s => {
-      const on = s.name === hot ? ' on' : '';
-      const d = s.pts.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join('');
-      g += `<path class="ln${on}" data-p="${esc(s.name)}" d="${d}"/>`;
-    });
-    series.forEach(s => {
-      const on = s.name === hot ? ' on' : '';
-      g += `<text class="lab${on}" data-p="${esc(s.name)}" x="${W - R + 8}" y="${ly[s.name] + 4}">${esc(s.name)} ${f0(s.pts[N])}</text>`;
-    });
-    return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Elo rating after each game night, one line per player">${g}</svg></div>`;
-  }
-  function wireHighlight(root) {
-    const set = name => {
-      root.querySelectorAll('.chart [data-p]').forEach(el => el.classList.toggle('on', el.dataset.p === name));
-      root.querySelectorAll('.lrow').forEach(el => el.classList.toggle('hot', el.dataset.p === name));
-    };
-    root.querySelectorAll('.lrow, .chart .lab').forEach(el => {
-      el.addEventListener('mouseenter', () => set(el.dataset.p));
-      el.addEventListener('focusin', () => set(el.dataset.p));
-    });
-  }
-  // A single popup node attached directly to <body>, reused for every
-  // .tierbarwrap/.popwrap on the page. It has to live outside `main`: any
-  // .popwrap nested inside .stats sits under an ancestor that gets
-  // backdrop-filter in dark mode, and backdrop-filter (like transform/
-  // filter) makes an element a new containing block for position:fixed
-  // descendants — combined with .stats's overflow:hidden, a popup embedded
-  // in place there would be clipped into invisibility instead of floating
-  // over the page. Each wrap keeps its own hidden source node (built by
-  // withPopup/tierPopup) purely as content to clone into this shared layer.
-  let popLayer = null;
-  function ensurePopLayer() {
-    if (!popLayer) { popLayer = document.createElement('div'); popLayer.className = 'popbox'; document.body.appendChild(popLayer); }
-    return popLayer;
-  }
-  function hidePopLayer() { if (popLayer) popLayer.style.display = 'none'; }
-  function wireHoverPopups(root) {
-    const layer = ensurePopLayer();
-    root.querySelectorAll('.tierbarwrap, .popwrap').forEach(wrap => {
-      const src = wrap.querySelector('.tierpopup, .popbox');
-      if (!src) return;
-      src.style.display = 'none';
-      const place = e => {
-        const pad = 16;
-        layer.style.transform = 'none';
-        let x = e.clientX + pad, y = e.clientY + pad;
-        const pw = layer.offsetWidth, ph = layer.offsetHeight;
-        if (x + pw > window.innerWidth - 8) x = e.clientX - pw - pad;
-        if (y + ph > window.innerHeight - 8) y = e.clientY - ph - pad;
-        layer.style.left = x + 'px';
-        layer.style.top = y + 'px';
-      };
-      const show = e => { layer.innerHTML = src.innerHTML; layer.style.display = 'block'; place(e); };
-      wrap.addEventListener('mouseenter', show);
-      wrap.addEventListener('mousemove', place);
-      wrap.addEventListener('mouseleave', hidePopLayer);
-      wrap.addEventListener('focusin', () => {
-        layer.innerHTML = src.innerHTML; layer.style.display = 'block';
-        layer.style.transform = 'translate(-50%,-50%)'; layer.style.left = '50%'; layer.style.top = '50%';
-      });
-      wrap.addEventListener('focusout', hidePopLayer);
-    });
-  }
-  function wireGameRows(root) {
-    root.querySelectorAll('tr.grow').forEach(tr => {
-      tr.addEventListener('click', () => {
-        const det = root.querySelector(`tr.gdetail[data-g="${tr.dataset.g}"]`);
-        if (!det) return;
-        det.hidden = !det.hidden;
-        tr.classList.toggle('open', !det.hidden);
-      });
-    });
-    root.querySelectorAll('a[data-edit]').forEach(a => {
-      a.addEventListener('click', e => { e.preventDefault(); openAddModal(+a.dataset.edit); });
-    });
-  }
 
-  /* ---------- pages ---------- */
-  function resultRow(r) {
-    const d = r.after - r.before, g = r.game;
-    return `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td>${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 20) || esc(s)).join(' ')}</td><td class="wrap">${landscapePills(g)}</td><td>${f2(r.pts)}</td><td class="c">${f0(r.before)} → ${f0(r.after)}</td><td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${sgn(d)}</td></tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="9">${gameDetail(g)}</td></tr>`;
-  }
-  const typePill = t => t === 'Playoff' ? '<span class="pill play">Playoff</span>' : t === 'Friendly' ? '<span class="pill fr">Friendly</span>' : '';
 
-  function pagePlayers(gid, arg) {
-    const all = D.players.filter(p => p.allGames > 0);
-    if (!all.length) return `<h1>Players</h1>${groupSwitcher('players', gid)}<p class="empty">No games yet.</p>`;
-    const rankedHere = D.ranked;
-    const name = arg ? decodeURIComponent(arg) : (rankedHere[0] || all[0]).name;
-    const p = D.players.find(x => x.name === name) || all[0];
-    let h = `<div class="head"><div class="who">${p.tier ? icon(p.tier.icon, 72, p.tier.name + ' tier') : ''}<div><h1>${esc(p.name)}</h1>${p.tier ? `<p class="lede">${esc(p.tier.name)} tier${p.nextTier ? `, ${p.nextTier.need} Elo to ${esc(p.nextTier.tier.name)}` : ', top tier'}${p.peakTier && p.peakTier.id !== p.tier.id ? `. Best ever: ${esc(p.peakTier.name)}.` : ''}</p>` : ''}</div></div><div class="pills" aria-label="Choose a player">${all.map(x => `<a href="${hashFor('players', gid, encodeURIComponent(x.name))}" ${x.name === p.name ? 'aria-current="true"' : ''}>${nameIcon(x.name, 18)}${esc(x.name)}</a>`).join('')}</div></div>${groupSwitcher('players', gid)}${tierProgressBar(p)}${banner()}`;
-    if (!p.rated) return h + '<p class="empty">No rated games yet.</p>';
-    const hh = D.h2h(null);
-    const setCounts = {};
-    D.games.forEach(g => { if (g.places[p.name] != null) g.sets.forEach(s => { setCounts[s] = (setCounts[s] || 0) + 1; }); });
-    const setEntries = Object.entries(setCounts);
-    const mostSet = setEntries.length ? setEntries.reduce((a, b) => b[1] > a[1] ? b : a) : null;
-    const leastSet = setEntries.length > 1 ? setEntries.reduce((a, b) => b[1] < a[1] ? b : a) : null;
-    const losses = p.rated - p.wins;
-    const ratioTxt = p.wins ? (losses ? `${(p.wins / losses).toFixed(2)}:1` : 'no losses yet') : '—';
-    const peakGap = p.peak - p.elo;
-    const setsPop = setBreakdownPopup(setCounts);
-    const pRank = p.rank;
-    h += `<div class="stats">
-      ${statTile('icons/stats/elo.png', f0(p.elo), 'Elo' + (pRank ? ', rank ' + pRank : ''), null, popText(`Your current skill rating. Everyone starts at ${D.E.start}; it moves after every rated game based on who you played and how surprising the result was.`))}
-      ${statTile('icons/stats/peak-elo.png', f0(p.peak), 'peak Elo', null, popText('The highest Elo you\'ve ever reached — it never goes down.', peakGap > 0.5 ? `${f0(peakGap)} below your peak right now` : 'You\'re at your all-time peak right now'))}
-      ${statTile('icons/stats/rated-games.png', p.rated, 'rated games' + (p.status === 'Provisional' ? ' (provisional)' : ''), null, popText(`Games that count toward Elo — everything except Friendly games. Your first ${D.E.provisionalGames} are Provisional, with bigger rating swings while the system is still learning your skill.`))}
-      ${statTile('icons/stats/wins.png', p.wins, `wins (${pc(p.winPct)})`, null, popText(`Tables you've won outright — sole 1st place, no ties.`, `W/L ratio ${ratioTxt}`))}
-      ${statTile('icons/stats/average-points.png', f2(p.avgPts), 'avg points, 0 to 1', null, popText('Your average share of the points on offer at your tables, from 0 (always last) to 1 (always first). 0.5 is what an evenly matched table averages.'))}
-      ${statTile('icons/stats/win-streak.png', p.streak, `win streak (best ${p.bestStreak})`, null, popText('Wins in a row right now — resets the moment you don\'t finish 1st.', `Best ever: ${p.bestStreak}`))}
-      ${statTile('icons/champion.png', p.titles, 'season title' + (p.titles === 1 ? '' : 's'), null, popText('Seasons you\'ve won outright. Decided by points, not Elo — see the Season page.'))}
-      ${statTile('icons/stats/top-half-finishes.png', pc(p.topHalf), 'top half', null, popText('Share of tables where your points share was 0.5 or better — roughly, finishing in the top half of the table.'))}
-      ${statTile('icons/stats/last-place-finishes.png', p.lasts, 'last places', null, popText('Tables where you finished alone in last place. A tie for last doesn\'t count against you.'))}
-      ${statTile('icons/stats/longest-without-win.png', p.bestDry, 'longest dry spell', null, popText('Your longest-ever run of rated games without a win.', p.dry > 0 ? `${p.dry} games into one right now` : 'Not in one right now'))}
-      ${(() => {
-        // Best/worst landscape type by win %, only counting types with enough games to mean something.
-        const q = Object.entries(p.landscapeStats).filter(([, e]) => e.games >= D.S.minGamesForRecords);
-        if (q.length < 2) return '';
-        const best = q.reduce((a, b) => b[1].winPct > a[1].winPct ? b : a), worst = q.reduce((a, b) => b[1].winPct < a[1].winPct ? b : a);
-        if (best[1].winPct === worst[1].winPct) return '';
-        const pop = (t, e) => popText(`Your win rate in rated games with ${t} in play, out of ${e.games} games. Only types with at least ${D.S.minGamesForRecords} games count.`, `Overall: ${pc(p.winPct)}`);
-        return statTile(null, esc(best[0]), `best landscape (${pc(best[1].winPct)} wins)`, null, pop(best[0], best[1])) + statTile(null, esc(worst[0]), `worst landscape (${pc(worst[1].winPct)} wins)`, null, pop(worst[0], worst[1]));
-      })()}
-      ${setStatTile(mostSet && mostSet[0], 'most played', setsPop)}
-      ${setStatTile(leastSet && leastSet[0], 'least played', setsPop)}
-      </div>`;
-    const dec = hh.players.filter(o => o !== p.name).map(o => ({ o, w: hh.ahead[p.name][o], l: hh.ahead[o][p.name] })).filter(x => x.w + x.l >= 3);
-    const nem = dec.filter(x => x.l > x.w).sort((a, b) => b.l / (b.w + b.l) - a.l / (a.w + a.l) || b.l - a.l)[0];
-    const vic = dec.filter(x => x.w > x.l).sort((a, b) => b.w / (b.w + b.l) - a.w / (a.w + a.l) || b.w - a.w)[0];
-    if (nem || vic) h += `<div class="rivals">${nem ? `<p><b>Nemesis</b> ${link(nem.o)}, who finished ahead ${nem.l} of ${nem.w + nem.l} times.</p>` : ''}${vic ? `<p><b>Favourite victim</b> ${link(vic.o)}, finished behind ${vic.w} of ${vic.w + vic.l} times.</p>` : ''}</div>`;
-    h += '<h2>Rating history</h2>' + ratingChart(p.name, rankedHere.map(x => x.name));
-    const opp = hh.players.filter(o => o !== p.name).map(o => ({ o, w: hh.ahead[p.name][o], l: hh.ahead[o][p.name] })).filter(x => x.w + x.l > 0).sort((a, b) => (b.w / (b.w + b.l)) - (a.w / (a.w + a.l)) || (b.w + b.l) - (a.w + a.l));
-    if (opp.length) h += `<h2>Against each opponent</h2><div class="tablewrap"><table><thead><tr><th class="l">Opponent</th><th>Finished ahead</th><th>Finished behind</th><th>Share ahead</th></tr></thead><tbody>${opp.map(x => `<tr><td class="name">${link(x.o)}</td><td>${x.w}</td><td>${x.l}</td><td>${x.w + x.l ? pc(x.w / (x.w + x.l)) : ''}</td></tr>`).join('')}</tbody></table></div><p class="note">Counts tables where both of you played, rated games only. Tied finishes aren't counted either way.</p>`;
-    h += `<h2>Results</h2><div class="tablewrap"><table><thead><tr><th></th><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th class="l">Landscapes</th><th>Points</th><th class="c">Elo</th><th>Change</th></tr></thead><tbody>${p.results.slice().reverse().map(resultRow).join('')}</tbody></table></div>`;
-    return h;
-  }
-
-  function finishText(g) {
-    const names = g.names.slice().sort((a, b) => g.places[a] - g.places[b]);
-    return names.map((n, i) => (i ? (g.places[n] === g.places[names[i - 1]] ? ' = ' : ' > ') : '') + nameIconAt(n, g.snapshot[n], 16) + (i === 0 || g.places[n] === 1 ? `<b>${esc(n)}</b>` : esc(n))).join('');
-  }
-  function gameDetail(g) {
-    // Season score is a 0-1 ratio internally, but displayed x1000 so it
-    // reads as a whole-number points total instead of a 3-decimal fraction.
-    const sc = x => f0(x * 1000);
-    const sgnSc = x => (x > 0.5 ? '+' : x < -0.5 ? '−' : '') + Math.abs(Math.round(x * 1000));
-    const rows = g.names.slice().sort((a, b) => g.places[a] - g.places[b]).map(n => {
-      const elo = g.elo && g.elo[n];
-      const score = g.score && g.score[n];
-      const vp = g.playerVP && g.playerVP[n];
-      const d = elo ? elo.after - elo.before : null;
-      const sd = score ? score.after - score.before : null;
-      return `<tr><td class="name">${linkAt(n, g.snapshot[n])}</td>
-        <td>${elo ? f0(elo.before) + ' → ' + f0(elo.after) : '—'}</td>
-        <td class="${d > 0.5 ? 'up-t' : d < -0.5 ? 'down-t' : ''}">${d != null ? sgn(d) : ''}</td>
-        <td>${score ? sc(score.before) + ' → ' + sc(score.after) : '—'}</td>
-        <td class="${sd > 0.0005 ? 'up-t' : sd < -0.0005 ? 'down-t' : ''}">${sd != null ? sgnSc(sd) : ''}</td>
-        <td>${vp != null ? vp : '—'}</td></tr>`;
-    }).join('');
-    return `<div class="tablewrap"><table class="plain"><thead><tr><th class="l">Player</th><th>Elo</th><th>Change</th><th>Season score</th><th>Change</th><th>VP</th></tr></thead><tbody>${rows}</tbody></table></div>${(g.landscapes || []).length ? `<p class="note">Landscapes in play: ${landscapePills(g)}</p>` : ''}${g.notes ? `<p class="note">${esc(g.notes)}</p>` : ''}`;
-  }
-  function gamesTable(list, canEdit) {
-    const cols = canEdit ? 9 : 8;
-    return `<div class="tablewrap"><table><thead><tr><th></th><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>VP</th><th class="l">Landscapes</th><th class="l">Notes</th>${canEdit ? '<th></th>' : ''}</tr></thead><tbody>${list.map(g => `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td class="l">${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 22) || esc(s)).join(' ')}</td><td>${g.vp ?? ''}</td><td class="wrap">${landscapePills(g)}</td><td class="wrap">${esc(g.notes)}</td>${canEdit ? `<td><a href="#" data-edit="${g.line}" onclick="event.stopPropagation()">Edit</a></td>` : ''}</tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="${cols}">${gameDetail(g)}</td></tr>`).join('')}</tbody></table></div>`;
-  }
   /* ---------- add / edit a game (admin only) ---------- */
   const blankBS = () => ({ date: Eng.fmtDay(Eng.todayDay()), type: '', picked: [], tie: {}, sets: [], landscapes: [], vp: {}, notes: '', editId: null });
   let bs = blankBS();
@@ -717,22 +459,13 @@ import { hashFor as hashForRoute } from '../lib/route.js';
           const dir = th.dataset.dir === 'desc' ? 'asc' : 'desc';
           heads.forEach(x => { delete x.dataset.dir; x.removeAttribute('aria-sort'); });
           th.dataset.dir = dir; th.setAttribute('aria-sort', dir === 'asc' ? 'ascending' : 'descending');
-          // Expandable game rows (gamesTable) pair each .grow summary row with
-          // a sibling .gdetail row sharing the same data-g — sort only the
-          // summary rows, then re-attach each one's detail row right after it,
-          // so an expanded game's detail stays with it instead of scattering
-          // to wherever its near-empty colspan cell happens to sort.
-          const rows = [...t.tBodies[0].rows].filter(r => !r.classList.contains('gdetail'));
+          const rows = [...t.tBodies[0].rows];
           rows.sort((ra, rb) => {
             const x = val(ra, ci), y = val(rb, ci);
             const r = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true });
             return dir === 'asc' ? r : -r;
           });
-          rows.forEach(r => {
-            t.tBodies[0].appendChild(r);
-            const det = r.dataset.g != null ? t.tBodies[0].querySelector(`tr.gdetail[data-g="${r.dataset.g}"]`) : null;
-            if (det) t.tBodies[0].appendChild(det);
-          });
+          rows.forEach(r => t.tBodies[0].appendChild(r));
         };
         th.addEventListener('click', go);
         th.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
@@ -765,8 +498,8 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     openAddModal(editId);
   }
 
-  // A React page took over the route: drop anything legacy code left floating outside <main>.
-  export function resetLegacyChrome() { closeAddModal(); hidePopLayer(); }
+  // A React page took over the route: drop the Add/Edit Game modal if it was left open.
+  export function resetLegacyChrome() { closeAddModal(); }
 
   // Re-renders the current page from the same context — used by filters and
   // admin forms that change local state but not the data.
@@ -776,13 +509,9 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     curGid = gid;
     D = pickD(ctx, gid);
     closeAddModal();
-    hidePopLayer();
-    const pages = { players: pagePlayers, admin: pageAdmin };
+    const pages = { admin: pageAdmin };
     const fn = pages[route];   // unknown routes are mapped to Home (ported) by App before they get here
     main.innerHTML = fn(gid, arg);
     makeSortable(main);
-    wireGameRows(main);
-    if (route === 'players') wireHighlight(main);
-    if (route === 'players') wireHoverPopups(main);
     if (route === 'admin') wireAdmin();
   }

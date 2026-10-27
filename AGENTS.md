@@ -34,12 +34,13 @@ src/pages/, src/components/, src/PageContext.js — ported pages. src/pages/inde
                  in <main> instead of unmounting the whole app. Shared pieces: TierIcon, SetIcon,
                  NameIcon, PlayerLink, GroupSwitcher, Banner, TypePill, LandscapePills, DateAnchor,
                  GameFinish/GameDetail/GamesTable (expandable game rows), SeasonTable/SeasonRecap,
-                 RatingChart, and SortableTable (React replacement for the old DOM-mutating
+                 RatingChart, StatTile/HoverPopup/PopLayer (the shared hover popup, one node on <body>),
+                 TierProgressBar, and SortableTable (React replacement for the old DOM-mutating
                  makeSortable; supports expandable detail rows).
-src/legacy/pages.js — the pages not yet ported (pageHome, pageSeason, ..., admin forms, Add Game
-                 modal) as one ES module exporting renderLegacyPage(mainEl, ctx). Template-literal
-                 strings written into <main>; React never touches <main>'s children for these
-                 routes. Each ported page deletes its function from here and its entry in render().
+src/legacy/pages.js — what's left of the old renderers: the Admin page and the Add/Edit Game
+                 modal (opened from React via openGameModal(ctx, editId)). Template-literal strings
+                 written into <main>/#modalRoot. Rankings, Season, Players, Head to head, Records and
+                 Games are all React now; this file shrinks as Admin and the modal are ported.
 style.css      — one file, CSS custom properties for theming, light/dark via
                  prefers-color-scheme.
 index.html     — static shell + script tags. No per-page HTML files; everything
@@ -124,6 +125,20 @@ the change is genuinely about the math/model itself.
 3. Drive the interactions on both builds and snapshot after each step (expand, sort, filter, hover,
    modals); a static diff alone misses state bugs. Behavior that *intentionally* differs (e.g. an
    unknown route now behaves exactly like Home) gets noted in the commit message.
+
+4. **Popup/portal content has no context.** A React element carries no context with it — context is
+   resolved where it is *rendered*. `PopLayer` renders popup content outside `PageContext`, so a
+   component used as popup content must not call `usePage()`; pass what it needs as props. (This
+   crashed the whole app on hover until a parity run caught it.)
+5. **Deleting legacy helpers:** `node --check` can't see a missing identifier, and a word-count of
+   references is fooled by comments, prose, and long template strings. After deleting, diff the set
+   of top-level definitions against the previous version and search every removed name for a
+   *call site per line* (`name(`), including inside `${...}`. Then run the modal/Admin parity test
+   (open Add Game, pick players so the preview renders, snapshot `#/admin`).
+6. Adjacent text nodes shape separately in the browser: `{n} game{s}` can be a pixel wider than the
+   same text as one string. Build short label strings with a template literal when exact layout
+   parity matters. Fake-data scenarios in the test harness: `swing` (rank movement), `odd` (undated
+   season, no-seasons group, friendly-only player, empty group), `rich` (landscape tiles + both rivals).
 
 ## Gotchas already paid for — don't rediscover these
 

@@ -7,7 +7,9 @@ import { Fragment, isValidElement, useMemo, useState } from 'react';
    head: [{ label, cls }]   — cls ('l' = left-aligned) is applied to the <th> and its <td>s;
                               a column with an empty label isn't sortable.
    rows: [{ key, cells }]   — a cell is a primitive, or { node, text, className }: `node` is what's
-                              rendered, `text` is what's sorted on (defaults to the primitive).
+                              rendered, `text` is what's sorted on (defaults to the primitive); a cell's
+                              own className replaces the column's `cls` (`className: undefined` = no class
+                              attribute at all; '' renders class="", which some legacy markup had).
                               Optional per row: className, onClick, data (-> data-g), and an
                               expandable `detail` node shown in a following <tr class="gdetail">
                               when `open` — it stays attached to its row through sorts. */
@@ -57,7 +59,7 @@ export default function SortableTable({ head, rows, empty }) {
         {shown.length ? shown.map(r => (
           <Fragment key={r.key}>
             <tr className={r.className} data-g={r.data} onClick={r.onClick}>
-              {r.cells.map((c, i) => { const cell = asCell(c); return <td key={i} className={cell.className ?? head[i].cls}>{cell.node}</td>; })}
+              {r.cells.map((c, i) => { const cell = asCell(c); return <td key={i} className={'className' in cell ? cell.className : head[i].cls}>{cell.node}</td>; })}
             </tr>
             {r.detail && <tr className="gdetail" data-g={r.data} hidden={!r.open}><td colSpan={head.length}>{r.detail}</td></tr>}
           </Fragment>
