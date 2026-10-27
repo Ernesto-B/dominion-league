@@ -4,6 +4,7 @@ import Players from './Players.jsx';
 import H2H from './H2H.jsx';
 import Records from './Records.jsx';
 import Games from './Games.jsx';
+import Admin from './Admin.jsx';
 
-// Routes already ported to React; every other route (just Admin now) still goes through LegacyPage.
-export const PAGES = { home: Rankings, season: Season, players: Players, h2h: H2H, records: Records, games: Games };
+// Routes already ported to React; every route is React now.
+export const PAGES = { home: Rankings, season: Season, players: Players, h2h: H2H, records: Records, games: Games, admin: Admin };

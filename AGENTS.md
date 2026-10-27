@@ -9,7 +9,7 @@ A static Dominion board-game league tracker: Elo rankings, seasons, head-to-head
 ## Hard constraints — read before changing architecture
 
 - **GitHub Pages only, by explicit owner preference.** Never introduce another hosting/deploy target. Any server-side need goes through Supabase (Postgres RLS/RPCs, or an Edge Function), not a separate platform — Edge Functions deploy to Supabase's own infrastructure, not GitHub Pages, so they don't conflict with this.
-- **Migrating to React + Vite (branch `react-migration`).** The owner has chosen to drop the old "no build step" rule. `npm run build` now produces `dist/`, deployed to GitHub Pages by `.github/workflows/deploy.yml` (Pages source must be set to "GitHub Actions"). Still no TypeScript in the browser code, and still hash routing (`#/<route>`), which keeps GitHub Pages working without a 404 fallback. The migration is incremental: the legacy `src/legacy/pages.js` keeps rendering everything not yet ported, while React (`src/`) takes over page by page. Static assets (`icons/`, `images/`, `data/`, legacy `js/`) live in `public/` and are copied through untouched.
+- **React + Vite, built and deployed by GitHub Actions.** The site used to be no-build vanilla JS; the owner chose to move it to React (branch `react-migration`). `npm run build` produces `dist/`, which `.github/workflows/deploy.yml` publishes to GitHub Pages (Pages source must be set to "GitHub Actions" — "Deploy from a branch" would publish unbuilt source). Still no TypeScript in the browser code, and still hash routing (`#/<route>`), which keeps GitHub Pages working without a 404 fallback. `vite.config.js` uses `base: './'` so it works from a repo subpath or a custom domain. Static assets (`icons/`, `images/`, `data/`) live in `public/` and are copied through untouched.
 - **Icons are never invented.** The owner generates all icon/image assets themselves and drops them in `~/Downloads/...`; an agent's job is to resize (`sips -Z <px>`) and wire them in. Never substitute a default emoji as a placeholder — ask, or leave the slot as plain text until an asset exists.
 
 ## Architecture
@@ -26,31 +26,29 @@ src/lib/       — framework-free modules: engine.js, format.js (esc/f0/pc/... h
 src/League.jsx — React context + the session state machine (loading -> login | pwchange |
                  ready | error). boot() refetches and recomputes while staying 'ready'.
 src/App.jsx, src/components/ — the shell (Header/nav, footer, skip link, document title),
-                 Login, PasswordChange, and LegacyPage. src/useHash.js is the hash router.
-src/pages/, src/components/, src/PageContext.js — ported pages. src/pages/index.js maps route ->
-                 component; App renders those inside PageContext (D already scoped to the group,
-                 gid, arg, me, allGroups, hashFor, reload...) and sends every other route to
-                 LegacyPage. Ported pages run inside PageBoundary, so a render error shows a message
+                 Login, PasswordChange. src/useHash.js is the hash router.
+src/pages/, src/components/, src/PageContext.js — the pages. src/pages/index.js maps route ->
+                 component; App renders the current one inside PageContext (D already scoped to the
+                 group, gid, arg, me, allGroups, hashFor, reload...). Pages run inside PageBoundary,
+                 so a render error shows a message
                  in <main> instead of unmounting the whole app. Shared pieces: TierIcon, SetIcon,
                  NameIcon, PlayerLink, GroupSwitcher, Banner, TypePill, LandscapePills, DateAnchor,
                  GameFinish/GameDetail/GamesTable (expandable game rows), SeasonTable/SeasonRecap,
                  RatingChart, StatTile/HoverPopup/PopLayer (the shared hover popup, one node on <body>),
-                 TierProgressBar, and SortableTable (React replacement for the old DOM-mutating
-                 makeSortable; supports expandable detail rows).
-src/legacy/pages.js — all that's left of the old renderers: the Admin page (group/season/player/
-                 set management, still template-literal strings written into <main>). Every other
-                 page, and the Add/Edit Game modal, is React; this file goes away when Admin is ported.
+                 TierProgressBar, GameModal (the Add/Edit Game dialog), and SortableTable (click-to-sort
+                 tables; supports expandable detail rows).
 style.css      — one file, CSS custom properties for theming, light/dark via
                  prefers-color-scheme.
-index.html     — static shell + script tags. No per-page HTML files; everything
-                 routes through #/<route>/<arg> in app.js.
+index.html     — the shell Vite builds from: #root (React mounts here), #modalRoot (the
+                 modal's portal target) and one module script. No per-page HTML files;
+                 everything routes through #/<route>/<arg> in src/App.jsx.
 ```
 
 **Data flow**: `boot()` in `src/League.jsx` → Supabase queries (`loadData()` in `src/lib/data.js`) (`players`, `games`,
 `game_results`, `groups`, `seasons`) → `loadData()` reconstructs them into the exact
 row shape `engine.js` has always expected (a `finish` string like `"Jose > Bob = Cara"`,
 reconstructed from the normalized `game_results.place` column) → `buildLeague()` → `Eng.compute(cfg, rows)`
-→ `App` parses the hash and `LegacyPage` calls `renderLegacyPage()`, which picks a page function and swaps `main.innerHTML`.
+→ `App` parses the hash and renders that route's page component, which reads the scoped model through `usePage()`.
 
 This adapter-in-the-middle design is deliberate: `engine.js` was written once, verified
 against a spreadsheet, and has never needed to change for any of the Supabase/auth/admin
@@ -60,11 +58,11 @@ the change is genuinely about the math/model itself.
 
 ## Conventions that exist for a reason
 
-- **`statTile(iconSrc, big, label, iconClass)`** (`src/legacy/pages.js`) builds the icon+number+label
-  tiles used across Player/Season/Records pages. Icon is optional — tiles without one
-  render identically to plain `.stat` tiles elsewhere, so it's safe to reuse everywhere.
-  Icons are **unconditional** even when the stat is 0 (a tile that hides its icon at zero
-  looks broken, not clean — this was a real bug, fixed once already).
+- **`<StatTile icon big label popup>`** (`src/components/StatTile.jsx`) builds the icon+number+label
+  tiles used across the Players/Season/Records pages. `icon` is optional — a tile without one
+  renders identically to a plain `.stat` tile, so it's safe to reuse everywhere. Icons are
+  **unconditional** even when the stat is 0 (a tile that hides its icon at zero looks broken, not
+  clean — this was a real bug, fixed once already).
 - **Group scoping: each group is a fully separate league, not a filtered view of one
   shared dataset.** `buildLeague()` in `src/lib/league.js` calls `Eng.compute()` once per group the
   viewer belongs to, each time with only that group's players/games/seasons —
@@ -105,45 +103,46 @@ the change is genuinely about the math/model itself.
   scoped under `@media (prefers-color-scheme:dark)` and placed **last** in `style.css`
   intentionally — see the gotcha below.
 
-## Porting a legacy page to React (the recipe that's been working)
+## Verifying a change by parity (how the React migration was checked)
 
-0. Port in this order of dependency: shared components first, then pages. Legacy helpers that
-   other legacy pages still call (`finishText`, `gameDetail`, `gamesTable`, `ratingChart`, ...)
-   must stay until their last caller is ported — grep before deleting.
-1. Translate the template string to a component in `src/pages/`, reading `usePage()`; reuse
-   `src/components/` rather than re-deriving markup. Register it in `src/pages/index.js`; delete the
-   legacy function and its `pages` entry in `src/legacy/pages.js`.
-2. Prove parity instead of eyeballing it: `git archive <last-commit-with-the-legacy-page> | tar -x`
-   into a scratch dir, build both trees with the fake-Supabase config (see Testing #4) on
-   different ports, and diff `#main` after normalizing (sort attributes, merge adjacent text
-   nodes, ignore `onerror`). Then click every sortable header on both and diff the row order.
-   This caught real bugs the first time: tie-break order (legacy sorts from the *displayed* order)
-   and sort keys (legacy sorts on visible text, e.g. "not decided"). Make the fake data rich enough
-   that every section renders — check the section headings, an identical half-empty page proves nothing.
-   Count the conditional bits too (`querySelectorAll` for crowns, rank arrows, ...): e.g. rank-move
-   arrows need >= 2 game nights *and* a rank change on the last one, so the fake has an opt-in
-   `?data=swing` scenario. Serialize the **live** DOM without mutating it (never `normalize()` it —
-   that breaks React's node refs), compare `<select>`s by `.value` and `style` by `cssText`, and
-   click row chevrons, not row centers (a player link sits in the middle).
-3. Drive the interactions on both builds and snapshot after each step (expand, sort, filter, hover,
-   modals); a static diff alone misses state bugs. For anything that writes, make the fake `rpc()`
-   record `(name, args)` (and offer a one-shot `window.__failNext`) and diff the payload log between
-   builds — that is the check that protects data, more than any DOM comparison. Behavior that *intentionally* differs (e.g. an
-   unknown route now behaves exactly like Home) gets noted in the commit message.
+The whole migration was done page by page, each checked against the page it replaced. The same
+technique is the best way to prove any refactor *doesn't* change what users see:
+
+1. Use the previous commit as the oracle: `git archive <commit> | tar -x` into a scratch dir, build
+   both trees with the fake-Supabase config (see Testing #4) on different ports, and diff `#main`
+   after normalizing (sort attributes, merge adjacent text nodes, ignore `onerror`/`onclick`).
+   Then click every sortable header on both and diff the row order. Two real bugs this caught the
+   first time: tie-break order (the old sorter sorts from the *displayed* order) and sort keys (it
+   sorts on visible text, e.g. "not decided"). Make the fake data rich enough that every section
+   renders — check the section headings, an identical half-empty page proves nothing. Count the
+   conditional bits too (`querySelectorAll` for crowns, rank arrows, ...): e.g. rank-move arrows
+   need >= 2 game nights *and* a rank change on the last one, so the fake has an opt-in `?data=swing`
+   scenario. Serialize the **live** DOM without mutating it (never `normalize()` it — that breaks
+   React's node refs), compare `<select>`s by `.value`, inputs by live value, and `style` by
+   `cssText`, and click row chevrons, not row centers (a player link sits in the middle).
+2. Drive the interactions on both builds and snapshot after each step (expand, sort, filter, hover,
+   modals, forms); a static diff alone misses state bugs. For anything that writes, make the fake
+   record every write — `rpc(name, args)`, `from(t).insert/update`, `functions.invoke` — and offer a
+   one-shot `window.__failNext`, then diff the payload logs between builds. That is the check that
+   protects data, more than any DOM comparison. Behavior that *intentionally* differs gets noted in
+   the commit message.
+3. Type like a browser: set input values through the **native** value setter and dispatch `input`
+   (and `change` for selects). Assigning `el.value = …` bypasses what React tracks, so React rightly
+   ignores it.
 
 4. **Popup/portal content has no context.** A React element carries no context with it — context is
    resolved where it is *rendered*. `PopLayer` renders popup content outside `PageContext`, so a
    component used as popup content must not call `usePage()`; pass what it needs as props. (This
    crashed the whole app on hover until a parity run caught it.)
-5. **Deleting legacy helpers:** `node --check` can't see a missing identifier, and a word-count of
+5. **Deleting dead helpers:** `node --check` can't see a missing identifier, and a word-count of
    references is fooled by comments, prose, and long template strings. After deleting, diff the set
    of top-level definitions against the previous version and search every removed name for a
-   *call site per line* (`name(`), including inside `${...}`. Then run the modal/Admin parity test
-   (open Add Game, pick players so the preview renders, snapshot `#/admin`).
+   *call site per line* (`name(`), including inside `${...}`. Then exercise the paths that used them
+   (open Add Game and pick players so the preview renders; open every Admin section).
 6. Adjacent text nodes shape separately in the browser: `{n} game{s}` can be a pixel wider than the
    same text as one string. Build short label strings with a template literal when exact layout
    parity matters. Fake-data scenarios in the test harness: `swing` (rank movement), `odd` (undated
-   season, no-seasons group, friendly-only player, empty group), `rich` (landscape tiles + both rivals).
+   season, no-seasons group, friendly-only player, empty group), `rich` (landscape tiles + both rivals + a tied game), `nogroups` (a site with no groups yet).
 
 ## Gotchas already paid for — don't rediscover these
 
@@ -186,7 +185,8 @@ There is no interactive browser available to the agent. What's actually been use
 to verify changes, in order of how often (a real headless Chrome *is* usable for DOM dumps,
 see the end of this list):
 
-1. `node --check src/legacy/pages.js src/lib/*.js` — syntax only, every change; `npm run build` too.
+1. `npm run build` — catches syntax and import errors, every change. (`node --check` can't see a
+   missing identifier; see gotcha 5 below.)
 2. Direct `node -e "..."` scripts importing `src/lib/engine.js` (plain ES module, works in Node) to
    assert on real computed output — e.g. feeding synthetic games through `compute()` and
    checking standings/Elo/records match hand-computed expectations. This is the main way

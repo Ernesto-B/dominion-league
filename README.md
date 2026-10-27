@@ -1,6 +1,6 @@
 # Dominion Night
 
-A website for our Dominion league: Elo rankings, seasons, head-to-head, records and a full game log. It's still a static site with no build step and no server of its own — the page does all the maths in the visitor's browser — but the roster and the game log now live in [Supabase](https://supabase.com) (a hosted Postgres database) instead of a CSV file, and the whole site requires signing in.
+A website for our Dominion league: Elo rankings, seasons, head-to-head, records and a full game log. It's a static React site (built with Vite, hosted on GitHub Pages) with no server of its own — the page does all the maths in the visitor's browser — but the roster and the game log now live in [Supabase](https://supabase.com) (a hosted Postgres database) instead of a CSV file, and the whole site requires signing in.
 
 - **Everyone gets their own account.** No anonymous visitors — names and results aren't exposed to scrapers or randoms who stumble onto the URL.
 - **Only the admin can add, edit or delete games**, from a page on the site itself.
@@ -8,9 +8,22 @@ A website for our Dominion league: Elo rankings, seasons, head-to-head, records 
 
 ## Publish on GitHub Pages (one time)
 
-1. Create a new repository on GitHub (public, since free Pages needs that) and upload everything in this folder, keeping the `data`, `js`, `icons` and `supabase` folders. **Do not** upload a `.env` file or anything containing your Supabase service-role key — see the setup below.
-2. Open Settings, then Pages. Under "Build and deployment" choose "Deploy from a branch", pick `main` and `/ (root)`, and save.
-3. After a minute the site is live at `https://YOUR-NAME.github.io/REPO-NAME/`.
+The site is a [Vite](https://vite.dev) + React app. GitHub builds it for you on every push to `main` (see `.github/workflows/deploy.yml`) and publishes the result — there's nothing to build or upload by hand.
+
+1. Create a new repository on GitHub (public, since free Pages needs that) and push everything in this folder, including `src`, `public`, `supabase` and `.github`. **Do not** commit a `.env` file or anything containing your Supabase service-role key — see the setup below.
+2. Open Settings, then Pages. Under "Build and deployment", set **Source** to **GitHub Actions** (not "Deploy from a branch" — that would publish the unbuilt source and show a blank page).
+3. Push to `main`. The "Deploy to GitHub Pages" workflow runs (watch it on the Actions tab); after a minute or two the site is live at `https://YOUR-NAME.github.io/REPO-NAME/`.
+
+## Working on it locally
+
+You need [Node.js](https://nodejs.org) 20.19+ or 22.12+ (the range this version of Vite supports; GitHub's build uses 22).
+
+```
+npm install        # once
+npm run dev        # live-reloading dev server (http://localhost:5173)
+npm run build      # the same production build GitHub runs; output goes to dist/
+npm run preview    # serve dist/ locally to check the built site
+```
 
 ## One-time Supabase setup
 

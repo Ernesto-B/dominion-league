@@ -8,7 +8,6 @@ import { PAGES } from './pages/index.js';
 import Header from './components/Header.jsx';
 import Login from './components/Login.jsx';
 import PasswordChange from './components/PasswordChange.jsx';
-import LegacyPage from './components/LegacyPage.jsx';
 import PageBoundary from './components/PageBoundary.jsx';
 import PopLayer from './components/PopLayer.jsx';
 import { popup } from './components/popup.js';
@@ -39,7 +38,6 @@ function Shell() {
 
   let body;
   if (Ported) body = <PageContext.Provider value={page}><main id="main" tabIndex={-1}><PageBoundary resetKey={hash}><Ported /></PageBoundary></main></PageContext.Provider>;
-  else if (ready) body = <LegacyPage league={state} boot={boot} route={route} />;
   else {
     let inner;
     if (state.status === 'login') inner = <Login title={state.cfg?.title} error={state.error} />;

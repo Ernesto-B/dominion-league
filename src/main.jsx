@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 
-// No <StrictMode>: its dev-only double-invoked effects would run the legacy
-// page renderer (and the auth subscription) twice. Revisit once pages are ported.
+// Not wrapped in <StrictMode> yet. It only changes development builds (double-invoked effects), so it
+// is worth trying: the auth subscription in League.jsx and the modal/popup effects all clean up, and
+// boot() just fetches twice in dev. Re-run the browser suites against a dev server if you turn it on.
 createRoot(document.getElementById('root')).render(<App />);
