@@ -255,8 +255,6 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     root.querySelectorAll('a[data-edit]').forEach(a => {
       a.addEventListener('click', e => { e.preventDefault(); openAddModal(+a.dataset.edit); });
     });
-    const addBtn = root.querySelector('#gAddBtn');
-    addBtn && addBtn.addEventListener('click', () => openAddModal(null));
   }
 
   /* ---------- pages ---------- */
@@ -490,20 +488,6 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     const cols = canEdit ? 9 : 8;
     return `<div class="tablewrap"><table><thead><tr><th></th><th class="l">Date</th><th></th><th class="l">Finish</th><th class="l">Sets</th><th>VP</th><th class="l">Landscapes</th><th class="l">Notes</th>${canEdit ? '<th></th>' : ''}</tr></thead><tbody>${list.map(g => `<tr class="grow" data-g="${g.line}"><td class="chev">▸</td><td class="l">${g.date}</td><td>${typePill(g.type)}</td><td class="wrap">${finishText(g)}</td><td class="wrap">${g.sets.map(s => setIcon(s, 22) || esc(s)).join(' ')}</td><td>${g.vp ?? ''}</td><td class="wrap">${landscapePills(g)}</td><td class="wrap">${esc(g.notes)}</td>${canEdit ? `<td><a href="#" data-edit="${g.line}" onclick="event.stopPropagation()">Edit</a></td>` : ''}</tr><tr class="gdetail" data-g="${g.line}" hidden><td colspan="${cols}">${gameDetail(g)}</td></tr>`).join('')}</tbody></table></div>`;
   }
-  const gf = { season: 'all', type: 'all', player: 'all', set: 'all' };
-  function pageGames(gid) {
-    let list = D.games.filter(g =>
-      (gf.season === 'all' || String(g.season) === gf.season) && (gf.type === 'all' || g.type === gf.type) && (gf.player === 'all' || g.places[gf.player] != null) && (gf.set === 'all' || g.sets.includes(gf.set))).slice().reverse();
-    const canEdit = !!(me && me.is_admin);
-    return `<div class="head"><div><h1>Games</h1><p class="lede">Every table we've logged, newest first. Winners in bold.</p></div>${canEdit ? '<button id="gAddBtn" class="iconbtn" type="button"><img src="icons/nav/add-a-game.png" alt="Add a game"></button>' : ''}</div>${groupSwitcher('games', gid)}${banner()}
-      <div class="controls"><label class="f">Season <select id="gfs">${seasonOptions(gf.season, true)}</select></label>
-      <label class="f">Type <select id="gft">${['all', 'Regular', 'Playoff', 'Friendly'].map(t => `<option value="${t}"${gf.type === t ? ' selected' : ''}>${t === 'all' ? 'All types' : t}</option>`).join('')}</select></label>
-      <label class="f">Player <select id="gfp"><option value="all">Everyone</option>${D.players.map(p => `<option${gf.player === p.name ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
-      <label class="f">Set <select id="gfset"><option value="all">All sets</option>${SET_NAMES.filter(n => enabledSets.has(n) || D.records.sets[n]).map(n => `<option${gf.set === n ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
-      <span class="meta">${list.length} table${list.length === 1 ? '' : 's'}</span></div>` +
-      (list.length ? gamesTable(list, canEdit) : '<p class="empty">Nothing matches those filters.</p>');
-  }
-
   /* ---------- add / edit a game (admin only) ---------- */
   const blankBS = () => ({ date: Eng.fmtDay(Eng.todayDay()), type: '', picked: [], tie: {}, sets: [], landscapes: [], vp: {}, notes: '', editId: null });
   let bs = blankBS();
@@ -935,10 +919,23 @@ import { hashFor as hashForRoute } from '../lib/route.js';
   // this page with fresh data.
   const boot = () => ctx.reload();
 
-  export function renderLegacyPage(el, c) {
-    main = el; ctx = c;
+  function bindContext(c) {
+    ctx = c;
     ({ cfg, me, allGroups, computedByGroup, rawPlayers, rawSeasons, playerIdByName, seasonDbIds, enabledSets } = c);
+    curGid = c.gid;
+    D = pickD(c, c.gid);
+  }
+
+  export function renderLegacyPage(el, c) {
+    main = el;
+    bindContext(c);
     render();
+  }
+
+  // The Add/Edit Game modal is still legacy; ported pages open it through here. editId null = new game.
+  export function openGameModal(c, editId) {
+    bindContext(c);
+    openAddModal(editId);
   }
 
   // A React page took over the route: drop anything legacy code left floating outside <main>.
@@ -953,7 +950,7 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     D = pickD(ctx, gid);
     closeAddModal();
     hidePopLayer();
-    const pages = { home: pageHome, season: pageSeason, players: pagePlayers, h2h: pageH2H, games: pageGames, admin: pageAdmin };
+    const pages = { home: pageHome, season: pageSeason, players: pagePlayers, h2h: pageH2H, admin: pageAdmin };
     const fn = pages[route] || pageHome;
     main.innerHTML = fn(gid, arg);
     makeSortable(main);
@@ -962,5 +959,4 @@ import { hashFor as hashForRoute } from '../lib/route.js';
     if (route === 'players') wireHoverPopups(main);
     if (route === 'admin') wireAdmin();
     const hs = $('#h2hsel'); if (hs) hs.addEventListener('change', () => { location.hash = hashFor('h2h', curGid, hs.value); });
-    [['#gfs', 'season'], ['#gft', 'type'], ['#gfp', 'player'], ['#gfset', 'set']].forEach(([id, k]) => { const el = $(id); if (el) el.addEventListener('change', () => { gf[k] = el.value; render(); const again = $(id); if (again) again.focus(); }); });
   }

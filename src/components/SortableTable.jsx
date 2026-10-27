@@ -1,4 +1,4 @@
-import { isValidElement, useMemo, useState } from 'react';
+import { Fragment, isValidElement, useMemo, useState } from 'react';
 
 /* Click-to-sort table, replacing the old DOM-mutating makeSortable(). Same rules: first click on a
    column sorts descending, then toggles; ISO dates compare as strings, leading numbers as numbers
@@ -7,7 +7,10 @@ import { isValidElement, useMemo, useState } from 'react';
    head: [{ label, cls }]   — cls ('l' = left-aligned) is applied to the <th> and its <td>s;
                               a column with an empty label isn't sortable.
    rows: [{ key, cells }]   — a cell is a primitive, or { node, text, className }: `node` is what's
-                              rendered, `text` is what's sorted on (defaults to the primitive). */
+                              rendered, `text` is what's sorted on (defaults to the primitive).
+                              Optional per row: className, onClick, data (-> data-g), and an
+                              expandable `detail` node shown in a following <tr class="gdetail">
+                              when `open` — it stays attached to its row through sorts. */
 const sortVal = raw => {
   const s = String(raw == null ? '' : raw).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
@@ -52,7 +55,12 @@ export default function SortableTable({ head, rows, empty }) {
       })}</tr></thead>
       <tbody>
         {shown.length ? shown.map(r => (
-          <tr key={r.key}>{r.cells.map((c, i) => { const cell = asCell(c); return <td key={i} className={cell.className ?? head[i].cls}>{cell.node}</td>; })}</tr>
+          <Fragment key={r.key}>
+            <tr className={r.className} data-g={r.data} onClick={r.onClick}>
+              {r.cells.map((c, i) => { const cell = asCell(c); return <td key={i} className={cell.className ?? head[i].cls}>{cell.node}</td>; })}
+            </tr>
+            {r.detail && <tr className="gdetail" data-g={r.data} hidden={!r.open}><td colSpan={head.length}>{r.detail}</td></tr>}
+          </Fragment>
         )) : empty && <tr><td colSpan={head.length} className="l">{empty}</td></tr>}
       </tbody>
     </table></div>
