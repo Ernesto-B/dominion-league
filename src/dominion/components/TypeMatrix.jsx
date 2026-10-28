@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { sortMatrixRows } from '../stats.js';
 import { cardsFilterHref } from '../links.js';
-import { ExpansionBadge } from './bits.jsx';
+import { Chip, ExpansionBadge } from './bits.jsx';
+import SunburstChart from './SunburstChart.jsx';
 import SortHeaders from './SortHeaders.jsx';
+import { DEFAULT_CHART } from '../sunburst.js';
 
 /* Card names of each printed type in each expansion, as one table so expansions and types can be compared. Click a heading
    to sort the expansions by it (a number column starts with the biggest); click a number to see those exact cards. The
    shading compares expansions WITHIN a column (each type has its own scale, since Action dwarfs everything else). */
-export default function TypeMatrix({ matrix, names }) {
+export default function TypeMatrix({ matrix, names, cards = [], chart = DEFAULT_CHART, onChart = () => {} }) {
   const [sort, setSort] = useState({ key: null, dir: 'asc' });
+  const { view, by, zoom } = chart;      // 'table' | 'sunburst'; the sunburst's inner ring; what it is zoomed into — all kept in the URL by the Overview
   const rows = sortMatrixRows(matrix.rows, sort);
   const top = Object.fromEntries(matrix.types.map(t => [t, Math.max(1, ...matrix.rows.map(r => r.counts[t]))]));
   const columns = [['expansion', 'Expansion', 'l'], ['names', 'Card names', ''], ...matrix.types.map(t => ['t:' + t, t, ''])];
@@ -21,6 +24,20 @@ export default function TypeMatrix({ matrix, names }) {
 
   return (
     <>
+      <div className="dn-viewbar">
+        <div className="dn-mode" role="group" aria-label="How to show the card types">
+          <Chip pressed={view === 'table'} onClick={() => onChart({ view: 'table', zoom: null })}>Table</Chip>
+          <Chip pressed={view === 'sunburst'} onClick={() => onChart({ view: 'sunburst' })}>Sunburst</Chip>
+        </div>
+        {view === 'sunburst' && (
+          <div className="dn-mode" role="group" aria-label="What the inner ring shows">
+            <span className="meta">Inner ring</span>
+            <Chip pressed={by === 'expansion'} onClick={() => onChart({ by: 'expansion', zoom: null })}>Expansions</Chip>
+            <Chip pressed={by === 'type'} onClick={() => onChart({ by: 'type', zoom: null })}>Card types</Chip>
+          </div>
+        )}
+      </div>
+      {view === 'sunburst' ? <SunburstChart key={`${by}|${zoom ?? ''}`} matrix={matrix} by={by} cards={cards} zoom={zoom} onZoom={z => onChart({ zoom: z })} /> : <>
       <div className="tablewrap"><table className="plain dn-table dn-matrix">
         <caption className="dn-sr">Number of card names of each printed type in each expansion</caption>
         <SortHeaders columns={columns} sort={sortKey} dir={sort.dir} onSort={key => onSort(key.startsWith('t:') ? key.slice(2) : key)} />
@@ -44,6 +61,7 @@ export default function TypeMatrix({ matrix, names }) {
         Click a heading to sort the expansions by it, or a number to see those cards. Shading compares expansions within a column.
         {sort.key !== null && <> <button type="button" className="ghost" onClick={() => setSort({ key: null, dir: 'asc' })}>Reset to collection order</button></>}
       </p>
+      </>}
     </>
   );
 }

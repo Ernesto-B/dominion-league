@@ -48,14 +48,8 @@ describe('Overview', () => {
     expect(t).toMatch(/Base Game/); expect(t).toMatch(/Cornucopia & Guilds/);
     expect(t).toMatch(/Events.*48/); expect(t).toMatch(/Traits.*15/);
   });
-  it('has no Edition or Attacks column; average cost is shown with coin icons, not a dollar sign', () => {
-    const head = html.match(/<thead>[\s\S]*?<\/thead>/)[0];
-    expect(text(head)).not.toMatch(/Edition/); expect(text(head)).not.toMatch(/Attacks/); expect(text(head)).toMatch(/Avg\. cost/);
-    const sec = html.slice(html.indexOf('id="ov-table"'), html.indexOf('id="st-copies"') > 0 ? html.indexOf('id="ov-table"') + 9000 : undefined);
-    const body = sec.match(/<tbody>[\s\S]*?<\/tbody>/)[0];
-    expect(body).not.toMatch(/\$\d/);                                                  // no "$4.0" text any more
-    expect(body).toMatch(/aria-label="Average coin cost \d\.\d\d"[^>]*><span[^>]*><img[^>]*src="icons\/costs\/coin-\d+\.png"/);
-    expect(t).toMatch(/Avg\. cost is the average coin cost per card name, shown as the nearest whole coin/);
+  it('no longer has the "By expansion" table, nor the Edition / Attacks columns it replaced', () => {
+    expect(html).not.toContain('id="ov-table"'); expect(t).not.toMatch(/Avg\. cost|Physical cards\s+Avg/);
     expect(t).not.toMatch(/Attacks counts/); expect(t).not.toMatch(/Only edition/);
   });
   it('also carries what used to be the Statistics tab (one page, no duplicate charts)', () => {
@@ -63,7 +57,6 @@ describe('Overview', () => {
     expect((html.match(/aria-label="Landscape designs per type"/g) || []).length).toBe(1);
     expect((html.match(/aria-label="Kingdom card names per printed type"/g) || []).length).toBe(1);
   });
-  it('says a multi-type card is counted once under each type', () => { expect(t).toMatch(/counted once under each/); expect(t).toMatch(/122 cards have more than one type/); });
 });
 
 describe('Kingdom cards browser', () => {
@@ -331,14 +324,21 @@ describe('back to your place (scroll memory)', () => {
   });
   it('forgets it once the viewer leaves the list/detail pages, and for a different list URL', () => {
     const win = setup();
-    navigated(list, detail, 500); navigated(detail, '#/dominion', 0);   // off to the Overview
+    navigated(list, detail, 500); navigated(detail, '#/dominion/insights', 0);   // off to Insights
     location.hash = list; restoreListScroll(); expect(win.scrollTo).not.toHaveBeenCalled();
     navigated(list, detail, 700); location.hash = '#/dominion/cards?type=Victory'; restoreListScroll(); expect(win.scrollTo).not.toHaveBeenCalled();
   });
-  it('does not record a position for a filter change (same page) or for the landscapes list', () => {
+  it('does not record a position for a filter change (same page); the landscapes list works like the cards list', () => {
     const win = setup();
     navigated('#/dominion/cards', list, 300); location.hash = list; restoreListScroll(); expect(win.scrollTo).not.toHaveBeenCalled();
     navigated('#/dominion/landscapes', '#/dominion/landscapes/x', 640); location.hash = '#/dominion/landscapes'; restoreListScroll(); expect(win.scrollTo).toHaveBeenLastCalledWith(0, 640);
+  });
+  it('the Overview works too, chart state and all, and an Artifact page counts as a detail page', () => {
+    const win = setup(), ov = '#/dominion?chart=sunburst&zoom=Attack&ring=type';
+    navigated(ov, '#/dominion/cards/dark-ages%3Acultist', 2200); navigated('#/dominion/cards/dark-ages%3Acultist', ov, 0); location.hash = ov;
+    restoreListScroll(); expect(win.scrollTo).toHaveBeenLastCalledWith(0, 2200);
+    navigated('#/dominion', '#/dominion/artifacts/renaissance%3Aartifact%3Ahorn', 900); location.hash = '#/dominion'; restoreListScroll(); expect(win.scrollTo).toHaveBeenLastCalledWith(0, 900);
+    navigated('#/dominion', '#/dominion/cards/x', 300); location.hash = '#/dominion?chart=sunburst'; restoreListScroll(); expect(win.scrollTo).toHaveBeenCalledTimes(2);   // a different chart state: not restored
   });
 });
 
@@ -420,6 +420,24 @@ describe('clickable table rows', () => {
   });
 });
 
+describe('Artifacts', () => {
+  const art = catalog.artifacts.find(a => a.name === 'Horn');
+  it('link from the Overview and from the Landscapes page to their own page', () => {
+    for (const h of [render(''), render('landscapes')]) for (const a of catalog.artifacts) expect(h, a.name).toContain(`href="#/dominion/artifacts/${encodeURIComponent(a.id)}"`);
+  });
+  it('have a details page with their text, how they are held and their tags', () => {
+    const h = render(`artifacts/${encodeURIComponent(art.id)}`), t = text(h);
+    expect(t).toMatch(/Horn/); expect(t).toMatch(/Artifact/); expect(t).toMatch(/Renaissance/); expect(t).toMatch(/Card text/); expect(art.text).toMatch(/\S/);
+    expect(t).toContain(art.text.split(/\s+/).slice(0, 3).join(' ').replace(/\$/g, '')); expect(t).toMatch(/how it.s held/);
+    expect(h).toContain('href="#/dominion/landscapes"');
+  });
+  it('say so for an Artifact that does not exist, and the route has no bare list', () => {
+    expect(text(render('artifacts/nope'))).toMatch(/Artifact not found/);
+    expect(parseDominionArg('artifacts/renaissance%3Aartifact%3Ahorn')).toEqual({ view: 'artifact', id: 'renaissance:artifact:horn', query: '' });
+    expect(parseDominionArg('artifacts').view).toBe('notfound'); expect(tabFor('artifact')).toBe('landscapes');
+  });
+});
+
 describe('Landscapes', () => {
   const html = render('landscapes'), t = text(html);
   it('lists all 124 landscapes and calls them landscapes, not Kingdom cards', () => { expect(t).toMatch(/Showing 124 of 124 landscapes/); expect(t).toMatch(/aren.t Kingdom cards/); });
@@ -443,14 +461,29 @@ describe('Landscapes', () => {
   it('handles an unknown landscape id gracefully', () => { expect(text(render('landscapes/zz%3Anone'))).toMatch(/Landscape not found/); });
 });
 
+describe('Physical cards by expansion (Overview)', () => {
+  it('keeps the chart but not the explanation under it', () => {
+    const t = text(render(''));
+    expect(t).toMatch(/Physical cards by expansion/); expect(t).not.toMatch(/Every copy in the boxes/); expect(t).not.toMatch(/charted above/);
+  });
+});
+
+describe('Printed card types (Overview)', () => {
+  it('shows the chart without the multi-type explanation under it', () => {
+    const t = text(render(''));
+    expect(t).toMatch(/Printed card types/); expect(t).not.toMatch(/A card can have several printed types/); expect(t).not.toMatch(/these bars add up to/);
+  });
+});
+
 describe('Statistics', () => {
   const html = render(''), t = text(html);
-  it('labels recorded mechanics as provisional and states the denominator', () => {
-    expect(t).toMatch(/Provisional/); expect(t).toMatch(/lower bounds, not totals/); expect(t).toMatch(/denominator: 331 names/);
-    expect(t).toMatch(/recorded positive classifications, not an exhaustive list/);
+  it('states the denominator of the mechanics chart, without a provisional banner or a review-status table', () => {
+    expect(t).toMatch(/denominator: 331 names/);
+    expect(t).not.toMatch(/Provisional|lower bounds, not totals|not an exhaustive list/);
+    expect(t).not.toMatch(/How far the tags have been reviewed|pending detailed verification|batch\d+/i);
   });
-  it('reports the recorded relationship totals and the pending-verification count', () => {
-    expect(t).toMatch(/1,?634 recorded mechanic tags across 96 of the 98 defined mechanics/); expect(t).toMatch(/69 card names are still marked/);
+  it('reports the recorded relationship totals', () => {
+    expect(t).toMatch(/1,?634 recorded mechanic tags across 96 of the 98 defined mechanics/);
   });
   it('covers the distributions asked for', () => {
     for (const h of ['Physical cards by expansion', 'Printed card types', 'Supply piles', 'Landscapes', 'Coin cost', 'Recorded mechanics', 'Data checks']) expect(t).toContain(h);

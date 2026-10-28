@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useCatalog } from '../CatalogContext.jsx';
 import { browseLandscapes, activeLandscapeFilters, DEFAULT_LANDSCAPE_FILTERS, landscapeFiltersFromQuery, landscapeFiltersToQuery, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
 import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
-import { landscapeHref } from '../links.js';
+import { artifactHref, landscapeHref } from '../links.js';
 import { PLURAL, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
@@ -104,7 +104,7 @@ export default function Landscapes({ query = '' }) {
             <thead><tr><th className="l" scope="col">Artifact</th><th className="l" scope="col">Expansion</th><th className="dn-hide-sm" scope="col">Copies</th><th className="l dn-hide-sm" scope="col">Behaviour</th><th className="l dn-hide-sm" scope="col">Recorded tags</th></tr></thead>
             <tbody>{catalog.artifacts.map(a => (
               <tr key={a.id}>
-                <td className="l name"><b>{a.name}</b></td>
+                <td className="l name"><a href={artifactHref(a.id)}><b>{a.name}</b></a></td>
                 <td className="l"><ExpansionBadge name={a.expansion} size={14} /></td>
                 <td className="dn-hide-sm">{a.copies}</td>
                 <td className="l dn-hide-sm">{a.behaviour ? humanize(a.behaviour) : '—'}</td>

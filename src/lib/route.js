@@ -13,7 +13,10 @@ export const ROUTE_TITLES = { dominion: 'Collection' };
    (Dominion/Admin) or a bare #/records — so leaving to such a page and coming back doesn't reset the group.
    `explicit` says the URL itself carried the group, i.e. the viewer chose it just now. */
 export function parseHash(hash, allGroups, lastGid) {
-  const parts = hash.replace(/^#\/?/, '').split('/');
+  // a query ("?chart=sunburst") belongs to the page, not to a path segment: peel it off first and hand it to the page with `arg`
+  const raw = hash.replace(/^#\/?/, ''), qi = raw.indexOf('?');
+  const query = qi >= 0 ? raw.slice(qi) : '';
+  const parts = (qi >= 0 ? raw.slice(0, qi) : raw).split('/');
   const route = parts[0] || 'home';
   const multi = !GLOBAL_ROUTES.includes(route) && allGroups.length > 1;
   const known = id => allGroups.some(g => g.id === id);
@@ -22,7 +25,7 @@ export function parseHash(hash, allGroups, lastGid) {
   try { if (named) named = decodeURIComponent(named); } catch { /* malformed: treated as unknown */ }
   const explicit = known(named);
   const gid = allGroups.length ? (explicit ? named : fallback) : null;
-  const arg = (multi ? parts.slice(2) : parts.slice(1)).join('/');
+  const arg = (multi ? parts.slice(2) : parts.slice(1)).join('/') + query;
   return { route, gid, arg, explicit };
 }
 

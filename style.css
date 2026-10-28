@@ -341,7 +341,7 @@ td.dn-cost-cell{white-space:nowrap}
 .dn-types{display:inline-flex;gap:4px;flex-wrap:wrap}
 /* printed-type colours, as r,g,b triples so the pill (translucent wash) and the filter chip (coloured edge) share them.
    The wash sits over the pill's normal background and the text keeps its usual colour, so both themes stay readable. */
-:root{--t-action:150,150,150;--t-treasure:235,195,30;--t-duration:248,112,8;--t-attack:228,25,40;--t-reaction:60,130,235;--t-victory:60,170,90;--t-project:240,110,170;--t-trait:150,90,225;--t-event:170,165,158;--t-way:110,190,245;--t-landmark:40,125,70}
+:root{--t-action:150,150,150;--t-treasure:235,195,30;--t-duration:248,112,8;--t-attack:228,25,40;--t-reaction:60,130,235;--t-victory:60,170,90;--t-project:240,110,170;--t-trait:150,90,225;--t-event:170,165,158;--t-way:110,190,245;--t-landmark:40,125,70;--t-command:118,134,160;--t-gathering:150,160,172;--t-looter:96,108,128;--sb-neutral:150,162,180}
 .pill.t-action{background:rgba(var(--t-action),.38)}
 .pill.t-treasure{background:rgba(var(--t-treasure),.42)}
 .pill.t-duration{background:rgba(var(--t-duration),.5)}
@@ -453,6 +453,37 @@ a.dn-kchip:hover{border-color:var(--muted)}
 .dn-rztile.fresh{animation:dn-fresh 1.6s ease-out}
 @media (prefers-reduced-motion:reduce){.dn-rztile.fresh{animation:none;box-shadow:0 0 0 2px rgb(var(--t-treasure))}}
 @media (max-width:600px){.dn-rzgrid{grid-template-columns:1fr}.dn-rz-bar{align-items:flex-start}}
+.dn-viewbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 22px;margin:0 0 12px}
+.dn-viewbar .dn-mode{margin-top:0}
+.dn-sb{display:grid;justify-items:center;gap:10px}
+.dn-sb-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.dn-sb-key{display:inline-flex;align-items:center;gap:7px;min-height:0;padding:4px 11px;font:500 13px var(--text);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;cursor:pointer}
+.dn-sb-key i{width:12px;height:12px;border-radius:50%;display:block}
+.dn-sb-key.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.dn-sb-svg{width:100%;max-width:560px;height:auto;display:block;-webkit-tap-highlight-color:transparent}
+.dn-sb-arc{fill-opacity:.8;stroke:none;cursor:pointer;transition:fill-opacity .12s,opacity .12s;outline:none}
+.dn-sb-arc.leaf{fill-opacity:.55}
+.dn-sb-arc.alt{fill-opacity:.6}
+.dn-sb-neutral{fill:rgba(var(--sb-neutral),.2)}
+.dn-sb-arc:hover,.dn-sb-arc.on{fill-opacity:1}
+.dn-sb-neutral:hover,.dn-sb-neutral.on{fill:rgba(var(--sb-neutral),.42)}
+.dn-sb-arc:focus-visible,a:focus-visible .dn-sb-arc{stroke:var(--focus);stroke-width:3}
+.dn-sb-svg a{outline:none}
+.dn-sb-arc.dim{opacity:.18}
+.dn-sb-hole{fill:var(--panel)}
+.dn-sb-hole.back{cursor:pointer;outline:none}
+.dn-sb-hole.back:hover{fill:var(--line)}
+.dn-sb-hole.back:focus-visible{stroke:var(--focus);stroke-width:3}
+.dn-sb-num,.dn-sb-lab{fill:var(--ink);font:600 13px var(--text)}
+.dn-sb-lab{font-size:12.5px}
+.dn-sb-big{fill:var(--ink);font:800 34px var(--display)}
+.dn-sb-big.sm{font-size:24px}
+.dn-sb-card{fill:var(--ink);font:500 10.5px var(--text)}
+.dn-sb-crumbs{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 16px}
+.dn-sb-sub{fill:var(--muted);font:500 13px var(--text)}
+.dn-sb-ico{opacity:.85}
+@media (prefers-color-scheme:dark){.dn-sb-ico{filter:brightness(0) invert(1)}}   /* the set icons are dark line art, like img.seticon elsewhere */
+.dn-sb-info{margin:0;min-height:44px;text-align:center;max-width:560px}
 .dn-pager{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-top:12px}
 .dn-pager-nav{display:inline-flex;align-items:center;gap:10px;margin-left:auto}
 .dn-table tr.dn-rowlink{cursor:pointer}
@@ -555,3 +586,6 @@ tr.grow.hl td.chev + td{box-shadow:inset 3px 0 0 var(--brass),inset 0 1px 0 var(
   a.pl,.lname a{display:inline-block;padding:11px 4px;margin:-11px -4px}
   .dn-rztile-btns button{min-height:44px}
 }
+
+/* on a phone the ring is ~60% of its drawn size, so card names on it would be ~6px: leave them off and let a tap read the card */
+@media (max-width:720px){.dn-sb-card{display:none}}

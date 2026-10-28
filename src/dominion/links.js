@@ -6,6 +6,7 @@ import { DEFAULT_CARD_FILTERS, DEFAULT_LANDSCAPE_FILTERS, cardFiltersToQuery, la
 export const dominionHref = (view = '', id = null, query = '') => '#/dominion' + (view ? '/' + view : '') + (id != null ? '/' + encodeURIComponent(id) : '') + query;
 export const cardHref = (id, query = '') => dominionHref('cards', id, query);
 export const landscapeHref = (id, query = '') => dominionHref('landscapes', id, query);
+export const artifactHref = id => dominionHref('artifacts', id);
 // the browser, already filtered: cardsFilterHref({ types: ['Attack'] })
 export const cardsFilterHref = patch => dominionHref('cards', null, cardFiltersToQuery({ ...DEFAULT_CARD_FILTERS, ...patch }));
 export const landscapesFilterHref = patch => dominionHref('landscapes', null, landscapeFiltersToQuery({ ...DEFAULT_LANDSCAPE_FILTERS, ...patch }));
@@ -35,9 +36,10 @@ function parsePath(path) {
   if (view === 'overview' || view === 'stats') return id == null ? { view: 'overview', id: null } : { view: 'notfound', id: null };
   if (view === 'cards') return id == null ? { view: 'cards', id: null } : { view: 'card', id };
   if (view === 'landscapes') return id == null ? { view: 'landscapes', id: null } : { view: 'landscape', id };
+  if (view === 'artifacts') return id == null ? { view: 'notfound', id: null } : { view: 'artifact', id };   // there is no list of Artifacts: they sit on the Landscapes page
   if (view === 'insights') return id == null ? { view: 'insights', id: null } : { view: 'notfound', id: null };
   if (view === 'randomizer') return id == null ? { view: 'randomizer', id: null } : { view: 'notfound', id: null };
   return { view: 'notfound', id: null };
 }
 // which top-level tab a view belongs to (a card's detail page lives under "Kingdom cards")
-export const tabFor = view => ({ card: 'cards', landscape: 'landscapes' }[view] || view);
+export const tabFor = view => ({ card: 'cards', landscape: 'landscapes', artifact: 'landscapes' }[view] || view);

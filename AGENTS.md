@@ -45,6 +45,8 @@ src/dominion/  — the Dominion collection section (#/dominion[/cards[/<id>] | /
                  replaceState, useUrlFilters.js is the hook, scrollMemory.js restores the list scroll on return);
                  randomizer.js is the PURE Kingdom draw (rules, locks, re-rolls, the link codec, setup notes);
                  kingdom.js (a game's kingdom items, name search), kingdomDraft.js (the Randomizer -> Add Game hand-off),
+                 sunburst.js (pure geometry + data for the sunburst view of "Card types by expansion", incl. zoomData() for the
+                 click-to-zoom down to individual cards, drawn by components/SunburstChart.jsx in the type-pill colours — the `--t-*` variables in style.css);
                  playStats.js (pure play counts / insights) and useLeagueGames.js (the viewer's group's games, from
                  PageContext; null outside the league) tie the Collection to the league;
                  views/ + components/ are presentational (they read the catalog from
@@ -201,8 +203,9 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   pile, Knights and Castles are ONE pile with several names, so names >= piles), *physical* cards (sum of pile
   copies), landscapes and Artifacts are five different things. Landscapes and Artifacts are never Kingdom cards.
 - **Mechanic tags are positive-only and non-exhaustive.** A missing tag is NOT a confirmed "no". There is
-  deliberately no "without"/"exclude" filter anywhere (a test enforces this), tag counts are labelled provisional,
-  and the disclaimer (`MECHANICS_NOTE`) appears wherever mechanics are filtered or counted. Landscape/Artifact
+  deliberately no "without"/"exclude" filter anywhere (a test enforces this), the owner removed the on-page disclaimers and the
+  review-status table as clutter (the *behaviour* — never a "without" filter, rules that require tags only ever add cards — is
+  what keeps this honest). Landscape/Artifact
   tags use a *different vocabulary* from the Kingdom taxonomy — never join them to it.
 - **A multi-type card has several printed types** and is listed/counted under each (122 of the 331 names).
 - **Supabase silently truncates responses (1,000 rows by default).** Anything that could grow past that goes

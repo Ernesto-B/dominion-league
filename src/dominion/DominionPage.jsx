@@ -8,6 +8,7 @@ import Landscapes from './views/Landscapes.jsx';
 import LandscapeDetail from './views/LandscapeDetail.jsx';
 import Randomizer from './views/Randomizer.jsx';
 import Insights from './views/Insights.jsx';
+import ArtifactDetail from './views/ArtifactDetail.jsx';
 
 export function DominionNav({ active }) {
   return (
@@ -22,13 +23,14 @@ export function DominionNav({ active }) {
 export function DominionView({ arg }) {
   const r = parseDominionArg(arg);
   switch (r.view) {
-    case 'overview': return <Overview />;
+    case 'overview': return <Overview query={r.query} />;
     case 'cards': return <Cards query={r.query} />;
     case 'card': return <CardDetail id={r.id} query={r.query} />;
     case 'landscapes': return <Landscapes query={r.query} />;
     case 'landscape': return <LandscapeDetail id={r.id} query={r.query} />;
     case 'randomizer': return <Randomizer query={r.query} />;
     case 'insights': return <Insights />;
+    case 'artifact': return <ArtifactDetail id={r.id} />;
     default: return <><h1>Not found</h1><EmptyState>There’s no such page in the collection.</EmptyState></>;
   }
 }

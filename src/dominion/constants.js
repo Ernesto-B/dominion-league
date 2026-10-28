@@ -25,9 +25,5 @@ export const MATRIX_SKIPPED_TYPES = ['Knight', 'Castle'];
 export const LANDSCAPE_TYPES = ['Event', 'Landmark', 'Project', 'Way', 'Trait'];   // display order
 export const PLURAL = { Event: 'Events', Landmark: 'Landmarks', Project: 'Projects', Way: 'Ways', Trait: 'Traits' };
 
-// Shown wherever mechanics are filtered or counted. The dataset only records POSITIVE tags.
-export const MECHANICS_NOTE = 'Mechanic tags are recorded positive classifications, not an exhaustive list. A card without a tag may still have that effect — a missing tag is not a confirmed "no".';
-export const MECHANICS_PROVISIONAL = 'Provisional: tags are still being reviewed, so counts are lower bounds, not totals.';
-
 export const humanize = id => { const s = String(id ?? '').replace(/_/g, ' ').trim(); return s ? s[0].toUpperCase() + s.slice(1) : s; };
 export const list = s => (s ? String(s).split('|').map(x => x.trim()).filter(Boolean) : []);

@@ -84,7 +84,7 @@ export function buildCatalog(raw) {
     cards, cardsById: new Map(cards.map(c => [c.id, c])),
     piles, pilesByKey: new Map(piles.map(p => [p.key, p])),
     landscapes, landscapesById: new Map(landscapes.map(l => [l.id, l])),
-    artifacts, taxonomy, expansions,
+    artifacts, artifactsById: new Map(artifacts.map(a => [a.id, a])), taxonomy, expansions,
     ownedExpansions: expansions.filter(e => owned.has(e.name)),
     landscapeTypes: LANDSCAPE_TYPES.filter(t => landscapes.some(l => l.type === t)),
     meta: { mechanicRelationshipCount: raw.mechanicRelationshipCount ?? null, textRecordCount: textRecords.size },
