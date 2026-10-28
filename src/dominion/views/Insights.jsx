@@ -104,7 +104,7 @@ function Loaded({ head, lg }) {
 function Counts({ total, played, patch }) {
   const never = total - played;
   const cell = (n, extra) => (n ? <a href={cardsFilterHref({ ...patch, ...extra })}>{n}</a> : <>0</>);
-  const share = n => <span className="meta"> {total ? Math.round(n / total * 100) : 0}%</span>;
+  const share = n => <span className="dn-pct">{total ? Math.round(n / total * 100) : 0}%</span>;   // a small pill, so it never reads as part of the count
   return (
     <>
       <td>{cell(total, {})}</td>

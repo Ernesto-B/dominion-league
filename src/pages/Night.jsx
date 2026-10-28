@@ -13,6 +13,7 @@ import { useCatalogLoad } from '../dominion/CatalogContext.jsx';
 import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
 import { CardText } from '../dominion/components/bits.jsx';
 import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, toGameItems } from '../dominion/randomizer.js';
+import SnakeDraft from '../dominion/components/SnakeDraft.jsx';
 import CountUp from '../components/CountUp.jsx';
 import RandomizerPanel from '../dominion/components/RandomizerPanel.jsx';
 import { pilesPlayed, playStats } from '../dominion/playStats.js';
@@ -29,6 +30,8 @@ export default function Night() {
   const [st, setSt] = useState(() => (storage() ? loadNight(storage(), gid) : blankNight()));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const savedSt = useRef(null);                          // the form as it was when saved, for Undo
+  const [undoing, setUndoing] = useState(false);
   const [done, setDone] = useState(null);                 // { id } after a successful save
   const [roll, setRoll] = useState(DEFAULT_OPTIONS);          // every option of the Randomizer, here too
   const setRollOpts = patch => setRoll(r => ({ ...r, ...patch }));
@@ -41,6 +44,7 @@ export default function Night() {
   // the rolled kingdom: held in memory after a roll, rebuilt from its saved compact form after a reload
   const rolled = useMemo(() => st.rolled || (cat.status === 'ready' && st.rolledQ ? kingdomFromParams(cat.catalog, new URLSearchParams(st.rolledQ)) : null), [st.rolled, st.rolledQ, cat.status, cat.catalog]);
   const [showText, setShowText] = useState(false);
+  const [drafting, setDrafting] = useState(false);            // the Kingdom step's snake draft (in memory only)
   const [now, setNow] = useState(Date.now());
   const before = useRef({ ranks: {}, tiers: {} });          // the ladder just before saving, to say what the game changed
 
@@ -66,6 +70,7 @@ export default function Night() {
   const save = async () => {
     if (st.picked.length < 2) { setMsg('Pick at least 2 players.'); return; }
     if (!st.date) { setMsg('Pick a date.'); return; }
+    savedSt.current = st;
     before.current = { ranks: Object.fromEntries(D.ranked.map(p => [p.name, p.rank])), tiers: Object.fromEntries(D.ranked.map(p => [p.name, p.tier.id])) };
     setSaving(true); setMsg('Saving…');
     const { data, error } = await sb.rpc('add_game', buildGameArgs({ ...st, editId: null }, gid, playerIdByName));
@@ -80,6 +85,16 @@ export default function Night() {
     if (st.step !== 'players') { setSt(s => back(s)); return; }
     if (window.history.length > 1) window.history.back(); else window.location.hash = hashFor('', gid);
   };
+  // Undo: delete the game just saved and put the form back exactly as it was, so a wrong finish order or VP is one tap to fix
+  const undo = async () => {
+    if (done.id == null) return;
+    setUndoing(true); setMsg('');
+    const { error } = await sb.rpc('delete_game', { p_game_id: done.id });
+    setUndoing(false);
+    if (error) { setMsg(error.message); return; }
+    setSt(savedSt.current || blankNight()); setDone(null);
+    await reload();
+  };
   const startOver = () => { if (storage()) clearNight(storage(), gid); setSt(blankNight()); setDone(null); setMsg(''); };
 
   if (done) return (
@@ -91,7 +106,9 @@ export default function Night() {
           <a className="btn" href={hashFor('', gid)}>See the rankings</a>
           <a className="btn ghost" href={done.id != null ? hashFor('games', gid, done.id) : hashFor('games', gid)}>See the game</a>
           <button type="button" className="ghost" onClick={startOver}>Log another</button>
+          {done.id != null && <button type="button" className="ghost" disabled={undoing} onClick={undo}>{undoing ? 'Undoing…' : 'Undo and fix'}</button>}
         </p>
+        {msg && <p className="meta" role="status">{msg}</p>}
       </div>
     </>
   );
@@ -127,8 +144,14 @@ export default function Night() {
             {!catalog ? (cat.status === 'error' ? <p className="meta">The card list isn’t available right now. You can skip the kingdom and still save the game. <button type="button" className="ghost" onClick={cat.retry}>Try again</button></p> : <p className="meta">Loading the card list…</p>) : (
               <>
                 <p className="meta">Roll a kingdom exactly as in the Randomizer, pick the cards yourself, or skip this step.</p>
+                {drafting
+                  ? <SnakeDraft catalog={catalog} players={st.picked} opts={roll} setOpts={setRollOpts} plays={plays}
+                      onDone={res => { applyKingdom(toGameItems(res), res); setDrafting(false); }} onCancel={() => setDrafting(false)} />
+                  : <>
+                <p className="meta" style={{ marginBottom: 6 }}>Or take turns choosing it: <button type="button" className="linkish" onClick={() => setDrafting(true)}>Snake draft</button></p>
                 <RandomizerPanel catalog={catalog} opts={roll} setOpts={setRollOpts} state={rolled} plays={plays} heading={false} emptyHint={false}
                   onState={res => applyKingdom(toGameItems(res), res)} onReset={() => setRoll(DEFAULT_OPTIONS)} />
+                  </>}
                 <details className="dn-mech night-hand" open={!!items.length && !rolled}><summary>{items.length && !rolled ? 'Your kingdom — change it if you like' : 'Or pick the cards by hand'}</summary>
                   <KingdomPicker items={items} onChange={(kingdom, implied) => setSt(s => ({ ...s, kingdom, rolled: null, rolledQ: null, kingdomTouched: true, sets: [...new Set([...s.sets, ...implied.sets])], landscapes: [...new Set([...s.landscapes, ...implied.landscapes])] }))} />
                 </details>

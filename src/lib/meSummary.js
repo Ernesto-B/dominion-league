@@ -1,6 +1,7 @@
 /* What the "starts with you" home card says about the signed-in player. Pure, so it is tested directly.
    `ranked` is D.ranked (best first); `start` the Elo everyone begins on. Returns null when the player isn't on the ladder yet. */
-export function meSummary(ranked, name, start = 1000) {
+/* `win` (optional) is what a win at an even table of four pays, so the next-tier line can say how many wins away it is. */
+export function meSummary(ranked, name, start = 1000, win = 0) {
   const i = ranked.findIndex(p => p.name === name);
   if (i < 0) return null;
   const p = ranked[i], above = ranked[i - 1] || null, below = ranked[i + 1] || null;
@@ -8,7 +9,13 @@ export function meSummary(ranked, name, start = 1000) {
   let gap = null;   // the nearest thing to say about the ladder: how far behind the next player up, or how far clear of the one below
   if (above) gap = { kind: 'behind', who: above.name, rank: above.rank, elo: Math.max(0, Math.round(above.elo - p.elo)) };
   else if (below) gap = { kind: 'clear', who: below.name, rank: below.rank, elo: Math.max(0, Math.round(p.elo - below.elo)) };
+  let next = null;   // the next tier up: how many Elo away, how far along the way, and about how many wins that is
+  if (p.nextTier) {
+    const lower = p.tier.min == null || p.tier.min === -Infinity ? start : p.tier.min, upper = p.nextTier.tier.min;
+    next = { tier: p.nextTier.tier, need: p.nextTier.need, pct: Math.max(0, Math.min(1, (p.elo - lower) / (upper - lower))), wins: win > 0 ? Math.max(1, Math.ceil(p.nextTier.need / win)) : null };
+  }
   return {
+    next,
     rank: p.rank, of: ranked.length, elo: Math.round(p.elo), fromStart: Math.round(p.elo - start), tier: p.tier, provisional: p.status === 'Provisional',
     streak: p.streak, titles: p.titles || 0, gap,
     last: last ? { place: last.place, of: last.game.n, date: last.game.date, delta: Math.round(last.after - last.before) } : null,

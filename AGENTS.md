@@ -206,6 +206,11 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   must never sign the viewer out. `components/PullToRefresh.jsx` refetches on a pull from the top of a touch screen (the browser's own is off via `overscroll-behavior`).
 - Motion is small and honours `prefers-reduced-motion` (all of it sits in one `no-preference` block near the end of `style.css`; `components/CountUp.jsx`
   counts numbers). The app is installable (`public/manifest.webmanifest`); its icon is still the owner's `icons/emperor.png` until they supply a 192/512 one.
+- Badges and rivalries are pure (`lib/achievements.js`, tested): every badge is a fact about a player's results with the game that earned it, never expiring. The me card shows
+  the next tier (`meSummary` `next`), the nemesis and a one-time "New badge" (seen ids in localStorage `dl.badges.<group>`; a first look announces nothing). Game night's
+  "Undo and fix" deletes the game just saved and restores the form from `savedSt`.
+- The snake draft (`dominion/draft.js`, pure and tested; `components/SnakeDraft.jsx`) is a mode of Game night's Kingdom step: a pool twice the kingdom size (first half under all the
+  randomizer's rules), picks in snake order on one device, then `finishDraft` rebuilds the kingdom (with setup notes) the same shape as a roll. It is in memory only: a reload mid-draft starts over.
 - The Admin page has two tabs: People (new player, who plays in which group) and Settings (sets, groups, seasons).
 - The `lists` styling swaps the phone's game tables for `components/GameCards.jsx` (Last night and the Games page share the open/closed
   state with the table beside them), shows the form dots under each ladder name, and draws `RatingChart` at phone width with tappable name

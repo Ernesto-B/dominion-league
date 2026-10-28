@@ -14,6 +14,8 @@ import StatTile, { SetStatTile, SetBreakdown, PopText } from '../components/Stat
 import TierProgressBar from '../components/TierProgressBar.jsx';
 import GameCards from '../components/GameCards.jsx';
 import H2HMatrix from '../components/H2HMatrix.jsx';
+import Badges from '../components/Badges.jsx';
+import { rivalries } from '../lib/achievements.js';
 import RatingChart from '../components/RatingChart.jsx';
 import SortableTable from '../components/SortableTable.jsx';
 import { setIconPath } from '../lib/sets.js';
@@ -79,9 +81,7 @@ export default function Players() {
   }
 
   const rivals = hh.players.filter(o => o !== p.name).map(o => ({ o, w: hh.ahead[p.name][o], l: hh.ahead[o][p.name] }));
-  const dec = rivals.filter(x => x.w + x.l >= 3);
-  const nem = dec.filter(x => x.l > x.w).sort((a, b) => b.l / (b.w + b.l) - a.l / (a.w + a.l) || b.l - a.l)[0];
-  const vic = dec.filter(x => x.w > x.l).sort((a, b) => b.w / (b.w + b.l) - a.w / (a.w + a.l) || b.w - a.w)[0];
+  const { nem, vic } = rivalries(hh, p.name);
   const opp = rivals.filter(x => x.w + x.l > 0).sort((a, b) => (b.w / (b.w + b.l)) - (a.w / (a.w + a.l)) || (b.w + b.l) - (a.w + a.l));
 
   return (
@@ -118,6 +118,7 @@ export default function Players() {
           {vic && <p><b>Favourite victim</b> <PlayerLink name={vic.o} />, finished behind {vic.w} of {vic.w + vic.l} times.</p>}
         </div>
       )}
+      <Badges p={p} />
       <h2>Rating history</h2>
       <RatingChart names={rankedHere.map(x => x.name)} hot={p.name} highlight={highlight} onHover={n => setHover({ of: p.name, name: n })} />
       {opp.length > 0 && <>
