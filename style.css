@@ -128,8 +128,10 @@ a.gamelink:hover{text-decoration:underline solid}
 tr.seed td{background:var(--felt-soft)}
 td.wrap{white-space:normal;min-width:180px;text-align:left}
 tr.grow{cursor:pointer}
-td.chev{width:18px;color:var(--muted);transition:transform .15s}
-tr.grow.open td.chev{transform:rotate(90deg)}
+/* the arrow is drawn by ::before so that only the glyph turns when a row opens; turning the whole cell would turn its highlight with it */
+td.chev{width:18px;color:var(--muted);font-size:0;line-height:0}
+td.chev::before{content:"▸";display:inline-block;font-size:15px;line-height:1.5;transition:transform .15s}
+tr.grow.open td.chev::before{transform:rotate(90deg)}
 tr.gdetail td{background:var(--bg);padding:14px 16px}
 tr.gdetail:hover{background:none}
 /* an expanded game must not stretch the whole table to fit its own wide inner table: the cell takes the width the other rows give
@@ -551,13 +553,15 @@ a.dn-kchip:hover{border-color:var(--muted)}
 }
 
 /* A game reached from a link (#/games/<group>/<id>): tint its row and pulse once so the eye finds it. */
-tr.grow.hl td:not(.chev){background:color-mix(in srgb, var(--brass) 22%, transparent);box-shadow:inset 0 1px 0 var(--brass),inset 0 -1px 0 var(--brass)}
-tr.grow.hl td.chev + td{box-shadow:inset 3px 0 0 var(--brass),inset 0 1px 0 var(--brass),inset 0 -1px 0 var(--brass)}
-/* the opened game under a highlighted row is part of it: tint the whole expanded block, as the card is on a phone */
-tr.grow.hl + tr.gdetail > td{background:color-mix(in srgb, var(--brass) 14%, transparent);box-shadow:inset 3px 0 0 var(--brass),inset 0 -1px 0 var(--brass)}
-tr.grow.hl:has(+ tr.gdetail:not([hidden])) td:not(.chev){box-shadow:inset 0 1px 0 var(--brass)}
-tr.grow.hl:has(+ tr.gdetail:not([hidden])) td.chev + td{box-shadow:inset 3px 0 0 var(--brass),inset 0 1px 0 var(--brass)}
-@media (prefers-reduced-motion:no-preference){tr.grow.hl td:not(.chev){animation:hlpulse 1.6s ease-out 1}}
+/* One highlighted block: the row, its arrow cell and (when opened) the whole expanded game under it share one tint and one gold outline */
+tr.grow.hl td{background:color-mix(in srgb, var(--brass) 22%, transparent);box-shadow:inset 0 1px 0 var(--brass),inset 0 -1px 0 var(--brass)}
+tr.grow.hl td:first-child{box-shadow:inset 3px 0 0 var(--brass),inset 0 1px 0 var(--brass),inset 0 -1px 0 var(--brass)}
+tr.grow.hl td:last-child{box-shadow:inset -3px 0 0 var(--brass),inset 0 1px 0 var(--brass),inset 0 -1px 0 var(--brass)}
+tr.grow.hl:has(+ tr.gdetail:not([hidden])) td{box-shadow:inset 0 1px 0 var(--brass)}
+tr.grow.hl:has(+ tr.gdetail:not([hidden])) td:first-child{box-shadow:inset 3px 0 0 var(--brass),inset 0 1px 0 var(--brass)}
+tr.grow.hl:has(+ tr.gdetail:not([hidden])) td:last-child{box-shadow:inset -3px 0 0 var(--brass),inset 0 1px 0 var(--brass)}
+tr.grow.hl + tr.gdetail > td{background:color-mix(in srgb, var(--brass) 14%, transparent);box-shadow:inset 3px 0 0 var(--brass),inset -3px 0 0 var(--brass),inset 0 -1px 0 var(--brass)}
+@media (prefers-reduced-motion:no-preference){tr.grow.hl td{animation:hlpulse 1.6s ease-out 1}}
 @keyframes hlpulse{0%{background:color-mix(in srgb, var(--brass) 60%, transparent)}100%{background:color-mix(in srgb, var(--brass) 22%, transparent)}}
 
 /* Back-to-top button (Games + Collection): fades in once the page is scrolled. */
@@ -670,6 +674,7 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
 .gc-sub{grid-column:2 / 4;color:var(--muted);font-size:13px;padding:0 0 8px}
 .gcard-more{margin-top:4px;padding-top:8px;border-top:1px dashed var(--line);cursor:default}
 .gcard.hl{background:color-mix(in srgb, var(--brass) 18%, transparent)}
+.ux-redesign .gview-cards .gcard.hl{background:color-mix(in srgb, var(--brass) 18%, var(--panel));border-color:var(--brass)}
 
 /* --- ux "lists": denser lists and stacked tables on phones --- */
 .stack-sort{display:none}
@@ -678,6 +683,10 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
 .since ul{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:4px}
 .since button{min-height:44px}
 ol.night-did .pill{margin-left:6px}
+/* the player whose page it is, marked in their results: their name in the finish order and their row in an opened game */
+.me-name{background:color-mix(in srgb, var(--brass) 24%, transparent);border-radius:4px;padding:1px 5px;margin:0 -2px}
+tr.gme>td{background:color-mix(in srgb, var(--brass) 16%, transparent)}
+tr.gme>td:first-child{box-shadow:inset 3px 0 0 var(--brass)}
 details.how .how-key{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--felt);border-radius:10px;padding:12px 16px;margin:8px 0 4px}
 details.how .how-key p{margin:0 0 6px}
 details.how .how-key p:last-child{margin:0}

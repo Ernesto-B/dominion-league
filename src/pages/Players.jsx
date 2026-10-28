@@ -142,12 +142,12 @@ function Results({ p }) {
   const rows = p.results.slice().reverse().map(r => {
     const d = r.after - r.before, g = r.game, isOpen = open.has(g.line);
     return {
-      key: g.line, data: g.line, className: 'grow' + (isOpen ? ' open' : ''), onClick: () => toggle(g.line), open: isOpen, detail: <GameDetail game={g} />,
+      key: g.line, data: g.line, className: 'grow' + (isOpen ? ' open' : ''), onClick: () => toggle(g.line), open: isOpen, detail: <GameDetail game={g} me={p.name} />,
       cells: [
         { node: '▸', className: 'chev' },
         { node: <a className="gamelink" href={hashFor('games', gid, g.line)} title="Open this game in the Games page" onClick={e => e.stopPropagation()}>{g.date}</a>, text: g.date, className: undefined },
         { node: <TypePill type={g.type} />, text: g.type === 'Playoff' || g.type === 'Friendly' ? g.type : '', className: undefined },
-        { node: <GameFinish game={g} />, text: finishText(g), className: 'wrap' },
+        { node: <GameFinish game={g} me={p.name} />, text: finishText(g), className: 'wrap' },
         { node: g.sets.map((s, i) => <Fragment key={s}>{i > 0 && ' '}{setIconPath(s) ? <SetIcon name={s} size={20} /> : s}</Fragment>), text: g.sets.map(s => setIconPath(s) ? '' : s).join(' '), className: 'wrap' },
         { node: <LandscapePills game={g} />, text: (g.landscapes || []).join(' '), className: 'wrap' },
         { node: f2(r.pts), text: f2(r.pts), className: undefined },

@@ -115,34 +115,36 @@ export default function Overview({ query = '' }) {
         </Section>
       </div>
 
-      <Section title="Coin cost" id="st-cost">
-        <div className="builder">
-          <BarChart label="Kingdom card names per coin cost" labelWidth="34px" items={[
-            ...s.coinCosts.map(c => ({ key: 'c' + c.key, label: <CostIcons coins={c.key} size={24} />, value: c.count, href: cardsFilterHref({ costs: [c.key] }) })),
-            { key: 'debt-only', label: <span className="dn-cost" role="img" aria-label="Debt only: cards that cost only Debt" title="Cards that cost only Debt"><PlainDebtIcon size={24} /></span>, value: s.debtOnly.length },
-          ]} />
-          <p className="note" style={{ marginBottom: 0 }}>
-            Out of {s.names} card names. {s.debtOnly.length} cards cost only Debt ({s.debtOnly.map(c => c.name).join(', ')}) and have no coin cost, so they get their own bar rather than counting as $0.
-            {' '}{s.debtCards.length - s.debtOnly.length} more costs coins <i>and</i> Debt ({s.debtCards.filter(c => c.coins > 0).map(c => c.name).join(', ')}) and is counted at its coin cost.
-            {' '}{s.overpayCards.length} can be overpaid ({s.overpayCards.map(c => c.name).join(', ')}) and are counted at their base cost.
-          </p>
-        </div>
-      </Section>
+      <div className="grid2">
+        <Section title="Coin cost" id="st-cost">
+          <div className="builder">
+            <BarChart label="Kingdom card names per coin cost" labelWidth="34px" items={[
+              ...s.coinCosts.map(c => ({ key: 'c' + c.key, label: <CostIcons coins={c.key} size={24} />, value: c.count, href: cardsFilterHref({ costs: [c.key] }) })),
+              { key: 'debt-only', label: <span className="dn-cost" role="img" aria-label="Debt only: cards that cost only Debt" title="Cards that cost only Debt"><PlainDebtIcon size={24} /></span>, value: s.debtOnly.length },
+            ]} />
+            <p className="note" style={{ marginBottom: 0 }}>
+              Out of {s.names} card names. {s.debtOnly.length} cards cost only Debt ({s.debtOnly.map(c => c.name).join(', ')}) and have no coin cost, so they get their own bar rather than counting as $0.
+              {' '}{s.debtCards.length - s.debtOnly.length} more costs coins <i>and</i> Debt ({s.debtCards.filter(c => c.coins > 0).map(c => c.name).join(', ')}) and is counted at its coin cost.
+              {' '}{s.overpayCards.length} can be overpaid ({s.overpayCards.map(c => c.name).join(', ')}) and are counted at their base cost.
+            </p>
+          </div>
+        </Section>
 
-      <Section title="Recorded mechanics" id="st-mech">
-        <div className="builder">
-          <p className="meta" style={{ marginTop: 0 }}>
-            {m.relationships.toLocaleString()} recorded mechanic tags across {m.distinct} of the {m.taxonomySize} defined mechanics; {m.cardsWithTag} of {s.names} card names have at least one tag.
-            Bars show card names recorded with each mechanic (denominator: {s.names} names), top {Math.min(TOP, m.frequency.length)} of {m.frequency.length}.
-          </p>
-          <BarChart label="Card names recorded with each mechanic, most common first" items={shown.map(mechItem)} />
-          {rest.length > 0 && (
-            <details className="dn-more"><summary>Show the other {rest.length} recorded mechanics</summary>
-              <BarChart label="Remaining recorded mechanics" items={rest.map(mechItem)} max={shown[0].count} />
-            </details>
-          )}
-        </div>
-      </Section>
+        <Section title="Recorded mechanics" id="st-mech">
+          <div className="builder">
+            <p className="meta" style={{ marginTop: 0 }}>
+              {m.relationships.toLocaleString()} recorded mechanic tags across {m.distinct} of the {m.taxonomySize} defined mechanics; {m.cardsWithTag} of {s.names} card names have at least one tag.
+              Bars show card names recorded with each mechanic (denominator: {s.names} names), top {Math.min(TOP, m.frequency.length)} of {m.frequency.length}.
+            </p>
+            <BarChart label="Card names recorded with each mechanic, most common first" items={shown.map(mechItem)} />
+            {rest.length > 0 && (
+              <details className="dn-more"><summary>Show the other {rest.length} recorded mechanics</summary>
+                <BarChart label="Remaining recorded mechanics" items={rest.map(mechItem)} max={shown[0].count} />
+              </details>
+            )}
+          </div>
+        </Section>
+      </div>
 
       <Section title="Data checks" id="st-checks">
         <ul className="dn-checks">
