@@ -21,16 +21,16 @@ describe('computeXp', () => {
   it('pays each part of a four-player game by hand', () => {
     const g = game({ Me: 1, A: 2, B: 3, C: 4 }, { vp: { Me: 40, A: 30 }, landscapes: ['Event'], kingdom: king });
     const x = computeXp(D([g]));
-    expect(x.get('Me').perGame[0].parts).toEqual({ finish: 50, win: 15, surprise: 20, vp: 50, landscapes: 10, cards: 10 });   // 3+3 for cards, 4 for the landscape
-    expect(x.get('Me').total).toBe(155);
-    expect(x.get('A').perGame[0].parts).toMatchObject({ finish: 40, half: 8, surprise: 7, vp: 38 });   // 2nd of four is the top half; 30 VP + 10 x 30/40
-    expect(x.get('B').perGame[0].parts).toEqual({ finish: 30, landscapes: 10, cards: 10 });           // 3rd of four: no top-half prize, and it did no better than Elo expected
-    expect(x.get('C').total).toBe(20 + 10 + 10);                                                      // last place still earns
+    expect(x.get('Me').perGame[0].parts).toEqual({ finish: 49, win: 15, surprise: 20, vp: 50, landscapes: 10, cards: 10 });   // 3+3 for cards, 4 for the landscape
+    expect(x.get('Me').total).toBe(154);
+    expect(x.get('A').perGame[0].parts).toMatchObject({ finish: 41, half: 8, surprise: 7, vp: 38 });   // 2nd of four is the top half; 30 VP + 10 x 30/40
+    expect(x.get('B').perGame[0].parts).toEqual({ finish: 33, landscapes: 10, cards: 10 });           // 3rd of four: no top-half prize, and it did no better than Elo expected
+    expect(x.get('C').total).toBe(25 + 10 + 10);                                                      // last place still earns
   });
   it('doubles finish + win XP on a win streak, up to 100 in all; cards only pay the first time', () => {
     const x = computeXp(D([game({ Me: 1, A: 2, B: 3, C: 4 }, { kingdom: king }), game({ Me: 1, A: 2, B: 3, C: 4 }, { kingdom: king })]));
     const second = x.get('Me').perGame[1].parts;
-    expect(second.streak).toBe(35);          // 65 doubled is 130, capped at 100
+    expect(second.streak).toBe(36);          // 64 doubled is 128, capped at 100
     expect(second.cards).toBeUndefined();    // seen those already
     expect(x.get('A').perGame[1].parts.streak).toBeUndefined();
   });
@@ -57,7 +57,7 @@ describe('computeXp', () => {
     expect(t.perGame[0].parts.season).toBe(XP.season);      // game 2 is after the season ended
     const big = computeXp(D([game({ Me: 1, A: 2 }, { vp: { Me: 1000, A: 5 } })])).get('Me');
     expect(big.level).toBe(5); expect(big.steps.find(s => s.level === 5).earned).not.toBeNull();
-    expect(big.total).toBe(30 + 15 + 20 + 1010 + 30);       // 1,075 and then the level-5 badge's 30
+    expect(big.total).toBe(33 + 15 + 20 + 1010 + 30);       // 1,078 and then the level-5 badge's 30
   });
   it('is only ever added to', () => {
     const x = computeXp(D([game({ Me: 4, A: 1, B: 2, C: 3 }), game({ Me: 4, A: 1, B: 2, C: 3 })])).get('Me');

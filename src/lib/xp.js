@@ -18,7 +18,7 @@ import { achievements } from './achievements.js';
      badges     BADGE for each badge unlocked in the game (plus a badge's own `bonus`)
    and SEASON for winning a season, paid on that player's last game of it. Nothing is capped except the streak. */
 export const XP = {
-  last: 20, perPlace: 10, win: 15, half: 8, halfMin: 4, halfMax: 6,
+  last: 25, perPlace: 8, win: 15, half: 8, halfMin: 4, halfMax: 6,
   streakMult: 2, streakCap: 100,
   improve: [[0.5, 20], [0.25, 10]],        // [rise over your own recent average, in the finishing fraction, XP], best first
   improveWindow: 5,
