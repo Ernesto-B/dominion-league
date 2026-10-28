@@ -1039,3 +1039,5 @@ a:hover .dn-exp-label{text-decoration:underline}
   .dn-table th:first-child,.dn-table td:first-child{padding-left:12px}
   .dn-table th:last-child:not(.dn-hide-sm),.dn-table td:last-child:not(.dn-hide-sm),.dn-table th.edge,.dn-table td.edge{padding-right:12px}
 }
+.dn-namecost{display:inline-flex;align-items:center;gap:8px}
+@media (max-width:720px){.dn-iconset .dn-exp-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}}   /* a phone shows just the set's icon (the name stays for screen readers) */

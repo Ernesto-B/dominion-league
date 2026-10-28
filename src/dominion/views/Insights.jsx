@@ -4,7 +4,8 @@ import { useLeagueGames } from '../useLeagueGames.js';
 import { MIN_GAMES_FOR_RECORD, insights } from '../playStats.js';
 import { cardHref, cardsFilterHref, dominionHref } from '../links.js';
 import { EmptyState } from '../components/States.jsx';
-import { ExpansionBadge, Section } from '../components/bits.jsx';
+import { ExpansionBadge, Section, TypePills } from '../components/bits.jsx';
+import CostIcons from '../components/Cost.jsx';
 import { usePager } from '../components/Pager.jsx';
 
 const pct = r => `${Math.round(r * 100)}%`;
@@ -45,17 +46,21 @@ function Loaded({ head, lg }) {
       <p className="note" style={{ marginTop: 0 }}>Based on <b>{lg.withKingdom}</b> of {lg.totalGames} {lg.totalGames === 1 ? 'game' : 'games'}{lg.groupName ? ` in ${lg.groupName}` : ''} that {lg.withKingdom === 1 ? 'has' : 'have'} a kingdom logged.{lg.multiGroup ? ' It shows the group you last picked on the league pages.' : ''}</p>
 
       <Section title="Most played cards" id="in-most">
-        <div className="tablewrap"><table className="plain dn-table">
+        <div className="tablewrap"><table className="plain dn-table dn-iconset">
           <caption className="dn-sr">The most played Kingdom cards</caption>
-          <thead><tr><th className="l" scope="col">Card</th><th className="l dn-hide-sm" scope="col">Expansion</th><th className="edge" scope="col">Games</th><th className="l dn-hide-sm" scope="col">Last played</th></tr></thead>
-          <tbody>{pg.items.map(r => (
+          <thead><tr><th className="l" scope="col">Card</th><th className="l dn-hide-sm" scope="col">Types</th><th className="l" scope="col"><span className="th-full">Expansion</span><span className="th-short" aria-hidden="true">Set</span></th><th className="edge" scope="col">Games</th><th className="l dn-hide-sm" scope="col">Last played</th></tr></thead>
+          <tbody>{pg.items.map(r => {
+            const members = catalog.pilesByKey.get(r.key).cardIds.map(id => catalog.cardsById.get(id)).filter(Boolean), first = members[0];
+            return (
             <tr key={r.key}>
-              <td className="l name"><a href={cardHref(repCard(r.key))}>{r.name}</a></td>
-              <td className="l dn-hide-sm"><ExpansionBadge name={r.expansion} size={16} /></td>
+              <td className="l name"><span className="dn-namecost">{first && <CostIcons coins={first.coins} debt={first.debt} overpay={first.overpay} size={22} />}<a href={cardHref(repCard(r.key))}>{r.name}</a></span></td>
+              <td className="l dn-hide-sm"><TypePills types={[...new Set(members.flatMap(c => c.types))]} /></td>
+              <td className="l"><ExpansionBadge name={r.expansion} size={16} /></td>
               <td className="edge">{r.games}</td>
               <td className="l dn-hide-sm"><a href={lg.hashFor('games', lg.gid, r.last.line)} title="Open that game">{r.last.date}</a></td>
             </tr>
-          ))}</tbody>
+            );
+          })}</tbody>
         </table></div>
         {pager}
       </Section>
