@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 /* The Overview's small charts. Plain SVG / HTML / CSS, no library; every number is real text (screen readers read it)
    and every item may carry an `href` (its label becomes a link to the matching filtered list). Each chart answers a different question,
    so the page doesn't read as one chart repeated:
@@ -17,24 +19,34 @@ const colored = items => items.map((it, i) => ({ ...it, color: it.color || catCo
 const Name = ({ i }) => <>{i.icon}{i.href ? <a href={i.href} onClick={i.onClick}>{i.label}</a> : i.label}</>;
 const typeColor = key => `rgb(var(--t-${String(key).toLowerCase()}, var(--sb-neutral)))`;
 
-/* ---- Donut: slices of a ring, a legend beside it with the exact numbers and shares */
+/* ---- Donut: slices of a ring with a legend beside it. Pointing at a slice or a legend row lights that one up and names it in the middle;
+   the share (a percentage) is on the tooltip and in the spoken text, the legend itself shows the count. */
 export function Donut({ items, label, center }) {
   const data = colored(items), total = Math.max(1, sum(data)), R = 70, C = 2 * Math.PI * R;
+  const [hot, setHot] = useState(null);
+  const lit = data.find(i => i.key === hot) || null;
   let acc = 0;
   return (
     <div className="dn-donut" role="group" aria-label={label}>
       <svg viewBox="0 0 200 200" aria-hidden="true">
         <g transform="rotate(-90 100 100)">
           {data.map(i => {
-            const len = (i.value / total) * C, el = <circle key={i.key} cx="100" cy="100" r={R} fill="none" stroke={i.color} strokeWidth="30" strokeDasharray={`${Math.max(0, len - 1.5)} ${C - Math.max(0, len - 1.5)}`} strokeDashoffset={-acc}><title>{`${i.label}: ${fmt(i.value)}`}</title></circle>;
+            const len = (i.value / total) * C, on = hot === i.key;
+            const el = <circle key={i.key} cx="100" cy="100" r={R} fill="none" stroke={i.color} strokeWidth={on ? 36 : 30} opacity={hot && !on ? 0.35 : 1} style={{ transition: 'opacity .15s, stroke-width .15s' }}
+              strokeDasharray={`${Math.max(0, len - 1.5)} ${C - Math.max(0, len - 1.5)}`} strokeDashoffset={-acc} onMouseEnter={() => setHot(i.key)} onMouseLeave={() => setHot(null)}><title>{`${i.label}: ${fmt(i.value)} (${share(i.value, total)})`}</title></circle>;
             acc += len; return el;
           })}
         </g>
-        <text x="100" y="98" textAnchor="middle" className="dn-donut-n">{fmt(sum(data))}</text>
-        <text x="100" y="118" textAnchor="middle" className="dn-donut-c">{center}</text>
+        <text x="100" y="98" textAnchor="middle" className="dn-donut-n">{fmt(lit ? lit.value : sum(data))}</text>
+        <text x="100" y="118" textAnchor="middle" className="dn-donut-c">{lit ? lit.label : center}</text>
       </svg>
       <ol className="dn-legend dn-legend-2" style={{ '--rows': Math.ceil(data.length / 2) }}>
-        {data.map(i => <li key={i.key}><i style={{ background: i.color }} aria-hidden="true" /><span className="dn-legend-name"><Name i={i} /></span><span className="dn-legend-n">{fmt(i.value)}</span><span className="dn-legend-p">{share(i.value, total)}</span></li>)}
+        {data.map(i => (
+          <li key={i.key} className={hot === i.key ? 'on' : undefined} title={`${i.label}: ${fmt(i.value)} (${share(i.value, total)})`} onMouseEnter={() => setHot(i.key)} onMouseLeave={() => setHot(null)} onFocus={() => setHot(i.key)} onBlur={() => setHot(null)}>
+            <i style={{ background: i.color }} aria-hidden="true" /><span className="dn-legend-name"><Name i={i} /></span><span className="dn-legend-n">{fmt(i.value)}</span>
+            <span className="dn-sr">{share(i.value, total)}</span>
+          </li>
+        ))}
       </ol>
     </div>
   );
@@ -106,7 +118,9 @@ export function Columns({ items, label }) {
       {items.map(i => (
         <li key={i.key ?? i.label}>
           <b className="dn-col-n">{fmt(i.value)}</b>
-          <span className="dn-col-track" aria-hidden="true"><span style={{ height: `${Math.max(i.value ? 3 : 0, (i.value / top) * 100)}%` }} /></span>
+          {i.href
+            ? <a className="dn-col-track dn-col-link" href={i.href} title={i.title} aria-label={i.title || `${i.value}`}><span style={{ height: `${Math.max(i.value ? 3 : 0, (i.value / top) * 100)}%` }} /></a>
+            : <span className="dn-col-track" aria-hidden="true"><span style={{ height: `${Math.max(i.value ? 3 : 0, (i.value / top) * 100)}%` }} /></span>}
           <span className="dn-col-label"><Name i={i} /></span>
         </li>
       ))}

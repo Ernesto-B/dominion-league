@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { realCatalog } from './fixtures.js';
 import { generate, seededRng } from '../../src/dominion/randomizer.js';
-import { kingdomImageLayout, shareKingdomImage, TONE_RGB, W, PAD, ROW_H } from '../../src/dominion/kingdomImage.js';
+import { kingdomCode, kingdomImageLayout, shareKingdomImage, wrapParts, TONE_RGB, W, PAD, ROW_H } from '../../src/dominion/kingdomImage.js';
 import { ROOT } from '../../scripts/dominion/lib/tables.mjs';
 
 const catalog = realCatalog();
@@ -61,5 +61,34 @@ describe('sharing the picture', () => {
     for (const nav of [null, {}, { canShare: () => false }, { canShare: () => true, share: async () => { throw new Error('NotAllowedError'); } }]) {
       const { a, d } = doc(); expect(await shareKingdomImage(blob, { nav, doc: d })).toBe('downloaded'); expect(a.click).toHaveBeenCalledOnce(); expect(a.download).toBe('kingdom.png');
     }
+  });
+});
+
+describe('the long expansion list', () => {
+  const names = ['Cornucopia & Guilds', 'Seaside', 'Intrigue', 'Menagerie', 'Base Game', 'Plunder', 'Hinterlands', 'Dark Ages', 'Prosperity', 'Empires', 'Renaissance'];
+  it('wraps onto several lines instead of running off the right edge, never splitting an expansion name', () => {
+    const lines = wrapParts(names.join(' · '));
+    expect(lines.length).toBeGreaterThan(1);
+    lines.forEach(l => expect(l.length).toBeLessThanOrEqual(54));
+    expect(lines.join(' · ')).toBe(names.join(' · '));
+  });
+  it('keeps a short list on one line, and makes room for every extra line (nothing overlaps the cards)', () => {
+    expect(wrapParts('Seaside · Plunder')).toEqual(['Seaside · Plunder']);
+    const r = roll({}), one = kingdomImageLayout(r, { subtitle: 'Seaside' }), many = kingdomImageLayout(r, { subtitle: names.join(' · ') });
+    expect(many.subtitle.lines.length).toBeGreaterThan(1);
+    expect(many.cards[0].y).toBe(one.cards[0].y + (many.subtitle.lines.length - 1) * many.subtitle.lineH);
+    expect(many.height).toBeGreaterThan(one.height);
+    expect(many.subtitle.y + (many.subtitle.lines.length - 1) * many.subtitle.lineH).toBeLessThan(many.cards[0].y);
+  });
+});
+
+describe('the kingdom number in the file name', () => {
+  it('is six digits, the same for the same kingdom and different for another', () => {
+    const a = roll({}, 1), b = roll({}, 2);
+    expect(kingdomCode(a)).toMatch(/^\d{6}$/); expect(kingdomCode(a)).toBe(kingdomCode(roll({}, 1))); expect(kingdomCode(a)).not.toBe(kingdomCode(b));
+  });
+  it('shows up in the picture’s footer when given', () => {
+    expect(kingdomImageLayout(roll({}), { code: '182736' }).footer.text).toBe('Dominion Night · 182736');
+    expect(kingdomImageLayout(roll({})).footer.text).toBe('Dominion Night');
   });
 });

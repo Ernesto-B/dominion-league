@@ -7,7 +7,7 @@ import { coinIconSrc, debtIconSrc } from './components/Cost.jsx';
 import { setIconPath } from '../lib/sets.js';
 import { primaryType } from './kingdom.js';
 
-export const W = 1080, PAD = 48, GAP = 14, ROW_H = 92, HEAD_H = 168, SECTION_H = 64;
+export const W = 1080, PAD = 48, GAP = 14, ROW_H = 92, HEAD_H = 168, SECTION_H = 64, SUB_LINE_H = 38, SUB_CHARS = 54;
 const COL_W = (W - 2 * PAD - GAP) / 2;
 
 // the same colours as the type pills and chart (the --t-* variables in style.css; a test keeps them in step)
@@ -18,7 +18,26 @@ export const TONE_RGB = {
 };
 const toneOf = t => (t && TONE_RGB[String(t).toLowerCase()] ? String(t).toLowerCase() : null);
 
-export function kingdomImageLayout(state, { title = 'Kingdom', subtitle = '' } = {}) {
+/* A short number that names a kingdom (for the file name: kingdom-182736.png). It is a fingerprint of the cards and landscapes, not a random
+   seed: the same kingdom always gets the same number, so two people sharing a picture of it can tell it is the same one. */
+export function kingdomCode(state) {
+  const text = [...state.slots.map(s => s.key), '|', ...state.landscapes.map(l => l.landscape.id)].join(',');
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return String((h >>> 0) % 1000000).padStart(6, '0');
+}
+
+// "A · B · C ..." broken into lines that fit the picture's width (an estimate by characters; the painter shortens anything that still overflows)
+export function wrapParts(text, max = SUB_CHARS) {
+  const lines = []; let cur = '';
+  String(text || '').split(' · ').filter(Boolean).forEach(part => {
+    if (cur && (cur + ' · ' + part).length > max) { lines.push(cur); cur = part; } else cur = cur ? cur + ' · ' + part : part;
+  });
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+export function kingdomImageLayout(state, { title = 'Kingdom', subtitle = '', code = '' } = {}) {
   const items = [];
   const cardRows = state.slots.map(s => {
     const cards = s.cards, main = cards.find(c => primaryType(c) === 'Attack') || cards[0];
@@ -28,7 +47,8 @@ export function kingdomImageLayout(state, { title = 'Kingdom', subtitle = '' } =
   const hostName = id => { const s = state.slots.find(x => x.cards.some(c => c.id === id)); return s ? s.name : null; };
   const landRows = state.landscapes.map(l => ({ kind: 'landscape', name: l.landscape.name, sub: l.on && hostName(l.on) ? `${l.landscape.type} · on ${hostName(l.on)}` : l.landscape.type, tone: toneOf(l.landscape.type), cost: null, set: expansionMeta(l.landscape.expansion).icon }));
 
-  let y = HEAD_H;
+  const subLines = wrapParts(subtitle), headH = HEAD_H + Math.max(0, subLines.length - 1) * SUB_LINE_H;
+  let y = headH;
   const place = (rows, startY) => rows.map((r, i) => ({ ...r, x: PAD + (i % 2) * (COL_W + GAP), y: startY + Math.floor(i / 2) * (ROW_H + GAP), w: COL_W, h: ROW_H }));
   const cards = place(cardRows, y);
   y += Math.ceil(cardRows.length / 2) * (ROW_H + GAP);
@@ -43,7 +63,7 @@ export function kingdomImageLayout(state, { title = 'Kingdom', subtitle = '' } =
   if (notes.length) { notesBlock = { heading: { text: 'Setup', x: PAD, y: y + 18 }, lines: notes.map((t, i) => ({ text: t, x: PAD, y: y + SECTION_H + 8 + i * 44 })) }; y += SECTION_H + 8 + notes.length * 44; }
   const height = Math.ceil(y + 36 + 40);
   items.push(...cards, ...lands);
-  return { width: W, height, title: { text: title, x: PAD, y: 82 }, subtitle: { text: subtitle, x: PAD, y: 126 }, cards, lands, landHeading, notes: notesBlock, footer: { text: 'Dominion Night', x: W - PAD, y: height - 28 } };
+  return { width: W, height, title: { text: title, x: PAD, y: 82 }, subtitle: { text: subtitle, lines: subLines, x: PAD, y: 126, lineH: SUB_LINE_H }, cards, lands, landHeading, notes: notesBlock, footer: { text: code ? `Dominion Night · ${code}` : 'Dominion Night', x: W - PAD, y: height - 28 } };
 }
 
 // ---- painting (browser only) ----
@@ -67,7 +87,8 @@ export async function drawKingdomImage(canvas, layout, { doc = document } = {}) 
   ctx.fillStyle = '#0A0E12'; ctx.fillRect(0, 0, layout.width, layout.height);
   const grad = ctx.createLinearGradient(0, 0, 0, 200); grad.addColorStop(0, 'rgba(255,255,255,.07)'); grad.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = grad; ctx.fillRect(0, 0, layout.width, 200);
   ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#F2F5F8'; ctx.font = '800 58px "Bricolage Grotesque", system-ui, sans-serif'; ctx.fillText(layout.title.text, layout.title.x, layout.title.y);
-  ctx.fillStyle = '#94A3B3'; ctx.font = '500 28px "Instrument Sans", system-ui, sans-serif'; ctx.fillText(layout.subtitle.text, layout.subtitle.x, layout.subtitle.y);
+  ctx.fillStyle = '#94A3B3'; ctx.font = '500 28px "Instrument Sans", system-ui, sans-serif';
+  layout.subtitle.lines.forEach((line, i) => ctx.fillText(fit(ctx, line, layout.width - 2 * PAD), layout.subtitle.x, layout.subtitle.y + i * layout.subtitle.lineH));
 
   for (const r of rows) {
     ctx.fillStyle = 'rgba(255,255,255,.06)'; ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 16); ctx.fill();

@@ -69,7 +69,7 @@ export default function Overview({ query = '' }) {
         <Section title="Physical cards by expansion" id="st-copies">
           <div className="builder">
             <Lollipop label="Physical Kingdom cards per expansion"
-              items={s.byExpansion.map(e => ({ key: e.name, label: e.label, value: e.copies, icon: e.icon && <SetIcon name={e.icon} size={18} /> }))} />
+              items={s.byExpansion.map(e => ({ key: e.name, label: e.label, value: e.copies, icon: e.icon && <SetIcon name={e.icon} size={18} />, href: cardsFilterHref({ expansions: [e.name] }) }))} />
           </div>
         </Section>
         <Section title="Supply piles" id="st-piles">
@@ -115,8 +115,8 @@ export default function Overview({ query = '' }) {
         <Section title="Coin cost" id="st-cost">
           <div className="builder">
             <Columns label="Kingdom card names per coin cost" items={[
-              ...s.coinCosts.map(c => ({ key: 'c' + c.key, label: <CostIcons coins={c.key} size={24} />, value: c.count, href: cardsFilterHref({ costs: [c.key] }) })),
-              { key: 'debt-only', label: <span className="dn-cost" role="img" aria-label="Debt only: cards that cost only Debt" title="Cards that cost only Debt"><PlainDebtIcon size={24} /></span>, value: s.debtOnly.length },
+              ...s.coinCosts.map(c => ({ key: 'c' + c.key, label: <CostIcons coins={c.key} size={24} />, value: c.count, href: cardsFilterHref({ costs: [c.key] }), title: `${c.count} cards cost ${c.key} coins — show them` })),
+              { key: 'debt-only', label: <span className="dn-cost" role="img" aria-label="Debt only: cards that cost only Debt" title="Cards that cost only Debt"><PlainDebtIcon size={24} /></span>, value: s.debtOnly.length, href: cardsFilterHref({ debt: 'has' }), title: `${s.debtOnly.length} cards cost only Debt (${s.debtCards.length} cost Debt in all) — show the cards that cost Debt` },
             ]} />
             <p className="note" style={{ marginBottom: 0 }}>
               Out of {s.names} card names. {s.debtOnly.length} cards cost only Debt ({s.debtOnly.map(c => c.name).join(', ')}) and have no coin cost, so they get their own bar rather than counting as $0.

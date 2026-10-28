@@ -160,6 +160,13 @@ describe('sortable landscape headers', () => {
 
 describe('the Overview charts', () => {
   const html = render(''), t = text(html);
+  it('lets you click through: every expansion name, and every coin-cost column, opens the filtered Kingdom cards', () => {
+    const phys = html.match(/<ol class="dn-lol"[^>]*aria-label="Physical Kingdom cards per expansion">[\s\S]*?<\/ol>/)[0];
+    expect((phys.match(/href="#\/dominion\/cards\?[^"]*exp=/g) || []).length).toBe(11);
+    const cols = html.match(/<ol class="dn-cols" aria-label="Kingdom card names per coin cost">[\s\S]*?<\/ol>/)[0];
+    expect((cols.match(/class="dn-col-track dn-col-link"/g) || []).length).toBe(11);        // the bars themselves are links (10 costs + Debt)
+    expect(cols).toMatch(/class="dn-col-track dn-col-link" href="#\/dominion\/cards\?[^"]*cost=5"/);
+  });
   it('uses a different kind of chart for each question, not one bar chart repeated', () => {
     expect(html).not.toContain('dn-treemap'); expect((html.match(/class="dn-bars"/g) || []).length).toBe(1);   // one plain bar chart, not one for everything
     for (const [cls, label] of [['dn-donut', 'Kingdom card names per expansion'], ['dn-bars', 'Kingdom card names per printed type'], ['dn-lol', 'Physical Kingdom cards per expansion'],

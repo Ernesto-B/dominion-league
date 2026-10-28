@@ -10,7 +10,7 @@ import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, optionsFromParams,
 import { expansionMeta } from '../constants.js';
 import RandomizerPanel from '../components/RandomizerPanel.jsx';
 import { uxOn } from '../../ux.js';
-import { renderKingdomImage, shareKingdomImage } from '../kingdomImage.js';
+import { kingdomCode, renderKingdomImage, shareKingdomImage } from '../kingdomImage.js';
 
 const expansionName = e => expansionMeta(e).label;
 
@@ -42,8 +42,9 @@ export default function Randomizer({ query = '' }) {
   const shareImage = async () => {
     setCopied('Making the picture…');
     try {
-      const blob = await renderKingdomImage(state, { title: 'Kingdom', subtitle: `${[...new Set(state.slots.map(s => s.expansion))].map(e => expansionName(e)).join(' · ')}` });
-      const how = await shareKingdomImage(blob, { name: 'kingdom.png', title: 'Dominion kingdom' });
+      const code = kingdomCode(state);
+      const blob = await renderKingdomImage(state, { title: 'Kingdom', code, subtitle: `${[...new Set(state.slots.map(s => s.expansion))].map(e => expansionName(e)).join(' · ')}` });
+      const how = await shareKingdomImage(blob, { name: `kingdom-${code}.png`, title: 'Dominion kingdom' });
       setCopied(how === 'shared' ? '' : how === 'downloaded' ? 'Picture saved to your downloads' : '');
     } catch { setCopied('The picture couldn’t be made on this device.'); }
     setTimeout(() => setCopied(''), 3500);
