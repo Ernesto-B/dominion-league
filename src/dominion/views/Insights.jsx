@@ -47,12 +47,12 @@ function Loaded({ head, lg }) {
       <Section title="Most played cards" id="in-most">
         <div className="tablewrap"><table className="plain dn-table">
           <caption className="dn-sr">The most played Kingdom cards</caption>
-          <thead><tr><th className="l" scope="col">Card</th><th className="l dn-hide-sm" scope="col">Expansion</th><th scope="col">Games</th><th className="l dn-hide-sm" scope="col">Last played</th></tr></thead>
+          <thead><tr><th className="l" scope="col">Card</th><th className="l dn-hide-sm" scope="col">Expansion</th><th className="edge" scope="col">Games</th><th className="l dn-hide-sm" scope="col">Last played</th></tr></thead>
           <tbody>{pg.items.map(r => (
             <tr key={r.key}>
               <td className="l name"><a href={cardHref(repCard(r.key))}>{r.name}</a></td>
               <td className="l dn-hide-sm"><ExpansionBadge name={r.expansion} size={16} /></td>
-              <td>{r.games}</td>
+              <td className="edge">{r.games}</td>
               <td className="l dn-hide-sm"><a href={lg.hashFor('games', lg.gid, r.last.line)} title="Open that game">{r.last.date}</a></td>
             </tr>
           ))}</tbody>
@@ -62,13 +62,12 @@ function Loaded({ head, lg }) {
 
       <Section title="Not played yet" id="in-never">
         <div className="builder">
-          <p style={{ marginTop: 0 }}><b>{ins.neverTotal}</b> of the {catalog.piles.length} Kingdom supply piles haven’t been in a logged game.{ins.neverTotal > 0 && <> <a href={cardsFilterHref({ played: 'no' })}>Show them all</a>.</>}</p>
-          <div className="tablewrap"><table className="plain dn-table">
+          <div className="tablewrap"><table className="plain dn-table dn-pcttable">
             <caption className="dn-sr">Kingdom supply piles played and not played yet, by expansion</caption>
-            <thead><tr><th className="l" scope="col">Expansion</th><th scope="col">Piles</th><th scope="col">Played</th><th scope="col">Not played</th></tr></thead>
+            <thead><tr><th className="l" scope="col">Expansion</th><th className="dn-hide-sm" scope="col">Piles</th><th scope="col">Played</th><th scope="col">Not played</th></tr></thead>
             <tbody>{ins.neverByExpansion.map(x => (
               <tr key={x.expansion}>
-                <td className="l"><ExpansionBadge name={x.expansion} /></td>
+                <td className="l"><a href={cardsFilterHref({ expansions: [x.expansion] })}><ExpansionBadge name={x.expansion} /></a></td>
                 <Counts total={x.total} played={x.total - x.never} patch={{ expansions: [x.expansion] }} />
               </tr>
             ))}</tbody>
@@ -103,13 +102,16 @@ function Loaded({ head, lg }) {
 // Piles / Played / Not played cells: each number opens the Kingdom cards table with that expansion (or all) and that play history filtered
 function Counts({ total, played, patch }) {
   const never = total - played;
-  const cell = (n, extra) => (n ? <a href={cardsFilterHref({ ...patch, ...extra })}>{n}</a> : <>0</>);
-  const share = n => <span className="dn-pct">{total ? Math.round(n / total * 100) : 0}%</span>;   // a small pill, so it never reads as part of the count
+  // the number and its percentage are one link, so the whole cell is the target
+  const cell = (n, extra, showShare = true) => {
+    const inner = <><span className="dn-num">{n}</span>{showShare && <span className="dn-pct">{total ? Math.round(n / total * 100) : 0}%</span>}</>;
+    return n ? <a className="dn-cell-link" href={cardsFilterHref({ ...patch, ...extra })}>{inner}</a> : <span className="dn-cell-link off">{inner}</span>;
+  };
   return (
     <>
-      <td>{cell(total, {})}</td>
-      <td>{cell(played, { played: 'yes' })}{share(played)}</td>
-      <td>{cell(never, { played: 'no' })}{share(never)}</td>
+      <td className="dn-hide-sm">{cell(total, {}, false)}</td>
+      <td>{cell(played, { played: 'yes' })}</td>
+      <td>{cell(never, { played: 'no' })}</td>
     </>
   );
 }

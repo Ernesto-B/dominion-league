@@ -16,7 +16,7 @@ import { KingdomChip } from './KingdomChips.jsx';
    onReset()               put the options back to their defaults
    actions                 extra buttons for the bar above the tiles (Copy link, Use for a game, ...)
    plays                   Map(pile key -> games played), for "favor cards we've played less"; null when there are no logged games */
-export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, state, onState, onReset, plays = null, actions = null, heading = true, emptyHint = true, rulesOpen = false, foldExpansions = false }) {
+export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, state, onState, onReset, plays = null, actions = null, emptyHint = true, rulesOpen = false, foldExpansions = false }) {
   const [locked, setLocked] = useState(() => new Set());        // pile keys kept on a re-roll
   const [lockedL, setLockedL] = useState(() => new Set());      // landscape ids kept on a re-roll
   const [message, setMessage] = useState('');
@@ -64,23 +64,21 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
 
         <div className="controls dn-rz-go">
           <button type="submit">{state ? 'Roll a new kingdom' : 'Roll a kingdom'}</button>
-          <label className="f dn-seed-in">Seed <input type="text" inputMode="numeric" size={8} placeholder="random" value={seedText} aria-describedby="rz-seed-help" onChange={e => setSeedText(e.target.value.replace(/[^\d]/g, '').slice(0, 9))} /></label>
+          <label className="f dn-seed-in">Seed <input type="text" inputMode="numeric" size={8} placeholder="random" value={seedText} onChange={e => setSeedText(e.target.value.replace(/[^\d]/g, '').slice(0, 9))} /></label>
           <button type="button" className="ghost" onClick={reset} disabled={!changed}>Reset options</button>
           {(locked.size > 0 || lockedL.size > 0) && state && <span className="meta">Locked cards stay when you roll again.</span>}
         </div>
-        <p className="meta dn-rz-seedhelp" id="rz-seed-help">Every roll has a seed. Roll again with the same seed and the same options and you get the same kingdom.</p>
         {message && <p className="dn-rz-msg" role="alert">{message}</p>}
       </form>
 
       {state ? (
-        <section aria-labelledby="rz-result" ref={resultRef} className="dn-rz-result">
+        <section aria-label="Your kingdom" ref={resultRef} className="dn-rz-result">
           <div className="dn-rz-bar">
-            {heading ? <h2 id="rz-result">Your kingdom</h2> : <h3 id="rz-result" style={{ margin: 0 }}>Your kingdom</h3>}
             <div className="dn-rz-actions">
               <label className="dn-check"><input type="checkbox" checked={showText} onChange={e => setShowText(e.target.checked)} /> Show card text</label>
               {state.seed != null && <span className="dn-seed" title="Roll again with this seed and the same options to get this exact kingdom">Seed <b>{formatSeed(state.seed)}</b></span>}
-              {actions}
             </div>
+            {actions && <div className="dn-rz-actions">{actions}</div>}
           </div>
 
           <ul className="dn-rzgrid" aria-label="Kingdom cards">

@@ -77,7 +77,7 @@ export default function Cards({ query = '' }) {
         </fieldset>
 
         <fieldset className="dn-fieldset"><legend>Cost</legend>
-          <div className="dn-costrow"><span className="meta dn-rowlabel">Coins</span>
+          <div className="dn-costrow">
             <div className="dn-chips" role="group" aria-label="Coin cost (pick one or more)">
               {s.coinCosts.map(c => (
                 <Chip key={c.key} pressed={f.costs.includes(c.key)} count={c.count} label={`${c.key} ${c.key === 1 ? 'coin' : 'coins'} — ${c.count} cards`} onClick={() => update({ costs: toggle(f.costs, c.key) })}>
@@ -86,7 +86,7 @@ export default function Cards({ query = '' }) {
               ))}
             </div>
           </div>
-          <div className="dn-costrow"><span className="meta dn-rowlabel">Debt</span>
+          <div className="dn-costrow">
             <div className="dn-chips" role="group" aria-label="Debt cost">
               <Chip pressed={f.debt === 'none'} label="No Debt cost" onClick={() => update({ debt: f.debt === 'none' ? 'any' : 'none' })}>No Debt</Chip>
               <Chip pressed={f.debt === 'has'} label="Any Debt cost" onClick={() => update({ debt: f.debt === 'has' ? 'any' : 'has' })}><PlainDebtIcon size={22} />Any Debt</Chip>

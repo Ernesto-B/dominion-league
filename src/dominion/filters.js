@@ -12,7 +12,7 @@ export const DEFAULT_CARD_FILTERS = Object.freeze({
   costs: [], debt: 'any', played: 'any', sort: 'name', dir: 'asc',
 });
 export const DEFAULT_LANDSCAPE_FILTERS = Object.freeze({
-  q: '', text: false, types: [], expansions: [], mechanics: [], mechanicMode: 'any', sort: 'name', dir: 'asc',
+  q: '', text: false, types: [], expansions: [], mechanics: [], mechanicMode: 'any', played: 'any', sort: 'name', dir: 'asc',
 });
 
 export const norm = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -79,12 +79,14 @@ export function sortCards(cards, { sort = 'name', dir = 'asc' } = {}, ctx = {}) 
 }
 export const browseCards = (cards, f, ctx = {}) => sortCards(filterCards(cards, f, ctx), f, ctx);
 
-export function filterLandscapes(items, f) {
+/* `ctx.plays` (optional) is the league's landscape play counts, playStats().landscapes: a Map(landscape id -> { games }). */
+export function filterLandscapes(items, f, ctx = {}) {
   return items.filter(l =>
     matchesText([l.name, f.text && l.text], f.q)
     && (!f.types.length || f.types.includes(l.type))
     && (!f.expansions.length || f.expansions.includes(l.expansion))
-    && hits(l.mechanicIds, f.mechanics, f.mechanicMode));
+    && hits(l.mechanicIds, f.mechanics, f.mechanicMode)
+    && (f.played === 'any' || !ctx.plays || (f.played === 'yes') === ctx.plays.has(l.id)));
 }
 export const LANDSCAPE_SORTS = ['name', 'type', 'expansion', 'trigger'];
 export function sortLandscapes(items, { sort = 'name', dir = 'asc' } = {}) {
@@ -105,14 +107,14 @@ export function sortLandscapes(items, { sort = 'name', dir = 'asc' } = {}) {
   const out = items.slice().sort(cmp);
   return sign < 0 ? out.reverse() : out;
 }
-export const browseLandscapes = (items, f) => sortLandscapes(filterLandscapes(items, f), f);
+export const browseLandscapes = (items, f, ctx = {}) => sortLandscapes(filterLandscapes(items, f, ctx), f);
 
 // how many filters are narrowing the list (sorting doesn't count)
 export function activeCardFilters(f) {
   return (f.q.trim() ? 1 : 0) + (f.expansions.length ? 1 : 0) + (f.types.length ? 1 : 0) + (f.mechanics.length ? 1 : 0)
     + (f.costs.length ? 1 : 0) + (f.debt !== 'any' ? 1 : 0) + (f.played !== 'any' ? 1 : 0);
 }
-export const activeLandscapeFilters = f => (f.q.trim() ? 1 : 0) + (f.types.length ? 1 : 0) + (f.expansions.length ? 1 : 0) + (f.mechanics.length ? 1 : 0);
+export const activeLandscapeFilters = f => (f.q.trim() ? 1 : 0) + (f.types.length ? 1 : 0) + (f.expansions.length ? 1 : 0) + (f.mechanics.length ? 1 : 0) + (f.played !== 'any' ? 1 : 0);
 
 export const toggle = (arr, x) => (arr.includes(x) ? arr.filter(y => y !== x) : [...arr, x]);
 
@@ -160,6 +162,7 @@ export function landscapeFiltersToQuery(f) {
   f.expansions.forEach(v => p.append('exp', v));
   f.mechanics.forEach(v => p.append('tag', v));
   if (f.mechanicMode !== d.mechanicMode) p.set('tmode', f.mechanicMode);
+  if (f.played !== d.played) p.set('played', f.played);
   if (f.sort !== d.sort) p.set('sort', f.sort);
   if (f.dir !== d.dir) p.set('dir', f.dir);
   return wrap(p);
@@ -169,7 +172,7 @@ export function landscapeFiltersFromQuery(qs) {
   return {
     q: p.get('q') || '', text: p.get('text') === '1',
     types: many(p, 'type'), expansions: many(p, 'exp'), mechanics: many(p, 'tag'),
-    mechanicMode: oneOf(p.get('tmode'), ['all', 'any'], d.mechanicMode),
+    mechanicMode: oneOf(p.get('tmode'), ['all', 'any'], d.mechanicMode), played: oneOf(p.get('played'), ['yes', 'no'], d.played),
     sort: oneOf(p.get('sort'), LANDSCAPE_SORTS, d.sort), dir: oneOf(p.get('dir'), ['asc', 'desc'], d.dir),
   };
 }

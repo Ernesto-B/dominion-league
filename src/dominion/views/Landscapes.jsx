@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useCatalog } from '../CatalogContext.jsx';
 import { browseLandscapes, activeLandscapeFilters, DEFAULT_LANDSCAPE_FILTERS, landscapeFiltersFromQuery, landscapeFiltersToQuery, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
 import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
+import { useLeagueGames } from '../useLeagueGames.js';
 import { artifactHref, landscapeHref } from '../links.js';
 import { PLURAL, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
@@ -17,13 +18,15 @@ export default function Landscapes({ query = '' }) {
   const { f, update, qText, onQ, clear: clearFilters } = useUrlFilters(query, { fromQuery: landscapeFiltersFromQuery, toQuery: landscapeFiltersToQuery, defaults: DEFAULT_LANDSCAPE_FILTERS });
   useListScroll();
   const [mq, setMq] = useState('');
+  const lg = useLeagueGames();
+  const plays = lg && lg.stats ? lg.stats.landscapes : null;   // landscape id -> { games }; null until a kingdom has been logged
   const qs = landscapeFiltersToQuery(f);   // carried into each landscape's page (Previous/Next, back to the list)
   // header clicks share state with the "Sort by" menu: the active column flips direction, another column starts ascending
   const sortBy = key => update(f.sort === key ? { dir: f.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: 'asc' });
   const clear = () => { clearFilters(); setMq(''); };
   const random = () => { const l = pickRandom(rows); if (l) window.location.hash = landscapeHref(l.id, qs); };
 
-  const rows = useMemo(() => browseLandscapes(catalog.landscapes, f), [catalog, f]);
+  const rows = useMemo(() => browseLandscapes(catalog.landscapes, f, { plays }), [catalog, f, plays]);
   const active = activeLandscapeFilters(f);
   const typeCount = t => catalog.landscapes.filter(l => l.type === t).length;
   const expansions = catalog.ownedExpansions.filter(e => catalog.landscapes.some(l => l.expansion === e.name));
@@ -50,6 +53,12 @@ export default function Landscapes({ query = '' }) {
         <fieldset className="dn-fieldset"><legend>Expansion</legend>
           <div className="dn-chips">{expansions.map(e => <Chip key={e.name} pressed={f.expansions.includes(e.name)} count={expCount(e.name)} onClick={() => update({ expansions: toggle(f.expansions, e.name) })}><ExpansionBadge name={e.name} /></Chip>)}</div>
         </fieldset>
+        {plays && <fieldset className="dn-fieldset"><legend>Play history</legend>
+          <div className="dn-chips">
+            <Chip pressed={f.played === 'yes'} count={catalog.landscapes.filter(l => plays.has(l.id)).length} onClick={() => update({ played: f.played === 'yes' ? 'any' : 'yes' })}>Played</Chip>
+            <Chip pressed={f.played === 'no'} count={catalog.landscapes.filter(l => !plays.has(l.id)).length} onClick={() => update({ played: f.played === 'no' ? 'any' : 'no' })}>Not played yet</Chip>
+          </div>
+        </fieldset>}
         <fieldset className="dn-fieldset"><legend>Recorded tags</legend>
           <details className="dn-mech" open={f.mechanics.length > 0 || undefined}>
             <summary>{f.mechanics.length ? `${f.mechanics.length} selected` : 'Choose tags'} · {tagCounts.length} tags recorded</summary>

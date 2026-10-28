@@ -1,6 +1,7 @@
 import { usePage } from '../PageContext.js';
 import HoverPopup from './HoverPopup.jsx';
 import TierIcon from './TierIcon.jsx';
+import { tierProgress } from '../lib/tierProgress.js';
 import { tierRange } from './TierLegend.jsx';
 
 const TierAnchor = ({ tier }) => (
@@ -17,8 +18,7 @@ export default function TierProgressBar({ p }) {
   let fill, label, to;
   if (!p.nextTier) { fill = <i style={{ width: '100%', background: 'var(--brass)' }}></i>; label = 'Top tier reached'; to = null; }
   else {
-    const lower = p.tier.min === -Infinity ? D.E.start : p.tier.min, upper = p.nextTier.tier.min;
-    const pct = Math.max(0, Math.min(1, (p.elo - lower) / (upper - lower))) * 100;
+    const pct = tierProgress(p.elo, p.tier, p.nextTier.tier) * 100;
     fill = <i style={{ width: pct + '%' }}></i>; label = `${Math.round(pct)}% of the way to ${p.nextTier.tier.name}`; to = p.nextTier.tier;
   }
   return (

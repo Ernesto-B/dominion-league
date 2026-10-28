@@ -536,12 +536,12 @@ describe('the card-types-by-expansion table on Statistics', () => {
     expect(body).toContain('class="dn-zero" aria-label="No Treasure cards in Base Game"');   // a zero is muted text with a spoken label, not a link
     expect(body).not.toMatch(/title="0 /);
   });
-  it('says why Knight and Castle are not columns (they are only the type of two special piles)', () => {
-    expect(text(sec)).toMatch(/Knight and Castle aren.t shown: they.re only the type of the Knights and Castles piles/);
+  it('has no Knight or Castle column (they are only the type of two special piles), but the printed-types chart still has them', () => {
+    expect(sec).not.toMatch(/<th[^>]*>Knight</);
     expect(html).toMatch(/aria-label="Kingdom card names per printed type"[\s\S]*Knight/);   // but the printed-types chart still has them
   });
-  it('explains that multi-type cards count under each type, and shades cells', () => {
-    expect(text(sec)).toMatch(/counts once under each, so a row can add up to more than that expansion.s card names/);
+  it('shades the cells (the long explanation under the table was removed on purpose)', () => {
+    expect(text(sec)).not.toMatch(/counts once under each/);
     expect(body).toMatch(/color-mix\(in srgb, var\(--felt\)/);
   });
 });

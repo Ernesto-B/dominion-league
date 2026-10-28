@@ -1,6 +1,8 @@
 /* What the "starts with you" home card says about the signed-in player. Pure, so it is tested directly.
    `ranked` is D.ranked (best first); `start` the Elo everyone begins on. Returns null when the player isn't on the ladder yet. */
 /* `win` (optional) is what a win at an even table of four pays, so the next-tier line can say how many wins away it is. */
+import { tierProgress } from './tierProgress.js';
+
 export function meSummary(ranked, name, start = 1000, win = 0) {
   const i = ranked.findIndex(p => p.name === name);
   if (i < 0) return null;
@@ -11,8 +13,7 @@ export function meSummary(ranked, name, start = 1000, win = 0) {
   else if (below) gap = { kind: 'clear', who: below.name, rank: below.rank, elo: Math.max(0, Math.round(p.elo - below.elo)) };
   let next = null;   // the next tier up: how many Elo away, how far along the way, and about how many wins that is
   if (p.nextTier) {
-    const lower = p.tier.min == null || p.tier.min === -Infinity ? start : p.tier.min, upper = p.nextTier.tier.min;
-    next = { tier: p.nextTier.tier, need: p.nextTier.need, pct: Math.max(0, Math.min(1, (p.elo - lower) / (upper - lower))), wins: win > 0 ? Math.max(1, Math.ceil(p.nextTier.need / win)) : null };
+    next = { tier: p.nextTier.tier, need: p.nextTier.need, pct: tierProgress(p.elo, p.tier, p.nextTier.tier), wins: win > 0 ? Math.max(1, Math.ceil(p.nextTier.need / win)) : null };
   }
   return {
     next,

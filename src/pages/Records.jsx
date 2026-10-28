@@ -81,8 +81,6 @@ export default function Records() {
         </table></div>
       </>}
 
-      {O.tables && R.mostLandscapes && <Landscapes R={R} min={min} />}
-
       <h2>Sets in play</h2>
       {R.setsLogged ? <>
         <SortableTable stack head={[{ label: 'Set', cls: L }, { label: 'Games' }, { label: 'Share' }, { label: 'Avg winning VP' }]}
@@ -93,6 +91,8 @@ export default function Records() {
           })} />
         <p className="note">A game tagged with more than one set counts fully toward each one — the kingdom was mixed, not split.</p>
       </> : <p className="empty">Fill the sets field when adding a game (separate sets with semicolons).</p>}
+
+      {O.tables && R.mostLandscapes && <Landscapes R={R} min={min} />}
 
       <h2>Season champions</h2>
       <SortableTable stack head={[{ label: 'Season', cls: L }, { label: 'Champion', cls: L }, { label: 'Dates', cls: L }]}

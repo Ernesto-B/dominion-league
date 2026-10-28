@@ -11,6 +11,7 @@ import { DEFAULT_CHART } from '../sunburst.js';
    shading compares expansions WITHIN a column (each type has its own scale, since Action dwarfs everything else). */
 export default function TypeMatrix({ matrix, names, cards = [], chart = DEFAULT_CHART, onChart = () => {} }) {
   const [sort, setSort] = useState({ key: null, dir: 'asc' });
+  const [compact, setCompact] = useState(false);   // on a phone, once the table is scrolled sideways the expansion names give way to their icons, so the numbers get the room
   const { view, by, zoom } = chart;      // 'table' | 'sunburst'; the sunburst's inner ring; what it is zoomed into — all kept in the URL by the Overview
   const rows = sortMatrixRows(matrix.rows, sort);
   const top = Object.fromEntries(matrix.types.map(t => [t, Math.max(1, ...matrix.rows.map(r => r.counts[t]))]));
@@ -38,7 +39,7 @@ export default function TypeMatrix({ matrix, names, cards = [], chart = DEFAULT_
         )}
       </div>
       {view === 'sunburst' ? <SunburstChart key={`${by}|${zoom ?? ''}`} matrix={matrix} by={by} cards={cards} zoom={zoom} onZoom={z => onChart({ zoom: z })} /> : <>
-      <div className="tablewrap"><table className="plain dn-table dn-matrix">
+      <div className="tablewrap" onScroll={e => { const x = e.currentTarget.scrollLeft; setCompact(c => (c ? x > 4 : x > 24)); }}><table className={'plain dn-table dn-matrix' + (compact ? ' compact' : '')}>
         <caption className="dn-sr">Number of card names of each printed type in each expansion</caption>
         <SortHeaders columns={columns} sort={sortKey} dir={sort.dir} onSort={key => onSort(key.startsWith('t:') ? key.slice(2) : key)} />
         <tbody>
@@ -50,17 +51,12 @@ export default function TypeMatrix({ matrix, names, cards = [], chart = DEFAULT_
             </tr>
           ))}
           <tr className="dn-total">
-            <th scope="row" className="l">All expansions</th><td><b>{names}</b></td>
+            <th scope="row" className="l">All<span className="dn-more"> expansions</span></th><td><b>{names}</b></td>
             {matrix.types.map(t => <td key={t}><b>{show(null, t, matrix.totals[t], 'all expansions')}</b></td>)}
           </tr>
         </tbody>
       </table></div>
-      <p className="note">
-        A card with several printed types counts once under each, so a row can add up to more than that expansion’s card names (“Card names” is the number of distinct names).
-        {matrix.skipped.length > 0 && <>{matrix.skipped.join(' and ')} aren’t shown: they’re only the type of the Knights and Castles piles (still in the chart above and in the card filters). </>}
-        Click a heading to sort the expansions by it, or a number to see those cards. Shading compares expansions within a column.
-        {sort.key !== null && <> <button type="button" className="ghost" onClick={() => setSort({ key: null, dir: 'asc' })}>Reset to collection order</button></>}
-      </p>
+      {sort.key !== null && <p className="note"><button type="button" className="ghost" onClick={() => setSort({ key: null, dir: 'asc' })}>Reset to collection order</button></p>}
       </>}
     </>
   );

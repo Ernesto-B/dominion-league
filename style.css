@@ -347,7 +347,6 @@ a.pl{vertical-align:middle}
 td.dn-cost-cell{white-space:nowrap}
 .dn-costrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0 0 8px}
 .dn-costrow:last-child{margin-bottom:0}
-.dn-rowlabel{min-width:44px}
 .dn-chip .dn-cost-icon{margin:-3px 0}
 .dn-types{display:inline-flex;gap:4px;flex-wrap:wrap}
 /* printed-type colours, as r,g,b triples so the pill (translucent wash) and the filter chip (coloured edge) share them.
@@ -432,7 +431,7 @@ a.dn-kchip:hover{border-color:var(--muted)}
 .dn-rz-bar h2{margin:0}
 .dn-rz-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
 .dn-rz-sub{margin:22px 0 8px}
-.dn-rzgrid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;align-items:start}
+.dn-rzgrid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;align-items:stretch;grid-auto-rows:1fr}
 .dn-rztile{display:flex;flex-direction:column;gap:10px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:10px}
 .dn-rztile.locked{box-shadow:inset 0 0 0 1px var(--muted)}
 .dn-rztile-body{display:flex;gap:12px;align-items:flex-start;min-width:0}
@@ -664,7 +663,7 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
   .top-inner{justify-content:space-between;padding-top:10px;padding-bottom:10px}
   #navuser a{display:none}   /* Log out lives in the More sheet */
   .brand{display:block;font:800 18px var(--display);color:#E6EBF0;margin-right:auto}
-  .bottomnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0B1015;border-top:1px solid var(--line);padding:0 4px env(safe-area-inset-bottom)}
+  .bottomnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0B1015;border-top:1px solid var(--line);padding:0 4px env(safe-area-inset-bottom);transform:translateZ(0);will-change:transform;backface-visibility:hidden}   /* its own compositor layer, so it stays put while the page scrolls under it */
   .bottomnav a,.bottomnav button{flex:1;min-width:0;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 2px;
     background:none;border:0;border-radius:0;color:#9AA7B4;font:600 12px var(--text);text-decoration:none;cursor:pointer}
   .bottomnav img{width:26px;height:26px;opacity:.75}
@@ -686,20 +685,6 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
 }
 
 /* --- ux "home": the card that opens Rankings --- */
-.mecard{display:flex;gap:16px;align-items:center;margin:0 0 16px;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
-.mecard-main{min-width:0;flex:1}
-.mecard-main p{margin:0 0 4px}
-.mecard-hi{font:700 14px var(--text);color:var(--muted)}
-.mecard-rank{font-size:20px}
-.mecard-rank b{font:800 28px var(--display)}
-.mecard-elo{margin-left:10px;font-weight:600;color:var(--muted)}
-.mecard-line{font-size:14px}
-.mecard-last{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:14px;margin-top:8px !important}
-.mecard-last .form{display:inline-flex;gap:3px}
-.mecard-go{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px !important}
-.mecard-go .btn{min-height:44px;display:inline-flex;align-items:center;font-size:15px}
-@media (max-width:480px){.mecard{gap:12px;padding:14px}.mecard>img.tier{width:44px;height:44px;align-self:flex-start}.mecard-rank{font-size:17px}.mecard-rank b{font-size:26px}}
-.mecard-rank .tag{margin-left:8px}
 
 /* a game as a card (GameCards.jsx): used on phones, and on desktop as a grid (the 'redesign' flag) */
 .gcard{padding:2px 14px 10px;border-top:1px solid var(--line);cursor:pointer}
@@ -900,8 +885,8 @@ html{overscroll-behavior-y:contain}   /* the browser's own pull-to-refresh would
   .btn,button,.pills a,.chip,.gcard,.story,.lrow .lname{transition:transform .12s ease,background-color .15s ease,border-color .15s ease}
   .btn:active,button:active,.pills a:active,.gcard:active,.story:active{transform:scale(.97)}
   img.tier{transition:transform .2s cubic-bezier(.3,1.5,.5,1)}
-  .lrow:hover img.tier,.mecard:hover>img.tier,a:active>img.tier{transform:scale(1.15) rotate(-4deg)}
-  .mecard>img.tier{animation:dnpop .7s cubic-bezier(.3,1.6,.5,1) .1s both}
+  .lrow:hover img.tier,a:active>img.tier{transform:scale(1.15) rotate(-4deg)}
+  .mc-top>img.tier{animation:dnpop .7s cubic-bezier(.3,1.6,.5,1) .1s both}
 }
 @keyframes dnspin{to{transform:rotate(360deg)}}
 @keyframes dnrise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -911,11 +896,6 @@ html{overscroll-behavior-y:contain}   /* the browser's own pull-to-refresh would
 
 .dn-table tfoot th,.dn-table tfoot td{font-weight:700;border-top:2px solid var(--line)}
 
-.mecard-next{display:flex;flex-direction:column;gap:5px;margin:6px 0 0;font-size:14px;color:var(--muted)}
-.mecard-next b{color:var(--ink)}
-.mecard-next img{vertical-align:-4px}
-.mecard-bar{display:block;height:6px;border-radius:3px;background:var(--line);overflow:hidden;max-width:320px}
-.mecard-bar i{display:block;height:100%;background:var(--brass);border-radius:3px}
 @media (prefers-reduced-motion:no-preference){.mecard-bar i{animation:dngrow .9s cubic-bezier(.2,.7,.2,1) .2s both;transform-origin:left}}
 @keyframes dngrow{from{transform:scaleX(0)}to{transform:none}}
 .dn-pct{display:inline-block;min-width:48px;margin-left:12px;padding:2px 8px;border-radius:999px;background:var(--line);color:var(--muted);font-size:12px;font-weight:500;text-align:center;font-variant-numeric:tabular-nums;vertical-align:1px}
@@ -932,17 +912,130 @@ html{overscroll-behavior-y:contain}   /* the browser's own pull-to-refresh would
 @media (prefers-reduced-motion:no-preference){.badge-new{animation:dnpop .6s cubic-bezier(.3,1.6,.5,1) both}}
 
 /* ---------- snake draft (Game night kingdom step) ---------- */
-.dn-draft-turn{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid var(--brass);border-radius:10px;background:var(--brass-soft);font-size:18px}
+.dn-draft-turn{position:sticky;top:8px;z-index:35;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border:2px solid var(--seat);border-radius:12px;background:color-mix(in srgb, var(--seat) 22%, #0B1015);box-shadow:0 6px 18px rgba(0,0,0,.45)}
+@media (min-width:721px){.dn-draft-turn{top:84px}}
+.dn-draft-turn-who{display:flex;flex-direction:column;line-height:1.1}
+.dn-draft-turn-who b{font:800 30px var(--display);color:var(--seat)}
+.dn-draft-turn-n{text-align:right;font-size:13px}
+@media (prefers-reduced-motion:no-preference){.dn-draft-turn{animation:dnpop .45s cubic-bezier(.3,1.5,.5,1) both}}
+.dn-draft-pool{align-items:stretch;grid-auto-rows:1fr}
+.dn-draft-tile{cursor:pointer;display:flex;flex-direction:column;min-height:92px}
+.dn-draft-tile.taken{cursor:default}
+.dn-draft-sub{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:4px}
+.dn-draft-sub .dn-rz-exp{margin:0}
+.dn-draft-tile>.dn-rz-text{flex:1;border-top:1px solid var(--line);padding-top:8px}
+.dn-draft-tile>p{margin-top:auto !important}
 .dn-draft-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
 .dn-draft-tile{padding:0}
 .dn-draft-take{all:unset;box-sizing:border-box;display:flex;gap:12px;align-items:flex-start;width:100%;padding:12px 14px;cursor:pointer;border-radius:10px;min-height:44px}
-.dn-draft-take:hover:not(:disabled){background:color-mix(in srgb, var(--brass) 14%, transparent)}
+.dn-draft-tile:not(.taken):hover{background:color-mix(in srgb, var(--brass) 14%, var(--panel));border-top-color:var(--brass);border-right-color:var(--brass);border-bottom-color:var(--brass)}
 .dn-draft-take:focus-visible{outline:2px solid var(--brass);outline-offset:-2px}
 .dn-draft-take:disabled{cursor:default}
-.dn-draft-tile.taken{opacity:.45}
-.dn-draft-by{margin-left:auto;font-size:13px;font-weight:700;color:var(--brass);white-space:nowrap}
+.dn-draft-tile.taken{border-left-color:var(--seat)}
+.dn-draft-tile.taken .dn-rz-cost,.dn-draft-tile.taken .dn-rz-main,.dn-draft-tile.taken>.dn-rz-text,.dn-draft-tile.taken>p{opacity:.55}
+.dn-draft-by{margin-left:auto;font-size:13px;font-weight:700;color:var(--seat,var(--brass));white-space:nowrap}
 .dn-draft-tile>.dn-rz-text,.dn-draft-tile>p{padding:0 14px 12px}
 .dn-draft-seats{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px;max-width:320px}
 .dn-draft-seats li{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:8px}
 .dn-draft-seats li span{flex:1;font-weight:600}
-.dn-draft-picks{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.dn-draft-picks{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.dn-draft-seat{padding:10px 12px;border:1px solid var(--line);border-top:4px solid var(--seat);border-radius:10px;background:var(--panel)}
+.dn-draft-seat.now{border-color:var(--seat);box-shadow:0 0 0 1px var(--seat)}
+.dn-draft-seat-head{display:flex;flex-direction:column;margin:0 0 8px}
+.dn-draft-seat-head b{font-size:17px;color:var(--seat)}
+.dn-draft-mine{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.dn-draft-mine li{display:flex;gap:8px;align-items:baseline;padding:4px 8px;border-left:4px solid var(--line);border-radius:4px;background:color-mix(in srgb, var(--ink) 6%, transparent)}
+.dn-draft-mine .n{font-size:12px;color:var(--muted);min-width:22px}
+.dn-cell-link{display:inline-flex;align-items:center;gap:0;padding:4px 6px;margin:-4px -6px;border-radius:8px;color:inherit;text-decoration:none}
+a.dn-cell-link:hover,a.dn-cell-link:focus-visible{background:color-mix(in srgb, var(--brass) 16%, transparent)}
+.dn-cell-link .dn-num{font-weight:700}
+.dn-cell-link.off .dn-num{font-weight:400}
+a.dn-cell-link:hover .dn-pct{color:var(--ink)}
+.badges-fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+.badges-fold>summary::-webkit-details-marker{display:none}
+.badges-fold>summary::before{content:'▸';font-size:18px;color:var(--muted);transition:transform .15s}
+.badges-fold[open]>summary::before{transform:rotate(90deg)}
+.badges-fold>summary h2{margin:0}
+.badges-fold>.badges{margin-top:12px}
+.badge-when{color:var(--brass)!important;font-weight:600}
+.badges-fold{margin-top:40px}
+.dn-draft-mine li.t-action{border-left-color:rgb(var(--t-action))}
+.dn-draft-mine li.t-attack{border-left-color:rgb(var(--t-attack))}
+.dn-draft-mine li.t-command{border-left-color:rgb(var(--t-command))}
+.dn-draft-mine li.t-duration{border-left-color:rgb(var(--t-duration))}
+.dn-draft-mine li.t-event{border-left-color:rgb(var(--t-event))}
+.dn-draft-mine li.t-gathering{border-left-color:rgb(var(--t-gathering))}
+.dn-draft-mine li.t-landmark{border-left-color:rgb(var(--t-landmark))}
+.dn-draft-mine li.t-looter{border-left-color:rgb(var(--t-looter))}
+.dn-draft-mine li.t-project{border-left-color:rgb(var(--t-project))}
+.dn-draft-mine li.t-reaction{border-left-color:rgb(var(--t-reaction))}
+.dn-draft-mine li.t-trait{border-left-color:rgb(var(--t-trait))}
+.dn-draft-mine li.t-treasure{border-left-color:rgb(var(--t-treasure))}
+.dn-draft-mine li.t-victory{border-left-color:rgb(var(--t-victory))}
+.dn-draft-mine li.t-way{border-left-color:rgb(var(--t-way))}
+
+.dn-exp-label{text-decoration:inherit}
+a:hover .dn-exp-label{text-decoration:underline}
+
+/* ---------- the me card: who you are and what you are heading for, as a small dashboard ---------- */
+.mecard{display:flex;flex-direction:column;gap:16px;margin:0 0 16px;padding:18px 20px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.mc-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.mc-who{flex:1;min-width:0}
+.mc-who p{margin:0}
+.mecard-hi{font:700 14px var(--text);color:var(--muted)}
+.mc-tier{font:800 30px var(--display);letter-spacing:-.02em;line-height:1.1}
+.mc-tier .tag{margin-left:10px;vertical-align:middle}
+.mecard-go{display:flex;flex-wrap:wrap;gap:8px;margin:0}
+.mecard-go .btn{min-height:44px;display:inline-flex;align-items:center;font-size:15px}
+.mc-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.mc-tile{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb, var(--ink) 5%, transparent);min-width:0}
+.mc-label{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.mc-big{font:800 30px var(--display);letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+.mc-big small{font:500 15px var(--text);color:var(--muted);letter-spacing:0}
+.mc-big.mc-name{font-size:24px;overflow:hidden;text-overflow:ellipsis}
+.mc-delta{font:700 16px var(--text);margin-left:4px}
+.mc-sub{font-size:13px;color:var(--muted);min-height:1.3em}
+.mc-sub .form{display:inline-flex;gap:3px}
+.mc-next{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.mc-next b{color:var(--ink)}
+.mc-next .mecard-bar{flex:1;min-width:120px}
+.mc-next-txt{flex-basis:100%}
+@media (min-width:700px){.mc-next-txt{flex-basis:auto}}
+.mecard-bar{display:block;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.mecard-bar i{display:block;height:100%;background:var(--brass);border-radius:4px}
+.mecard .badge-new{margin:0}
+@media (max-width:480px){.mecard{padding:12px;gap:12px}.mc-top{gap:10px}.mc-tier{font-size:22px}.mc-big{font-size:22px}.mc-big small{font-size:13px}.mc-big.mc-name{font-size:20px}.mc-top>img.tier{width:48px;height:48px}.mecard-go{width:100%}.mecard-go .btn{flex:1;justify-content:center}.mc-tiles{gap:8px}.mc-tile{padding:8px 10px;gap:2px}.mc-label{font-size:11px}.mc-sub{font-size:12px;min-height:0}}
+.dn-rztile-body{flex:1}
+.dn-draft-tile.land{cursor:default}
+.dn-draft-lands .dn-draft-take{cursor:default}
+.dn-draft{scroll-margin-top:8px}
+@media (max-width:720px){
+  .dn-pct{min-width:0;margin-left:6px;padding:1px 6px;font-size:11px}
+  .dn-cell-link{margin:-4px -2px;padding:4px 2px}
+}
+@media (max-width:720px){.dn-pcttable th,.dn-pcttable td{padding-left:4px;padding-right:4px}.dn-pcttable td{font-size:15px}}
+@media (max-width:720px){.dn-pcttable th:first-child,.dn-pcttable td:first-child{padding-left:12px}.dn-pcttable th:last-child,.dn-pcttable td:last-child{padding-right:12px}}
+@media (max-width:720px){.dn-pcttable .dn-pct{margin-left:4px}.dn-pcttable .dn-exp{gap:4px}}
+@media (max-width:720px){
+  /* the names slide shut instead of vanishing (the text stays in the page for screen readers) */
+  .dn-matrix .dn-exp-label,.dn-matrix .dn-more{display:inline-block;max-width:220px;overflow:hidden;white-space:nowrap;vertical-align:bottom;transition:max-width .28s ease,opacity .2s ease}
+  .dn-matrix.compact .dn-exp-label,.dn-matrix.compact .dn-more{max-width:0;opacity:0}
+  .dn-matrix .dn-exp{gap:0}
+  .dn-matrix .dn-exp>img,.dn-matrix .dn-exp>span:first-child:not(.dn-exp-label){margin-right:6px;transition:margin-right .28s ease}
+  .dn-matrix.compact .dn-exp>img,.dn-matrix.compact .dn-exp>span:first-child:not(.dn-exp-label){margin-right:0}
+  .dn-matrix th:first-child{transition:padding .28s ease}
+  .dn-matrix thead th:first-child,.dn-matrix thead th:first-child *{transition:font-size .28s ease}
+  .dn-matrix.compact th:first-child{padding-left:10px;padding-right:10px}
+}
+@media (max-width:720px){
+  /* collapsed: the first column is only as wide as an icon plus a little room; its heading text is hidden (not removed) */
+  .dn-matrix.compact th:first-child{width:1px;min-width:0;max-width:none;padding-left:10px;padding-right:10px;overflow:hidden}
+  .dn-matrix.compact thead th:first-child,.dn-matrix.compact thead th:first-child *{font-size:0;min-width:0;padding-left:0;padding-right:0}
+}
+@media (max-width:720px){.season-edge th:first-child,.season-edge td:first-child{padding-left:12px}.season-edge th.edge,.season-edge td.edge{padding-right:12px}}
+@media (max-width:720px){.season-edge th,.season-edge td{padding-left:5px;padding-right:5px}}
+/* Collection tables on a phone: the text keeps clear of the table's left and right edges (.edge marks the last column still shown when the true last one is hidden) */
+@media (max-width:720px){
+  .dn-table th:first-child,.dn-table td:first-child{padding-left:12px}
+  .dn-table th:last-child:not(.dn-hide-sm),.dn-table td:last-child:not(.dn-hide-sm),.dn-table th.edge,.dn-table td.edge{padding-right:12px}
+}

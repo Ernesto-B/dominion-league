@@ -149,7 +149,7 @@ export default function Night() {
                       onDone={res => { applyKingdom(toGameItems(res), res); setDrafting(false); }} onCancel={() => setDrafting(false)} />
                   : <>
                 <p className="meta" style={{ marginBottom: 6 }}>Or take turns choosing it: <button type="button" className="linkish" onClick={() => setDrafting(true)}>Snake draft</button></p>
-                <RandomizerPanel catalog={catalog} opts={roll} setOpts={setRollOpts} state={rolled} plays={plays} heading={false} emptyHint={false}
+                <RandomizerPanel catalog={catalog} opts={roll} setOpts={setRollOpts} state={rolled} plays={plays} emptyHint={false}
                   onState={res => applyKingdom(toGameItems(res), res)} onReset={() => setRoll(DEFAULT_OPTIONS)} />
                   </>}
                 <details className="dn-mech night-hand" open={!!items.length && !rolled}><summary>{items.length && !rolled ? 'Your kingdom — change it if you like' : 'Or pick the cards by hand'}</summary>

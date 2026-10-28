@@ -28,6 +28,7 @@ export default function SeasonTable({ standings }) {
       { node: r.nights, text: r.nights, className: hide('Nights') }, { node: pc(r.attendance), text: pc(r.attendance), className: hide('Attendance') },
     ],
   }));
-  const head = HEAD.map(h => (hide(h.label) ? { ...h, cls: [h.cls, 'dn-hide-sm'].filter(Boolean).join(' ') } : h));
-  return <SortableTable head={head} rows={rows} />;
+  // 'edge' marks the last column a phone still shows (Seed), so it can keep clear of the table's right edge
+  const head = HEAD.map(h => (hide(h.label) ? { ...h, cls: [h.cls, 'dn-hide-sm'].filter(Boolean).join(' ') } : h.label === 'Seed' ? { ...h, cls: [h.cls, 'edge'].filter(Boolean).join(' ') } : h));
+  return <div className="season-edge"><SortableTable head={head} rows={rows} /></div>;
 }
