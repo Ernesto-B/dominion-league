@@ -43,6 +43,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--text
   }
 }
 a{color:inherit}
+a,button,select,summary,label,input{touch-action:manipulation}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:3px}
 .skip{position:absolute;left:-999px;top:0;background:var(--ink);color:var(--bg);padding:8px 12px;z-index:10}
 .skip:focus{left:8px;top:8px}
@@ -702,6 +703,35 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
   .chart-keys button.on{border-color:var(--felt);background:var(--felt-soft)}
   .chart-keys b{margin-left:4px}
   .form-key .form{display:inline-flex;vertical-align:middle;margin:0 2px 0 6px}
+  /* nothing may make the page wider than the screen: a wide element is clipped at the edge instead of shifting the whole layout
+     (and the fixed bottom bar) sideways on iOS. Content that needs width scrolls inside its own box (.tablewrap). */
+  .ux-lists body{overflow-x:hidden;overflow-x:clip}
+  .ux-lists main{min-width:0}
+  .ux-lists .gcards{max-width:100%}
+  .ux-lists .gcard-head{flex-wrap:wrap;row-gap:0}
+  .ux-lists .gcard-sets{min-width:0;flex-wrap:wrap;justify-content:flex-end}
+  .ux-lists .gcard-row{grid-template-columns:36px minmax(0,1fr) auto}
+  .ux-lists .gc-name{flex-wrap:wrap;overflow-wrap:anywhere}
+  .ux-lists .head{gap:10px}
+  .ux-lists button.iconbtn img{height:56px}
+}
+/* a little smaller on narrow phones, so more fits and less is cut off */
+@media (max-width:400px){
+  .ux-lists main{padding-left:14px;padding-right:14px}
+  .ux-lists .chips.toprow,.ux-lists .storyrow{margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px}
+  .ux-lists body{font-size:15px}
+  .ux-lists h2{font-size:21px;margin-top:32px}
+  .ux-lists h3{font-size:17px}
+  .ux-lists .meta,.ux-lists .note,.ux-lists .chip,.ux-lists .story{font-size:13px}
+  .ux-lists .lrow .lelo{font-size:19px}
+  .ux-lists .gc-sub{font-size:12.5px}
+  .ux-lists .chart-keys button{padding:0 10px;font-size:13px}
+}
+@media (max-width:340px){
+  .ux-lists body{font-size:14px}
+  .ux-lists main{padding-left:12px;padding-right:12px}
+  .ux-lists .chips.toprow,.ux-lists .storyrow{margin-left:-12px;margin-right:-12px;padding-left:12px;padding-right:12px}
+  .ux-lists h1{font-size:30px}
 }
 
 /* --- ux "flow": the Game night page --- */
@@ -717,7 +747,11 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
 .night-reset{text-align:center;margin:4px 0 20px}
 .night-timer{margin:0 0 12px;font:800 40px var(--display)}
 .night-players{margin:14px 0 0}
-.night-text{display:grid;gap:12px;margin-top:6px}
+.night-text{display:grid;gap:10px;margin-top:6px}
+/* each card's text is its own small block, so where one ends and the next begins is obvious */
+.night-text li{background:color-mix(in srgb, var(--bg) 55%, transparent);border:1px solid var(--line);border-left:3px solid var(--brass);border-radius:8px;padding:9px 12px 4px}
+.night-text li>b{display:block;margin-bottom:4px;font-size:15px}
+.night-text .dn-cardtext p{margin:0 0 8px}
 .night-notes{margin:10px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;gap:6px}
 .night-result{list-style:none;margin:12px 0;padding:0;display:grid;gap:4px;font-size:17px}
 .night-result b{display:inline-block;min-width:1.4em}

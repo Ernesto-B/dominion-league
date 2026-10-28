@@ -9,7 +9,7 @@ const DEBT = new Set([1, 2, 3, 4, 5, 6, 8]);
 export const coinIconSrc = (n, plus = false) => (plus ? (COIN_PLUS.has(n) && `icons/costs/coin-${n}plus.png`) : (COINS.has(n) && `icons/costs/coin-${n}.png`)) || null;
 export const debtIconSrc = n => (DEBT.has(n) ? `icons/costs/debt-${n}.png` : null);
 
-const Img = ({ src, size }) => <img className="dn-cost-icon" src={src} width={size} height={size} alt="" />;
+const Img = ({ src, size }) => <img className="dn-cost-icon" src={src} width={size} height={size} loading="lazy" decoding="async" alt="" />;
 
 export function CoinIcon({ coins, overpay = false, size = 24 }) {
   const src = coinIconSrc(coins, overpay);
