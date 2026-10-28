@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { sb } from '../lib/supabase.js';
 import { SET_NAMES, LANDSCAPES } from '../lib/sets.js';
 import { buildGameArgs, resortByVP, toggle } from '../lib/gameForm.js';
-import { STEPS, advance, back, blankNight, canAdvance, clearNight, elapsed, loadNight, saveNight, stepNumber } from '../lib/night.js';
+import { STEPS, advance, back, blankNight, canAdvance, clearNight, elapsed, gameSummary, loadNight, saveNight, stepNumber } from '../lib/night.js';
 import NameIcon from '../components/NameIcon.jsx';
 import SetIcon from '../components/SetIcon.jsx';
 import EloPreview from '../components/EloPreview.jsx';
@@ -32,6 +32,7 @@ export default function Night() {
   const setRollOpts = patch => { setMsg(''); setRoll(r => ({ ...r, ...patch })); };
   const [showText, setShowText] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const before = useRef({ ranks: {}, tiers: {} });          // the ladder just before saving, to say what the game changed
 
   useEffect(() => { if (storage() && !done) saveNight(storage(), gid, st); }, [st, gid, done]);
   useEffect(() => { if (st.step !== 'play') return undefined; const t = setInterval(() => setNow(Date.now()), 20000); return () => clearInterval(t); }, [st.step]);
@@ -60,6 +61,7 @@ export default function Night() {
   const save = async () => {
     if (st.picked.length < 2) { setMsg('Pick at least 2 players.'); return; }
     if (!st.date) { setMsg('Pick a date.'); return; }
+    before.current = { ranks: Object.fromEntries(D.ranked.map(p => [p.name, p.rank])), tiers: Object.fromEntries(D.ranked.map(p => [p.name, p.tier.id])) };
     setSaving(true); setMsg('Saving…');
     const { data, error } = await sb.rpc('add_game', buildGameArgs({ ...st, editId: null }, gid, playerIdByName));
     setSaving(false);
@@ -79,7 +81,7 @@ export default function Night() {
     <>
       <div className="head"><div><h1>Game saved</h1><p className="lede">{groupName ? `${groupName} — ` : ''}the standings are updated.</p></div></div>
       <div className="night-card night-done">
-        <p style={{ marginTop: 0 }}>Nice game. The ladder has been recalculated.</p>
+        <GameResult game={done.id != null ? D.games.find(x => x.line === done.id) : null} before={before.current} ranked={D.ranked} tierFor={D.tierFor} />
         <p className="night-go">
           <a className="btn" href={hashFor('', gid)}>See the rankings</a>
           <a className="btn ghost" href={done.id != null ? hashFor('games', gid, done.id) : hashFor('games', gid)}>See the game</a>
@@ -180,6 +182,27 @@ export default function Night() {
           : <button type="button" onClick={() => { setMsg(''); setSt(s => advance(s)); }} disabled={!ok}>{st.step === 'kingdom' ? (items.length ? 'Next →' : 'Skip →') : st.step === 'play' ? 'Game over — scores →' : 'Next →'}</button>}
       </div>
       <p className="meta night-reset"><button type="button" className="linkish" onClick={startOver}>Start over</button></p>
+    </>
+  );
+}
+
+// what the saved game did: each player's Elo, their move on the ladder, and any tier crossed
+function GameResult({ game, before, ranked, tierFor }) {
+  const rows = gameSummary(game, before, ranked, tierFor);
+  if (!game) return <p className="meta" style={{ marginTop: 0 }}>Updating the standings…</p>;
+  if (!rows) return <p style={{ marginTop: 0 }}>Nice game. This one doesn’t change anyone’s rating.</p>;
+  return (
+    <>
+      <p style={{ marginTop: 0 }}>Nice game. Here’s what it did:</p>
+      <ol className="night-result night-did">{rows.map(r => (
+        <li key={r.name}>
+          <b>{r.name}</b> <span className={r.delta > 0 ? 'up-t' : r.delta < 0 ? 'down-t' : ''}>{r.delta > 0 ? '+' : r.delta < 0 ? '−' : ''}{Math.abs(r.delta)}</span>
+          <span className="meta"> · {r.before} → {r.after}{r.rankAfter != null && <> · #{r.rankAfter}</>}</span>
+          {r.rankMove !== 0 && <span className={r.rankMove > 0 ? 'up-t' : 'down-t'}> {r.rankMove > 0 ? '▲' : '▼'}{Math.abs(r.rankMove)}</span>}
+          {r.tierUp && <span className="pill ok"> now a {r.tierUp.name}</span>}
+          {r.tierDown && <span className="pill warn"> down to {r.tierDown.name}</span>}
+        </li>
+      ))}</ol>
     </>
   );
 }

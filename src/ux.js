@@ -1,7 +1,7 @@
 /* Switches for the UX experiments, so one build can be A (the current layout) and B (the new one) — and any mix:
      http://host/?ux=none         everything off: the current layout
      http://host/?ux=all          everything on (the default on this branch)
-     http://host/?ux=nav,home     only these (nav, home, lists, flow, share)
+     http://host/?ux=nav,home     only these (nav, home, lists, flow, share, redesign)
    The choice is remembered in localStorage (so it survives the hash navigation that follows), and the footer switcher changes it.
    Each flag also becomes a class on <html> ("ux-nav", ...) for the CSS. Read once at startup: changing it reloads the page. */
 export const UX_FLAGS = {
@@ -10,6 +10,7 @@ export const UX_FLAGS = {
   lists: 'Denser lists and stacked tables on phones',
   flow: 'Guided Game night flow',
   share: 'Share a kingdom as an image',
+  redesign: 'Cleaner front door: since-your-last-visit, tidier ladder, folded filters',
 };
 const KEY = 'dl.ux';
 const ALL = Object.keys(UX_FLAGS);

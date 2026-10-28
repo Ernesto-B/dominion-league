@@ -10,6 +10,7 @@ import TierLegend from '../components/TierLegend.jsx';
 import LastNight from '../components/LastNight.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import MeCard from '../components/MeCard.jsx';
+import SinceVisit from '../components/SinceVisit.jsx';
 import { uxOn } from '../ux.js';
 
 function Ladder({ ranked: rk, highlight, setHighlight }) {
@@ -57,6 +58,42 @@ export default function Rankings() {
   const gl = D.games.filter(g => g.n >= 2);
   const last = gl.length ? gl[gl.length - 1].date : null;
   const R = D.records, nights = R.overview.nights;
+
+  const notes = <>
+    <h2>Rank tiers</h2>
+    <TierLegend />
+    <p className="note">Your tier follows your current Elo, so it can go down as well as up. The trophy is for winning a season and never goes away.</p>
+    <p className="note">Everyone starts at {D.E.start} as a {D.startTier.name} and climbs from there. Elo carries across seasons; friendly games never count. New players move faster for their first {D.E.provisionalGames} games (provisional).</p>
+    <p className="note">This ladder is Elo — a lifetime skill rating that never resets. It's not what decides a season's winner; that's points, on the <a href={hashFor('season', gid)}>Season page</a>.</p>
+  </>;
+  const chips = (
+    <div className="chips toprow">
+      <SeasonChip />
+      {last && <span className="chip">Last night <b>{short(last)}</b></span>}
+      <span className="chip"><b>{nights}</b> night{nights === 1 ? '' : 's'} played</span>
+    </div>
+  );
+
+  // the redesigned front door: you, what changed, the ladder; the explanations are folded away at the bottom
+  if (uxOn('redesign')) return (
+    <>
+      <GroupSwitcher route="" />
+      <MeCard ranked={rk} />
+      {rk.length > 0 && <SinceVisit ranked={rk} />}
+      {chips}
+      <Banner />
+      {!rk.length ? <p className="empty">No rated games yet. Once the admin adds one, the rankings show up here.</p> : <>
+        <Ladder ranked={rk} highlight={highlight} setHighlight={setHighlight} />
+        <p className="note dn-only-sm form-key"><span className="form"><i className="w"></i></span> strong finish <span className="form"><i className="m"></i></span> middling <span className="form"><i className="l"></i></span> weak — each player’s last five games, oldest first.</p>
+        <LastNight games={gl} />
+        <h2>Rating history</h2>
+        <RatingChart names={rk.map(p => p.name)} highlight={highlight} onHover={setHighlight} />
+        <h2>Highlights</h2>
+        <StoryCards R={R} ranked={rk} />
+        <details className="help how"><summary>How ratings and tiers work</summary>{notes}</details>
+      </>}
+    </>
+  );
 
   return (
     <>

@@ -4,6 +4,7 @@ import { usePage } from '../PageContext.js';
 import { SET_NAMES } from '../lib/sets.js';
 import GroupSwitcher from '../components/GroupSwitcher.jsx';
 import Banner from '../components/Banner.jsx';
+import FilterFold from '../components/FilterFold.jsx';
 import GamesTable from '../components/GamesTable.jsx';
 import { takeKingdomDraft } from '../dominion/kingdomDraft.js';
 import { uxOn } from '../ux.js';
@@ -36,33 +37,47 @@ export default function Games() {
 
   const list = D.games.filter(g => matches(g, gf)).slice().reverse();
 
+  const selects = (
+    <>
+      <label className="f">Season <select id="gfs" value={gf.season} onChange={set('season')}>
+          <option value="all">All seasons</option>
+          {D.seasons.map(s => <option key={s.number} value={s.number}>{s.name}</option>)}
+        </select></label>
+      <label className="f">Type <select id="gft" value={gf.type} onChange={set('type')}>
+          {['all', 'Regular', 'Playoff', 'Friendly'].map(t => <option key={t} value={t}>{t === 'all' ? 'All types' : t}</option>)}
+        </select></label>
+      <label className="f">Player <select id="gfp" value={gf.player} onChange={set('player')}>
+          <option value="all">Everyone</option>
+          {D.players.map(p => <option key={p.name}>{p.name}</option>)}
+        </select></label>
+      <label className="f">Set <select id="gfset" value={gf.set} onChange={set('set')}>
+          <option value="all">All sets</option>
+          {SET_NAMES.filter(n => enabledSets.has(n) || D.records.sets[n]).map(n => <option key={n}>{n}</option>)}
+        </select></label>
+    </>
+  );
+
   return (
     <>
       <div className="head">
         <div><h1>Games</h1><p className="lede">Every table we've logged, newest first. Winners in bold.</p></div>
-        {canEdit && uxOn('flow') && <a className="btn ghost" href={hashFor('night', gid)} style={{ marginRight: 8 }}>Game night</a>}
-        {canEdit && <button id="gAddBtn" className="iconbtn" type="button" onClick={() => setModal({ editId: null })}><img src="icons/nav/add-a-game.png" alt="Add a game" /></button>}
+        {canEdit && uxOn('flow')
+          ? <a className="btn gamenight" href={hashFor('night', gid)}><img src="icons/nav/add-a-game.png" alt="" />Game night</a>
+          : canEdit && <button id="gAddBtn" className="iconbtn" type="button" onClick={() => setModal({ editId: null })}><img src="icons/nav/add-a-game.png" alt="Add a game" /></button>}
       </div>
       <GroupSwitcher route="games" />
       <Banner />
-      <div className="controls">
-        <label className="f">Season <select id="gfs" value={gf.season} onChange={set('season')}>
-          <option value="all">All seasons</option>
-          {D.seasons.map(s => <option key={s.number} value={s.number}>{s.name}</option>)}
-        </select></label>
-        <label className="f">Type <select id="gft" value={gf.type} onChange={set('type')}>
-          {['all', 'Regular', 'Playoff', 'Friendly'].map(t => <option key={t} value={t}>{t === 'all' ? 'All types' : t}</option>)}
-        </select></label>
-        <label className="f">Player <select id="gfp" value={gf.player} onChange={set('player')}>
-          <option value="all">Everyone</option>
-          {D.players.map(p => <option key={p.name}>{p.name}</option>)}
-        </select></label>
-        <label className="f">Set <select id="gfset" value={gf.set} onChange={set('set')}>
-          <option value="all">All sets</option>
-          {SET_NAMES.filter(n => enabledSets.has(n) || D.records.sets[n]).map(n => <option key={n}>{n}</option>)}
-        </select></label>
-        <span className="meta">{list.length} table{list.length === 1 ? '' : 's'}</span>
-      </div>
+      {uxOn('redesign') ? (
+        <>
+          <FilterFold active={['season', 'type', 'player', 'set'].filter(k => gf[k] !== 'all').length}>
+            <div className="controls" style={{ marginTop: 8 }}>{selects}</div>
+          </FilterFold>
+          <p className="meta" role="status">{list.length} table{list.length === 1 ? '' : 's'}</p>
+        </>
+      ) : (
+        <div className="controls">{selects}
+          <span className="meta">{list.length} table{list.length === 1 ? '' : 's'}</span></div>
+      )}
       {modal && <Suspense fallback={null}><GameModal key={String(modal.editId)} editId={modal.editId} draft={modal.draft} onClose={() => setModal(null)} /></Suspense>}
       {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${target ? target.line : ''}`} games={list} highlight={target ? target.line : undefined} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
     </>

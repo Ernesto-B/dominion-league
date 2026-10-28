@@ -51,3 +51,21 @@ export function loadNight(storage, gid, today = todayISO()) {
 }
 export function saveNight(storage, gid, st) { try { storage.setItem(key(gid), JSON.stringify(slim(st))); return true; } catch { return false; } }
 export function clearNight(storage, gid) { try { storage.removeItem(key(gid)); } catch { /* ignore */ } }
+
+/* What a saved game did, for the "Game saved" screen. `before` is { ranks: {name: rank}, tiers: {name: tierId} } taken from the ladder just
+   before saving; `g` is the game as the engine now has it (g.elo, g.places, g.snapshot); `ranked` is the ladder now. Players come in finish
+   order. A rank of null means the player wasn't on the ladder before. Returns null for a game that didn't move any rating. */
+export function gameSummary(g, before, ranked, tierFor) {
+  if (!g || !g.elo || !Object.keys(g.elo).length) return null;
+  const now = new Map(ranked.map(p => [p.name, p]));
+  return g.names.slice().sort((a, b) => g.places[a] - g.places[b]).filter(n => g.elo[n]).map(name => {
+    const e = g.elo[name], p = now.get(name), tierAfter = tierFor(e.after), tierBefore = tierFor(e.before);
+    const rankBefore = before.ranks[name] ?? null;
+    return {
+      name, place: g.places[name], before: Math.round(e.before), after: Math.round(e.after), delta: Math.round(e.after - e.before),
+      rankBefore, rankAfter: p ? p.rank : null, rankMove: rankBefore != null && p ? rankBefore - p.rank : 0,
+      tierUp: tierAfter.id !== tierBefore.id && e.after > e.before ? tierAfter : null,
+      tierDown: tierAfter.id !== tierBefore.id && e.after < e.before ? tierAfter : null,
+    };
+  });
+}
