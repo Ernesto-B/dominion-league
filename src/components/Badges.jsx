@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import TierIcon from './TierIcon.jsx';
-import { grouped } from '../lib/achievements.js';
+import { TIERS, grouped } from '../lib/achievements.js';
 import { badgesFor } from '../lib/xp.js';
 import SetIcon from './SetIcon.jsx';
 import { short } from '../lib/format.js';
@@ -19,6 +19,7 @@ export default function Badges({ p }) {
   return (
     <details className="badges-fold" open={open} onToggle={e => { const o = e.currentTarget.open; setOpen(o); try { localStorage.setItem(KEY, o ? '1' : '0'); } catch { /* not remembered */ } }}>
       <summary><h2>Badges <span className="meta">{got} of {list.length}</span></h2></summary>
+      <p className="tier-legend" aria-label="How hard a badge is">{TIERS.map(t => <span key={t.id} title={t.hint}><i className={'tier-dot td-' + t.id}></i>{t.label}</span>)}</p>
       {grouped(list).map(sec => (
         <section key={sec.group} className="badge-sec">
           <h3>{sec.group} <span className="meta">{sec.got} of {sec.of}</span></h3>
@@ -31,13 +32,17 @@ export default function Badges({ p }) {
   );
 }
 
-const icon = b => b.set ? <SetIcon name={b.set} size={26} /> : b.tier ? <TierIcon id={b.tier.icon} size={26} alt="" /> : b.id === 'champion' ? <TierIcon id="champion" size={26} alt="" /> : b.earned ? '★' : '☆';
+const LABEL = Object.fromEntries(TIERS.map(t => [t.id, t.label]));
+// the small coloured dot that says how hard a badge is (the colour key is the legend at the top of the section)
+const Dot = ({ tier }) => (tier ? <i className={'tier-dot td-' + tier} title={LABEL[tier]} aria-label={LABEL[tier]} role="img"></i> : null);
+
+const icon = b => b.set ? <SetIcon name={b.set} size={26} /> : b.tierIcon ? <TierIcon id={b.tierIcon.icon} size={26} alt="" /> : b.id === 'champion' ? <TierIcon id="champion" size={26} alt="" /> : b.earned ? '★' : '☆';
 
 function Badge({ b, when }) {
   return (
     <li className={b.earned ? 'got' : 'locked'}>
       <span className="badge-ico" aria-hidden="true">{icon(b)}</span>
-      <span className="badge-txt"><b>{b.name}</b><small>{b.hint}</small>{when(b)}</span>
+      <span className="badge-txt"><b><Dot tier={b.tier} />{b.name}</b><small>{b.hint}</small>{when(b)}</span>
     </li>
   );
 }
@@ -55,7 +60,7 @@ function Track({ t, when }) {
       <button type="button" className="badge-head" aria-expanded={open} aria-controls={id}>
         <span className="badge-ico" aria-hidden="true">{icon(cur || ref)}</span>
         <span className="badge-txt">
-          <b>{t.name} <span className="meta">{t.got} of {t.of}</span></b>
+          <b><Dot tier={ref && ref.tier} />{t.name} <span className="meta">{t.got} of {t.of}</span></b>
           <small>{cur ? cur.name : 'Not started'}{nx ? <> → {nx.name}</> : ' · all done'}</small>
         </span>
         <span className="badge-chev" aria-hidden="true">▾</span>
@@ -65,7 +70,7 @@ function Track({ t, when }) {
       </div>
       <div className="badge-more" id={id}>
         <ol className="badge-steps">
-          {t.steps.map(b => <li key={b.id} className={b.earned ? 'got' : 'locked'}><span aria-hidden="true">{b.earned ? '✓' : '○'}</span><span><b>{b.name}</b> <small>{b.hint}</small> {when(b)}</span></li>)}
+          {t.steps.map(b => <li key={b.id} className={b.earned ? 'got' : 'locked'}><span aria-hidden="true">{b.earned ? '✓' : '○'}</span><span><b><Dot tier={b.tier} />{b.name}</b> <small>{b.hint}</small> {when(b)}</span></li>)}
         </ol>
       </div>
     </li>

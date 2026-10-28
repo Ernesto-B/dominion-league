@@ -964,6 +964,12 @@ a.dn-cell-link:hover .dn-pct{color:var(--ink)}
 .badges-fold>.badges{margin-top:12px}
 .badge-when{color:var(--brass)!important;font-weight:600}
 .badge-sec{margin-top:18px}
+:root{--td-common:#9aa3ad;--td-uncommon:#5fc79a;--td-rare:#5b9bf0;--td-epic:#a678e8;--td-legendary:#e8bf5a}
+.tier-dot{display:inline-block;width:9px;height:9px;margin-right:7px;border-radius:50%;vertical-align:1px;background:var(--td)}
+.td-common{--td:var(--td-common)}.td-uncommon{--td:var(--td-uncommon)}.td-rare{--td:var(--td-rare)}.td-epic{--td:var(--td-epic)}
+.td-legendary{--td:var(--td-legendary);box-shadow:0 0 0 2px color-mix(in srgb, var(--td-legendary) 35%, transparent)}
+.tier-legend{display:flex;flex-wrap:wrap;gap:4px 16px;margin:10px 0 0;font-size:13px;color:var(--muted)}
+.tier-legend .tier-dot{margin-right:5px}
 .badge-sec h3{margin:0 0 8px;font-size:16px}
 .badges li.badge-track{display:flex;flex-direction:column;align-items:stretch;padding:0;cursor:pointer}
 .badge-head{display:flex;gap:10px;align-items:center;width:100%;padding:10px 12px 4px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:10px}

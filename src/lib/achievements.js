@@ -10,40 +10,83 @@ const firstIndex = (results, ok) => { for (let i = 0; i < results.length; i++) i
 
 /* `group` files a badge under a heading on the Player page. A badge with a `track` is one step of a ladder (games played, ranks): the page draws a
    track as one box showing the current step and the next, with every step inside it. Ids never change, so "seen" lists keep working.
-   `bonus` is the XP a badge pays on top of the standard badge XP (lib/xp.js). `target` is the number a step is reached at, when it is a count. */
-export const GROUPS = ['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Expansions', 'Milestones', 'Seasons'];
-const wins = (n, name, bonus) => ({ id: 'wins-' + n, group: 'Winning', track: 'wins', trackName: 'Victories', name, hint: `Win ${n} games.`, target: n, bonus });
-const lifetime = (n, name, bonus) => ({ id: 'vp-' + n, group: 'Milestones', track: 'vp', trackName: 'Estate Ledger', name, hint: `Score ${n.toLocaleString()} victory points over all your games.`, target: n, bonus });
+   `bonus` is the XP a badge pays on top of the standard badge XP (lib/xp.js). `target` is the number a step is reached at, when it is a count.
+   `tier` is how hard it is, shown as a small coloured dot (TIERS). */
+export const GROUPS = ['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones', 'Seasons'];
+export const TIERS = [
+  { id: 'common', label: 'Common', hint: 'Simple progression milestones' },
+  { id: 'uncommon', label: 'Uncommon', hint: 'Moderate challenges' },
+  { id: 'rare', label: 'Rare', hint: 'Difficult accomplishments' },
+  { id: 'epic', label: 'Epic', hint: 'Major challenges' },
+  { id: 'legendary', label: 'Legendary', hint: 'Long-term goals' },
+];
+const wins = (n, name, tier, bonus) => ({ id: 'wins-' + n, group: 'Winning', track: 'wins', trackName: 'Victories', name, hint: `Win ${n} games.`, target: n, tier, bonus });
+const lifetime = (n, name, tier, bonus) => ({ id: 'vp-' + n, group: 'Milestones', track: 'vp', trackName: 'Estate Ledger', name, hint: `Score ${n.toLocaleString()} victory points over all your games.`, target: n, tier, bonus });
+const typeWins = (id, name, type, article) => ({ id, group: 'Landscapes', name, hint: `Win 5 games featuring ${article} ${type}.`, target: 5, tier: 'uncommon', bonus: 40 });
 export const BADGES = [
-  { id: 'first-win', group: 'Winning', name: 'First blood', hint: 'Win a game outright.' },
-  wins(5, 'Skirmisher', 20), wins(10, 'Veteran of the Field', 40), wins(20, 'Scourge', 80), wins(50, 'Warmaster', 200), wins(100, 'Immortal', 500),
-  { id: 'hat-trick', group: 'Winning', name: 'Hat trick', hint: 'Win three games in a row.' },
-  { id: 'clean-sweep', group: 'Winning', name: 'Clean sweep', hint: 'Win every game of a night (two or more games).' },
-  { id: 'landslide', group: 'Winning', name: 'Landslide', hint: 'Win a game by more than 20 VP over the runner-up.', bonus: 30 },
-  { id: 'twice-the-crown', group: 'Winning', name: 'Twice the Crown', hint: 'Win with at least double the VP of every other player.', bonus: 40 },
-  { id: 'shadow', group: 'Winning', name: 'Shadow of the Throne', hint: 'Finish in the top half three games in a row.', bonus: 20 },
-  { id: 'redemption', group: 'Comebacks and upsets', name: 'Redemption', hint: 'Win the game right after finishing last.' },
-  { id: 'giant-slayer', group: 'Comebacks and upsets', track: 'slayer', trackName: 'Slayer', name: 'Giant slayer', hint: 'Win at a table with someone rated 100+ Elo above you.' },
-  { id: 'god-slayer', group: 'Comebacks and upsets', track: 'slayer', trackName: 'Slayer', name: 'God Slayer', hint: 'Win at a table with someone rated 200+ Elo above you.', bonus: 50 },
-  { id: 'phoenix', group: 'Comebacks and upsets', name: 'The Phoenix', hint: 'Win a rated game of 3 or more as the lowest-rated player at the table.', bonus: 75 },
-  { id: 'big-swing', group: 'Comebacks and upsets', name: 'Big swing', hint: 'Gain 50 or more Elo in a single game.' },
-  { id: 'know-your-enemy', group: 'The table', name: 'Know your enemy', hint: 'Play at least one game against every other player.' },
-  { id: 'unbeaten-blade', group: 'The table', name: 'Unbeaten Blade', hint: 'Win three 1v1 games in a row.', bonus: 30 },
-  { id: 'king-of-the-hill', group: 'The table', name: 'King of the Hill', hint: 'Win two games in a row with 5 or more players in each.', bonus: 75 },
-  { id: 'apex-predator', group: 'The table', name: 'Apex Predator', hint: 'Win a 6-player game.', bonus: 40 },
-  { id: 'colossus', group: 'The table', name: 'Colossus', hint: 'In a 5 or 6-player game, outscore the bottom three players combined.', bonus: 100 },
-  { id: 'world-voyage', group: 'The table', name: 'World Voyage', hint: 'Win a game at every table size, from 2 to 6 players.', bonus: 200 },
-  { id: 'gilded-hall', group: 'The kingdom', name: 'Gilded Hall', hint: 'Win with a kingdom whose cards cost 4.8 coins or more on average.', bonus: 25 },
-  { id: 'pure-blood', group: 'The kingdom', name: 'Pure Blood', hint: 'Play a game where all 10 kingdom cards are from the same expansion.', bonus: 15 },
-  { id: 'trial-by-fire', group: 'The kingdom', name: 'Trial by Fire', hint: 'Win with 3 or more Attack cards in the kingdom.', bonus: 25 },
-  { id: 'peaceful-realm', group: 'The kingdom', name: 'Peaceful Realm', hint: 'Play a game with no Attack card in the kingdom.', bonus: 10 },
-  { id: 'cheap-tricks', group: 'The kingdom', track: 'humble', trackName: 'Humble Means', name: 'Cheap Tricks', hint: 'Win when every kingdom card costs 4 coins or less.', bonus: 20 },
-  { id: 'fire-sale', group: 'The kingdom', track: 'humble', trackName: 'Humble Means', name: 'Fire Sale', hint: 'Win when every kingdom card costs 3 coins or less.', bonus: 50 },
-  { id: 'regular', group: 'Milestones', track: 'games', trackName: 'Games played', name: 'Regular', hint: 'Play 10 rated games.', target: 10 },
-  { id: 'veteran', group: 'Milestones', track: 'games', trackName: 'Games played', name: 'Veteran', hint: 'Play 25 rated games.', target: 25 },
-  { id: 'spoils-150', group: 'Milestones', track: 'spoils', trackName: 'Spoils', name: 'Full Coffers', hint: 'Earn more than 150 XP from a single game.', target: 151, bonus: 25 },
-  { id: 'spoils-200', group: 'Milestones', track: 'spoils', trackName: 'Spoils', name: "Dragon's Hoard", hint: 'Earn more than 200 XP from a single game.', target: 201, bonus: 75 },
-  lifetime(250, 'Landholder', 10), lifetime(500, 'Baron', 20), lifetime(750, 'Provincial Governor', 35), lifetime(1000, 'Duke of Duchies', 60), lifetime(1250, 'Lord of the Realm', 100),
+  // Winning
+  { id: 'first-win', group: 'Winning', tier: 'common', name: 'First blood', hint: 'Win a game outright.' },
+  wins(5, 'Skirmisher', 'common', 20), wins(10, 'Veteran of the Field', 'uncommon', 40), wins(20, 'Scourge', 'rare', 80), wins(50, 'Warmaster', 'epic', 200), wins(100, 'Immortal', 'legendary', 500),
+  { id: 'hat-trick', group: 'Winning', track: 'streak', trackName: 'Winning Streak', tier: 'uncommon', name: 'Hat trick', hint: 'Win three rated games in a row.', target: 3 },
+  { id: 'unstoppable', group: 'Winning', track: 'streak', trackName: 'Winning Streak', tier: 'rare', name: 'Unstoppable', hint: 'Win five rated games in a row.', target: 5, bonus: 60 },
+  { id: 'clean-sweep', group: 'Winning', tier: 'uncommon', name: 'Clean sweep', hint: 'Win every game of a night (two or more games).' },
+  { id: 'landslide', group: 'Winning', track: 'margin', trackName: 'Margin of Victory', tier: 'uncommon', name: 'Landslide', hint: 'Win a game by more than 20 VP over the runner-up.', target: 21, bonus: 30 },
+  { id: 'overkill', group: 'Winning', track: 'margin', trackName: 'Margin of Victory', tier: 'rare', name: 'Overkill', hint: 'Win a game by 50 VP or more over the runner-up.', target: 50, bonus: 60 },
+  { id: 'twice-the-crown', group: 'Winning', tier: 'rare', name: 'Twice the Crown', hint: 'Win with at least double the VP of every other player.', bonus: 40 },
+  { id: 'total-domination', group: 'Winning', tier: 'legendary', name: 'Total Domination', hint: 'In a game of 3 or more, win with more VP than all your opponents combined.', bonus: 300 },
+  { id: 'shadow', group: 'Winning', tier: 'uncommon', name: 'Shadow of the Throne', hint: 'Finish in the top half three games in a row.', bonus: 20 },
+  // Comebacks and upsets
+  { id: 'redemption', group: 'Comebacks and upsets', tier: 'common', name: 'Redemption', hint: 'Win the game right after finishing last.' },
+  { id: 'giant-slayer', group: 'Comebacks and upsets', track: 'slayer', trackName: 'Slayer', tier: 'uncommon', name: 'Giant slayer', hint: 'Win at a table with someone rated 100+ Elo above you.' },
+  { id: 'god-slayer', group: 'Comebacks and upsets', track: 'slayer', trackName: 'Slayer', tier: 'rare', name: 'God Slayer', hint: 'Win at a table with someone rated 200+ Elo above you.', bonus: 50 },
+  { id: 'phoenix', group: 'Comebacks and upsets', tier: 'epic', name: 'The Phoenix', hint: 'Win a rated game of 3 or more as the lowest-rated player at the table.', bonus: 75 },
+  { id: 'the-chosen-one', group: 'Comebacks and upsets', tier: 'legendary', name: 'The Chosen One', hint: 'Win a 6-player rated game as the lowest-rated player at the table.', bonus: 500 },
+  { id: 'big-swing', group: 'Comebacks and upsets', tier: 'uncommon', name: 'Big swing', hint: 'Gain 50 or more Elo in a single game.' },
+  { id: 'bounty-hunter', group: 'Comebacks and upsets', tier: 'uncommon', name: 'Bounty Hunter', hint: 'Finish ahead of a higher-rated player in 5 different rated games.', target: 5, bonus: 40 },
+  { id: 'kingslayer', group: 'Comebacks and upsets', tier: 'epic', name: 'Kingslayer', hint: 'Finish ahead of the league’s highest-rated player, as they stood going into the game.', bonus: 100 },
+  // The table
+  { id: 'know-your-enemy', group: 'The table', tier: 'uncommon', name: 'Know your enemy', hint: 'Play at least one game against every other player.' },
+  { id: 'unbeaten-blade', group: 'The table', tier: 'rare', name: 'Unbeaten Blade', hint: 'Win three 1v1 games in a row.', bonus: 30 },
+  { id: 'lone-wolf', group: 'The table', tier: 'uncommon', name: 'Lone Wolf', hint: 'Win 10 1v1 games.', target: 10, bonus: 40 },
+  { id: 'royal-court', group: 'The table', tier: 'uncommon', name: 'Royal Court', hint: 'Win 10 games with 4 or more players.', target: 10, bonus: 40 },
+  { id: 'king-of-the-hill', group: 'The table', tier: 'epic', name: 'King of the Hill', hint: 'Win two games in a row with 5 or more players in each.', bonus: 75 },
+  { id: 'apex-predator', group: 'The table', tier: 'rare', name: 'Apex Predator', hint: 'Win a 6-player game.', bonus: 40 },
+  { id: 'colossus', group: 'The table', tier: 'epic', name: 'Colossus', hint: 'In a 5 or 6-player game, outscore the bottom three players combined.', bonus: 100 },
+  { id: 'the-final-boss', group: 'The table', tier: 'epic', name: 'The Final Boss', hint: 'Win a 6-player rated game while rated highest at the table.', bonus: 100 },
+  { id: 'world-voyage', group: 'The table', tier: 'epic', name: 'World Voyage', hint: 'Win a game at every table size, from 2 to 6 players.', bonus: 200 },
+  { id: 'the-grandmaster', group: 'The table', tier: 'legendary', name: 'The Grandmaster', hint: 'Win a rated game at every table size (2 to 6) against opponents whose average Elo is at least your own going in.', bonus: 500 },
+  { id: 'the-unbreakable', group: 'The table', tier: 'legendary', name: 'The Unbreakable', hint: 'Play 20 rated games in a row without finishing last.', target: 20, bonus: 600 },
+  // The kingdom
+  { id: 'gilded-hall', group: 'The kingdom', tier: 'uncommon', name: 'Gilded Hall', hint: 'Win with a kingdom whose cards cost 4.8 coins or more on average.', bonus: 25 },
+  { id: 'the-great-divide', group: 'The kingdom', tier: 'rare', name: 'The Great Divide', hint: 'Win with 3 or more cards costing 2 coins or less and 3 or more costing 6 or more.', bonus: 50 },
+  { id: 'pure-blood', group: 'The kingdom', tier: 'uncommon', name: 'Pure Blood', hint: 'Play a game where all 10 kingdom cards are from the same expansion.', bonus: 15 },
+  { id: 'a-world-divided', group: 'The kingdom', tier: 'rare', name: 'A World Divided', hint: 'Win with a kingdom of exactly 2 expansions, 5 piles from each.', bonus: 60 },
+  { id: 'ten-kingdoms', group: 'The kingdom', tier: 'epic', name: 'Ten Kingdoms, One Crown', hint: 'Win where every kingdom pile is from a different expansion.', bonus: 150 },
+  { id: 'trial-by-fire', group: 'The kingdom', tier: 'uncommon', name: 'Trial by Fire', hint: 'Win with 3 or more Attack cards in the kingdom.', bonus: 25 },
+  { id: 'war-zone', group: 'The kingdom', tier: 'uncommon', name: 'War Zone', hint: 'Play a game with 5 or more Attack cards in the kingdom.', bonus: 20 },
+  { id: 'peaceful-realm', group: 'The kingdom', track: 'peace', trackName: 'Peace', tier: 'common', name: 'Peaceful Realm', hint: 'Play a game with no Attack card in the kingdom.', bonus: 10 },
+  { id: 'the-pacifist', group: 'The kingdom', track: 'peace', trackName: 'Peace', tier: 'uncommon', name: 'The Pacifist', hint: 'Win a game with no Attack card in the kingdom.', bonus: 30 },
+  { id: 'gold-rush', group: 'The kingdom', tier: 'common', name: 'Gold Rush', hint: 'Win a game with 3 or more Treasures in the kingdom.', bonus: 15 },
+  { id: 'cheap-tricks', group: 'The kingdom', track: 'humble', trackName: 'Humble Means', tier: 'uncommon', name: 'Cheap Tricks', hint: 'Win when every kingdom card costs 4 coins or less.', bonus: 20 },
+  { id: 'fire-sale', group: 'The kingdom', track: 'humble', trackName: 'Humble Means', tier: 'rare', name: 'Fire Sale', hint: 'Win when every kingdom card costs 3 coins or less.', bonus: 50 },
+  // Landscapes
+  typeWins('changing-tides', 'Changing Tides', 'Trait', 'a'), typeWins('architect-of-victory', 'Architect of Victory', 'Project', 'a'), typeWins('the-wayfinder', 'The Wayfinder', 'Way', 'a'),
+  typeWins('master-strategist', 'Master Strategist', 'Landmark', 'a'), typeWins('turning-point', 'Turning Point', 'Event', 'an'),
+  { id: 'shifting-realities', group: 'Landscapes', track: 'mix', trackName: 'Landscape Mix', tier: 'uncommon', name: 'Shifting Realities', hint: 'Win a game featuring at least two different landscape types.', target: 2, bonus: 30 },
+  { id: 'fortune-favors', group: 'Landscapes', track: 'mix', trackName: 'Landscape Mix', tier: 'rare', name: 'Fortune Favors the Bold', hint: 'Win a game featuring at least three different landscape types.', target: 3, bonus: 60 },
+  { id: 'master-of-fate', group: 'Landscapes', tier: 'epic', name: 'Master of Fate', hint: 'Win at least one game featuring each landscape type, over any number of games.', bonus: 150 },
+  { id: 'landscape-connoisseur', group: 'Landscapes', track: 'lsee', trackName: 'Landscape Explorer', tier: 'uncommon', name: 'Landscape Connoisseur', hint: 'See 25 different landscape cards in your games.', target: 25, bonus: 40 },
+  { id: 'beyond-the-horizon', group: 'Landscapes', track: 'lsee', trackName: 'Landscape Explorer', tier: 'rare', name: 'Beyond the Horizon', hint: 'See 50 different landscape cards in your games.', target: 50, bonus: 100 },
+  // Milestones
+  { id: 'regular', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'common', name: 'Regular', hint: 'Play 10 rated games.', target: 10 },
+  { id: 'veteran', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'uncommon', name: 'Veteran', hint: 'Play 25 rated games.', target: 25 },
+  { id: 'spoils-150', group: 'Milestones', track: 'spoils', trackName: 'Spoils', tier: 'uncommon', name: 'Full Coffers', hint: 'Earn more than 150 XP from a single game.', target: 151, bonus: 25 },
+  { id: 'spoils-200', group: 'Milestones', track: 'spoils', trackName: 'Spoils', tier: 'rare', name: "Dragon's Hoard", hint: 'Earn more than 200 XP from a single game.', target: 201, bonus: 75 },
+  lifetime(250, 'Landholder', 'common', 10), lifetime(500, 'Baron', 'common', 20), lifetime(750, 'Provincial Governor', 'uncommon', 35), lifetime(1000, 'Duke of Duchies', 'rare', 60), lifetime(1250, 'Lord of the Realm', 'epic', 100),
+  { id: 'the-centurion', group: 'Milestones', tier: 'epic', name: 'The Centurion', hint: 'Finish a game with 100 VP or more.', bonus: 100 },
+  { id: 'unfortunate-one', group: 'Milestones', tier: 'common', name: 'The Unfortunate One', hint: 'Finish a game with exactly 1 VP.', bonus: 10 },
+  { id: 'into-the-abyss', group: 'Milestones', tier: 'uncommon', name: 'Into the Abyss', hint: 'Finish a game with negative VP.', bonus: 20 },
+  { id: 'the-immortal', group: 'Milestones', tier: 'legendary', name: 'The Immortal', hint: 'Win 100 rated games and reach 1,500 Elo.', bonus: 1000 },
 ];
 
 // the 50% and 100% steps of each expansion (by the catalog's expansion name): more than half of its supply piles, then all of them
@@ -54,6 +97,8 @@ const EXPANSION_NAMES = {
   Menagerie: ['Horse Whisperer', 'Master of the Menagerie'], Plunder: ['Treasure Hunter', 'Dread Admiral'],
 };
 const LEVEL_NAMES = { 5: 'Apprentice', 10: 'Adept', 20: 'Sage', 50: 'Grandmaster', 100: 'Paragon', 200: 'Dominion Incarnate' };
+const LEVEL_TIERS = { 5: 'common', 10: 'common', 20: 'uncommon', 50: 'rare', 100: 'epic', 200: 'legendary' };
+const RANK_TIERS = ['common', 'uncommon', 'rare', 'epic'];   // Knight, Lord, Duke, Emperor (the tiers above the first)
 const slug = n => n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 const vpOf = (g, n) => (g.playerVP && g.playerVP[n] != null && !Number.isNaN(+g.playerVP[n]) ? +g.playerVP[n] : null);
@@ -63,6 +108,18 @@ function cardsOf(g, catalog) {
   const cards = (g.kingdom || []).filter(k => k.kind === 'card').map(k => catalog.cardsById.get(k.id));
   return { cards: cards.filter(Boolean), full: cards.length >= 10 && cards.every(Boolean) };
 }
+const landscapesOf = (g, catalog) => [...new Map((g.kingdom || []).filter(k => k.kind === 'landscape').map(k => catalog.landscapesById.get(k.id)).filter(Boolean).map(l => [l.id, l])).values()];
+
+/* Dominion Legend: every badge that is not legendary, earned. (The Renown track and the season title are added after this, since they come from XP and the
+   league, so they are left out of the count.) Earned in the game that completed the set; null while anything is missing. */
+export function legendFrom(list, games = []) {
+  const need = list.filter(b => b.tier !== 'legendary');
+  if (!need.length || !need.every(b => b.earned)) return null;
+  const idx = new Map(games.map(g => [g.line, g.idx ?? 0]));
+  const last = need.map(b => b.earned.line).filter(l => l != null).reduce((m, l) => (m == null || (idx.get(l) ?? 0) > (idx.get(m) ?? 0) ? l : m), null);
+  const g = last != null ? games.find(x => x.line === last) : null;
+  return { date: g ? g.date : null, line: g ? g.line : null };
+}
 
 /* `p` is a player from the engine (results, titles, peak); `tiers` D.tiers; `everyone` the other rated players' names; `xp` the player's XP (lib/xp.js)
    for the Level track. `ctx` = { games: every game of the group (D.games), catalog: the Collection's catalog or null, baseXp: Map line -> XP before badge
@@ -71,17 +128,42 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
   const rs = p.results || [];
   const at = i => (i >= 0 && rs[i] ? { date: rs[i].game.date, line: rs[i].game.line } : null);
   const out = new Map(), vals = new Map();
+  const me = p.name, all = ctx.games || [];
 
   out.set('first-win', at(firstIndex(rs, r => sole(r.game, r.place))));
-  let run = 0, hat = -1;
-  rs.forEach((r, i) => { run = sole(r.game, r.place) ? run + 1 : 0; if (run === 3 && hat < 0) hat = i; });
-  out.set('hat-trick', at(hat));
+  let run = 0, best = 0, hat = -1, unst = -1;
+  rs.forEach((r, i) => { run = sole(r.game, r.place) ? run + 1 : 0; best = Math.max(best, run); if (run === 3 && hat < 0) hat = i; if (run === 5 && unst < 0) unst = i; });
+  out.set('hat-trick', at(hat)); out.set('unstoppable', at(unst)); vals.set('hat-trick', best); vals.set('unstoppable', best);
   out.set('redemption', at(firstIndex(rs, (r, i) => i > 0 && sole(r.game, r.place) && soleLast(rs[i - 1].game, rs[i - 1].place))));
-  const slayer = gap => at(firstIndex(rs, r => sole(r.game, r.place) && Object.entries(r.game.elo || {}).some(([n, e]) => n !== p.name && e && e.before - r.before >= gap)));
+  const slayer = gap => at(firstIndex(rs, r => sole(r.game, r.place) && Object.entries(r.game.elo || {}).some(([n, e]) => n !== me && e && e.before - r.before >= gap)));
   out.set('giant-slayer', slayer(100)); out.set('god-slayer', slayer(200));
   out.set('big-swing', at(firstIndex(rs, r => r.after - r.before >= 50)));
-  // the lowest-rated player at a table of three or more beats everyone else there
-  out.set('phoenix', at(firstIndex(rs, r => { const e = Object.entries(r.game.elo || {}); return e.length >= 3 && r.place === 1 && e.every(([n, x]) => n === p.name || (x && x.before > r.before)); })));
+  // the lowest-rated player at a table beats everyone else there (three or more players; six for The Chosen One)
+  const lowest = (r, size) => { const e = Object.entries(r.game.elo || {}); return (size ? e.length === size : e.length >= 3) && r.place === 1 && e.every(([n, x]) => n === me || (x && x.before > r.before)); };
+  out.set('phoenix', at(firstIndex(rs, r => lowest(r, 0)))); out.set('the-chosen-one', at(firstIndex(rs, r => lowest(r, 6))));
+  // rated games only, from here: who was rated above whom going in
+  const eloOf = r => Object.entries(r.game.elo || {}).filter(([n, e]) => n !== me && e);
+  out.set('the-final-boss', at(firstIndex(rs, r => r.game.n === 6 && r.place === 1 && eloOf(r).length === 5 && eloOf(r).every(([, e]) => e.before < r.before))));
+  let bounty = 0; const bountyAt = [];
+  rs.forEach((r, i) => { if (eloOf(r).some(([n, e]) => e.before > r.before && r.game.places[n] > r.place)) { bounty++; bountyAt.push(i); } });
+  out.set('bounty-hunter', at(bounty >= 5 ? bountyAt[4] : -1)); vals.set('bounty-hunter', bounty);
+  // the league's top-rated player going into a game (the previous game's ratings), beaten
+  out.set('kingslayer', at(firstIndex(rs, r => {
+    const g = r.game, prev = g.idx > 0 ? all[g.idx - 1] : null, snap = prev && prev.snapshot; if (!snap) return false;
+    const top = Object.entries(snap).sort((a, b) => b[1] - a[1]); if (top.length < 2 || top[0][1] === top[1][1] || top[0][0] === me) return false;
+    return g.places[top[0][0]] != null && g.places[top[0][0]] > r.place;
+  })));
+  // Immortal: 100 rated wins AND a 1,500 Elo peak; the later of the two moments
+  let rw = 0, w100 = -1, p1500 = -1;
+  rs.forEach((r, i) => { if (r.place === 1 && ++rw === 100) w100 = i; if (p1500 < 0 && r.after >= 1500) p1500 = i; });
+  out.set('the-immortal', at(w100 >= 0 && p1500 >= 0 ? Math.max(w100, p1500) : -1));
+  // 20 rated games in a row without finishing last (a shared last place is last)
+  let safe = 0, unbreak = -1; rs.forEach((r, i) => { safe = r.place === r.game.n ? 0 : safe + 1; if (safe === 20 && unbreak < 0) unbreak = i; });
+  out.set('the-unbreakable', at(unbreak));
+  // a win at every table size against opponents rated at least as high on average
+  const gm = new Set(); let gmAt = -1;
+  rs.forEach((r, i) => { const o = eloOf(r); if (r.place === 1 && o.length && r.game.n >= 2 && r.game.n <= 6 && o.reduce((t, [, e]) => t + e.before, 0) / o.length >= r.before) gm.add(r.game.n); if (gmAt < 0 && gm.size === 5) gmAt = i; });
+  out.set('the-grandmaster', at(gmAt));
 
   // a night won from start to finish: every rated game that day won outright, at least two of them
   const byDay = new Map();
@@ -90,19 +172,20 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
   for (const idx of byDay.values()) if (idx.length >= 2 && idx.every(i => sole(rs[i].game, rs[i].place))) { sweep = sweep < 0 ? idx[idx.length - 1] : Math.min(sweep, idx[idx.length - 1]); }
   out.set('clean-sweep', at(sweep));
 
-  const others = everyone.filter(n => n !== p.name), met = new Set();
-  let all = -1;
-  if (others.length) rs.forEach((r, i) => { if (all >= 0) return; Object.keys(r.game.places).forEach(n => met.add(n)); if (others.every(n => met.has(n))) all = i; });
-  out.set('know-your-enemy', at(all));
+  const others = everyone.filter(n => n !== me), met = new Set();
+  let allMet = -1;
+  if (others.length) rs.forEach((r, i) => { if (allMet >= 0) return; Object.keys(r.game.places).forEach(n => met.add(n)); if (others.every(n => met.has(n))) allMet = i; });
+  out.set('know-your-enemy', at(allMet));
   out.set('regular', at(rs.length >= 10 ? 9 : -1)); vals.set('regular', rs.length);
   out.set('veteran', at(rs.length >= 25 ? 24 : -1)); vals.set('veteran', rs.length);
 
   // everything below looks at every game the player sat at, friendly ones too (a win is a win), in order
-  const me = p.name, G = (ctx.games || []).filter(g => g.n >= 2 && g.places[me] != null);
+  const G = all.filter(g => g.n >= 2 && g.places[me] != null);
   const gat = i => (i >= 0 && G[i] ? { date: G[i].date, line: G[i].line } : null);
   const won = G.map(g => g.places[me] === 1);
   const runEnd = (n, ok) => { let r = 0; for (let i = 0; i < G.length; i++) { r = ok(G[i], i) ? r + 1 : 0; if (r >= n) return i; } return -1; };
   const reach = (cum, t) => cum.findIndex(v => v >= t);
+  const countAt = (ok, n) => { let c = 0, at1 = -1; G.forEach((g, i) => { if (ok(g, i) && ++c === n) at1 = i; }); return [at1, c]; };
 
   let w = 0; const cumWins = G.map((g, i) => (w += won[i] ? 1 : 0));
   for (const n of [5, 10, 20, 50, 100]) { out.set('wins-' + n, gat(reach(cumWins, n))); vals.set('wins-' + n, w); }
@@ -110,11 +193,20 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
   for (const n of [250, 500, 750, 1000, 1250]) { out.set('vp-' + n, gat(reach(cumVp, n))); vals.set('vp-' + n, vpSum); }
 
   const rivalsVp = g => g.names.filter(n => n !== me).map(n => vpOf(g, n));
-  out.set('landslide', gat(G.findIndex((g, i) => won[i] && allVp(g) && vpOf(g, me) - Math.max(...rivalsVp(g)) > 20)));
+  const margin = (g, i) => (won[i] && allVp(g) ? vpOf(g, me) - Math.max(...rivalsVp(g)) : null);
+  const margins = G.map(margin), bestMargin = margins.reduce((m, v) => (v != null && v > m ? v : m), 0);
+  out.set('landslide', gat(margins.findIndex(m => m != null && m > 20))); out.set('overkill', gat(margins.findIndex(m => m != null && m >= 50)));
+  vals.set('landslide', bestMargin); vals.set('overkill', bestMargin);
   out.set('twice-the-crown', gat(G.findIndex((g, i) => won[i] && allVp(g) && vpOf(g, me) > 0 && rivalsVp(g).every(v => v * 2 <= vpOf(g, me)))));
+  out.set('total-domination', gat(G.findIndex((g, i) => won[i] && g.n >= 3 && allVp(g) && vpOf(g, me) > rivalsVp(g).reduce((t, v) => t + v, 0))));
   out.set('colossus', gat(G.findIndex(g => (g.n === 5 || g.n === 6) && allVp(g) && vpOf(g, me) > rivalsVp(g).sort((a, b) => a - b).slice(0, 3).reduce((x, y) => x + y, 0))));
+  out.set('the-centurion', gat(G.findIndex(g => (vpOf(g, me) ?? -Infinity) >= 100)));
+  out.set('unfortunate-one', gat(G.findIndex(g => vpOf(g, me) === 1)));
+  out.set('into-the-abyss', gat(G.findIndex(g => (vpOf(g, me) ?? 0) < 0)));
   out.set('shadow', gat(runEnd(3, g => g.pts[me] >= 0.5)));
   out.set('unbeaten-blade', gat((() => { const duels = G.map((g, i) => [g, i]).filter(([g]) => g.n === 2); let r = 0; for (const [, i] of duels) { r = won[i] ? r + 1 : 0; if (r >= 3) return i; } return -1; })()));
+  const [wolfAt, wolf] = countAt((g, i) => g.n === 2 && won[i], 10); out.set('lone-wolf', gat(wolfAt)); vals.set('lone-wolf', wolf);
+  const [courtAt, court] = countAt((g, i) => g.n >= 4 && won[i], 10); out.set('royal-court', gat(courtAt)); vals.set('royal-court', court);
   out.set('king-of-the-hill', gat(G.findIndex((g, i) => i > 0 && g.n >= 5 && G[i - 1].n >= 5 && won[i] && won[i - 1])));
   out.set('apex-predator', gat(G.findIndex((g, i) => g.n === 6 && won[i])));
   const sizes = new Set(); let voyage = -1;
@@ -124,63 +216,120 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
   // XP in one game, before any badge payout; the biggest so far is the progress
   const base = ctx.baseXp;
   if (base) {
-    let best = 0;
-    G.forEach(g => { best = Math.max(best, base.get(g.line) || 0); });
+    let bestXp = 0;
+    G.forEach(g => { bestXp = Math.max(bestXp, base.get(g.line) || 0); });
     out.set('spoils-150', gat(G.findIndex(g => (base.get(g.line) || 0) > 150))); out.set('spoils-200', gat(G.findIndex(g => (base.get(g.line) || 0) > 200)));
-    vals.set('spoils-150', best); vals.set('spoils-200', best);
+    vals.set('spoils-150', bestXp); vals.set('spoils-200', bestXp);
   }
 
-  // what the kingdoms were made of: needs the Collection's catalog
   const cat = ctx.catalog;
+  const extra = [];   // badges built from the catalog (expansion tracks) and the levels, appended after the static ones
+  // what the kingdoms were made of: needs the Collection's catalog
   if (cat) {
-    const kc = G.map(g => cardsOf(g, cat));
+    const kc = G.map(g => cardsOf(g, cat)), ls = G.map(g => landscapesOf(g, cat));
+    const exps = c => new Set(c.cards.map(x => x.expansion));
     const avg = c => c.cards.reduce((t, x) => t + x.coins, 0) / c.cards.length;
     const cheap = (c, max) => c.full && c.cards.every(x => x.debt === 0 && x.coins <= max);
-    out.set('gilded-hall', gat(G.findIndex((g, i) => won[i] && kc[i].full && avg(kc[i]) >= 4.8)));
-    out.set('pure-blood', gat(kc.findIndex(c => c.full && new Set(c.cards.map(x => x.expansion)).size === 1)));
-    out.set('trial-by-fire', gat(G.findIndex((g, i) => won[i] && kc[i].cards.filter(x => x.types.includes('Attack')).length >= 3)));
-    out.set('peaceful-realm', gat(kc.findIndex(c => c.full && !c.cards.some(x => x.types.includes('Attack')))));
-    out.set('cheap-tricks', gat(G.findIndex((g, i) => won[i] && cheap(kc[i], 4))));
-    out.set('fire-sale', gat(G.findIndex((g, i) => won[i] && cheap(kc[i], 3))));
+    const attacks = c => c.cards.filter(x => x.types.includes('Attack')).length;
+    const spread = kc.map(c => exps(c).size);
+    const first = ok => gat(G.findIndex((g, i) => ok(g, i, kc[i], ls[i])));
+    out.set('gilded-hall', first((g, i, c) => won[i] && c.full && avg(c) >= 4.8));
+    out.set('the-great-divide', first((g, i, c) => won[i] && c.cards.filter(x => x.debt === 0 && x.coins <= 2).length >= 3 && c.cards.filter(x => x.debt === 0 && x.coins >= 6).length >= 3));
+    out.set('pure-blood', first((g, i, c) => c.full && exps(c).size === 1));
+    out.set('a-world-divided', first((g, i, c) => { if (!won[i] || !c.full || c.cards.length !== 10) return false; const n = {}; c.cards.forEach(x => { n[x.expansion] = (n[x.expansion] || 0) + 1; }); const v = Object.values(n); return v.length === 2 && v[0] === 5 && v[1] === 5; }));
+    out.set('ten-kingdoms', first((g, i, c) => won[i] && c.full && exps(c).size === c.cards.length));
+    out.set('trial-by-fire', first((g, i, c) => won[i] && attacks(c) >= 3));
+    out.set('war-zone', first((g, i, c) => attacks(c) >= 5));
+    out.set('peaceful-realm', first((g, i, c) => c.full && attacks(c) === 0)); out.set('the-pacifist', first((g, i, c) => won[i] && c.full && attacks(c) === 0));
+    out.set('gold-rush', first((g, i, c) => won[i] && c.cards.filter(x => x.types.includes('Treasure')).length >= 3));
+    out.set('cheap-tricks', first((g, i, c) => won[i] && cheap(c, 4))); out.set('fire-sale', first((g, i, c) => won[i] && cheap(c, 3)));
+
+    // landscapes
+    const types = i => new Set(ls[i].map(l => l.type));
+    const typeWinCount = type => countAt((g, i) => won[i] && types(i).has(type), 5);
+    for (const [id, type] of [['changing-tides', 'Trait'], ['architect-of-victory', 'Project'], ['the-wayfinder', 'Way'], ['master-strategist', 'Landmark'], ['turning-point', 'Event']]) { const [a, c] = typeWinCount(type); out.set(id, gat(a)); vals.set(id, c); }
+    const bestMix = G.reduce((m, g, i) => (won[i] ? Math.max(m, types(i).size) : m), 0);
+    out.set('shifting-realities', first((g, i) => won[i] && types(i).size >= 2)); out.set('fortune-favors', first((g, i) => won[i] && types(i).size >= 3));
+    vals.set('shifting-realities', bestMix); vals.set('fortune-favors', bestMix);
+    const wonTypes = new Set(), allTypes = cat.landscapeTypes || []; let fate = -1;
+    G.forEach((g, i) => { if (won[i]) types(i).forEach(t => wonTypes.add(t)); if (fate < 0 && allTypes.length && allTypes.every(t => wonTypes.has(t))) fate = i; });
+    out.set('master-of-fate', gat(fate));
+    const lSeen = new Set(), lCum = G.map((g, i) => { ls[i].forEach(l => lSeen.add(l.id)); return lSeen.size; });
+    out.set('landscape-connoisseur', gat(reach(lCum, 25))); out.set('beyond-the-horizon', gat(reach(lCum, 50))); vals.set('landscape-connoisseur', lSeen.size); vals.set('beyond-the-horizon', lSeen.size);
+
+    // expansions in one kingdom: played with (3, 5, 7) and won with (5, 8)
+    out.set('first-expedition', gat(spread.findIndex(n => n >= 3))); out.set('world-traveler', gat(spread.findIndex(n => n >= 5))); out.set('melting-pot', gat(spread.findIndex(n => n >= 7)));
+    const bestSpread = Math.max(0, ...spread), bestWonSpread = Math.max(0, ...spread.map((n, i) => (won[i] ? n : 0)));
+    for (const id of ['first-expedition', 'world-traveler', 'melting-pot']) vals.set(id, bestSpread);
+    out.set('cultural-exchange', gat(spread.findIndex((n, i) => won[i] && n >= 5))); out.set('united-kingdoms', gat(spread.findIndex((n, i) => won[i] && n >= 8)));
+    vals.set('cultural-exchange', bestWonSpread); vals.set('united-kingdoms', bestWonSpread);
+
+    // cards (supply piles, a split pile once) ever seen, and wins per expansion
+    const owned = cat.ownedExpansions.map(e => e.name), piles = new Set();
+    const pileCum = G.map((g, i) => { kc[i].cards.forEach(c => piles.add(c.pileKey)); return piles.size; });
+    out.set('collector', gat(reach(pileCum, 100))); out.set('grand-archivist', gat(reach(pileCum, 250))); out.set('master-of-all-realms', gat(cat.piles.length ? reach(pileCum, cat.piles.length) : -1));
+    for (const id of ['collector', 'grand-archivist', 'master-of-all-realms']) vals.set(id, piles.size);
+    const winsWith = new Map(owned.map(n => [n, 0])), firstWin = new Map(); let jack = -1, special = -1;
+    G.forEach((g, i) => { if (!won[i]) return; exps(kc[i]).forEach(n => { if (!winsWith.has(n)) return; winsWith.set(n, winsWith.get(n) + 1); if (!firstWin.has(n)) firstWin.set(n, i); if (special < 0 && winsWith.get(n) >= 10) special = i; }); if (jack < 0 && owned.length && owned.every(n => firstWin.has(n))) jack = i; });
+    out.set('jack-of-all-trades', gat(jack)); out.set('the-specialist', gat(special)); vals.set('the-specialist', Math.max(0, ...winsWith.values()));
+
+    // every owned expansion is a track: more than half of its supply piles played, then all of them
+    const perExp = new Map(owned.map(n => [n, new Set()])), seenSets = new Set(), sets5 = [], firstAt = new Map();
+    const totals = new Map(owned.map(n => [n, cat.piles.filter(x => x.expansion === n).length]));
+    G.forEach((g, i) => {
+      for (const c of kc[i].cards) {
+        if (!seenSets.has(c.expansion)) { seenSets.add(c.expansion); sets5.push(i); }
+        const set = perExp.get(c.expansion); if (set) set.add(c.pileKey);
+      }
+      for (const n of owned) {
+        const total = totals.get(n), size = perExp.get(n).size;
+        if (size * 2 > total && !firstAt.has(n + ':half')) firstAt.set(n + ':half', i);
+        if (size >= total && total && !firstAt.has(n + ':full')) firstAt.set(n + ':full', i);
+      }
+    });
+    const cart = (id, name, hint, target, bonus, tier, k) => extra.push({ id, group: 'Expansions', track: 'sets', trackName: 'Cartographer', tier, name, hint, target, bonus, value: seenSets.size, earned: gat(k) });
+    cart('sets-5', 'Journeyman', 'Play with cards from 5 expansions.', 5, 20, 'common', seenSets.size >= 5 ? sets5[4] : -1);
+    cart('sets-all', 'Master Cartographer', `Play with cards from all ${owned.length} expansions.`, owned.length, 120, 'epic', seenSets.size >= owned.length ? sets5[owned.length - 1] : -1);
+    for (const n of owned) {
+      const names = EXPANSION_NAMES[n]; if (!names) continue;
+      const total = totals.get(n), label = expansionMeta(n).label, size = perExp.get(n).size, set = expansionMeta(n).icon;
+      const step = (id, name, hint, target, bonus, tier, k) => extra.push({ id: `exp-${slug(n)}-${id}`, group: 'Expansions', track: 'exp-' + slug(n), trackName: label, set, tier, name, hint, target, bonus, value: size, earned: gat(k) });
+      step('half', names[0], `Play with more than half of ${label}'s cards.`, Math.floor(total / 2) + 1, 40, 'uncommon', firstAt.has(n + ':half') ? firstAt.get(n + ':half') : -1);
+      step('full', names[1], `Play with every one of ${label}'s cards.`, total, 200, 'epic', firstAt.has(n + ':full') ? firstAt.get(n + ':full') : -1);
+    }
   }
 
   const list = BADGES.map(b => ({ ...b, earned: out.get(b.id) || null, ...(vals.has(b.id) ? { value: vals.get(b.id) } : {}) }));
-
-  // every owned expansion is a track: more than half of its supply piles played, then all of them (one pile per kingdom slot, a split pile once)
+  // the catalog-built ones need their (static) names to be listed after the others in their sections: a track's steps stay together either way
+  list.push(...extra);
+  // Collection (cards seen): its steps carry the catalog total, so they are listed only when the catalog is in
   if (cat) {
-    const owned = cat.ownedExpansions.map(e => e.name), seenSets = new Set(), perExp = new Map(owned.map(n => [n, new Set()]));
-    const sets5 = [], first = new Map();   // sets5: the game each new set was first played in
-    G.forEach((g, i) => {
-      for (const c of cardsOf(g, cat).cards) {
-        if (!seenSets.has(c.expansion)) { seenSets.add(c.expansion); sets5.push(i); }
-        const piles = perExp.get(c.expansion); if (piles) piles.add(c.pileKey);
-      }
-      for (const n of owned) {
-        const total = cat.piles.filter(x => x.expansion === n).length, size = perExp.get(n).size;
-        if (size * 2 > total && !first.has(n + ':half')) first.set(n + ':half', i);
-        if (size >= total && total && !first.has(n + ':full')) first.set(n + ':full', i);
-      }
-    });
-    const cart = (id, name, hint, target, bonus, k) => list.push({ id, group: 'Expansions', track: 'sets', trackName: 'Cartographer', name, hint, target, bonus, value: seenSets.size, earned: gat(k) });
-    cart('sets-5', 'Journeyman', 'Play with cards from 5 expansions.', 5, 20, seenSets.size >= 5 ? sets5[4] : -1);
-    cart('sets-all', 'Master Cartographer', `Play with cards from all ${owned.length} expansions.`, owned.length, 120, seenSets.size >= owned.length ? sets5[owned.length - 1] : -1);
-    for (const n of owned) {
-      const names = EXPANSION_NAMES[n]; if (!names) continue;
-      const total = cat.piles.filter(x => x.expansion === n).length, label = expansionMeta(n).label, size = perExp.get(n).size, set = expansionMeta(n).icon;
-      const step = (id, name, hint, target, bonus, k) => list.push({ id: `exp-${slug(n)}-${id}`, group: 'Expansions', track: 'exp-' + slug(n), trackName: label, set, name, hint, target, bonus, value: size, earned: gat(k) });
-      step('half', names[0], `Play with more than half of ${label}'s cards.`, Math.floor(total / 2) + 1, 40, first.has(n + ':half') ? first.get(n + ':half') : -1);
-      step('full', names[1], `Play with every one of ${label}'s cards.`, total, 200, first.has(n + ':full') ? first.get(n + ':full') : -1);
-    }
+    const total = cat.piles.length;
+    const add = (id, name, hint, target, tier, bonus) => list.push({ id, group: 'Expansions', track: 'cards', trackName: 'Collection', tier, name, hint, target, bonus, value: vals.get(id), earned: out.get(id) || null });
+    add('collector', 'Collector', 'See 100 different kingdom cards in your games.', 100, 'uncommon', 40);
+    add('grand-archivist', 'Grand Archivist', 'See 250 different kingdom cards in your games.', 250, 'rare', 100);
+    add('master-of-all-realms', 'Master of All Realms', `See every one of the ${total} kingdom cards across all ${cat.ownedExpansions.length} expansions.`, total, 'legendary', 500);
+    const ex = (id, name, hint, target, tier, bonus, track, trackName) => list.push({ id, group: 'Expansions', track, trackName, tier, name, hint, target, bonus, value: vals.get(id), earned: out.get(id) || null });
+    ex('first-expedition', 'First Expedition', 'Play a game with cards from 3 different expansions.', 3, 'common', 10, 'expeditions', 'Expeditions');
+    ex('world-traveler', 'World Traveler', 'Play a game with cards from 5 different expansions.', 5, 'uncommon', 25, 'expeditions', 'Expeditions');
+    ex('melting-pot', 'The Melting Pot', 'Play a game with cards from 7 different expansions.', 7, 'rare', 60, 'expeditions', 'Expeditions');
+    ex('cultural-exchange', 'Cultural Exchange', 'Win a game with cards from 5 or more expansions.', 5, 'rare', 50, 'unity', 'Unity');
+    ex('united-kingdoms', 'United Kingdoms', 'Win a game with cards from 8 or more expansions.', 8, 'epic', 120, 'unity', 'Unity');
+    list.push({ id: 'jack-of-all-trades', group: 'Expansions', tier: 'epic', name: 'Jack of All Trades', hint: 'Win at least one game with each expansion in the kingdom, over any number of games.', bonus: 150, earned: out.get('jack-of-all-trades') || null });
+    list.push({ id: 'the-specialist', group: 'Expansions', tier: 'uncommon', name: 'The Specialist', hint: 'Win 10 games featuring the same expansion.', target: 10, bonus: 40, value: vals.get('the-specialist'), earned: out.get('the-specialist') || null });
   }
 
   // reaching each tier above the first; the date is the game that took the player over the line
   (tiers || []).forEach((t, k) => {
     if (!k || t.min == null) return;
-    list.push({ id: 'tier-' + t.id, group: 'Milestones', track: 'rank', trackName: 'Rank', name: `Reached ${t.name}`, hint: `Get to ${t.min} Elo.`, tier: t, target: t.min, value: Math.round(p.peak || 0) || rs.reduce((m, r) => Math.max(m, Math.round(r.after)), 0), earned: at(firstIndex(rs, r => Math.round(r.after) >= t.min)) });
+    list.push({ id: 'tier-' + t.id, group: 'Milestones', track: 'rank', trackName: 'Rank', tier: RANK_TIERS[Math.min(k - 1, RANK_TIERS.length - 1)], name: `Reached ${t.name}`, hint: `Get to ${t.min} Elo.`, tierIcon: t, target: t.min, value: Math.round(p.peak || 0) || rs.reduce((m, r) => Math.max(m, Math.round(r.after)), 0), earned: at(firstIndex(rs, r => Math.round(r.after) >= t.min)) });
   });
+
+  list.push({ id: 'dominion-legend', group: 'Milestones', tier: 'legendary', name: 'Dominion Legend', hint: 'Earn every other badge that is not legendary.', bonus: 2000, earned: legendFrom(list, all) });
+
   // the Renown track comes from XP (lib/xp.js), which itself needs the other badges, so it is only added when the caller passes the XP in
-  if (xp) for (const st of xp.steps) list.push({ id: 'level-' + st.level, group: 'Milestones', track: 'level', trackName: 'Renown', name: LEVEL_NAMES[st.level] || `Level ${st.level}`, hint: `Reach level ${st.level}.`, target: st.level, bonus: st.bonus, value: xp.level, earned: st.earned });
-  if (p.titles > 0) list.push({ id: 'champion', group: 'Seasons', name: p.titles > 1 ? `Season champion ×${p.titles}` : 'Season champion', hint: 'Win a season.', earned: { date: null, line: null } });
+  if (xp) for (const st of xp.steps) list.push({ id: 'level-' + st.level, group: 'Milestones', track: 'level', trackName: 'Renown', tier: LEVEL_TIERS[st.level] || 'uncommon', name: LEVEL_NAMES[st.level] || `Level ${st.level}`, hint: `Reach level ${st.level}.`, target: st.level, bonus: st.bonus, value: xp.level, earned: st.earned });
+  if (p.titles > 0) list.push({ id: 'champion', group: 'Seasons', tier: 'epic', name: p.titles > 1 ? `Season champion ×${p.titles}` : 'Season champion', hint: 'Win a season.', earned: { date: null, line: null } });
   return list;
 }
 

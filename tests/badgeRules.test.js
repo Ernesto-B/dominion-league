@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { achievements, grouped, BADGES } from '../src/lib/achievements.js';
+import { achievements, grouped, legendFrom, BADGES, GROUPS, TIERS } from '../src/lib/achievements.js';
 
 let line = 0;
 // a game Me sat at: places by name, optional VP by name, optional kingdom (card ids), optional Elo before by name (a rated game)
@@ -125,8 +125,196 @@ describe('the whole list', () => {
   it('has unique ids, sorts into the documented groups, and keeps tracks together', () => {
     const ids = BADGES.map(b => b.id); expect(new Set(ids).size).toBe(ids.length);
     const secs = grouped(Object.values(run([win2()], { catalog: mkCatalog(), baseXp: new Map() })));
-    expect(secs.map(s => s.group)).toEqual(['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Expansions', 'Milestones']);
+    expect(secs.map(s => s.group)).toEqual(['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones']);
     const slayer = secs.find(s => s.group === 'Comebacks and upsets').items.find(i => i.id === 'slayer');
     expect(slayer.steps.map(s => s.id)).toEqual(['giant-slayer', 'god-slayer']);
+  });
+});
+
+// ---- the second batch ----
+const rated = (places, me, others = {}, o = {}) => game(places, { ...o, elo: { Me: me, ...others } });
+const winsRated = n => Array.from({ length: n }, () => rated({ Me: 1, A: 2 }, 1000, { A: 1000 }));
+
+describe('streaks, margins and VP quirks', () => {
+  it('Unstoppable is five rated wins in a row; Overkill a 50 VP margin; Total Domination more than all rivals combined at 3+', () => {
+    expect(earned(run(winsRated(5)), 'unstoppable')).not.toBeNull(); expect(earned(run(winsRated(4)), 'unstoppable')).toBeNull();
+    expect(earned(run([...winsRated(2), rated({ Me: 2, A: 1 }, 1000, { A: 1000 }), ...winsRated(3)]), 'unstoppable')).toBeNull();
+    expect(earned(run([win2({ vp: { Me: 80, A: 30 } })]), 'overkill')).not.toBeNull(); expect(earned(run([win2({ vp: { Me: 79, A: 30 } })]), 'overkill')).toBeNull();
+    expect(run([win2({ vp: { Me: 79, A: 30 } })]).landslide.value).toBe(49);
+    expect(earned(run([game({ Me: 1, A: 2, B: 3 }, { vp: { Me: 46, A: 20, B: 25 } })]), 'total-domination')).not.toBeNull();
+    expect(earned(run([game({ Me: 1, A: 2, B: 3 }, { vp: { Me: 45, A: 20, B: 25 } })]), 'total-domination')).toBeNull();
+    expect(earned(run([win2({ vp: { Me: 80, A: 10 } })]), 'total-domination')).toBeNull();   // two players is not enough
+  });
+  it('The Centurion, The Unfortunate One and Into the Abyss read your own VP, whatever your place', () => {
+    expect(earned(run([game({ Me: 2, A: 1 }, { vp: { Me: 100, A: 101 } })]), 'the-centurion')).not.toBeNull();
+    expect(earned(run([game({ Me: 2, A: 1 }, { vp: { Me: 99, A: 101 } })]), 'the-centurion')).toBeNull();
+    expect(earned(run([game({ Me: 2, A: 1 }, { vp: { Me: 1, A: 9 } })]), 'unfortunate-one')).not.toBeNull();
+    expect(earned(run([game({ Me: 2, A: 1 }, { vp: { Me: -3, A: 9 } })]), 'into-the-abyss')).not.toBeNull();
+    expect(earned(run([game({ Me: 2, A: 1 }, { vp: { Me: 0, A: 9 } })]), 'into-the-abyss')).toBeNull();
+    expect(earned(run([game({ Me: 2, A: 1 })]), 'unfortunate-one')).toBeNull();   // no VP logged
+  });
+  it('Lone Wolf counts 1v1 wins and Royal Court wins at 4 or more', () => {
+    expect(earned(run(Array.from({ length: 10 }, () => win2())), 'lone-wolf')).not.toBeNull(); expect(earned(run(Array.from({ length: 9 }, () => win2())), 'lone-wolf')).toBeNull();
+    const four = () => game({ Me: 1, A: 2, B: 3, C: 4 });
+    expect(earned(run(Array.from({ length: 10 }, four)), 'royal-court')).not.toBeNull(); expect(run(Array.from({ length: 9 }, four))['royal-court'].value).toBe(9);
+  });
+});
+
+describe('rated-table badges', () => {
+  it('The Final Boss and The Chosen One are six-player rated wins as the highest- and lowest-rated', () => {
+    const six = (me, rest) => rated({ Me: 1, A: 2, B: 3, C: 4, D: 5, E: 6 }, me, { A: rest, B: rest, C: rest, D: rest, E: rest });
+    expect(earned(run([six(1100, 1000)]), 'the-final-boss')).not.toBeNull(); expect(earned(run([six(1000, 1000)]), 'the-final-boss')).toBeNull();
+    expect(earned(run([six(900, 1000)]), 'the-chosen-one')).not.toBeNull(); expect(earned(run([six(1100, 1000)]), 'the-chosen-one')).toBeNull();
+    expect(earned(run([rated({ Me: 1, A: 2, B: 3 }, 900, { A: 1000, B: 1000 })]), 'the-chosen-one')).toBeNull();   // only three at the table
+  });
+  it('Bounty Hunter counts games where you finished ahead of any higher-rated player, five different ones', () => {
+    const ahead = () => rated({ Me: 1, A: 2, B: 3 }, 1000, { A: 1100, B: 900 });
+    expect(earned(run(Array.from({ length: 5 }, ahead)), 'bounty-hunter')).not.toBeNull();
+    expect(run(Array.from({ length: 4 }, ahead))['bounty-hunter'].value).toBe(4);
+    const behind = () => rated({ Me: 3, A: 2, B: 1 }, 1000, { A: 1100, B: 1100 });   // finished behind the higher-rated: no
+    expect(earned(run(Array.from({ length: 6 }, behind)), 'bounty-hunter')).toBeNull();
+  });
+  it('Kingslayer beats whoever led the league going into the game', () => {
+    const g0 = rated({ Me: 2, A: 1 }, 1000, { A: 1100 }), g1 = rated({ Me: 1, A: 2 }, 1000, { A: 1100 }), g2 = rated({ Me: 1, A: 2 }, 1000, { A: 1100 });
+    [g0, g1, g2].forEach((g, i) => { g.idx = i; });
+    g0.snapshot = { Me: 1000, A: 1100, B: 1000 }; g1.snapshot = { Me: 1000, A: 1100, B: 1000 }; g2.snapshot = { Me: 1000, A: 1100, B: 1000 };
+    const b = run([g0, g1, g2]);
+    expect(b.kingslayer.earned.line).toBe(g1.line);          // g0 was lost, and nothing led before it
+    const tied = rated({ Me: 1, A: 2 }, 1000, { A: 1000 }), before = rated({ Me: 3, A: 1 }, 1000, { A: 1000 });
+    before.idx = 0; tied.idx = 1; before.snapshot = { Me: 1000, A: 1000 };
+    expect(earned(run([before, tied]), 'kingslayer')).toBeNull();   // nobody was clearly on top
+  });
+  it('The Immortal needs 100 rated wins AND a 1,500 peak; The Unbreakable 20 without finishing last', () => {
+    const wins = Array.from({ length: 100 }, (_, i) => rated({ Me: 1, A: 2 }, 1000 + i * 6, { A: 1000 }));
+    const rs = wins.map((g, i) => ({ game: g, place: 1, before: 1000 + i * 6, after: 1000 + (i + 1) * 6 }));   // peaks at 1,600
+    expect(earned(run(wins, { results: rs }), 'the-immortal')).not.toBeNull();
+    const low = rs.map(r => ({ ...r, after: 1100 }));
+    expect(earned(run(wins, { results: low }), 'the-immortal')).toBeNull();
+    const clean = Array.from({ length: 20 }, () => rated({ Me: 2, A: 1, B: 3 }, 1000, { A: 1000, B: 1000 })), tie = rated({ Me: 3, A: 1, B: 3 }, 1000, { A: 1000, B: 1000 });
+    expect(earned(run(clean), 'the-unbreakable')).not.toBeNull(); expect(earned(run([...clean.slice(0, 10), tie, ...clean.slice(10, 19)]), 'the-unbreakable')).toBeNull();   // a shared last place breaks the run
+  });
+  it('The Grandmaster wins at every size against opponents rated at least as high on average', () => {
+    const at = (n, opp) => rated(Object.fromEntries(['Me', 'A', 'B', 'C', 'D', 'E'].slice(0, n).map((x, i) => [x, i + 1])), 1000, Object.fromEntries(['A', 'B', 'C', 'D', 'E'].map(x => [x, opp])));
+    expect(earned(run([2, 3, 4, 5, 6].map(n => at(n, 1000))), 'the-grandmaster')).not.toBeNull();
+    expect(earned(run([2, 3, 4, 5, 6].map(n => at(n, 999))), 'the-grandmaster')).toBeNull();
+  });
+});
+
+// a catalog with `exps` expansions of `piles` piles each, ids "e<i>p<j>", plus landscapes of each of the five types
+const mkBig = (exps = 11, piles = 6) => {
+  const names = ['Dominion Base Game', 'Intrigue', 'Seaside', 'Prosperity', 'Hinterlands', 'Dark Ages', 'Cornucopia & Guilds', 'Empires', 'Renaissance', 'Menagerie', 'Plunder'].slice(0, exps);
+  const cards = [], pl = [];
+  names.forEach((exp, e) => { for (let j = 0; j < piles; j++) { const id = `e${e}p${j}`; cards.push({ id, expansion: exp, pileKey: `${exp}::${id}`, coins: 4, debt: 0, types: ['Action'] }); pl.push({ expansion: exp, key: `${exp}::${id}` }); } });
+  const types = ['Event', 'Landmark', 'Project', 'Way', 'Trait'], lands = [];
+  for (let i = 0; i < 60; i++) lands.push({ id: `l${i}`, type: types[i % 5] });
+  return { cardsById: new Map(cards.map(c => [c.id, c])), piles: pl, ownedExpansions: names.map(name => ({ name })), landscapesById: new Map(lands.map(l => [l.id, l])), landscapeTypes: types, _cards: cards };
+};
+const withKingdom = (g, ids, landIds = []) => { g.kingdom = [...ids.map(id => ({ kind: 'card', id })), ...landIds.map(id => ({ kind: 'landscape', id }))]; return g; };
+
+describe('expansion-mix badges (need the catalog)', () => {
+  const cat = mkBig();
+  const g = (won, ids, lands) => withKingdom(won ? win2() : game({ Me: 2, A: 1 }), ids, lands);
+  it('First Expedition, World Traveler and The Melting Pot are about playing with 3, 5 and 7 expansions in one game', () => {
+    const b = run([g(false, ['e0p0', 'e1p0', 'e2p0', 'e0p1', 'e1p1', 'e2p1', 'e0p2', 'e1p2', 'e2p2', 'e0p3'])], { catalog: cat });
+    expect(earned(b, 'first-expedition')).not.toBeNull(); expect(earned(b, 'world-traveler')).toBeNull();
+    const b7 = run([g(false, ['e0p0', 'e1p0', 'e2p0', 'e3p0', 'e4p0', 'e5p0', 'e6p0', 'e0p1', 'e1p1', 'e2p1'])], { catalog: cat });
+    expect(earned(b7, 'melting-pot')).not.toBeNull(); expect(b7['melting-pot'].value).toBe(7);
+  });
+  it('Cultural Exchange and United Kingdoms are WINS with 5 and 8 expansions in one game', () => {
+    const five = ['e0p0', 'e1p0', 'e2p0', 'e3p0', 'e4p0', 'e0p1', 'e1p1', 'e2p1', 'e3p1', 'e4p1'];
+    expect(earned(run([g(true, five)], { catalog: cat }), 'cultural-exchange')).not.toBeNull();
+    expect(earned(run([g(false, five)], { catalog: cat }), 'cultural-exchange')).toBeNull();           // played, not won
+    expect(earned(run([g(true, five)], { catalog: cat }), 'united-kingdoms')).toBeNull();
+    const eight = ['e0p0', 'e1p0', 'e2p0', 'e3p0', 'e4p0', 'e5p0', 'e6p0', 'e7p0', 'e0p1', 'e1p1'];
+    expect(earned(run([g(true, eight)], { catalog: cat }), 'united-kingdoms')).not.toBeNull();
+  });
+  it('The Specialist is ten wins in games featuring the same expansion, a game counting for every expansion in it', () => {
+    const wins = n => Array.from({ length: n }, (_, i) => withKingdom(win2(), ['e0p0', `e${1 + (i % 3)}p0`]));
+    expect(earned(run(wins(10), { catalog: cat }), 'the-specialist')).not.toBeNull();   // all ten feature expansion 0
+    expect(run(wins(9), { catalog: cat })['the-specialist'].value).toBe(9);
+    expect(earned(run(wins(10).map((g, i) => (i === 3 ? withKingdom(game({ Me: 2, A: 1 }), ['e0p0']) : g)), { catalog: cat }), 'the-specialist')).toBeNull();   // a loss does not count
+  });
+  it('Ten Kingdoms needs every pile from a different expansion; A World Divided exactly two expansions of five', () => {
+    const tenDiff = Array.from({ length: 10 }, (_, i) => `e${i}p0`);
+    expect(earned(run([g(true, tenDiff)], { catalog: cat }), 'ten-kingdoms')).not.toBeNull();
+    expect(earned(run([g(true, [...tenDiff.slice(0, 9), 'e0p1'])], { catalog: cat }), 'ten-kingdoms')).toBeNull();
+    const two = [...Array.from({ length: 5 }, (_, j) => `e0p${j}`), ...Array.from({ length: 5 }, (_, j) => `e1p${j}`)];
+    expect(earned(run([g(true, two)], { catalog: cat }), 'a-world-divided')).not.toBeNull();
+    expect(earned(run([g(true, [...two.slice(0, 4), 'e2p0', ...two.slice(5)])], { catalog: cat }), 'a-world-divided')).toBeNull();
+  });
+  it('Collector, Grand Archivist and Master of All Realms count different piles seen; Jack of All Trades a win with each expansion; The Specialist ten wins with one', () => {
+    const small = mkBig(11, 40), all = small._cards.map(c => c.id);
+    const games = [];
+    for (let i = 0; i < all.length; i += 10) games.push(g(true, all.slice(i, i + 10)));
+    const b = run(games, { catalog: small });                          // 440 piles in 44 games, one win each
+    expect(earned(b, 'collector').line).toBe(games[9].line); expect(earned(b, 'grand-archivist').line).toBe(games[24].line);
+    expect(earned(b, 'master-of-all-realms')).not.toBeNull(); expect(b['master-of-all-realms'].target).toBe(440);
+    expect(earned(b, 'jack-of-all-trades')).not.toBeNull();
+    expect(earned(b, 'the-specialist')).toBeNull();                    // each expansion shows up in only 4 of those wins
+    const half = run(games.slice(0, 20), { catalog: small });
+    expect(earned(half, 'jack-of-all-trades')).toBeNull(); expect(earned(half, 'master-of-all-realms')).toBeNull();
+  });
+});
+
+describe('landscape badges (need the catalog)', () => {
+  const cat = mkBig();
+  const L = type => ({ Event: 'l0', Landmark: 'l1', Project: 'l2', Way: 'l3', Trait: 'l4' }[type]);
+  const w = (...lands) => withKingdom(win2(), [], lands);
+  it('five wins featuring a type earn that type\'s badge, and playing without a win does not count', () => {
+    const b = run(Array.from({ length: 5 }, () => w(L('Trait'))), { catalog: cat });
+    expect(earned(b, 'changing-tides')).not.toBeNull(); expect(earned(b, 'turning-point')).toBeNull();
+    expect(earned(run([...Array.from({ length: 4 }, () => w(L('Event'))), withKingdom(game({ Me: 2, A: 1 }), [], [L('Event')])], { catalog: cat }), 'turning-point')).toBeNull();
+    expect(run(Array.from({ length: 5 }, () => w(L('Way'))), { catalog: cat })['the-wayfinder'].earned).not.toBeNull();
+  });
+  it('Shifting Realities and Fortune Favors the Bold are wins with 2 and 3 landscape types; Master of Fate needs a win with each type over time', () => {
+    const b = run([w('l0', 'l5', 'l1')], { catalog: cat });          // l0 and l5 are both Events; l1 a Landmark: two types
+    expect(earned(b, 'shifting-realities')).not.toBeNull(); expect(earned(b, 'fortune-favors')).toBeNull();
+    expect(earned(run([w('l0', 'l1', 'l2')], { catalog: cat }), 'fortune-favors')).not.toBeNull();
+    const five = ['l0', 'l1', 'l2', 'l3', 'l4'].map(l => w(l));
+    expect(earned(run(five, { catalog: cat }), 'master-of-fate').line).toBe(five[4].line);
+    expect(earned(run(five.slice(0, 4), { catalog: cat }), 'master-of-fate')).toBeNull();
+  });
+  it('Landscape Connoisseur and Beyond the Horizon count different landscape cards seen, in any game', () => {
+    const ids = Array.from({ length: 60 }, (_, i) => `l${i}`), games = [];
+    for (let i = 0; i < 60; i += 5) games.push(withKingdom(game({ Me: 2, A: 1 }), [], ids.slice(i, i + 5)));
+    const b = run(games, { catalog: cat });
+    expect(earned(b, 'landscape-connoisseur').line).toBe(games[4].line); expect(earned(b, 'beyond-the-horizon').line).toBe(games[9].line);
+  });
+});
+
+describe('kingdom-shape badges, second batch', () => {
+  const ids = Array.from({ length: 10 }, (_, i) => `e0p${i}`);
+  const cat10 = f => { const c = mkBig(1, 10); c._cards.forEach((x, i) => f(x, i)); return c; };
+  it('The Great Divide: three cards at 2 or less and three at 6 or more (a debt card is neither)', () => {
+    const c = cat10((x, i) => { x.coins = i < 3 ? 2 : i < 6 ? 6 : 4; });
+    expect(earned(run([withKingdom(win2(), ids)], { catalog: c }), 'the-great-divide')).not.toBeNull();
+    const d = cat10((x, i) => { x.coins = i < 3 ? 2 : i < 6 ? 6 : 4; if (i === 0) x.debt = 3; });
+    expect(earned(run([withKingdom(win2(), ids)], { catalog: d }), 'the-great-divide')).toBeNull();
+  });
+  it('Gold Rush wins with 3 Treasures; War Zone plays with 5 Attacks; The Pacifist wins with none', () => {
+    const t = cat10((x, i) => { x.types = i < 3 ? ['Treasure'] : ['Action']; });
+    expect(earned(run([withKingdom(win2(), ids)], { catalog: t }), 'gold-rush')).not.toBeNull(); expect(earned(run([withKingdom(game({ Me: 2, A: 1 }), ids)], { catalog: t }), 'gold-rush')).toBeNull();
+    const a = cat10((x, i) => { x.types = i < 5 ? ['Action', 'Attack'] : ['Action']; });
+    expect(earned(run([withKingdom(game({ Me: 2, A: 1 }), ids)], { catalog: a }), 'war-zone')).not.toBeNull();
+    expect(earned(run([withKingdom(win2(), ids)], { catalog: cat10(() => {}) }), 'the-pacifist')).not.toBeNull();
+    expect(earned(run([withKingdom(game({ Me: 2, A: 1 }), ids)], { catalog: cat10(() => {}) }), 'the-pacifist')).toBeNull();
+  });
+});
+
+describe('Dominion Legend and tiers', () => {
+  it('is earned only when every non-legendary badge is, on the game that finished the set', () => {
+    const a = win2(), b = win2(); a.idx = 0; b.idx = 1;
+    const list = [{ id: 'x', tier: 'common', earned: { date: a.date, line: a.line } }, { id: 'y', tier: 'rare', earned: { date: b.date, line: b.line } }, { id: 'z', tier: 'legendary', earned: null }];
+    expect(legendFrom(list, [a, b]).line).toBe(b.line);
+    expect(legendFrom([...list, { id: 'w', tier: 'epic', earned: null }], [a, b])).toBeNull();
+    expect(legendFrom([], [a])).toBeNull();
+  });
+  it('every badge has one of the five tiers, and each group has a place in the page order', () => {
+    const ok = new Set(TIERS.map(t => t.id)), list = Object.values(run([win2()], { catalog: mkBig(), baseXp: new Map() }));
+    expect(list.filter(b => !ok.has(b.tier)).map(b => b.id)).toEqual([]);
+    expect(list.filter(b => !GROUPS.includes(b.group)).map(b => b.id)).toEqual([]);
+    expect(list.find(b => b.id === 'dominion-legend').bonus).toBe(2000);
+    expect(list.find(b => b.id === 'the-immortal').bonus).toBe(1000); expect(list.find(b => b.id === 'the-unbreakable').bonus).toBe(600);
+    expect(list.find(b => b.id === 'grand-archivist').name).toBe('Grand Archivist');
   });
 });
