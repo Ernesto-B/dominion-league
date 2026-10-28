@@ -59,7 +59,7 @@ export default function Season() {
       </details>
       {seasonGames.length > 0 && <>
         <h2>Games this season</h2>
-        <GamesTable key={num} games={seasonGames} />
+        <GamesTable key={num} games={seasonGames} link />
       </>}
     </>
   );

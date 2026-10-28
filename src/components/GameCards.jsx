@@ -15,9 +15,9 @@ const tone = (d, eps) => (d > eps ? 'up-t' : d < -eps ? 'down-t' : '');
 /* ux experiment "lists": a game as a small card on a phone instead of a row of a wide table. The card is the finish order, one line
    per player (place, name, Elo change) with the sets underneath; tapping it opens each player's Elo, season points and VP stacked
    under their line, then the kingdom and notes. Used by Last night and by the Games page; the table stays for desktop.
-   `me` marks one player's line (the Players page). `open` is a Set of game ids and `toggle(id)` flips one, owned by the table next to it, so the two views agree. */
-export default function GameCards({ games, open, toggle, onEdit, showDate = false, highlight, me = null }) {
-  const { D } = usePage();
+   `me` marks one player's line (the Players page); `link` adds a small ↗ to the game's own place in the Games page (wide screens only). `open` is a Set of game ids and `toggle(id)` flips one, owned by the table next to it, so the two views agree. */
+export default function GameCards({ games, open, toggle, onEdit, showDate = false, highlight, me = null, link = false }) {
+  const { D, gid, hashFor } = usePage();
   return (
     <ul className="gcards" aria-label="Games">
       {games.map(g => {
@@ -29,6 +29,7 @@ export default function GameCards({ games, open, toggle, onEdit, showDate = fals
                 <span className="chev">▸</span>{showDate && <b>{short(g.date)}</b>}
               </button>
               <TypePill type={g.type} />
+              {link && <a className="gcard-open" href={hashFor('games', gid, g.line)} title="Open this game in the Games page" aria-label={`Open the ${short(g.date)} game in the Games page`} onClick={e => e.stopPropagation()}>↗</a>}
               <span className="gcard-sets">{g.sets.map(s => (setIconPath(s) ? <SetIcon key={s} name={s} size={20} /> : <span key={s} className="meta">{s}</span>))}</span>
             </div>
             <ol className={'gcard-rows' + (g.names.length > 3 ? ' cols2' : '')} style={{ '--rows': Math.ceil(g.names.length / 2) }}>

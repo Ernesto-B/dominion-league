@@ -40,7 +40,7 @@ export default function LastNight({ games }) {
           );
         })}</tbody>
       </table></div>
-      {cards && <GameCards games={todays} open={open} toggle={toggle} />}
+      {cards && <GameCards games={todays} open={open} toggle={toggle} link />}
       </Wrap>
     </>
   );

@@ -158,5 +158,5 @@ function Results({ p }) {
   });
   if (!uxOn('lists') && !uxOn('redesign')) return <SortableTable head={head} rows={rows} />;
   // the same games as on the Games page: cards on a phone, and with the redesign on a wide screen too; this player's own line is marked
-  return <div className={uxOn('redesign') ? 'gview-cards' : undefined}><div className="gtable"><SortableTable head={head} rows={rows} /></div><GameCards games={p.results.slice().reverse().map(r => r.game)} open={open} toggle={toggle} showDate me={p.name} /></div>;
+  return <div className={uxOn('redesign') ? 'gview-cards' : undefined}><div className="gtable"><SortableTable head={head} rows={rows} /></div><GameCards games={p.results.slice().reverse().map(r => r.game)} open={open} toggle={toggle} showDate link me={p.name} /></div>;
 }

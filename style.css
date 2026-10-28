@@ -200,6 +200,18 @@ button.iconbtn img{display:block;height:72px;width:auto}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
 
 /* builder */
+.grid2{align-items:stretch}
+/* side by side, the two panels are the same height, and what is inside spreads to fill it */
+.grid2>section{display:flex;flex-direction:column;min-width:0}
+.grid2>section>.builder,.grid2>section>.tablewrap{flex:1}
+.grid2>section>.builder{display:flex;flex-direction:column}
+.grid2>section>.builder>.dn-bars,.grid2>section>.builder>.dn-lol,.grid2>section>.builder>.dn-cols,.grid2>section>.builder>.dn-donut{flex:1}
+.grid2>section>.builder>.dn-bars,.grid2>section>.builder>.dn-lol{align-content:space-between}
+.grid2>section>.builder>.dn-donut{align-content:space-between}
+.grid2>section>.tablewrap table{height:100%}
+@media (max-width:720px){.gcard-open{display:none}}
+.gcard-open{color:var(--muted);text-decoration:none;font-size:15px;line-height:1;padding:4px 6px;border-radius:6px}
+.gcard-open:hover{color:var(--ink);background:var(--line)}
 .builder{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
 .order{list-style:none;margin:10px 0;padding:0}
 

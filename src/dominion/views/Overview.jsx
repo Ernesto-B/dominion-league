@@ -51,22 +51,18 @@ export default function Overview({ query = '' }) {
       </details>
 
       <div className="grid2">
-        <div>
-          <Section title="Card names by expansion" id="ov-exp">
+        <Section title="Card names by expansion" id="ov-exp">
             <div className="builder">
               <Donut label="Kingdom card names per expansion" center="card names"
                 items={s.byExpansion.map(e => ({ key: e.name, label: e.label, value: e.names, icon: e.icon && <SetIcon name={e.icon} size={18} />, href: cardsFilterHref({ expansions: [e.name] }) }))} />
             </div>
-          </Section>
-        </div>
-        <div>
-          <Section title="Printed card types" id="ov-types">
+        </Section>
+        <Section title="Printed card types" id="ov-types">
             <div className="builder">
               <Bars label="Kingdom card names per printed type"
                 items={s.byType.map(t => ({ key: t.key, label: t.key, value: t.count, href: cardsFilterHref({ types: [t.key] }) }))} />
             </div>
-          </Section>
-        </div>
+        </Section>
       </div>
 
       <div className="grid2">
@@ -110,8 +106,8 @@ export default function Overview({ query = '' }) {
             <Waffle label="Landscape designs per type" items={s.landscapeByType.map(t => ({ key: t.key, label: PLURAL[t.key] || t.key, value: t.count, href: landscapesFilterHref({ types: [t.key] }) }))} />
             <p className="meta">By expansion</p>
             <Segments label="Landscape designs per expansion" items={s.landscapeByExpansion.map(x => { const e = s.byExpansion.find(b => b.name === x.key); return { key: x.key, label: e ? e.label : x.key, value: x.count, icon: e?.icon && <SetIcon name={e.icon} size={18} /> }; })} />
-            <p className="note" style={{ marginBottom: 0 }}>{s.landscapes} landscape designs, one card each. Not Kingdom cards.</p>
           </div>
+          <p className="note">{s.landscapes} landscape designs, one card each. Not Kingdom cards.</p>
         </Section>
       </div>
 
