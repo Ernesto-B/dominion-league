@@ -27,14 +27,17 @@ export const XP = {
   landscapes: 10, newCard: 3, newLandscape: 4,
   badge: 30, season: 100,
 };
-export const LEVEL_STEPS = [5, 10, 15];   // the Level track's badges
+// the Renown track's badges: the level, and the XP a step pays on top of the standard badge XP
+export const LEVEL_STEPS = [{ level: 5, bonus: 10 }, { level: 10, bonus: 20 }, { level: 20, bonus: 40 }, { level: 50, bonus: 100 }, { level: 100, bonus: 250 }, { level: 200, bonus: 600 }];
 
-// total XP to reach a level: 50 x L x (L - 1) → level 2 at 100, 5 at 1,000, 10 at 4,500
-export const xpForLevel = L => 50 * L * (L - 1);
+/* Total XP to reach a level: 90 for each level so far plus a gentle rise, so level 2 is 90, 20 is 1,847, 50 is 5,351, 100 is 12,791 and
+   200 is 33,671 (about 100 XP a game: level 20 in ~20 games, level 200 in ~330). Never skips a level and never goes down. */
+export const xpForLevel = L => Math.round(90 * (L - 1) + 0.4 * (L - 1) * (L - 2));
 export function levelAt(xp) {
-  let L = Math.max(1, Math.floor((1 + Math.sqrt(1 + 0.08 * Math.max(0, xp))) / 2));
-  while (xpForLevel(L + 1) <= xp) L++;
-  while (L > 1 && xpForLevel(L) > xp) L--;
+  const x = Math.max(0, xp), u = (-89.6 + Math.sqrt(89.6 * 89.6 + 1.6 * x)) / 0.8;
+  let L = Math.max(1, Math.floor(u) + 1);
+  while (xpForLevel(L + 1) <= x) L++;
+  while (L > 1 && xpForLevel(L) > x) L--;
   return L;
 }
 
@@ -84,7 +87,7 @@ function gameParts(g, a, st, rating, scale) {
    `badges` is a Map name → the player's badge list from achievements() (without the Level track, which pays out here). */
 export function computeXp(D, badges = new Map()) {
   const scale = D.E.scale, out = new Map(), st = new Map(), rate = new Map();
-  const state = n => st.get(n) || st.set(n, { prevWon: false, recent: [], night: -1, run: 0, seen: new Set(), total: 0, perGame: [], totals: {}, steps: LEVEL_STEPS.map(level => ({ level, earned: null })) }).get(n);
+  const state = n => st.get(n) || st.set(n, { prevWon: false, recent: [], night: -1, run: 0, seen: new Set(), total: 0, perGame: [], totals: {}, steps: LEVEL_STEPS.map(st => ({ level: st.level, bonus: st.bonus, earned: null })) }).get(n);
 
   // badge XP lands on the game that earned it; a badge with no game (the season title) lands with the title
   const badgeXp = new Map();   // name → Map(line → xp)
@@ -130,7 +133,7 @@ export function computeXp(D, badges = new Map()) {
       for (let again = true; again;) {
         again = false;
         const lvl = levelAt(s.total + xp);
-        for (const step of s.steps) if (!step.earned && lvl >= step.level) { step.earned = { date: g.date, line: g.line }; badgeN += XP.badge; xp += XP.badge; again = true; }
+        for (const step of s.steps) if (!step.earned && lvl >= step.level) { step.earned = { date: g.date, line: g.line }; badgeN += XP.badge + step.bonus; xp += XP.badge + step.bonus; again = true; }
       }
       if (badgeN) parts.badges = badgeN;
       s.total += xp;
@@ -152,18 +155,30 @@ export function computeXp(D, badges = new Map()) {
   return out;
 }
 
-// computed once per loaded league (D is rebuilt on every reload), shared by the ladder, the me card and the Player page
-const cache = new WeakMap();
-export function leagueXp(D) {
-  let m = cache.get(D);
-  if (!m) {
-    const everyone = D.ranked.map(x => x.name);
-    m = computeXp(D, new Map(D.players.map(p => [p.name, achievements(p, D.tiers, everyone)])));
-    cache.set(D, m);
-  }
-  return m;
+/* What each game paid a player before any badge or title payout: the yardstick for the "XP in one match" badges, which must not count
+   their own payout (and which no badge can depend on circularly). player name → Map(line → XP). */
+export function baseGameXp(D) {
+  const out = new Map();
+  for (const [name, x] of computeXp(D, new Map())) out.set(name, new Map(x.perGame.map(e => [e.line, e.xp - (e.parts.badges || 0) - (e.parts.season || 0)])));
+  return out;
 }
-export const xpOf = (D, name) => leagueXp(D).get(name) || null;
+
+// computed once per loaded league (D is rebuilt on every reload) and catalog, shared by the ladder, the me card and the Player page
+const cache = new WeakMap(), baseCache = new WeakMap();
+const baseOf = D => baseCache.get(D) || (baseCache.set(D, baseGameXp(D)), baseCache.get(D));
+const ctxFor = (D, name, catalog) => ({ games: D.games, catalog: catalog || null, baseXp: baseOf(D).get(name) });
+export function leagueXp(D, catalog = null) {
+  catalog = catalog || null;
+  const hit = cache.get(D);
+  if (hit && hit.catalog === catalog) return hit.map;
+  const everyone = D.ranked.map(x => x.name);
+  const map = computeXp(D, new Map(D.players.map(p => [p.name, achievements(p, D.tiers, everyone, null, ctxFor(D, p.name, catalog))])));
+  cache.set(D, { catalog, map });
+  return map;
+}
+export const xpOf = (D, name, catalog = null) => leagueXp(D, catalog).get(name) || null;
+// a player's whole badge list as the pages show it: every rule, the catalog-based ones too, and the Renown track from their XP
+export const badgesFor = (D, p, catalog = null) => achievements(p, D.tiers, D.ranked.map(x => x.name), xpOf(D, p.name, catalog), ctxFor(D, p.name, catalog));
 
 /* What one game paid each player (no breakdown): [{ name, place, xp, level, levelUp }] in finishing order, from leagueXp(D). levelUp is the level reached,
    when this game took the player over a line. Empty when the game isn't in the XP map (fewer than two players). */

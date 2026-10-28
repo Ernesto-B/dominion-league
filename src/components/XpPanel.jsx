@@ -4,8 +4,8 @@ import { short } from '../lib/format.js';
 
 /* A player's level and where their XP came from. XP is experience, not skill: it never goes down and is not what the ladder ranks by. */
 export default function XpPanel({ name }) {
-  const { D, gid, hashFor } = usePage();
-  const x = xpOf(D, name);
+  const { D, gid, hashFor, catalog } = usePage();
+  const x = xpOf(D, name, catalog);
   if (!x || !x.perGame.length) return null;
   const rows = PART_ORDER.map(k => [k, x.totals[k] || 0]);   // every part, in a fixed order, so nothing moves between players
   const pct = Math.round(x.pct * 100), last = x.last;

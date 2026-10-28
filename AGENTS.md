@@ -211,8 +211,11 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   "Undo and fix" deletes the game just saved and restores the form from `savedSt`.
 - Badges on the Player page are filed by `group` and a stepped badge has a `track` (`achievements.js` `grouped()`; one box per ladder showing the current and next step, opened to list every step). Open/closed is remembered in
   localStorage `dl.badgesopen` (open by default). Level badges are only added when `achievements()` is given the player's XP.
+- Badge rules live in `lib/achievements.js` (`BADGES` plus the per-expansion tracks built from the catalog). Rated-result badges read `p.results`; the rest read every game the player sat at (`ctx.games`, friendly included),
+  and the kingdom ones need the Collection's catalog (`ctx.catalog`, from `useLeagueCatalog`, loaded after the first paint and shared in page context as `catalog`; null earns nothing yet). "Every card costs..." badges need a full
+  kingdom (10+ cards, all found). A badge's `bonus` is XP on top of the standard 30; "XP in one match" counts a game's XP before badge payouts (`baseGameXp`). Use `badgesFor(D, p, catalog)` rather than calling `achievements` directly.
 - XP (`lib/xp.js`, pure, tested; `XP` holds every number) is experience, never skill: finish, win, top half, win streak, improvement, beating Elo's odds, raw VP and VP share, landscapes, new kingdom cards,
-  badges and season titles, from every game including friendlies, and it only goes up. It is recomputed on each load (`leagueXp(D)`, cached per D) so retuning a number rewrites history. It reads the engine's
+  badges and season titles, from every game including friendlies, and it only goes up. Levels take ~90 XP each plus a gentle rise (`xpForLevel`: 20 = 1,847, 100 = 12,791, 200 = 33,671). It is recomputed on each load (`leagueXp(D)`, cached per D) so retuning a number rewrites history. It reads the engine's
   output and never changes it. Shown as `Lv N` on the ladder, a me-card tile and the Player page's `XpPanel`.
 - The snake draft (`dominion/draft.js`, pure and tested; `components/SnakeDraft.jsx`) is a mode of Game night's Kingdom step: a pool twice the kingdom size (first half under all the
   randomizer's rules), picks in snake order on one device, then `finishDraft` rebuilds the kingdom (with setup notes) the same shape as a roll. It is in memory only: a reload mid-draft starts over.

@@ -15,7 +15,7 @@ import { xpOf } from '../lib/xp.js';
 import { steadyPayout } from '../lib/steadyElo.js';
 
 function Ladder({ ranked: rk, highlight, setHighlight }) {
-  const { D, gid, hashFor } = usePage();
+  const { D, gid, hashFor, catalog } = usePage();
   const mx = Math.max(60, ...rk.map(p => Math.abs(p.elo - D.E.start))) * 1.08;
   return (
     <div className="ladder" role="table" aria-label="Elo rankings">
@@ -24,7 +24,7 @@ function Ladder({ ranked: rk, highlight, setHighlight }) {
         const d = p.elo - D.E.start, wpx = Math.abs(d) / mx * 50;
         const lastR = p.results[p.results.length - 1];
         const dl = lastR ? lastR.after - lastR.before : 0;
-        const rm = p.rankDelta, lv = xpOf(D, p.name);
+        const rm = p.rankDelta, lv = xpOf(D, p.name, catalog);
         return (
           <div key={p.name} className={'lrow' + (highlight === p.name ? ' hot' : '')} data-p={p.name} role="row" style={{ '--i': Math.min(idx, 12) }}
             onMouseEnter={() => setHighlight(p.name)} onFocus={() => setHighlight(p.name)}>

@@ -1,8 +1,9 @@
 import { useId, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import TierIcon from './TierIcon.jsx';
-import { achievements, grouped } from '../lib/achievements.js';
-import { xpOf } from '../lib/xp.js';
+import { grouped } from '../lib/achievements.js';
+import { badgesFor } from '../lib/xp.js';
+import SetIcon from './SetIcon.jsx';
 import { short } from '../lib/format.js';
 
 const KEY = 'dl.badgesopen';
@@ -10,8 +11,8 @@ const readOpen = () => { try { return localStorage.getItem(KEY) !== '0'; } catch
 
 /* The badges on a Player page: earned ones with the game that earned them, the rest dimmed with how to get them. */
 export default function Badges({ p }) {
-  const { D, gid, hashFor } = usePage();
-  const list = achievements(p, D.tiers, D.ranked.map(x => x.name), xpOf(D, p.name));
+  const { D, gid, hashFor, catalog } = usePage();
+  const list = badgesFor(D, p, catalog);
   const [open, setOpen] = useState(readOpen);
   const got = list.filter(b => b.earned).length;
   const when = b => b.earned && (b.earned.line != null ? <small className="badge-when">Earned <a href={hashFor('games', gid, b.earned.line)}>{short(b.earned.date)}</a></small> : <small className="badge-when">Earned</small>);
@@ -30,7 +31,7 @@ export default function Badges({ p }) {
   );
 }
 
-const icon = b => b.tier ? <TierIcon id={b.tier.icon} size={26} alt="" /> : b.id === 'champion' ? <TierIcon id="champion" size={26} alt="" /> : b.earned ? '★' : '☆';
+const icon = b => b.set ? <SetIcon name={b.set} size={26} /> : b.tier ? <TierIcon id={b.tier.icon} size={26} alt="" /> : b.id === 'champion' ? <TierIcon id="champion" size={26} alt="" /> : b.earned ? '★' : '☆';
 
 function Badge({ b, when }) {
   return (

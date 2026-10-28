@@ -6,28 +6,30 @@ import CountUp from './CountUp.jsx';
 import HoverPopup from './HoverPopup.jsx';
 import { tierRange } from './TierLegend.jsx';
 import { steadyPayout } from '../lib/steadyElo.js';
-import { useMemo, useState } from 'react';
-import { xpOf } from '../lib/xp.js';
-import { achievements, earnedIds, loadBadgesSeen, newBadges, rivalries, saveBadgesSeen } from '../lib/achievements.js';
+import { useEffect, useMemo, useState } from 'react';
+import { badgesFor, xpOf } from '../lib/xp.js';
+import { earnedIds, loadBadgesSeen, newBadges, rivalries, saveBadgesSeen } from '../lib/achievements.js';
 
 /* The Rankings page opens with the signed-in player, not the whole ladder — where they stand, how far to the next spot, and how the
    last few games went. The Elo counts up from the start rating when the card appears. */
 export default function MeCard({ ranked }) {
-  const { me, D, gid, hashFor } = usePage();
+  const { me, D, gid, hashFor, catalog } = usePage();
   const store = () => { try { return window.localStorage; } catch { return null; } };
   // badges the viewer hasn't been told about: a first look records what is already earned and says nothing; "Nice" marks the rest as seen
   const mineP = me && D.players.find(x => x.name === me.name);
-  const list = useMemo(() => (mineP && mineP.rated ? achievements(mineP, D.tiers, ranked.map(x => x.name), xpOf(D, mineP.name)) : []), [mineP, D, ranked]);
+  const list = useMemo(() => (mineP && mineP.rated ? badgesFor(D, mineP, catalog) : []), [mineP, D, catalog]);
   const nem = useMemo(() => (mineP && mineP.rated ? rivalries(D.h2h(null), me.name).nem : null), [mineP, D, me]);
-  const [fresh, setFresh] = useState(() => {
-    const s = store(); if (!s || !list.length) return [];
-    const seen = loadBadgesSeen(s, gid);
-    if (!seen) { saveBadgesSeen(s, gid, earnedIds(list)); return []; }
-    return newBadges(list, seen);
-  });
-  const xp = me ? xpOf(D, me.name) : null;
+  // what was already earned the last time this device looked. Nothing is announced until the catalog is in (its badges would all look new), and a first look only records.
+  const [seen, setSeen] = useState(() => { const s = store(); return s ? loadBadgesSeen(s, gid) : null; });
+  useEffect(() => {
+    if (!catalog || seen || !list.length) return;
+    const s = store(); if (s) saveBadgesSeen(s, gid, earnedIds(list));
+    setSeen(earnedIds(list));
+  }, [catalog, seen, list, gid]);
+  const fresh = seen && catalog ? newBadges(list, seen) : [];
+  const xp = me ? xpOf(D, me.name, catalog) : null;
   if (!me) return null;
-  const gotIt = () => { const s = store(); if (s) saveBadgesSeen(s, gid, earnedIds(list)); setFresh([]); };
+  const gotIt = () => { const s = store(); if (s) saveBadgesSeen(s, gid, earnedIds(list)); setSeen(earnedIds(list)); };
   const s = meSummary(ranked, me.name, D.E.start, steadyPayout(4, D.E)[0]);
   const mine = hashFor('players', gid, encodeURIComponent(me.name));
   if (!s) return (
@@ -76,7 +78,7 @@ export default function MeCard({ ranked }) {
         </div></HoverPopup>
       )}
       {list.length > 0 && <p className="mc-badges"><a href={mine}>Badges <b>{list.filter(b => b.earned).length}</b> of {list.length}</a><span className="meta"> — see what’s next</span></p>}
-      {fresh.length > 0 && <p className="badge-new" role="status"><span>New badge{fresh.length === 1 ? '' : 's'}: <b>{fresh.map(b => b.name).join(', ')}</b></span><button type="button" className="ghost" onClick={gotIt}>Nice</button></p>}
+      {fresh.length > 0 && <p className="badge-new" role="status"><span>New badge{fresh.length === 1 ? '' : 's'}: <b>{fresh.slice(0, 3).map(b => b.name).join(', ')}</b>{fresh.length > 3 ? ` and ${fresh.length - 3} more` : ''}</span><button type="button" className="ghost" onClick={gotIt}>Nice</button></p>}
     </section>
   );
 }

@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { LeagueProvider, useLeague } from './League.jsx';
 import { useHash } from './useHash.js';
+import { useLeagueCatalog } from './useLeagueCatalog.js';
 import { parseHash, hashFor, ROUTES, ROUTE_TITLES } from './lib/route.js';
 import { pickD } from './lib/league.js';
 import { PageContext } from './PageContext.js';
@@ -19,6 +20,7 @@ import PullToRefresh from './components/PullToRefresh.jsx';
 function Shell() {
   const { state, boot } = useLeague();
   const hash = useHash();
+  const catalog = useLeagueCatalog();
   const ready = state.status === 'ready';
   const lastGid = useRef((() => { try { return localStorage.getItem('dl.group'); } catch { return null; } })());
   const route = useMemo(() => ready ? parseHash(hash, state.allGroups, lastGid.current) : null, [ready, hash, state.allGroups]);
@@ -29,9 +31,9 @@ function Shell() {
   }, [route]);
 
   const page = useMemo(() => ready ? {
-    ...state, ...route, D: pickD(state, route.gid), reload: boot,
+    ...state, ...route, D: pickD(state, route.gid), reload: boot, catalog,
     hashFor: (r, g, rest) => hashFor(r, g, rest, state.allGroups),
-  } : null, [state, ready, route, boot]);
+  } : null, [state, ready, route, boot, catalog]);
   const routeName = ready && ROUTES.includes(route.route) ? route.route : 'home';   // unknown routes show Home
   const Ported = ready ? PAGES[routeName] : null;
 

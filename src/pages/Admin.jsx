@@ -96,6 +96,43 @@ function PlayerGroups({ status, say }) {
   );
 }
 
+// ---- Password recovery ----
+function PasswordResets({ status, say }) {
+  const { rawPlayers } = usePage();
+  const [busy, setBusy] = useState(null);
+  const [issued, setIssued] = useState(null);
+  const setMsg = t => say('prMsg', t);
+
+  const reset = async p => {
+    if (!confirm(`Reset ${p.name}'s password? This signs them out everywhere and makes their current password stop working.`)) return;
+    setBusy(p.id); setIssued(null); setMsg('Resetting…');
+    const { data, error } = await sb.functions.invoke('reset-player-password', { body: { player_id: p.id } });
+    setBusy(null);
+    if (error) {
+      // Same as NewPlayer: a non-2xx response's useful {error} body is on error.context, not error.message.
+      let m = 'Could not reset that password.';
+      if (error.context && typeof error.context.json === 'function') {
+        try { const body = await error.context.json(); if (body && body.error) m = body.error; } catch (e) { /* keep the generic message */ }
+      }
+      setMsg(m); return;
+    }
+    setMsg(''); setIssued({ id: p.id, name: data.name, password: data.temporary_password });
+  };
+
+  const players = rawPlayers.slice().sort((a, b) => a.name.localeCompare(b.name));
+  return (
+    <div className="builder">
+      <p className="note">Verify the player in person before resetting. A reset signs them out on every device; give the one-time password directly to that verified person. They must choose a new password at their next sign-in.</p>
+      <div className="tablewrap"><table className="plain">
+        <thead><tr><th className="l">Player</th><th></th></tr></thead>
+        <tbody>{players.map(p => <tr key={p.id}><td className="l">{p.name}</td><td><button type="button" className="ghost" disabled={!!busy} onClick={() => reset(p)}>{busy === p.id ? 'Resetting…' : 'Reset password'}</button></td></tr>)}</tbody>
+      </table></div>
+      <Msg id="prMsg" status={status} />
+      {issued && <p className="note" role="status"><strong>{issued.name}'s one-time password:</strong> <code>{issued.password}</code><br />Give this to them privately. It is shown only until this page is refreshed.</p>}
+    </div>
+  );
+}
+
 // ---- Sets: which expansions the group owns (hidden from the Add Game picker when unticked) ----
 function Sets({ status, say }) {
   const { enabledSets, reload } = usePage();
@@ -298,6 +335,8 @@ export default function Admin() {
         <NewPlayer {...p} />
         <h2>Who plays in which group</h2>
         <PlayerGroups {...p} />
+        <h2>Password recovery</h2>
+        <PasswordResets {...p} />
       </> : <>
         <h2>Sets</h2>
         <Sets {...p} />

@@ -102,7 +102,7 @@ export default function Night() {
     <>
       <div className="head"><div><h1>Game saved</h1><p className="lede">{groupName ? `${groupName} — ` : ''}the standings are updated.</p></div></div>
       <div className="night-card night-done">
-        <GameResult game={done.id != null ? D.games.find(x => x.line === done.id) : null} before={before.current} ranked={D.ranked} tierFor={D.tierFor} xp={leagueXp(D)} />
+        <GameResult game={done.id != null ? D.games.find(x => x.line === done.id) : null} before={before.current} ranked={D.ranked} tierFor={D.tierFor} xp={leagueXp(D, catalog)} />
         <p className="night-go">
           <a className="btn" href={hashFor('', gid)}>See the rankings</a>
           <a className="btn ghost" href={done.id != null ? hashFor('games', gid, done.id) : hashFor('games', gid)}>See the game</a>

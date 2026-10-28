@@ -9,6 +9,7 @@ export default function Login({ title, error: bootError }) {
   const [pw, setPw] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [help, setHelp] = useState(false);
 
   const go = async e => {
     e.preventDefault();
@@ -32,6 +33,8 @@ export default function Login({ title, error: bootError }) {
         <label className="f">Password <input type="password" id="liPw" autoComplete="current-password" value={pw} onChange={e => setPw(e.target.value)} /></label>
       </div>
       <button id="liGo" type="submit" disabled={busy}>Sign in</button>
+      <p className="meta"><button type="button" className="linkish" onClick={() => setHelp(v => !v)} aria-expanded={help}>Forgot password?</button></p>
+      {help && <p className="note">For privacy, passwords cannot be reset from a name alone. Ask an admin in person to verify you and issue a one-time password. That reset signs you out on every device and requires you to choose a new password.</p>}
     </form>
   );
 }

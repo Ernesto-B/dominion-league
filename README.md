@@ -53,6 +53,12 @@ Everyone starts with the password `dominion`. The site won't let anyone past tha
 
 Only the admin (`is_admin = true` in the `players` table) sees the "Add a game" and "Admin" links and can add players, groups, seasons, or games. Everyone else is read-only.
 
+## Password recovery and one-time setup
+
+There is no self-service "forgot password" reset: this league intentionally has no email address or phone number that could prove who is making the request. Instead, an admin verifies the player in person, then uses **Admin → People → Password recovery**. The reset ends that player's sessions on every device, creates a random one-time password, and forces a new password at the next sign-in. Give the one-time password only to the verified player.
+
+The reset control needs the Edge Function below as well as the player-creation function.
+
 ## One-time setup: creating players from the site
 
 Creating a login for someone else needs Supabase's Auth Admin API, which requires the project's service-role key — far too sensitive to ever put in the browser, even for the admin. The fix is a small function that runs on Supabase's own servers (not GitHub Pages — this doesn't change how or where the site itself is hosted) and holds that key on our behalf: `supabase/functions/create-player/index.ts`. It independently checks the caller is really the admin before doing anything, the same way every other write in this project is gated.
@@ -62,6 +68,7 @@ To deploy it (once, and again after any future edit to that file):
 2. `supabase login` (opens a browser to connect the CLI to your Supabase account).
 3. From the repo root: `supabase link --project-ref hwwwpddinirdrxvvphgl`.
 4. `supabase functions deploy create-player`.
+5. `supabase functions deploy reset-player-password`.
 
 No key needs to be typed anywhere for this — Supabase automatically gives every deployed function its own project URL, anon key, and service-role key at runtime.
 
