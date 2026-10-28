@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { realCatalog } from './fixtures.js';
 import {
   generate, rerollSlot, rerollLandscape, seededRng, sortSlots, slotCardId, pileKeyOf, REQUIRE_RULES,
-  optionsToParams, optionsFromParams, kingdomToParams, kingdomFromParams, toGameItems, DEFAULT_OPTIONS,
+  optionsToParams, optionsFromParams, kingdomToParams, kingdomFromParams, toGameItems, DEFAULT_OPTIONS, rollSeeded, newSeed, parseSeed, formatSeed,
 } from '../../src/dominion/randomizer.js';
 
 const catalog = realCatalog();
@@ -10,7 +10,9 @@ const card = name => catalog.cards.find(c => c.name === name);
 const roll = (opts, seed = 1, extra = {}) => generate(catalog, opts, { rng: seededRng(seed), ...extra });
 const rolls = (opts, n = 150, extra = {}) => Array.from({ length: n }, (_, i) => roll(opts, i + 1, extra));
 const attacks = r => r.slots.filter(s => s.cards.some(c => c.types.includes('Attack'))).length;
-const has = (r, rule) => r.slots.some(s => s.cards.some(c => c.mechanicIds.some(t => REQUIRE_RULES[rule].tags.includes(t))));
+const has = (r, rule) => r.slots.some(s => s.cards.some(c => (REQUIRE_RULES[rule].coins != null
+  ? c.coins === REQUIRE_RULES[rule].coins && c.debt === 0
+  : c.mechanicIds.some(t => REQUIRE_RULES[rule].tags.includes(t)))));
 
 describe('the draw', () => {
   it('rolls ten distinct supply piles, cheapest first, and is repeatable for one seed', () => {
@@ -206,4 +208,77 @@ describe('the link', () => {
     expect(items.every(i => (i.kind === 'card' ? catalog.cardsById : catalog.landscapesById).has(i.id))).toBe(true);
   });
   it('maps any card of a pile to the pile', () => { expect(pileKeyOf(catalog, card('Fortune').id)).toBe(pileKeyOf(catalog, card('Gladiator').id)); expect(pileKeyOf(catalog, 'nope')).toBeNull(); });
+});
+
+describe('re-rolling one card and locking a place', () => {
+  const keys = r => r.slots.map(s => s.key);
+  it('re-rolling ONE card changes only that card, in the same place — nothing else moves', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const r = roll({ landscapes: 2 }, seed), i = seed % 10, next = rerollSlot(catalog, {}, r, i, { rng: seededRng(seed + 100) });
+      expect(next.ok).toBe(true);
+      keys(r).forEach((k, j) => { if (j === i) expect(keys(next)[j], `seed ${seed}`).not.toBe(k); else expect(keys(next)[j], `seed ${seed} slot ${j}`).toBe(k); });
+      expect(next.landscapes.map(l => l.landscape.id)).toEqual(r.landscapes.map(l => l.landscape.id));
+    }
+  });
+  it('re-rolling one landscape changes only that landscape, in the same place', () => {
+    const r = roll({ landscapes: 3 }, 7), next = rerollLandscape(catalog, {}, r, 1, { rng: seededRng(3) });
+    expect(keys(next)).toEqual(keys(r));
+    r.landscapes.forEach((l, j) => { if (j === 1) expect(next.landscapes[j].landscape.id).not.toBe(l.landscape.id); else expect(next.landscapes[j].landscape.id).toBe(l.landscape.id); });
+  });
+  it('a locked card keeps its PLACE across a whole new roll, and the rest fill the other places cheapest first', () => {
+    const r = roll({ landscapes: 3 }, 11), lockedSlots = [2, 9], lockedLand = [0];
+    const next = roll({ landscapes: 3 }, 12, {
+      keep: lockedSlots.map(i => r.slots[i].key), keepLandscapes: lockedLand.map(i => r.landscapes[i].landscape.id),
+      lockedAt: new Map(lockedSlots.map(i => [r.slots[i].key, i])), lockedLandscapeAt: new Map(lockedLand.map(i => [r.landscapes[i].landscape.id, i])),
+    });
+    lockedSlots.forEach(i => expect(next.slots[i].key).toBe(r.slots[i].key));
+    lockedLand.forEach(i => expect(next.landscapes[i].landscape.id).toBe(r.landscapes[i].landscape.id));
+    const free = next.slots.filter((_, i) => !lockedSlots.includes(i)), cost = s => s.cards[0].coins;
+    for (let i = 1; i < free.length; i++) expect(cost(free[i])).toBeGreaterThanOrEqual(cost(free[i - 1]));   // free places stay cheapest-first
+    expect(new Set(keys(next)).size).toBe(10);
+  });
+  it('a rolled kingdom keeps its order in the link, so a locked place survives sharing and reloading', () => {
+    const r = roll({}, 3), scrambled = { ...r, slots: [...r.slots.slice(5), ...r.slots.slice(0, 5)] };
+    expect(kingdomFromParams(catalog, kingdomToParams(scrambled)).slots.map(s => s.key)).toEqual(keys(scrambled));
+  });
+});
+
+describe('rolling from a seed', () => {
+  const same = (a, b) => { expect(a.slots.map(s => s.key)).toEqual(b.slots.map(s => s.key)); expect(a.landscapes.map(l => [l.landscape.id, l.on])).toEqual(b.landscapes.map(l => [l.landscape.id, l.on])); expect(a.setup).toEqual(b.setup); };
+  const OPTS = { landscapes: 2, expansions: ['Seaside', 'Dark Ages', 'Empires'], maxAttacks: 1, reaction: true, require: ['village', 'cost2', 'buy'] };
+  it('the same seed and options always roll the same kingdom, down to the landscapes, their hosts and the setup notes', () => {
+    for (const seed of [0, 7, 182736, 999999]) same(rollSeeded(catalog, OPTS, seed), rollSeeded(catalog, OPTS, seed));
+  });
+  it('a different seed rolls a different kingdom', () => {
+    const keys = new Set(Array.from({ length: 30 }, (_, i) => rollSeeded(catalog, OPTS, i * 31 + 1).slots.map(s => s.key).join()));
+    expect(keys.size).toBeGreaterThan(25);
+  });
+  it('obeys every rule while being repeatable', () => {
+    for (let seed = 1; seed <= 40; seed++) { const r = rollSeeded(catalog, OPTS, seed); expect(r.ok).toBe(true); expect(attacks(r)).toBeLessThanOrEqual(1); expect(has(r, 'village')).toBe(true); expect(has(r, 'cost2')).toBe(true); }
+  });
+  it('carries its seed for a fresh roll, and none when it cannot be reproduced from it', () => {
+    expect(rollSeeded(catalog, {}, 5).seed).toBe(5);
+    const r = rollSeeded(catalog, {}, 5);
+    expect(rollSeeded(catalog, {}, 6, { keep: [r.slots[0].key] }).seed).toBeNull();                        // a locked card comes from the previous kingdom
+    expect(rollSeeded(catalog, {}, 6, { keepLandscapes: [] }).seed).toBe(6);                                 // nothing locked is still a fresh roll
+    expect(rollSeeded(catalog, { favor: true }, 6, { plays: new Map([[r.slots[0].key, 9]]) }).seed).toBeNull();   // depends on the games played so far
+  });
+  it('a failed roll just reports why', () => { const r = rollSeeded(catalog, { expansions: ['Plunder'], cards: 12, include: [card('Fortune').id] }, 3); expect(r.ok === false || r.seed === 3).toBe(true); });
+  it('seeds are short numbers: made six digits wide, parsed from what a person types, never anything else', () => {
+    for (let i = 0; i < 50; i++) { const s = newSeed(); expect(s).toBeGreaterThanOrEqual(0); expect(s).toBeLessThan(1000000); expect(formatSeed(s)).toMatch(/^\d{6}$/); }
+    expect(formatSeed(42)).toBe('000042'); expect(parseSeed('000042')).toBe(42); expect(parseSeed(' 182736 ')).toBe(182736);
+    for (const bad of ['', 'abc', '12.5', '-3', '1e5', null, undefined, '1234567890']) expect(parseSeed(bad), String(bad)).toBeNull();
+  });
+  it('the seed travels in the link: options + seed from a link roll the very same kingdom again', () => {
+    const r = rollSeeded(catalog, OPTS, 182736), link = new URLSearchParams(kingdomToParams(r, optionsToParams(OPTS)).toString());
+    expect(link.get('seed')).toBe('182736');
+    const back = kingdomFromParams(catalog, link);
+    expect(back.seed).toBe(182736); same(back, r);
+    same(rollSeeded(catalog, optionsFromParams(link), back.seed), r);
+  });
+  it('a link with no seed, or a junk one, simply has none', () => {
+    const r = roll({}, 4); delete r.seed;
+    expect(kingdomFromParams(catalog, new URLSearchParams(kingdomToParams(r).toString())).seed).toBeNull();
+    const p = new URLSearchParams(kingdomToParams(r).toString()); p.set('seed', 'nope'); expect(kingdomFromParams(catalog, p).seed).toBeNull();
+  });
 });

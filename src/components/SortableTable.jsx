@@ -21,7 +21,9 @@ const sortVal = raw => {
 };
 const asCell = c => (c !== null && typeof c === 'object' && !isValidElement(c)) ? c : { node: c, text: c };
 
-export default function SortableTable({ head, rows, empty }) {
+/* `stack` (ux experiment "lists"): on a phone the table becomes a list of small cards, each cell labelled with its column. The header
+   row (and so click-to-sort) disappears there, so a "Sort by" menu takes its place. Desktop is unchanged. */
+export default function SortableTable({ head, rows, empty, stack = false }) {
   // `order` is the displayed row order (keys) after the last sort. Like the old DOM sorter, each
   // sort starts from what's on screen, so rows that tie keep their previous relative order.
   const [sort, setSort] = useState(null);   // { col, dir, order }
@@ -40,8 +42,19 @@ export default function SortableTable({ head, rows, empty }) {
     });
     setSort({ col, dir, order: sorted.map(r => r.key) });
   };
+  const sortable = head.map((h, i) => [i, h.label]).filter(([, l]) => l);
   return (
-    <div className="tablewrap"><table>
+    <div className="tablewrap">
+      {stack && sortable.length > 1 && (
+        <label className="stack-sort">Sort by{' '}
+          <select value={sort ? sort.col : ''} onChange={e => e.target.value !== '' && go(Number(e.target.value))} aria-label="Sort by">
+            <option value="" disabled>Choose…</option>
+            {sortable.map(([i, l]) => <option key={i} value={i}>{l}</option>)}
+          </select>
+          {sort && <button type="button" className="ghost" onClick={() => go(sort.col)} aria-label={`Sorted ${sort.dir === 'asc' ? 'ascending' : 'descending'}; reverse`}>{sort.dir === 'asc' ? '↑' : '↓'}</button>}
+        </label>
+      )}
+      <table className={stack ? 'stack' : undefined}>
       <thead><tr>{head.map((h, i) => {
         const can = !!h.label;
         const dir = sort && sort.col === i ? sort.dir : undefined;
@@ -59,7 +72,7 @@ export default function SortableTable({ head, rows, empty }) {
         {shown.length ? shown.map(r => (
           <Fragment key={r.key}>
             <tr className={r.className} data-g={r.data} onClick={r.onClick}>
-              {r.cells.map((c, i) => { const cell = asCell(c); return <td key={i} className={'className' in cell ? cell.className : head[i].cls}>{cell.node}</td>; })}
+              {r.cells.map((c, i) => { const cell = asCell(c); return <td key={i} data-label={head[i].label || undefined} className={'className' in cell ? cell.className : head[i].cls}>{cell.node}</td>; })}
             </tr>
             {r.detail && <tr className="gdetail" data-g={r.data} hidden={!r.open}><td colSpan={head.length}>{r.detail}</td></tr>}
           </Fragment>

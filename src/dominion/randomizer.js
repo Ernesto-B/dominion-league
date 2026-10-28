@@ -15,12 +15,19 @@
 import { pileMembers } from './model.js';
 import { LANDSCAPE_TYPES } from './constants.js';
 
+/* `tags` rules need a recorded mechanic (positive-only, see above); `coins` rules need a card whose PRINTED cost is that many coins
+   (no Debt), which is complete data, so those can't miss a card. */
 export const REQUIRE_RULES = {
-  village: { label: 'a Village (+Actions)', tags: ['village'] },
+  village: { label: 'a +Actions card (a Village)', tags: ['village'] },
   draw: { label: 'card drawing', tags: ['draw', 'terminal_draw'] },
   trash: { label: 'trashing', tags: ['trashing_from_hand', 'trashing_from_deck', 'trashing_from_play', 'trashing_from_discard'] },
-  buy: { label: 'a +Buy', tags: ['plus_buy'] },
+  buy: { label: 'a +Buy card', tags: ['plus_buy'] },
+  cost2: { label: 'a card costing $2', coins: 2 },
+  cost3: { label: 'a card costing $3', coins: 3 },
+  cost4: { label: 'a card costing $4', coins: 4 },
+  cost5: { label: 'a card costing $5', coins: 5 },
 };
+export const ruleIsExact = rule => REQUIRE_RULES[rule].coins != null;   // by printed cost, not by a recorded mechanic
 
 export const MAX_ATTACK_CHOICES = [0, 1, 2, 3];   // "no Attacks", "at most 1"... ; null = any number
 export const DEFAULT_OPTIONS = Object.freeze({
@@ -43,6 +50,23 @@ export function seededRng(seed) {
   return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 
+/* ---------------------------------------------------------------- seeds
+   A roll is reproducible: the same options and the same seed always give the same kingdom (every random choice comes from one seeded
+   generator). The seed is a number of up to six digits, shown with the kingdom, kept in its link and used in the picture's file name.
+   It only means something for a FRESH roll: a roll that keeps locked cards starts from the previous kingdom, a single re-roll changes one
+   card, and "favor cards we've played less" depends on the games logged so far, so none of those carry a seed. */
+export const newSeed = (rnd = Math.random) => Math.floor(rnd() * 1000000);
+export const parseSeed = v => { const s = String(v ?? '').trim(); return /^\d{1,9}$/.test(s) ? Number(s) : null; };
+export const formatSeed = n => String(n).padStart(6, '0');
+
+/* generate(), but from a seed. The result carries `seed` when it can be reproduced from it, otherwise `seed: null`. */
+export function rollSeeded(catalog, options, seed, extra = {}) {
+  const res = generate(catalog, options, { ...extra, rng: seededRng(seed) });
+  if (!res.ok) return res;
+  const fresh = !(extra.keep && extra.keep.length) && !(extra.keepLandscapes && extra.keepLandscapes.length) && !extra.plays;
+  return { ...res, seed: fresh ? seed : null };
+}
+
 // ---------------------------------------------------------------- piles
 const infoCache = new WeakMap();
 function pileInfos(catalog) {
@@ -62,7 +86,11 @@ function pileInfos(catalog) {
   return out;
 }
 export const pileKeyOf = (catalog, cardId) => pileInfos(catalog).byCardId.get(cardId)?.key ?? null;
-const satisfies = (info, rule) => REQUIRE_RULES[rule].tags.some(t => info.tags.has(t));
+export const satisfiesRule = (info, rule) => {
+  const r = REQUIRE_RULES[rule];
+  return r.coins != null ? info.cards.some(c => c.coins === r.coins && c.debt === 0) : r.tags.some(t => info.tags.has(t));
+};
+const satisfies = satisfiesRule;
 
 // a slot is what callers and the UI see
 const toSlot = info => ({ key: info.key, name: info.name, expansion: info.expansion, cards: info.cards });
@@ -113,9 +141,11 @@ function pick(candidates, o, plays, rng) {
 // ---------------------------------------------------------------- the draw
 /* generate(catalog, options, { rng, keep, keepLandscapes, plays })
      keep            pile keys that must stay (locked cards)        keepLandscapes   landscape ids that must stay
+     lockedAt        Map(pile key -> position): a locked card also keeps its PLACE on the table; the rest fill the other places cheapest first
+     lockedLandscapeAt  the same for landscapes (id -> position)
      plays           Map(pile key -> games played, see playStats.js pilesPlayed), used when options.favor is on
    Returns { ok: true, slots, landscapes: [{ landscape, on }], setup } or { ok: false, message }. */
-export function generate(catalog, options = {}, { rng = Math.random, keep = [], keepLandscapes = [], plays = null } = {}) {
+export function generate(catalog, options = {}, { rng = Math.random, keep = [], keepLandscapes = [], plays = null, lockedAt = null, lockedLandscapeAt = null } = {}) {
   const o = normalize(options);
   const { byKey, byCardId } = pileInfos(catalog);
   const pool = poolFor(catalog, o);
@@ -151,20 +181,33 @@ export function generate(catalog, options = {}, { rng = Math.random, keep = [], 
       if (swappable.length && rx.length) chosen[chosen.indexOf(swappable[Math.floor(rng() * swappable.length)])] = pick(rx, o, plays, rng);
     }
     const why = breaks(chosen, o, wanted);
-    if (!why) return finish(catalog, o, chosen, keepLandscapes, plays, rng);
+    if (!why) return finish(catalog, o, chosen, keepLandscapes, plays, rng, null, { lockedAt, lockedLandscapeAt });
     last = `${why}, and no kingdom was found that meets all of the rules together — try relaxing one.`;
   }
   return { ok: false, message: last };
 }
 
-/* Landscapes and the setup notes for a chosen set of piles. */
-function finish(catalog, o, chosen, keepLandscapes, plays, rng, prior = null) {
-  const slots = sortSlots(chosen.map(toSlot));
-  const picked = pickLandscapes(catalog, o, slots, keepLandscapes, rng, prior);
+/* Put sorted items in the table's places: an item with an entry in `lockedAt` takes that place (if it is free and in range), and the others
+   fill the remaining places in their sorted order. With no locks this is just the sorted list. */
+function placeLocked(sorted, keyOf, lockedAt) {
+  if (!lockedAt || !lockedAt.size) return sorted;
+  const n = sorted.length, out = new Array(n).fill(null), rest = [];
+  sorted.forEach(x => { const at = lockedAt.get(keyOf(x)); if (at != null && at >= 0 && at < n && !out[at]) out[at] = x; else rest.push(x); });
+  let r = 0;
+  return out.map(x => x || rest[r++]);
+}
+
+/* Landscapes and the setup notes for a chosen set of piles.
+   layout.keepOrder      the piles (and landscapes) are already in the order to show, so a re-roll of ONE card changes only that card
+                         and nothing around it moves;
+   layout.lockedAt, .lockedLandscapeAt   places held by locked cards (see generate). */
+function finish(catalog, o, chosen, keepLandscapes, plays, rng, prior = null, layout = {}) {
+  const slots = layout.keepOrder ? chosen.map(toSlot) : placeLocked(sortSlots(chosen.map(toSlot)), s => s.key, layout.lockedAt);
+  const picked = pickLandscapes(catalog, o, slots, keepLandscapes, rng, prior, layout);
   return { ok: true, slots, landscapes: picked, setup: setupFor(catalog, o, slots, rng, prior?.setup) };
 }
 
-function pickLandscapes(catalog, o, slots, keepLandscapes, rng, prior) {
+function pickLandscapes(catalog, o, slots, keepLandscapes, rng, prior, layout = {}) {
   const types = o.landscapeTypes.length ? o.landscapeTypes : LANDSCAPE_TYPES;
   // Landscapes come from every expansion that has them, whatever expansions the Kingdom cards are drawn from: the expansion
   // choice is about the Kingdom, and a landscape can be added to any game. Only the landscape TYPES chosen narrow them.
@@ -189,7 +232,8 @@ function pickLandscapes(catalog, o, slots, keepLandscapes, rng, prior) {
     }
     out.push({ landscape: l, on });
   }
-  return out;
+  if (layout.keepOrder) { const pos = new Map(chosen.map((l, i) => [l.id, i])); return out.sort((a, b) => pos.get(a.landscape.id) - pos.get(b.landscape.id)); }
+  return placeLocked(out, x => x.landscape.id, layout.lockedLandscapeAt);
 }
 
 /* The things players forget at setup, derived from the kingdom. All of these follow the official rules:
@@ -232,7 +276,7 @@ export function rerollSlot(catalog, options, state, index, { rng = Math.random, 
       const replaced = state.slots[index];
       const res = finish(catalog, { ...o, landscapes: state.landscapes.length }, next, state.landscapes.map(l => l.landscape.id), plays, rng, {
         landscapes: state.landscapes.map(l => (l.on && replaced.cards.some(c => c.id === l.on) ? { ...l, on: null } : l)), setup: state.setup,
-      });
+      }, { keepOrder: true });   // the new card takes the old one's place; nothing else moves
       return res;
     }
   }
@@ -248,7 +292,7 @@ export function rerollLandscape(catalog, options, state, index, { rng = Math.ran
   const swap = cands[Math.floor(rng() * cands.length)];
   const ids = state.landscapes.map((l, i) => (i === index ? swap.id : l.landscape.id));
   const slots = state.slots.map(s => infoOfSlot(catalog, s));
-  return finish(catalog, { ...o, landscapes: ids.length }, slots, ids, null, rng, { landscapes: state.landscapes.filter((_, i) => i !== index), setup: state.setup });
+  return finish(catalog, { ...o, landscapes: ids.length }, slots, ids, null, rng, { landscapes: state.landscapes.filter((_, i) => i !== index), setup: state.setup }, { keepOrder: true });
 }
 
 // ---------------------------------------------------------------- the link
@@ -285,6 +329,7 @@ export function kingdomToParams(state, p = new URLSearchParams()) {
   state.slots.forEach(s => p.append('c', slotCardId(s)));
   state.landscapes.forEach(l => p.append('l', l.landscape.id));
   state.landscapes.forEach(l => { if (l.on) p.append('t', `${l.landscape.id}~${l.on}`); });
+  if (state.seed != null) p.set('seed', String(state.seed));
   if (state.setup.bane) p.set('bane', slotCardId(state.setup.bane));
   if (state.setup.platinumColony != null) p.set('pc', flag(state.setup.platinumColony));
   if (state.setup.shelters != null) p.set('sh', flag(state.setup.shelters));
@@ -297,15 +342,14 @@ export function kingdomFromParams(catalog, p) {
   const seen = new Set(), infos = [];
   for (const id of many(p, 'c')) { const i = byCardId.get(id); if (i && !seen.has(i.key)) { seen.add(i.key); infos.push(i); } }
   if (!infos.length) return null;
-  const slots = sortSlots(infos.slice(0, 12).map(toSlot));
+  const slots = infos.slice(0, 12).map(toSlot);   // in the order written: a locked card's place is part of the kingdom
   const hosts = new Map(many(p, 't').map(t => t.split('~')).filter(t => t.length === 2));
   const landscapes = [...new Set(many(p, 'l'))].map(id => catalog.landscapesById.get(id)).filter(Boolean)
-    .sort((a, b) => LANDSCAPE_TYPES.indexOf(a.type) - LANDSCAPE_TYPES.indexOf(b.type) || a.name.localeCompare(b.name))
     .map(landscape => { const on = hosts.get(landscape.id); return { landscape, on: landscape.type === 'Trait' && on && byCardId.get(on) && seen.has(byCardId.get(on).key) ? on : null }; });
   const baneInfo = byCardId.get(p.get('bane'));
   const flagOf = k => (p.get(k) === '1' ? true : p.get(k) === '0' ? false : null);
   return {
-    slots, landscapes,
+    slots, landscapes, seed: parseSeed(p.get('seed')),
     setup: {
       bane: baneInfo && !seen.has(baneInfo.key) ? toSlot(baneInfo) : null, platinumColony: flagOf('pc'), shelters: flagOf('sh'),
       ruins: slots.some(s => s.cards.some(c => c.types.includes('Looter'))),

@@ -53,7 +53,7 @@ describe('Overview', () => {
     expect(t).not.toMatch(/Attacks counts/); expect(t).not.toMatch(/Only edition/);
   });
   it('also carries what used to be the Statistics tab (one page, no duplicate charts)', () => {
-    for (const h of ['Physical cards by expansion', 'Supply piles', 'Card types by expansion', 'Most common type combinations', 'Coin cost', 'Recorded mechanics', 'Data checks']) expect(t).toContain(h);
+    for (const h of ['Physical cards by expansion', 'Supply piles', 'Card types by expansion', 'Most common type combinations', 'Coin cost', 'Recorded mechanics']) expect(t).toContain(h);
     expect((html.match(/aria-label="Landscape designs per type"/g) || []).length).toBe(1);
     expect((html.match(/aria-label="Kingdom card names per printed type"/g) || []).length).toBe(1);
   });
@@ -158,14 +158,31 @@ describe('sortable landscape headers', () => {
   });
 });
 
-describe('bar chart label width', () => {
-  it('gives the coin-cost chart a narrow label column (its labels are small icons), and leaves the other charts alone', () => {
-    const html = render('');
-    const coin = html.match(/<ol class="dn-bars" aria-label="Kingdom card names per coin cost"[^>]*>/)[0];
-    expect(coin).toContain('--dn-bar-label:34px');
-    const others = [...html.matchAll(/<ol class="dn-bars" aria-label="([^"]+)"([^>]*)>/g)].filter(m => !/coin cost/.test(m[1]));
-    expect(others.length).toBeGreaterThan(3);
-    others.forEach(m => expect(m[2], m[1]).not.toContain('--dn-bar-label'));
+describe('the Overview charts', () => {
+  const html = render(''), t = text(html);
+  it('lets you click through: every expansion name, and every coin-cost column, opens the filtered Kingdom cards', () => {
+    const phys = html.match(/<ol class="dn-lol"[^>]*aria-label="Physical Kingdom cards per expansion">[\s\S]*?<\/ol>/)[0];
+    expect((phys.match(/href="#\/dominion\/cards\?[^"]*exp=/g) || []).length).toBe(11);
+    const cols = html.match(/<ol class="dn-cols" aria-label="Kingdom card names per coin cost">[\s\S]*?<\/ol>/)[0];
+    expect((cols.match(/class="dn-col-track dn-col-link"/g) || []).length).toBe(11);        // the bars themselves are links (10 costs + Debt)
+    expect(cols).toMatch(/class="dn-col-track dn-col-link" href="#\/dominion\/cards\?[^"]*cost=5"/);
+  });
+  it('uses a different kind of chart for each question, not one bar chart repeated', () => {
+    expect(html).not.toContain('dn-treemap'); expect((html.match(/class="dn-bars"/g) || []).length).toBe(1);   // one plain bar chart, not one for everything
+    for (const [cls, label] of [['dn-donut', 'Kingdom card names per expansion'], ['dn-bars', 'Kingdom card names per printed type'], ['dn-lol', 'Physical Kingdom cards per expansion'],
+      ['dn-seg', 'Supply piles by number of card names'], ['dn-waffle-wrap', 'Landscape designs per type'], ['dn-cols', 'Kingdom card names per coin cost'], ['dn-heat', 'Card names recorded with each mechanic, most common first']])
+      expect(html, label).toMatch(new RegExp(`class="${cls}"[^>]*aria-label="${label}"`));
+  });
+  it('keeps every number as real text and the filter links', () => {
+    expect(t).toMatch(/Base Game.*\d+/); expect(t).toMatch(/Events.*48/); expect(t).toMatch(/Traits.*15/);
+    expect(html).toContain('href="#/dominion/cards?exp=');                                   // an expansion links to its cards
+    expect(html).toMatch(/href="#\/dominion\/landscapes\?[^"]*"[^>]*>Events</);              // a landscape type links to its list
+  });
+  it('shows the coin-cost columns in order, the Debt-only column at the end', () => {
+    const cols = html.match(/<ol class="dn-cols" aria-label="Kingdom card names per coin cost">[\s\S]*?<\/ol>/)[0];
+    const lis = cols.split('<li').slice(1);
+    expect(lis).toHaveLength(11);                                   // costs 1 to 10, then Debt-only
+    expect(lis[lis.length - 1]).toContain('Debt only'); expect(lis[0]).toContain('<b class="dn-col-n">1</b>');   // one card costs 1
   });
 });
 
@@ -422,8 +439,10 @@ describe('clickable table rows', () => {
 
 describe('Artifacts', () => {
   const art = catalog.artifacts.find(a => a.name === 'Horn');
-  it('link from the Overview and from the Landscapes page to their own page', () => {
-    for (const h of [render(''), render('landscapes')]) for (const a of catalog.artifacts) expect(h, a.name).toContain(`href="#/dominion/artifacts/${encodeURIComponent(a.id)}"`);
+  it('are listed on the Landscapes page (each linking to its own page) and no longer as a section of the Overview', () => {
+    const land = render('landscapes'), overview = render('');
+    for (const a of catalog.artifacts) { expect(land, a.name).toContain(`href="#/dominion/artifacts/${encodeURIComponent(a.id)}"`); expect(overview, a.name).not.toContain(`href="#/dominion/artifacts/${encodeURIComponent(a.id)}"`); }
+    expect(text(overview)).not.toMatch(/Artifacts are tracked on their own/);
   });
   it('have a details page with their text, how they are held and their tags', () => {
     const h = render(`artifacts/${encodeURIComponent(art.id)}`), t = text(h);
@@ -486,12 +505,12 @@ describe('Statistics', () => {
     expect(t).toMatch(/1,?634 recorded mechanic tags across 96 of the 98 defined mechanics/);
   });
   it('covers the distributions asked for', () => {
-    for (const h of ['Physical cards by expansion', 'Printed card types', 'Supply piles', 'Landscapes', 'Coin cost', 'Recorded mechanics', 'Data checks']) expect(t).toContain(h);
+    for (const h of ['Physical cards by expansion', 'Printed card types', 'Supply piles', 'Landscapes', 'Coin cost', 'Recorded mechanics']) expect(t).toContain(h);
     expect(t).toMatch(/Out of 331 card names\. 4 cards cost only Debt \(City Quarter, Engineer, Overlord, Royal Blacksmith\) and have no coin cost, so they get their own bar rather than counting as \$0/);
     expect(html).toContain('aria-label="Debt only: cards that cost only Debt"'); expect(html).not.toContain('coin-0.png');
     expect(t).toMatch(/Out of 310 piles/);
   });
-  it('passes its own consistency checks on the real data', () => { expect(html).not.toContain('class="bad"'); expect((html.match(/class="ok"/g) || []).length).toBe(3); });
+  it('no longer shows a Data checks section (the checks themselves still pass on the real data)', () => { expect(t).not.toMatch(/Data checks/); expect(html).not.toContain('dn-checks'); });
 });
 
 describe('the card-types-by-expansion table on Statistics', () => {
@@ -610,7 +629,7 @@ describe('the Players link in the nav', () => {
   });
   it('changes nothing else in the nav, and still works for a viewer with no league data yet', () => {
     const nav = renderToStaticMarkup(<Header ready={ready('Ann', [['Ann', 2]])} hash="" />);
-    expect(nav).toContain('<a href="#/games/a"'); expect(nav).toContain('<a href="#/h2h/a"'); expect(nav).toContain('<a href="#/dominion"');
+    expect(nav).toContain('<a href="#/games/a"'); expect(nav).not.toContain('#/h2h'); expect(nav).toContain('<a href="#/dominion"');
     const bare = { route: { route: 'home', gid: 'a' }, me: { name: 'Ann', is_admin: false }, allGroups: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] };
     expect(playersHref(bare)).toBe('#/players/a');
   });
@@ -637,7 +656,7 @@ describe('nav icons', () => {
   it('every icon the header links to exists on disk (a typo would otherwise be a silent broken image)', () => {
     const ready = { route: { route: 'home', gid: 'a' }, me: { name: 'Ann', is_admin: true }, allGroups: [{ id: 'a', name: 'A' }] };
     const srcs = [...renderToStaticMarkup(<Header ready={ready} hash="" />).matchAll(/<img src="([^"]+)"/g)].map(m => m[1]);
-    expect(srcs.length).toBe(8);                                           // every nav entry has an icon, Collection included
+    expect(srcs.length).toBe(7);                                           // every nav entry has an icon, Collection included
     expect(srcs).toContain('icons/nav/collection.png');
     for (const src of srcs) expect(existsSync(path.join(ROOT, 'public', src)), src).toBe(true);
   });

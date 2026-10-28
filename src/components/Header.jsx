@@ -5,7 +5,7 @@ import { pickD } from '../lib/league.js';
 
 const NAV = [
   ['home', 'Rankings', 'rankings'], ['season', 'Season', 'season'], ['players', 'Players', 'players'],
-  ['h2h', 'Head to head', 'h2h'], ['games', 'Games', 'games'],
+  ['games', 'Games', 'games'],
   ['dominion', 'Collection', 'collection'],   // the URL stays #/dominion (an id, not a label); the icon file is icons/nav/collection.png
   ['records', 'Records', 'records'], ['admin', 'Admin', 'admin'],
 ];
@@ -37,6 +37,7 @@ export default function Header({ ready, hash }) {
           style={show ? undefined : { display: 'none' }} onClick={() => setOpen(o => !o)}>
           <span></span><span></span><span></span>
         </button>
+        {show && ready.cfg && <span className="brand">{ready.cfg.title || 'Dominion Night'}</span>}
         <nav id="nav" className={open ? 'nav-open' : undefined} aria-label="Sections" style={show ? undefined : { display: 'none' }}>
           {show && NAV.filter(([r]) => r !== 'admin' || ready.me.is_admin).map(([r, label, icon]) => (
             <a key={r} href={navHref(r, ready)}

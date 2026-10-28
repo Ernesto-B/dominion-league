@@ -62,7 +62,7 @@ export default function Records() {
       <div className="grid2">
         <div>
           <h2>Player records</h2>
-          <SortableTable head={[{ label: 'Record', cls: L }, { label: 'Holder', cls: L }, { label: 'Value' }]} rows={playerRecords} />
+          <SortableTable stack head={[{ label: 'Record', cls: L }, { label: 'Holder', cls: L }, { label: 'Value' }]} rows={playerRecords} />
         </div>
         <div>
           <h2>Table sizes</h2>
@@ -85,7 +85,7 @@ export default function Records() {
 
       <h2>Sets in play</h2>
       {R.setsLogged ? <>
-        <SortableTable head={[{ label: 'Set', cls: L }, { label: 'Games' }, { label: 'Share' }, { label: 'Avg winning VP' }]}
+        <SortableTable stack head={[{ label: 'Set', cls: L }, { label: 'Games' }, { label: 'Share' }, { label: 'Avg winning VP' }]}
           rows={setRows.map(([k, v]) => {
             const st = R.setStats[k];
             const vp = st && st.avgVP != null ? f1(st.avgVP) : '—';
@@ -95,7 +95,7 @@ export default function Records() {
       </> : <p className="empty">Fill the sets field when adding a game (separate sets with semicolons).</p>}
 
       <h2>Season champions</h2>
-      <SortableTable head={[{ label: 'Season', cls: L }, { label: 'Champion', cls: L }, { label: 'Dates', cls: L }]}
+      <SortableTable stack head={[{ label: 'Season', cls: L }, { label: 'Champion', cls: L }, { label: 'Dates', cls: L }]}
         rows={D.seasons.map(s => ({
           key: s.number,
           cells: [

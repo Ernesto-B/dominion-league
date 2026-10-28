@@ -60,6 +60,18 @@ index.html     — the shell Vite builds from: #root (React mounts here), #modal
                  everything routes through #/<route>/<arg> in src/App.jsx.
 ```
 
+**The rating model** is chosen by `config.elo.model` in `public/data/config.json`. `classic` (the engine's default when the key is absent, and what the
+spreadsheet verified) is pairwise Elo, K=200. The league runs `steady` (`src/lib/steadyElo.js`): K=100 (200 while provisional), a points-per-finish
+table that pays the top half first and the win second, half the top-half bonus for the exact middle of an odd table, and a table that pays `target`
+(0.52) of the points on average, which is the deliberate slow upward drift. Tier thresholds in `config.json` are the K=200 ones scaled by K/200
+(1125 / 1275 / 1475 / 1700): change K and the tiers together. Ratings are recomputed from the games on every load, so changing the model rewrites history.
+
+**Season score** = the average of each Regular game's season points with `prior` imaginary average games. A game's season points are
+`(1 - vpWeight) x finish points + vpWeight x (your VP / the winner's VP)` (0.3: 70% place, 30% VP share; a ratio, so it never depends on how many VP an
+expansion produces; a game without everyone's VP uses place only), plus a win-streak bonus (`streakBonus`, `streakCap`). Both live in `config.season`; see
+`g.sp` in the engine. There is no Head to head page: its matrix (`components/H2HMatrix.jsx`) is on each Player page,
+and `#/h2h` redirects to Players.
+
 **Data flow**: `boot()` in `src/League.jsx` → Supabase queries (`loadData()` in `src/lib/data.js`) (`players`, `games`,
 `game_results`, `groups`, `seasons`) → `loadData()` reconstructs them into the exact
 row shape `engine.js` has always expected (a `finish` string like `"Jose > Bob = Cara"`,
@@ -181,6 +193,30 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   key whenever the shape of the raw catalog rows changes. `React.lazy` splits the Collection, Admin, the Add Game dialog and a
   game's kingdom list out of the main bundle; `vite.config.js` gives React and the Supabase client their own long-cached chunks.
 
+## UX experiments (branch `ux-experiment`)
+
+- Every experiment sits behind a flag in `src/ux.js` (`?ux=none|all|nav,home,...`, remembered in localStorage, switchable from the footer),
+  and becomes a class on `<html>` (`ux-nav`, `ux-lists`, ...). With the flags off the site must behave exactly as on `main` — the CSS is all
+  keyed on those classes, and the old Add Game dialog was verified to send the identical payload.
+- `npm run dev:fake` runs the whole site on in-memory data (`dev/fakeSupabase.js`, swapped in by `vite.fake.config.js`; never part of the
+  real build). `dev/cdp.mjs` + `dev/ab-tasks.mjs` drive an emulated phone to compare A and B.
+- The `lists` flag also swaps the phone's game tables for `components/GameCards.jsx` (Last night and the Games page share the open/closed
+  state with the table beside them), shows the form dots under each ladder name, and draws `RatingChart` at phone width with tappable name
+  chips.
+- The Overview's charts live in `dominion/components/charts.jsx`, one chart type per question (donut, plain bars for the printed types, lollipop, segmented bar, waffle, columns, heat chips). Keep every number
+  as real text and every label a link where there is a filter for it; don't reach for a bar chart again just because it is the easy default.
+- `dominion/components/RandomizerPanel.jsx` is the whole working randomizer (options, roll, tiles with Lock/Re-roll, landscapes, setup notes). It is controlled, so the
+  Randomizer page (state in the URL) and the Game night Kingdom step (state in the step; the roll is saved as `rolledQ`, the compact link form) share it.
+- `dominion/components/RandomizerOptions.jsx` is the one options panel (expansions, counts, rules, include/exclude) used by the Randomizer
+  page and the Game night Kingdom step. Rules in `REQUIRE_RULES` are either mechanic `tags` (positive-only) or an exact printed `coins` cost.
+- The `redesign` flag: Rankings opens with you (`MeCard`), then `SinceVisit` (what changed since the viewer last looked, from `lib/lastVisit.js`;
+  a snapshot per group in localStorage `dl.seen.<group>`, shown until dismissed, never nudging), the ladder, last night, the chart and highlights,
+  with the explanations folded into "How ratings and tiers work". The Games filters fold on a phone (`components/FilterFold.jsx`), the Games page
+  shows game cards in a two-column grid on a wide screen (a Cards/Table switch, remembered in `dl.gamesview`), and "Game saved" says what the game did (`gameSummary` in `lib/night.js`). The Season table
+  keeps six columns on a phone under `lists`.
+- Shared pieces extracted so the dialog and the Game night flow can't drift: `src/lib/gameForm.js` (VP sort, results, RPC arguments),
+  `components/FinishOrder.jsx`, `components/EloPreview.jsx`. Flow state: `src/lib/night.js`.
+
 ## Game kingdoms (the Collection <-> the league)
 
 - A game's kingdom lives in `game_kingdom` (`supabase/schema.sql`): one row per card/landscape, `item_id` a Dominion catalog
@@ -191,6 +227,10 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   only when there is something to say** (a new game with cards, or an edit that touched the kingdom), which keeps an older
   database working with a newer site. The game rows the engine sees carry `kingdom` (display only, never read by the maths).
 - A split pile (Knights, Gladiator / Fortune) is ONE kingdom slot and is logged as one card id; `displayName()` shows the pile.
+- Rolls are reproducible: `rollSeeded(catalog, options, seed)` (`randomizer.js`) gives the same kingdom for the same options and seed, because every random choice
+  comes from one seeded generator. The seed (up to six digits) is shown with the kingdom, kept in its link (`seed=`) and used in the picture's file name. Only a
+  fresh roll carries one: locked cards, a single re-roll, and "favor cards we've played less" all depend on something other than the seed, so they set `seed: null`.
+  Never use `Math.random` inside `generate` or its helpers; take the injected `rng`.
 - The randomizer's rules: *excluding* uses printed types (complete); *requiring* uses mechanic tags (positive-only — a card can
   be missed, never wrongly counted). Keep it that way. Setup notes (Bane, Platinum/Colony, Shelters, Ruins) follow the official rules.
 - Filters AND the rolled kingdom live in the URL hash query (`urlState.js` writes with `replaceState`; `useHash` only scrolls

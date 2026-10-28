@@ -55,11 +55,11 @@ export default function Season() {
       {st.rows.length ? <SeasonTable standings={st} /> : <p className="empty">No regular games in this season yet.</p>}
       <details className="help">
         <summary>How is the season score calculated?</summary>
-        <p className="note">Season score = 1000 × (points + {D.S.prior} × 0.5) ÷ (games + {D.S.prior}), so it always lands somewhere between 0 and 1000. Points run from 1 for a win down to 0 for last, so a 3-player table and a 6-player table are worth the same, and ties split. The {D.S.prior} imaginary average games stop one lucky night from topping the table. Missing a night costs nothing. Qualified players rank first; green rows are playoff seeds. Playoff and friendly games don't count toward the table (playoffs still move Elo). This table — not Elo — decides the season champion; Elo is a separate, ongoing skill rating shown on <a href={hashFor('', gid)}>Rankings</a> that never resets.</p>
+        <p className="note">Every regular game gives you points for where you finished: 1 for a win down to 0 for last, the same at a 3-player or a 6-player table, with ties splitting the points.{D.S.streakBonus > 0 && <> Win streak: each win in a row after your first adds {D.S.streakBonus} to that game, up to +{+(D.S.streakBonus * D.S.streakCap).toFixed(2)}; any game you don't win starts you over.</>}{D.S.vpWeight > 0 && <> Close games: {Math.round(D.S.vpWeight * 100)}% of a game’s points come from your VP as a share of the winner’s (so a big-VP Prosperity game and a small-VP Base game count alike), and the other {Math.round((1 - D.S.vpWeight) * 100)}% from where you finished. A narrow loss therefore keeps most of that share and a blowout keeps little; a game without everyone’s VP just uses where you finished.</>} Your season score is 1000 × your average points per game, after adding {D.S.prior} imaginary average games so one lucky night can’t top the table{(D.S.streakBonus > 0 || D.S.vpWeight > 0) && <> (with the bonuses a score can go above 1000 or below 0)</>}. Missing a night costs nothing. Qualified players rank first; green rows are playoff seeds. Playoff and friendly games don't count toward the table (playoffs still move Elo). This table — not Elo — decides the season champion; Elo is a separate, ongoing skill rating shown on <a href={hashFor('', gid)}>Rankings</a> that never resets.</p>
       </details>
       {seasonGames.length > 0 && <>
         <h2>Games this season</h2>
-        <GamesTable key={num} games={seasonGames} />
+        <GamesTable key={num} games={seasonGames} link />
       </>}
     </>
   );

@@ -4,10 +4,10 @@
    always means exactly that, not "group 'season', page edit/5".
    The Dominion collection is site-wide too (the same boxes whichever friend group is playing), so it also
    never carries a group segment: #/dominion/cards/<card id>. */
-export const ROUTES = ['home', 'season', 'players', 'h2h', 'records', 'games', 'dominion', 'admin'];
+export const ROUTES = ['home', 'season', 'players', 'records', 'games', 'night', 'dominion', 'admin'];
 export const GLOBAL_ROUTES = ['dominion', 'admin'];   // not scoped to a group
 // What a route is called on screen when that isn't just its capitalised id (the browser tab title uses this)
-export const ROUTE_TITLES = { dominion: 'Collection' };
+export const ROUTE_TITLES = { dominion: 'Collection', night: 'Game night' };
 
 /* `lastGid` is the group the viewer last picked. It stands in whenever the URL doesn't name one — a site-wide page
    (Dominion/Admin) or a bare #/records — so leaving to such a page and coming back doesn't reset the group.
@@ -17,7 +17,8 @@ export function parseHash(hash, allGroups, lastGid) {
   const raw = hash.replace(/^#\/?/, ''), qi = raw.indexOf('?');
   const query = qi >= 0 ? raw.slice(qi) : '';
   const parts = (qi >= 0 ? raw.slice(0, qi) : raw).split('/');
-  const route = parts[0] || 'home';
+  const legacy = parts[0] === 'h2h';   // the old Head to head page lives on as the matrix on each player's page
+  const route = legacy ? 'players' : parts[0] || 'home';
   const multi = !GLOBAL_ROUTES.includes(route) && allGroups.length > 1;
   const known = id => allGroups.some(g => g.id === id);
   const fallback = known(lastGid) ? lastGid : allGroups[0]?.id;
@@ -25,7 +26,7 @@ export function parseHash(hash, allGroups, lastGid) {
   try { if (named) named = decodeURIComponent(named); } catch { /* malformed: treated as unknown */ }
   const explicit = known(named);
   const gid = allGroups.length ? (explicit ? named : fallback) : null;
-  const arg = (multi ? parts.slice(2) : parts.slice(1)).join('/') + query;
+  const arg = legacy ? '' : (multi ? parts.slice(2) : parts.slice(1)).join('/') + query;
   return { route, gid, arg, explicit };
 }
 

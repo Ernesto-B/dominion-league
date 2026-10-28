@@ -11,15 +11,7 @@ export function ExpansionBadge({ name, size = 18 }) {
 
 /* The filter facets of a browser, folded away on a phone (where they would fill more than a screen before the list starts)
    and open on a wider screen. The search box, sort and the result count stay outside it, always visible. */
-export function FilterFold({ active, children }) {
-  const [open, setOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia || window.matchMedia('(min-width: 721px)').matches);
-  return (
-    <details className="dn-fold" open={open} onToggle={e => setOpen(e.currentTarget.open)}>
-      <summary>Filters{active ? <span className="meta"> · {active} on</span> : null}</summary>
-      {children}
-    </details>
-  );
-}
+export { default as FilterFold } from '../../components/FilterFold.jsx';
 
 // the class (pill t-action, ...) lets style.css tint the six main types; every other type keeps the plain pill
 // a landscape's type as one pill, tinted like the printed-type pills (see t-event ... t-landmark in style.css)

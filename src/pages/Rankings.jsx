@@ -9,6 +9,10 @@ import TierIcon from '../components/TierIcon.jsx';
 import TierLegend from '../components/TierLegend.jsx';
 import LastNight from '../components/LastNight.jsx';
 import RatingChart from '../components/RatingChart.jsx';
+import MeCard from '../components/MeCard.jsx';
+import SinceVisit from '../components/SinceVisit.jsx';
+import { steadyPayout } from '../lib/steadyElo.js';
+import { uxOn } from '../ux.js';
 
 function Ladder({ ranked: rk, highlight, setHighlight }) {
   const { D, gid, hashFor } = usePage();
@@ -56,9 +60,54 @@ export default function Rankings() {
   const last = gl.length ? gl[gl.length - 1].date : null;
   const R = D.records, nights = R.overview.nights;
 
+  // what one game pays at an even table of four, from the league's own settings (only the 'steady' model has this shape)
+  const pay4 = D.E.model === 'steady' ? steadyPayout(4, D.E).map(v => Math.round(v)) : null;
+  const sg = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v);
+  const notes = <>
+    <div className="how-key">
+      <p><b>The fastest way up: finish in the top half.</b></p>
+      <p>Finish ahead of the middle of the table and your Elo goes up; finish behind it and it goes down. Winning pays a little extra on top. At an odd-sized table, the exact middle seat (3rd of 5) is roughly break-even.</p>
+      {pay4 && <p className="meta">A table of four, everyone rated the same: 1st {sg(pay4[0])} · 2nd {sg(pay4[1])} · 3rd {sg(pay4[2])} · 4th {sg(pay4[3])}.</p>}
+    </div>
+    <h2>Rank tiers</h2>
+    <TierLegend />
+    <p className="note">Your tier follows your current Elo, so it can go down as well as up. The trophy is for winning a season and never goes away.</p>
+    <p className="note">Everyone starts at {D.E.start} as a {D.startTier.name} and climbs from there. Elo carries across seasons; friendly games never count. New players move faster for their first {D.E.provisionalGames} games (provisional).</p>
+    <p className="note">This ladder is Elo — a lifetime skill rating that never resets. It's not what decides a season's winner; that's points, on the <a href={hashFor('season', gid)}>Season page</a>.</p>
+  </>;
+  const chips = (
+    <div className="chips toprow">
+      <SeasonChip />
+      {last && <span className="chip">Last night <b>{short(last)}</b></span>}
+      <span className="chip"><b>{nights}</b> night{nights === 1 ? '' : 's'} played</span>
+    </div>
+  );
+
+  // the redesigned front door: you, what changed, the ladder; the explanations are folded away at the bottom
+  if (uxOn('redesign')) return (
+    <>
+      <GroupSwitcher route="" />
+      <MeCard ranked={rk} />
+      {rk.length > 0 && <SinceVisit ranked={rk} />}
+      {chips}
+      <Banner />
+      {!rk.length ? <p className="empty">No rated games yet. Once the admin adds one, the rankings show up here.</p> : <>
+        <Ladder ranked={rk} highlight={highlight} setHighlight={setHighlight} />
+        <p className="note dn-only-sm form-key"><span className="form"><i className="w"></i></span> strong finish <span className="form"><i className="m"></i></span> middling <span className="form"><i className="l"></i></span> weak — each player’s last five games, oldest first.</p>
+        <LastNight games={gl} />
+        <h2>Rating history</h2>
+        <RatingChart names={rk.map(p => p.name)} highlight={highlight} onHover={setHighlight} />
+        <h2>Highlights</h2>
+        <StoryCards R={R} ranked={rk} />
+        <details className="help how"><summary>How ratings and tiers work</summary>{notes}</details>
+      </>}
+    </>
+  );
+
   return (
     <>
       <GroupSwitcher route="" />
+      {uxOn('home') && <MeCard ranked={rk} />}
       <div className="chips toprow">
         <SeasonChip />
         {last && <span className="chip">Last night <b>{short(last)}</b></span>}
@@ -68,6 +117,7 @@ export default function Rankings() {
       <Banner />
       {!rk.length ? <p className="empty">No rated games yet. Once the admin adds one, the rankings show up here.</p> : <>
         <Ladder ranked={rk} highlight={highlight} setHighlight={setHighlight} />
+        {uxOn('lists') && <p className="note dn-only-sm form-key"><span className="form"><i className="w"></i></span> strong finish <span className="form"><i className="m"></i></span> middling <span className="form"><i className="l"></i></span> weak — each player’s last five games, oldest first.</p>}
         <LastNight games={gl} />
         <h2>Rank tiers</h2>
         <TierLegend />

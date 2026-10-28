@@ -81,7 +81,7 @@ Seasons and friend groups are managed from the **Admin** page on the site (admin
 
 With more than one group, every page grows a small pill switcher — but only listing groups you're actually in.
 
-`elo` in `config.json` holds K, the provisional K and window, the start rating and the scale. `season.prior` is the season-score smoothing (3 means three imaginary average games) — these are the rare-change settings still worth a conscious file edit rather than a casual web form, since changing them recomputes every historical Elo.
+`elo` in `config.json` holds the rating model (`steady` or the original `classic`), K, the provisional K and window, the start rating, the scale and (for `steady`) `target`, the slow upward drift. The tier thresholds in the same file go with K: change one, change the other. `season.prior` is the season-score smoothing (3 means three imaginary average games) — these are the rare-change settings still worth a conscious file edit rather than a casual web form, since changing them recomputes every historical Elo.
 
 ## Rank titles and icons
 
@@ -102,7 +102,7 @@ Defaults: Peasant under 1040, Knight 1040, Lord 1090, Duke 1150, Emperor 1225. T
 - **Rankings:** Elo ladder with title icons, last night's results with the Elo change per player, the tier key, rating history, and the current season's top five.
 - **Season:** week-of-season progress, standings with qualification and playoff seeds, and the season's games.
 - **Players:** title and progress to the next one, season titles, top-half finishes, last places, longest run without a win, nemesis and favourite victim, rating history, record against each opponent, every result.
-- **Head to head, Records, Games:** the matrix; league and single-game records (biggest Elo swing, longest game, highest score); the full log with season, type and player filters. Admins get Edit/Delete links on each row of the Games page.
+- **Records, Games:** league and single-game records (biggest Elo swing, longest game, highest score); the full log with season, type and player filters. The head-to-head matrix is on the Players page (the old Head to head page redirects there). Admins get Edit/Delete links on each row of the Games page.
 - **Add a game** (admin only): pick who played and in what order, fill in the optional details, and save — it writes straight to the database. The same page shows each player's expected score and the Elo at stake ("Before you play"), which is handy for balancing seating.
 - **Admin** (admin only): add friend groups, and add/edit seasons — see above.
 - **Collection** (everyone, not tied to a friend group): our Dominion card collection — see below.
