@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { sb } from '../lib/supabase.js';
 import { SET_NAMES, LANDSCAPES } from '../lib/sets.js';
@@ -12,8 +12,9 @@ import KingdomPicker from '../components/KingdomPicker.jsx';
 import { useCatalogLoad } from '../dominion/CatalogContext.jsx';
 import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
 import { CardText } from '../dominion/components/bits.jsx';
-import { DEFAULT_OPTIONS, generate, toGameItems } from '../dominion/randomizer.js';
-import RandomizerOptions from '../dominion/components/RandomizerOptions.jsx';
+import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, toGameItems } from '../dominion/randomizer.js';
+import RandomizerPanel from '../dominion/components/RandomizerPanel.jsx';
+import { pilesPlayed, playStats } from '../dominion/playStats.js';
 import { impliedSets, primaryType, resolveKingdom } from '../dominion/kingdom.js';
 
 const storage = () => { try { return window.sessionStorage; } catch { return null; } };
@@ -28,8 +29,16 @@ export default function Night() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [done, setDone] = useState(null);                 // { id } after a successful save
-  const [roll, setRoll] = useState(DEFAULT_OPTIONS);          // every rule of the Randomizer, here too
-  const setRollOpts = patch => { setMsg(''); setRoll(r => ({ ...r, ...patch })); };
+  const [roll, setRoll] = useState(DEFAULT_OPTIONS);          // every option of the Randomizer, here too
+  const setRollOpts = patch => setRoll(r => ({ ...r, ...patch }));
+  // how often each pile has been played, for the "favor cards we've played less" rule (null until the catalog is in, or with no kingdoms logged)
+  const plays = useMemo(() => {
+    if (cat.status !== 'ready') return null;
+    const stats = playStats(cat.catalog, D.games, me ? me.name : null);
+    return stats.withKingdom ? pilesPlayed(stats) : null;
+  }, [cat.status, cat.catalog, D.games, me]);
+  // the rolled kingdom: held in memory after a roll, rebuilt from its saved compact form after a reload
+  const rolled = useMemo(() => st.rolled || (cat.status === 'ready' && st.rolledQ ? kingdomFromParams(cat.catalog, new URLSearchParams(st.rolledQ)) : null), [st.rolled, st.rolledQ, cat.status, cat.catalog]);
   const [showText, setShowText] = useState(false);
   const [now, setNow] = useState(Date.now());
   const before = useRef({ ranks: {}, tiers: {} });          // the ladder just before saving, to say what the game changed
@@ -49,12 +58,7 @@ export default function Night() {
   // ---- the kingdom
   const applyKingdom = (kingdom, rolled = null) => {
     const implied = catalog ? impliedSets(resolveKingdom(catalog, kingdom)) : { sets: [], landscapes: [] };
-    setSt(s => ({ ...s, kingdom, kingdomTouched: true, rolled, sets: [...new Set([...(rolled ? [] : s.sets), ...implied.sets])], landscapes: [...new Set([...(rolled ? [] : s.landscapes), ...implied.landscapes])] }));
-  };
-  const rollNow = () => {
-    const res = generate(catalog, roll);
-    if (!res.ok) { setMsg(res.message); return; }
-    setMsg(''); applyKingdom(toGameItems(res), res);
+    setSt(s => ({ ...s, kingdom, kingdomTouched: true, rolled, rolledQ: rolled ? kingdomToParams(rolled).toString() : null, sets: [...new Set([...(rolled ? [] : s.sets), ...implied.sets])], landscapes: [...new Set([...(rolled ? [] : s.landscapes), ...implied.landscapes])] }));
   };
 
   // ---- saving
@@ -121,14 +125,13 @@ export default function Night() {
           <>
             {!catalog ? (cat.status === 'error' ? <p className="meta">The card list isn’t available right now. You can skip the kingdom and still save the game. <button type="button" className="ghost" onClick={cat.retry}>Try again</button></p> : <p className="meta">Loading the card list…</p>) : (
               <>
-                <p className="meta">Roll a kingdom, pick the cards yourself, or skip this step.</p>
-                <RandomizerOptions catalog={catalog} opts={roll} setOpts={setRollOpts} rulesOpen foldExpansions />
-                <p className="night-roll"><button type="button" onClick={rollNow}>{st.rolled ? 'Roll again' : 'Roll a kingdom'}</button></p>
-                {msg && <p className="dn-rz-msg" role="alert">{msg}</p>}
-                {st.rolled && st.rolled.setup && <RolledNotes setup={st.rolled.setup} />}
-                <h3>{items.length ? 'Your kingdom — change it if you like' : 'Or pick by hand'}</h3>
-                <KingdomPicker items={items} onChange={(kingdom, implied) => setSt(s => ({ ...s, kingdom, rolled: null, kingdomTouched: true, sets: [...new Set([...s.sets, ...implied.sets])], landscapes: [...new Set([...s.landscapes, ...implied.landscapes])] }))} />
-                {items.length > 0 && <KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />}
+                <p className="meta">Roll a kingdom exactly as in the Randomizer, pick the cards yourself, or skip this step.</p>
+                <RandomizerPanel catalog={catalog} opts={roll} setOpts={setRollOpts} state={rolled} plays={plays} heading={false} emptyHint={false}
+                  onState={res => applyKingdom(toGameItems(res), res)} onReset={() => setRoll(DEFAULT_OPTIONS)} />
+                <details className="dn-mech night-hand" open={!!items.length && !rolled}><summary>{items.length && !rolled ? 'Your kingdom — change it if you like' : 'Or pick the cards by hand'}</summary>
+                  <KingdomPicker items={items} onChange={(kingdom, implied) => setSt(s => ({ ...s, kingdom, rolled: null, rolledQ: null, kingdomTouched: true, sets: [...new Set([...s.sets, ...implied.sets])], landscapes: [...new Set([...s.landscapes, ...implied.landscapes])] }))} />
+                </details>
+                {items.length > 0 && !rolled && <KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />}
               </>
             )}
           </>
@@ -142,7 +145,7 @@ export default function Night() {
                 <p className="meta" style={{ margin: '0 0 6px' }}>Tonight’s kingdom</p>
                 <div className="dn-kchips">{kingdomCards.map(r => <KingdomChip key={r.id} r={r} plain />)}</div>
                 {kingdomLands.length > 0 && <div className="dn-kchips">{kingdomLands.map(r => <KingdomChip key={r.id} r={r} plain />)}</div>}
-                {st.rolled && st.rolled.setup && <RolledNotes setup={st.rolled.setup} />}
+                {rolled && rolled.setup && <RolledNotes setup={rolled.setup} />}
                 <KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />
               </>
             ) : <p className="meta">No kingdom was picked. Have a great game — come back here when it ends.</p>}

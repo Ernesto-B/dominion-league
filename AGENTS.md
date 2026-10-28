@@ -202,6 +202,8 @@ technique is the best way to prove any refactor *doesn't* change what users see:
 - The `lists` flag also swaps the phone's game tables for `components/GameCards.jsx` (Last night and the Games page share the open/closed
   state with the table beside them), shows the form dots under each ladder name, and draws `RatingChart` at phone width with tappable name
   chips.
+- `dominion/components/RandomizerPanel.jsx` is the whole working randomizer (options, roll, tiles with Lock/Re-roll, landscapes, setup notes). It is controlled, so the
+  Randomizer page (state in the URL) and the Game night Kingdom step (state in the step; the roll is saved as `rolledQ`, the compact link form) share it.
 - `dominion/components/RandomizerOptions.jsx` is the one options panel (expansions, counts, rules, include/exclude) used by the Randomizer
   page and the Game night Kingdom step. Rules in `REQUIRE_RULES` are either mechanic `tags` (positive-only) or an exact printed `coins` cost.
 - The `redesign` flag: Rankings opens with you (`MeCard`), then `SinceVisit` (what changed since the viewer last looked, from `lib/lastVisit.js`;

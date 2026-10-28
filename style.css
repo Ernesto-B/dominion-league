@@ -665,8 +665,10 @@ details.how>h2:first-of-type{margin-top:8px}
   .ux-redesign .lrow .bar i{top:0;height:4px}
   .ux-redesign .lrow .bar::before{top:-2px;bottom:-2px}
 }
-.btn.gamenight{display:inline-flex;align-items:center;gap:10px;padding-left:8px}
-.btn.gamenight img{height:40px;width:auto;border-radius:8px}
+/* the same dark pill as the group buttons (.pills a), with the add-a-game icon inside */
+.btn.gamenight{display:inline-flex;align-items:center;gap:10px;padding:4px 18px 4px 8px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;min-height:44px}
+.btn.gamenight img{height:34px;width:auto;border-radius:6px}
+.btn.gamenight:hover{border-color:var(--felt)}
 .gcards,.chart-keys{display:none}
 @media (max-width:720px){
   /* the ladder: one tight line per player (rank, name, Elo, last change); the bar and form dots stay on the player's page */

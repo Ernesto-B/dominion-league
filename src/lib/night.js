@@ -12,7 +12,7 @@ const ids = STEPS.map(s => s.id);
 export const todayISO = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export const blankNight = (today = todayISO()) => ({
-  step: 'players', picked: [], tie: {}, vp: {}, kingdom: [], kingdomTouched: false, rolled: null, sets: [], landscapes: [],
+  step: 'players', picked: [], tie: {}, vp: {}, kingdom: [], kingdomTouched: false, rolled: null, rolledQ: null, sets: [], landscapes: [],
   date: today, type: '', notes: '', startedAt: null, editId: null,
 });
 
@@ -40,7 +40,8 @@ export function elapsed(startedAt, now = Date.now()) {
 }
 
 const key = gid => `dl.night.${gid ?? 'none'}`;
-// what is worth keeping: everything except `rolled`'s heavy catalog rows, which are rebuilt from the kingdom ids on return
+// what is worth keeping: everything except `rolled`'s heavy catalog rows. `rolledQ` is the roll in the Randomizer's compact link form
+// (kingdomToParams), which the Kingdom step rebuilds the tiles and setup notes from on return
 const slim = st => ({ ...st, rolled: null });
 export function loadNight(storage, gid, today = todayISO()) {
   try {
