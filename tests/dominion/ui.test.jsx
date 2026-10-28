@@ -610,7 +610,7 @@ describe('the Players link in the nav', () => {
   });
   it('changes nothing else in the nav, and still works for a viewer with no league data yet', () => {
     const nav = renderToStaticMarkup(<Header ready={ready('Ann', [['Ann', 2]])} hash="" />);
-    expect(nav).toContain('<a href="#/games/a"'); expect(nav).toContain('<a href="#/h2h/a"'); expect(nav).toContain('<a href="#/dominion"');
+    expect(nav).toContain('<a href="#/games/a"'); expect(nav).not.toContain('#/h2h'); expect(nav).toContain('<a href="#/dominion"');
     const bare = { route: { route: 'home', gid: 'a' }, me: { name: 'Ann', is_admin: false }, allGroups: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] };
     expect(playersHref(bare)).toBe('#/players/a');
   });
@@ -637,7 +637,7 @@ describe('nav icons', () => {
   it('every icon the header links to exists on disk (a typo would otherwise be a silent broken image)', () => {
     const ready = { route: { route: 'home', gid: 'a' }, me: { name: 'Ann', is_admin: true }, allGroups: [{ id: 'a', name: 'A' }] };
     const srcs = [...renderToStaticMarkup(<Header ready={ready} hash="" />).matchAll(/<img src="([^"]+)"/g)].map(m => m[1]);
-    expect(srcs.length).toBe(8);                                           // every nav entry has an icon, Collection included
+    expect(srcs.length).toBe(7);                                           // every nav entry has an icon, Collection included
     expect(srcs).toContain('icons/nav/collection.png');
     for (const src of srcs) expect(existsSync(path.join(ROOT, 'public', src)), src).toBe(true);
   });

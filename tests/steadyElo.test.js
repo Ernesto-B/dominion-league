@@ -95,4 +95,8 @@ describe('the shipped configuration', () => {
     expect(cfg.elo).toMatchObject({ model: 'steady', k: 100, provisionalK: 200, target: 0.52 });
     expect(cfg.tiers.map(t => t.min)).toEqual([null, 1125, 1275, 1475, 1700]);
   });
+  it('turns on both season bonuses (win streaks and VP)', async () => {
+    const cfg = JSON.parse((await import('node:fs')).readFileSync('public/data/config.json', 'utf8'));
+    expect(cfg.season).toMatchObject({ streakBonus: 0.04, streakCap: 3, vpBonus: 0.4 });
+  });
 });

@@ -6,7 +6,7 @@ import { uxOn } from '../ux.js';
 
 // the four places visited most, always one thumb-tap away; everything else lives behind "More"
 const PRIMARY = [['home', 'Rankings', 'rankings'], ['games', 'Games', 'games'], ['players', 'Players', 'players'], ['dominion', 'Collection', 'collection']];
-const MORE = [['season', 'Season', 'season'], ['h2h', 'Head to head', 'h2h'], ['records', 'Records', 'records'], ['admin', 'Admin', 'admin']];
+const MORE = [['season', 'Season', 'season'], ['records', 'Records', 'records'], ['admin', 'Admin', 'admin']];
 
 /* EXPERIMENT (ux flag "nav"): on a phone, a bar at the bottom of the screen replaces the hamburger menu. Hidden on wider screens
    (CSS), where the top nav is unchanged. `ready` is the same object Header gets. */

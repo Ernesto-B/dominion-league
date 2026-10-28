@@ -13,6 +13,7 @@ const groups2 = [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], group1 = [{ id
 describe('existing routes still work (nothing about the league pages changed)', () => {
   it('parses every pre-existing URL form exactly as before', () => {
     expect(parseHash('', group1)).toMatchObject({ route: 'home', gid: 'a', arg: '' });
+    expect(parseHash('#/h2h/a/3', group1)).toMatchObject({ route: 'players', arg: '' });   // the retired Head to head page
     expect(parseHash('#/players/Jose', group1)).toMatchObject({ route: 'players', gid: 'a', arg: 'Jose' });
     expect(parseHash('#/players/b/Jose', groups2)).toMatchObject({ route: 'players', gid: 'b', arg: 'Jose' });
     expect(parseHash('#//b', groups2)).toMatchObject({ route: 'home', gid: 'b', arg: '' });
@@ -25,7 +26,7 @@ describe('existing routes still work (nothing about the league pages changed)', 
     expect(hashFor('games', 'b', 12, groups2)).toBe('#/games/b/12');
   });
   it('still has a page for every route, the old ones included', () => {
-    for (const r of ['home', 'season', 'players', 'h2h', 'records', 'games', 'admin']) expect(isComponent(PAGES[r]), r).toBe(true);
+    for (const r of ['home', 'season', 'players', 'records', 'games', 'admin']) expect(isComponent(PAGES[r]), r).toBe(true);
     for (const r of ROUTES) expect(isComponent(PAGES[r]), `a page for ${r}`).toBe(true);
   });
 });

@@ -3,7 +3,7 @@
   "subtitle": "Weekly Dominion with the group. Ratings, seasons and records.",
   "repo": "",
   "elo": { "model": "steady", "k": 100, "provisionalK": 200, "provisionalGames": 10, "start": 1000, "scale": 400, "target": 0.52 },
-  "season": { "prior": 3, "minGamesForRecords": 5 },
+  "season": { "prior": 3, "minGamesForRecords": 5, "streakBonus": 0.04, "streakCap": 3, "vpBonus": 0.4 },
   "tiers": [
     { "id": "peasant", "name": "Peasant", "min": null },
     { "id": "knight", "name": "Knight", "min": 1125 },

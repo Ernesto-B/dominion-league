@@ -40,10 +40,10 @@ async function run(ux) {
   if (ux === 'none') { await tap('.nav-toggle'); await tap('#nav a', 'Records'); } else { await tap('.bottomnav button', 'More'); await tap('.moresheet a', 'Records'); }
   res.toRecords = (await on(`location.hash === '#/records'`)) ? taps : null;
 
-  // 4. Open Head to head and then get back to Rankings
+  // 4. Open Records and then get back to Rankings
   await reset('#/');
-  if (ux === 'none') { await tap('.nav-toggle'); await tap('#nav a', 'Head to head'); await tap('.nav-toggle'); await tap('#nav a', 'Rankings'); }
-  else { await tap('.bottomnav button', 'More'); await tap('.moresheet a', 'Head to head'); await tap('.bottomnav a', 'Rankings'); }
+  if (ux === 'none') { await tap('.nav-toggle'); await tap('#nav a', 'Records'); await tap('.nav-toggle'); await tap('#nav a', 'Rankings'); }
+  else { await tap('.bottomnav button', 'More'); await tap('.moresheet a', 'Records'); await tap('.bottomnav a', 'Rankings'); }
   res.toH2HAndBack = (await on(`location.hash === '#/' || location.hash === ''`)) ? taps : null;
 
   // 5. Log a three-player game with scores and save it (no kingdom: the same facts both ways)
@@ -71,7 +71,7 @@ const rows = [
   ['Players visible on the first screen of the ladder', A.ladderPlayersOnFirstScreen, B.ladderPlayersOnFirstScreen],
   ['Taps: open your own player page', A.toOwnPlayerPage, B.toOwnPlayerPage],
   ['Taps: open Records from home', A.toRecords, B.toRecords],
-  ['Taps: Head to head, then back to Rankings', A.toH2HAndBack, B.toH2HAndBack],
+  ['Taps: Records, then back to Rankings', A.toH2HAndBack, B.toH2HAndBack],
   ['Taps: log a 3-player game with scores (no kingdom)', A.logAGame, B.logAGame],
 ];
 const w = Math.max(...rows.map(r => r[0].length));

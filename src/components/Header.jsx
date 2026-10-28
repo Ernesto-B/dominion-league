@@ -5,7 +5,7 @@ import { pickD } from '../lib/league.js';
 
 const NAV = [
   ['home', 'Rankings', 'rankings'], ['season', 'Season', 'season'], ['players', 'Players', 'players'],
-  ['h2h', 'Head to head', 'h2h'], ['games', 'Games', 'games'],
+  ['games', 'Games', 'games'],
   ['dominion', 'Collection', 'collection'],   // the URL stays #/dominion (an id, not a label); the icon file is icons/nav/collection.png
   ['records', 'Records', 'records'], ['admin', 'Admin', 'admin'],
 ];

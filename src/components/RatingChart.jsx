@@ -29,7 +29,7 @@ export default function RatingChart({ names, hot = null, highlight = null, onHov
   if (nights.length < 1) return <p className="empty">The rating history appears after the first night is logged.</p>;
   const start = D.E.start;
   const series = names.map(n => ({ name: n, pts: [start].concat(nights.map(x => x.snapshot[n] ?? start)) }));
-  const W = narrow ? 400 : 880, H = narrow ? 300 : 330, L = narrow ? 38 : 46, R = narrow ? 12 : 112, T = 12, B = 28;
+  const W = narrow ? 400 : 880, H = narrow ? 300 : 330, L = narrow ? 38 : 46, R = narrow ? 22 : 112, T = 12, B = 28;
   let lo = Infinity, hi = -Infinity;
   series.forEach(s => s.pts.forEach(v => { lo = Math.min(lo, v); hi = Math.max(hi, v); }));
   lo = Math.min(lo, start - 20); hi = Math.max(hi, start + 20);
@@ -48,7 +48,8 @@ export default function RatingChart({ names, hot = null, highlight = null, onHov
   const ticks = Math.min(N, narrow ? 3 : 6), dates = [];
   for (let t = 1; t <= ticks; t++) {
     const i = Math.round(t / ticks * N);
-    dates.push(<text key={'d' + t} x={x(i)} y={H - 8} textAnchor="middle">{short(nights[i - 1].date)}</text>);
+    // the newest date sits at the right edge of the plot: end-align it there so it can't run off the picture (the middle ones centre)
+    dates.push(<text key={'d' + t} x={x(i)} y={H - 8} textAnchor={t === ticks && narrow ? 'end' : 'middle'}>{short(nights[i - 1].date)}</text>);
   }
   // Labels sit at their line's final value, nudged down so they never overlap.
   const sorted = series.slice().sort((a, b) => a.pts[N] - b.pts[N]);

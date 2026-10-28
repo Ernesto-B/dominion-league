@@ -66,6 +66,11 @@ table that pays the top half first and the win second, half the top-half bonus f
 (0.52) of the points on average, which is the deliberate slow upward drift. Tier thresholds in `config.json` are the K=200 ones scaled by K/200
 (1125 / 1275 / 1475 / 1700): change K and the tiers together. Ratings are recomputed from the games on every load, so changing the model rewrites history.
 
+**Season score** = the average of each Regular game's season points (finish points 1 -> 0, plus a win-streak bonus and a VP bonus, both set in
+`config.season`; see `g.sp` in the engine) with `prior` imaginary average games. The VP bonus is a table-centred ratio to the winner's VP, so it
+never depends on how many VP an expansion produces. There is no Head to head page: its matrix (`components/H2HMatrix.jsx`) is on each Player page,
+and `#/h2h` redirects to Players.
+
 **Data flow**: `boot()` in `src/League.jsx` → Supabase queries (`loadData()` in `src/lib/data.js`) (`players`, `games`,
 `game_results`, `groups`, `seasons`) → `loadData()` reconstructs them into the exact
 row shape `engine.js` has always expected (a `finish` string like `"Jose > Bob = Cara"`,

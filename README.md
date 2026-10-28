@@ -102,7 +102,7 @@ Defaults: Peasant under 1040, Knight 1040, Lord 1090, Duke 1150, Emperor 1225. T
 - **Rankings:** Elo ladder with title icons, last night's results with the Elo change per player, the tier key, rating history, and the current season's top five.
 - **Season:** week-of-season progress, standings with qualification and playoff seeds, and the season's games.
 - **Players:** title and progress to the next one, season titles, top-half finishes, last places, longest run without a win, nemesis and favourite victim, rating history, record against each opponent, every result.
-- **Head to head, Records, Games:** the matrix; league and single-game records (biggest Elo swing, longest game, highest score); the full log with season, type and player filters. Admins get Edit/Delete links on each row of the Games page.
+- **Records, Games:** league and single-game records (biggest Elo swing, longest game, highest score); the full log with season, type and player filters. The head-to-head matrix is on the Players page (the old Head to head page redirects there). Admins get Edit/Delete links on each row of the Games page.
 - **Add a game** (admin only): pick who played and in what order, fill in the optional details, and save — it writes straight to the database. The same page shows each player's expected score and the Elo at stake ("Before you play"), which is handy for balancing seating.
 - **Admin** (admin only): add friend groups, and add/edit seasons — see above.
 - **Collection** (everyone, not tied to a friend group): our Dominion card collection — see below.
