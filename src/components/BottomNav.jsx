@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { sb } from '../lib/supabase.js';
 import { hashFor, GLOBAL_ROUTES } from '../lib/route.js';
 import { navHref } from './Header.jsx';
-import { uxOn } from '../ux.js';
 
 // the four places visited most, always one thumb-tap away; everything else lives behind "More"
 const PRIMARY = [['home', 'Rankings', 'rankings'], ['games', 'Games', 'games'], ['players', 'Players', 'players'], ['dominion', 'Collection', 'collection']];
@@ -38,7 +37,7 @@ export default function BottomNav({ ready, hash }) {
         <div className="moresheet-back" onClick={e => { if (e.target === e.currentTarget) setMore(false); }}>
           <div className="moresheet" role="dialog" aria-modal="true" aria-label="More" ref={sheet}>
             <ul>
-              {uxOn('flow') && ready.me.is_admin && <li><a href={hashFor('night', ready.route.gid, undefined, ready.allGroups)} aria-current={route === 'night' ? 'page' : undefined}><img src="icons/nav/add-a-game.png" alt="" />Game night</a></li>}
+              {ready.me.is_admin && <li><a href={hashFor('night', ready.route.gid, undefined, ready.allGroups)} aria-current={route === 'night' ? 'page' : undefined}><img src="icons/nav/add-a-game.png" alt="" />Game night</a></li>}
               {extra.map(([r, label, icon]) => (
                 <li key={r}><a href={navHref(r, ready)} aria-current={route === r ? 'page' : undefined}><img src={`icons/nav/${icon}.png`} alt="" />{label}</a></li>
               ))}

@@ -168,7 +168,7 @@ function Groups({ status, say }) {
           <label className="f">New group name <input type="text" id="gfName" value={name} onChange={e => { setName(e.target.value); if (status.id === 'gfMsg') setMsg(''); }} /></label>
           <button id="gfSave" type="button" disabled={busy} onClick={add}>Add group</button><Msg id="gfMsg" status={status} />
         </div>
-        <p className="note">Id will be <code>{slugify(name) || '…'}</code> — it'll show up as a checkbox option in the Players section above once saved.</p>
+        <p className="note">Id will be <code>{slugify(name) || '…'}</code> — it'll show up as a checkbox option under People once saved.</p>
       </div>
     </>
   );
@@ -281,19 +281,31 @@ export default function Admin() {
   // a season form's message belongs to that form: don't carry it into a different add/edit target
   useEffect(() => { setStatus(s => s.id === 'sfMsg' ? { id: '', text: '' } : s); }, [editId]);
   if (!me || !me.is_admin) return <><h1>Admin</h1><p className="empty">Only the admin can manage groups and seasons.</p></>;
+  // editing a season (from its link) always lands on Settings
+  const [tab, setTab] = useState('people');
+  const shown = editId != null ? 'settings' : tab;
   return (
     <>
       <h1>Admin</h1>
-      <p className="lede">Manage friend groups and seasons.</p>
-      <h2>Players</h2>
-      <NewPlayer {...p} />
-      <PlayerGroups {...p} />
-      <h2>Sets</h2>
-      <Sets {...p} />
-      <h2>Groups</h2>
-      <Groups {...p} />
-      <h2>Seasons</h2>
-      <Seasons editId={editId} {...p} />
+      <p className="lede">Add people, and set up groups, sets and seasons.</p>
+      <div className="gview-switch admin-tabs" role="tablist" aria-label="Admin sections">
+        {[['people', 'People'], ['settings', 'Settings']].map(([id, label]) => (
+          <button key={id} type="button" role="tab" aria-selected={shown === id} aria-pressed={shown === id} onClick={() => setTab(id)}>{label}</button>
+        ))}
+      </div>
+      {shown === 'people' ? <>
+        <h2>New player</h2>
+        <NewPlayer {...p} />
+        <h2>Who plays in which group</h2>
+        <PlayerGroups {...p} />
+      </> : <>
+        <h2>Sets</h2>
+        <Sets {...p} />
+        <h2>Groups</h2>
+        <Groups {...p} />
+        <h2>Seasons</h2>
+        <Seasons editId={editId} {...p} />
+      </>}
     </>
   );
 }

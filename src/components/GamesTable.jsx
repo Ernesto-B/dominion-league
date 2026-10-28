@@ -7,13 +7,11 @@ import TypePill from './TypePill.jsx';
 import LandscapePills from './LandscapePills.jsx';
 import SortableTable from './SortableTable.jsx';
 import GameCards from './GameCards.jsx';
-import { uxOn } from '../ux.js';
 
 // Sortable list of games, each row expandable into its per-player breakdown. `onEdit(line)` adds the
 // admin Edit column. Re-key it (e.g. on filter changes) to reset the sort and collapse every row.
 // `highlight` (a game id) opens that row, tints it and scrolls it into view — used by links to a game.
-export default function GamesTable({ games, onEdit, highlight, view, link = false }) {
-  const shown = view || (uxOn('redesign') ? 'cards' : 'table');   // a wide screen: cards unless the Games page's switch says table
+export default function GamesTable({ games, onEdit, highlight, view = 'cards', link = false }) {   // a wide screen shows cards unless the Games page's switch says table
   const [open, setOpen] = useState(() => new Set(highlight != null ? [highlight] : []));
   const wrap = useRef(null);
   useEffect(() => {
@@ -43,7 +41,6 @@ export default function GamesTable({ games, onEdit, highlight, view, link = fals
       ],
     };
   });
-  if (!uxOn('lists') && !uxOn('redesign')) return <div ref={wrap}><SortableTable head={head} rows={rows} /></div>;
-  // the cards come with the phone layout; with the 'redesign' flag a wide screen can show them too (view 'cards') or keep the sortable table (view 'table')
-  return <div ref={wrap} className={uxOn('redesign') ? 'gview-' + shown : undefined}><div className="gtable"><SortableTable head={head} rows={rows} /></div><GameCards games={games} open={open} toggle={toggle} onEdit={onEdit} showDate highlight={highlight} link={link} /></div>;
+  // the cards are the phone layout; a wide screen shows them too (view 'cards') or keeps the sortable table (view 'table')
+  return <div ref={wrap} className={'gview-' + view}><div className="gtable"><SortableTable head={head} rows={rows} /></div><GameCards games={games} open={open} toggle={toggle} onEdit={onEdit} showDate highlight={highlight} link={link} /></div>;
 }

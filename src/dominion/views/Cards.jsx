@@ -44,7 +44,6 @@ export default function Cards({ query = '' }) {
         <div className="controls">
           <label className="f">Search <input type="search" value={qText} onChange={e => onQ(e.target.value)} placeholder="e.g. Village" autoComplete="off" /></label>
           <label className="f dn-check"><input type="checkbox" checked={f.text} onChange={e => update({ text: e.target.checked })} /> Include card text</label>
-          {plays && <label className="f dn-check"><input type="checkbox" checked={f.unplayed} onChange={e => update({ unplayed: e.target.checked })} /> Not played yet</label>}
           <label className="f">Sort by <select value={f.sort} onChange={e => update({ sort: e.target.value })}>{(plays ? [...SORTS, PLAYED_SORT] : SORTS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
           <button type="button" className="ghost" onClick={() => update({ dir: f.dir === 'asc' ? 'desc' : 'asc' })} aria-label={`Sort direction: ${f.dir === 'asc' ? 'ascending' : 'descending'}. Activate to reverse.`}>{f.dir === 'asc' ? '↑ Ascending' : '↓ Descending'}</button>
         </div>
@@ -55,6 +54,13 @@ export default function Cards({ query = '' }) {
             <Chip key={e.name} pressed={f.expansions.includes(e.name)} count={nameCount[e.name]} onClick={() => update({ expansions: toggle(f.expansions, e.name) })}><ExpansionBadge name={e.name} /></Chip>
           ))}</div>
         </fieldset>
+
+        {plays && <fieldset className="dn-fieldset"><legend>Play history</legend>
+          <div className="dn-chips">
+            <Chip pressed={f.played === 'yes'} count={catalog.cards.filter(c => plays.has(c.pileKey)).length} onClick={() => update({ played: f.played === 'yes' ? 'any' : 'yes' })}>Played</Chip>
+            <Chip pressed={f.played === 'no'} count={catalog.cards.filter(c => !plays.has(c.pileKey)).length} onClick={() => update({ played: f.played === 'no' ? 'any' : 'no' })}>Not played yet</Chip>
+          </div>
+        </fieldset>}
 
         <fieldset className="dn-fieldset"><legend>Printed type</legend>
           <div className="dn-chips">{s.byType.map(t => (

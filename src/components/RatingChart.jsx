@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { f0, short } from '../lib/format.js';
-import { uxOn } from '../ux.js';
 
-// ux experiment "lists": below 720px the chart is drawn at phone width (no wide scrolling picture) and its end-of-line labels become tappable name chips
+// below 720px the chart is drawn at phone width (no wide scrolling picture) and its end-of-line labels become tappable name chips
 const PHONE = '(max-width:720px)';
 function useNarrow() {
-  const [narrow, setNarrow] = useState(() => uxOn('lists') && typeof matchMedia !== 'undefined' && matchMedia(PHONE).matches);
+  const [narrow, setNarrow] = useState(() => typeof matchMedia !== 'undefined' && matchMedia(PHONE).matches);
   useEffect(() => {
-    if (!uxOn('lists')) return undefined;
     const m = matchMedia(PHONE), on = () => setNarrow(m.matches);
     m.addEventListener('change', on); on();
     return () => m.removeEventListener('change', on);

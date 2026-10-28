@@ -1,9 +1,11 @@
+import { useMemo } from 'react';
 import { useCatalog } from '../CatalogContext.jsx';
 import { useLeagueGames } from '../useLeagueGames.js';
 import { MIN_GAMES_FOR_RECORD, insights } from '../playStats.js';
 import { cardHref, cardsFilterHref, dominionHref } from '../links.js';
 import { EmptyState } from '../components/States.jsx';
 import { ExpansionBadge, Section } from '../components/bits.jsx';
+import { usePager } from '../components/Pager.jsx';
 
 const pct = r => `${Math.round(r * 100)}%`;
 
@@ -28,7 +30,13 @@ export default function Insights() {
     </>
   );
 
-  const ins = insights(catalog, lg.stats);
+  return <Loaded head={head} lg={lg} />;
+}
+
+function Loaded({ head, lg }) {
+  const { catalog } = useCatalog();
+  const ins = useMemo(() => insights(catalog, lg.stats, { top: Infinity }), [catalog, lg.stats]);
+  const { pg, pager } = usePager(ins.mostPlayed, 'cards');
   const repCard = key => catalog.pilesByKey.get(key).cardIds[0];
 
   return (
@@ -40,30 +48,34 @@ export default function Insights() {
         <div className="tablewrap"><table className="plain dn-table">
           <caption className="dn-sr">The most played Kingdom cards</caption>
           <thead><tr><th className="l" scope="col">Card</th><th className="l dn-hide-sm" scope="col">Expansion</th><th scope="col">Games</th><th className="l dn-hide-sm" scope="col">Last played</th></tr></thead>
-          <tbody>{ins.mostPlayed.map(r => (
+          <tbody>{pg.items.map(r => (
             <tr key={r.key}>
               <td className="l name"><a href={cardHref(repCard(r.key))}>{r.name}</a></td>
               <td className="l dn-hide-sm"><ExpansionBadge name={r.expansion} size={16} /></td>
               <td>{r.games}</td>
-              <td className="l dn-hide-sm">{r.last.date}</td>
+              <td className="l dn-hide-sm"><a href={lg.hashFor('games', lg.gid, r.last.line)} title="Open that game">{r.last.date}</a></td>
             </tr>
           ))}</tbody>
         </table></div>
+        {pager}
       </Section>
 
       <Section title="Not played yet" id="in-never">
         <div className="builder">
-          <p style={{ marginTop: 0 }}><b>{ins.neverTotal}</b> of the {catalog.piles.length} Kingdom supply piles haven’t been in a logged game.{ins.neverTotal > 0 && <> <a href={cardsFilterHref({ unplayed: true })}>Show them all</a>.</>}</p>
+          <p style={{ marginTop: 0 }}><b>{ins.neverTotal}</b> of the {catalog.piles.length} Kingdom supply piles haven’t been in a logged game.{ins.neverTotal > 0 && <> <a href={cardsFilterHref({ played: 'no' })}>Show them all</a>.</>}</p>
           <div className="tablewrap"><table className="plain dn-table">
-            <caption className="dn-sr">Kingdom piles not played yet, by expansion</caption>
-            <thead><tr><th className="l" scope="col">Expansion</th><th scope="col">Not played</th><th className="dn-hide-sm" scope="col">Piles</th></tr></thead>
+            <caption className="dn-sr">Kingdom supply piles played and not played yet, by expansion</caption>
+            <thead><tr><th className="l" scope="col">Expansion</th><th scope="col">Piles</th><th scope="col">Played</th><th scope="col">Not played</th></tr></thead>
             <tbody>{ins.neverByExpansion.map(x => (
               <tr key={x.expansion}>
-                <td className="l">{x.never ? <a href={cardsFilterHref({ expansions: [x.expansion], unplayed: true })}><ExpansionBadge name={x.expansion} /></a> : <ExpansionBadge name={x.expansion} />}</td>
-                <td>{x.never || '—'}</td>
-                <td className="dn-hide-sm">{x.total}</td>
+                <td className="l"><ExpansionBadge name={x.expansion} /></td>
+                <Counts total={x.total} played={x.total - x.never} patch={{ expansions: [x.expansion] }} />
               </tr>
             ))}</tbody>
+            <tfoot><tr>
+              <th className="l" scope="row">Total</th>
+              <Counts total={catalog.piles.length} played={catalog.piles.length - ins.neverTotal} patch={{}} />
+            </tr></tfoot>
           </table></div>
         </div>
       </Section>
@@ -84,6 +96,20 @@ export default function Insights() {
           <EmptyState>{lg.me ? <>Once you’ve played {MIN_GAMES_FOR_RECORD} games with the same card in the kingdom, your record with it shows here{ins.myGames ? ` (the most for any card so far is ${ins.myGames})` : ''}.</> : 'Your record shows once you’re signed in as a player.'}</EmptyState>
         )}
       </Section>
+    </>
+  );
+}
+
+// Piles / Played / Not played cells: each number opens the Kingdom cards table with that expansion (or all) and that play history filtered
+function Counts({ total, played, patch }) {
+  const never = total - played;
+  const cell = (n, extra) => (n ? <a href={cardsFilterHref({ ...patch, ...extra })}>{n}</a> : <>0</>);
+  const share = n => <span className="meta"> {total ? Math.round(n / total * 100) : 0}%</span>;
+  return (
+    <>
+      <td>{cell(total, {})}</td>
+      <td>{cell(played, { played: 'yes' })}{share(played)}</td>
+      <td>{cell(never, { played: 'no' })}{share(never)}</td>
     </>
   );
 }

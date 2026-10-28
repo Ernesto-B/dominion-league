@@ -74,11 +74,11 @@ describe('insights', () => {
 describe('filtering and sorting by play', () => {
   const plays = stats.piles;
   it('"not played yet" keeps only piles with no logged game, and is in the URL', () => {
-    const f = { ...DEFAULT_CARD_FILTERS, unplayed: true };
+    const f = { ...DEFAULT_CARD_FILTERS, played: 'no' };
     const out = browseCards(catalog.cards, f, { plays });
     expect(out.some(c => ['Village', 'Militia', 'Moat', 'Gladiator', 'Fortune'].includes(c.name))).toBe(false);
     expect(out.length).toBe(catalog.cards.filter(c => !plays.has(c.pileKey)).length);
-    expect(cardFiltersToQuery(f)).toBe('?unplayed=1'); expect(cardFiltersFromQuery('?unplayed=1').unplayed).toBe(true); expect(activeCardFilters(f)).toBe(1);
+    expect(cardFiltersToQuery(f)).toBe('?played=no'); expect(cardFiltersFromQuery('?played=no').played).toBe('no'); expect(cardFiltersFromQuery('?unplayed=1').played).toBe('no'); expect(activeCardFilters(f)).toBe(1);
     expect(browseCards(catalog.cards, f).length).toBe(catalog.cards.length);   // no league data: the filter can't apply, so it hides nothing
   });
   it('sorts by times played, either way, ties by name', () => {
@@ -151,7 +151,7 @@ describe('the Insights page', () => {
   it('shows the most played, what has not been played, and the viewer\'s record', () => {
     const h = view('insights'), t = text(h);
     expect(t).toMatch(/Based on 4 of 5 games in Friends/); expect(t).toMatch(/Most played cards/); expect(t).toMatch(/Village/);
-    expect(t).toMatch(/Not played yet/); expect(h).toContain('unplayed=1'); expect(t).toMatch(/Your record with cards/); expect(t).toMatch(/75%/);
+    expect(t).toMatch(/Not played yet/); expect(h).toContain('played=no'); expect(t).toMatch(/Your record with cards/); expect(t).toMatch(/75%/);
   });
   it('explains itself when no kingdom has been logged, with a pointer for an admin', () => {
     const none = { D: { games: [game(1, [], { Ann: 1, Bob: 2 })] } };

@@ -13,7 +13,6 @@ import GameDetail from '../components/GameDetail.jsx';
 import StatTile, { SetStatTile, SetBreakdown, PopText } from '../components/StatTile.jsx';
 import TierProgressBar from '../components/TierProgressBar.jsx';
 import GameCards from '../components/GameCards.jsx';
-import { uxOn } from '../ux.js';
 import H2HMatrix from '../components/H2HMatrix.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import SortableTable from '../components/SortableTable.jsx';
@@ -156,7 +155,6 @@ function Results({ p }) {
       ],
     };
   });
-  if (!uxOn('lists') && !uxOn('redesign')) return <SortableTable head={head} rows={rows} />;
-  // the same games as on the Games page: cards on a phone, and with the redesign on a wide screen too; this player's own line is marked
-  return <div className={uxOn('redesign') ? 'gview-cards' : undefined}><div className="gtable"><SortableTable head={head} rows={rows} /></div><GameCards games={p.results.slice().reverse().map(r => r.game)} open={open} toggle={toggle} showDate link me={p.name} /></div>;
+  // the same games as on the Games page: cards on a phone and a wide screen; this player's own line is marked
+  return <div className="gview-cards"><div className="gtable"><SortableTable head={head} rows={rows} /></div><GameCards games={p.results.slice().reverse().map(r => r.game)} open={open} toggle={toggle} showDate link me={p.name} /></div>;
 }

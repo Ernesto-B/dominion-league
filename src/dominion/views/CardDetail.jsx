@@ -5,7 +5,8 @@ import ItemNav from '../components/ItemNav.jsx';
 import PlayHistory from '../components/PlayHistory.jsx';
 import { useLeagueGames } from '../useLeagueGames.js';
 import { useState } from 'react';
-import { formatCost, pileOf, pileMembers, sharedMechanicCards, pageSlice, PAGE_SIZES } from '../model.js';
+import { usePager } from '../components/Pager.jsx';
+import { formatCost, pileOf, pileMembers, sharedMechanicCards } from '../model.js';
 import CostIcons from '../components/Cost.jsx';
 import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
@@ -108,9 +109,7 @@ export default function CardDetail({ id, query = '' }) {
 /* Every card recorded with a mechanic in common, best match first, paged so a card with hundreds of matches
    stays readable. Keyed by card, so moving to another card starts again on page 1. */
 function RelatedCards({ card, related }) {
-  const [size, setSize] = useState(PAGE_SIZES[0]);
-  const [page, setPage] = useState(1);
-  const pg = pageSlice(related, page, size);
+  const { pg, pager } = usePager(related);
   return (
     <Section title="Cards recorded with the same mechanics" id="cd-related">
       <div className="tablewrap">
@@ -126,17 +125,7 @@ function RelatedCards({ card, related }) {
           ))}</tbody>
         </table>
       </div>
-      <div className="dn-pager">
-        <span className="meta" aria-live="polite">Showing {pg.from}–{pg.to} of {pg.total} cards</span>
-        <label className="f">Per page <select value={size === Infinity ? 'all' : size} onChange={e => { setSize(e.target.value === 'all' ? Infinity : Number(e.target.value)); setPage(1); }}>{PAGE_SIZES.map(n => <option key={n} value={n}>{n}</option>)}<option value="all">All</option></select></label>
-        {pg.pages > 1 && (
-          <span className="dn-pager-nav">
-            <button type="button" className="ghost" onClick={() => setPage(pg.page - 1)} disabled={pg.page <= 1}>← Previous</button>
-            <span className="meta">Page {pg.page} of {pg.pages}</span>
-            <button type="button" className="ghost" onClick={() => setPage(pg.page + 1)} disabled={pg.page >= pg.pages}>Next →</button>
-          </span>
-        )}
-      </div>
+      {pager}
     </Section>
   );
 }

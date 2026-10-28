@@ -1,7 +1,6 @@
 import { f0, f2, pc, sgn } from '../lib/format.js';
 import PlayerLink from './PlayerLink.jsx';
 import SortableTable from './SortableTable.jsx';
-import { uxOn } from '../ux.js';
 
 // on a phone (ux 'lists') the table keeps what decides a season and drops the rest (they are on the player's page)
 const SECONDARY = new Set(['Win %', 'Avg points', 'Qualified', 'Elo change', 'Nights', 'Attendance']);
@@ -12,7 +11,7 @@ const HEAD = [
 
 // Season standings (from D.seasonStandings()); green rows are playoff seeds.
 export default function SeasonTable({ standings }) {
-  const lean = uxOn('lists'), hide = label => (lean && SECONDARY.has(label) ? 'dn-hide-sm' : undefined);
+  const hide = label => (SECONDARY.has(label) ? 'dn-hide-sm' : undefined);
   const rows = standings.rows.map(r => ({
     key: r.name,
     className: r.seed ? 'seed' : '',

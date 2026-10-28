@@ -9,7 +9,7 @@ import { hasCoin } from './model.js';
 
 export const DEFAULT_CARD_FILTERS = Object.freeze({
   q: '', text: false, expansions: [], types: [], typeMode: 'all', mechanics: [], mechanicMode: 'all',
-  costs: [], debt: 'any', unplayed: false, sort: 'name', dir: 'asc',
+  costs: [], debt: 'any', played: 'any', sort: 'name', dir: 'asc',
 });
 export const DEFAULT_LANDSCAPE_FILTERS = Object.freeze({
   q: '', text: false, types: [], expansions: [], mechanics: [], mechanicMode: 'any', sort: 'name', dir: 'asc',
@@ -31,7 +31,7 @@ export function debtMatches(debt, rule) {
 export const nameMatches = (item, q) => matchesText([item.name, item.previousName], q);
 
 /* `ctx.plays` (optional) is the league's pile play counts, playStats().piles: a Map(pile key -> { games }). Without it,
-   "not played yet" matches everything and "times played" sorts by name. */
+   "played"/"not played yet" match everything and "times played" sorts by name. */
 export function filterCards(cards, f, ctx = {}) {
   return cards.filter(c =>
     matchesText([c.name, c.previousName, f.text && c.text], f.q)
@@ -41,7 +41,7 @@ export function filterCards(cards, f, ctx = {}) {
     // coin cost: any of the chosen exact costs. A Debt-only card has no coin cost, so it never matches one.
     && (!f.costs.length || (hasCoin(c) && f.costs.includes(c.coins)))
     && debtMatches(c.debt, f.debt)
-    && (!f.unplayed || !ctx.plays || !ctx.plays.has(c.pileKey)));
+    && (f.played === 'any' || !ctx.plays || (f.played === 'yes') === ctx.plays.has(c.pileKey)));
 }
 
 const byName = (a, b) => a.name.localeCompare(b.name);
@@ -110,7 +110,7 @@ export const browseLandscapes = (items, f) => sortLandscapes(filterLandscapes(it
 // how many filters are narrowing the list (sorting doesn't count)
 export function activeCardFilters(f) {
   return (f.q.trim() ? 1 : 0) + (f.expansions.length ? 1 : 0) + (f.types.length ? 1 : 0) + (f.mechanics.length ? 1 : 0)
-    + (f.costs.length ? 1 : 0) + (f.debt !== 'any' ? 1 : 0) + (f.unplayed ? 1 : 0);
+    + (f.costs.length ? 1 : 0) + (f.debt !== 'any' ? 1 : 0) + (f.played !== 'any' ? 1 : 0);
 }
 export const activeLandscapeFilters = f => (f.q.trim() ? 1 : 0) + (f.types.length ? 1 : 0) + (f.expansions.length ? 1 : 0) + (f.mechanics.length ? 1 : 0);
 
@@ -135,7 +135,7 @@ export function cardFiltersToQuery(f) {
   if (f.mechanicMode !== d.mechanicMode) p.set('mmode', f.mechanicMode);
   f.costs.forEach(v => p.append('cost', String(v)));
   if (f.debt !== d.debt) p.set('debt', f.debt);
-  if (f.unplayed) p.set('unplayed', '1');
+  if (f.played !== d.played) p.set('played', f.played);
   if (f.sort !== d.sort) p.set('sort', f.sort);
   if (f.dir !== d.dir) p.set('dir', f.dir);
   return wrap(p);
@@ -148,7 +148,7 @@ export function cardFiltersFromQuery(qs) {
     mechanics: many(p, 'mech'), mechanicMode: oneOf(p.get('mmode'), ['all', 'any'], d.mechanicMode),
     costs: many(p, 'cost').filter(v => /^\d{1,2}$/.test(v)).map(Number),
     debt: debt && (['any', 'none', 'has'].includes(debt) || /^\d{1,2}$/.test(debt)) ? debt : d.debt,
-    unplayed: p.get('unplayed') === '1',
+    played: oneOf(p.get('played'), ['yes', 'no'], p.get('unplayed') === '1' ? 'no' : d.played),   // ?unplayed=1 is the older spelling of ?played=no
     sort: oneOf(p.get('sort'), CARD_SORTS, d.sort), dir: oneOf(p.get('dir'), ['asc', 'desc'], d.dir),
   };
 }

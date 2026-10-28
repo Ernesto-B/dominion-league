@@ -13,6 +13,7 @@ import { useCatalogLoad } from '../dominion/CatalogContext.jsx';
 import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
 import { CardText } from '../dominion/components/bits.jsx';
 import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, toGameItems } from '../dominion/randomizer.js';
+import CountUp from '../components/CountUp.jsx';
 import RandomizerPanel from '../dominion/components/RandomizerPanel.jsx';
 import { pilesPlayed, playStats } from '../dominion/playStats.js';
 import { impliedSets, primaryType, resolveKingdom } from '../dominion/kingdom.js';
@@ -197,9 +198,9 @@ function GameResult({ game, before, ranked, tierFor }) {
   return (
     <>
       <p style={{ marginTop: 0 }}>Nice game. Here’s what it did:</p>
-      <ol className="night-result night-did">{rows.map(r => (
-        <li key={r.name}>
-          <b>{r.name}</b> <span className={r.delta > 0 ? 'up-t' : r.delta < 0 ? 'down-t' : ''}>{r.delta > 0 ? '+' : r.delta < 0 ? '−' : ''}{Math.abs(r.delta)}</span>
+      <ol className="night-result night-did">{rows.map((r, i) => (
+        <li key={r.name} style={{ '--i': i }}>
+          <b>{r.name}</b> <span className={r.delta > 0 ? 'up-t' : r.delta < 0 ? 'down-t' : ''}>{r.delta > 0 ? '+' : r.delta < 0 ? '−' : ''}<CountUp value={Math.abs(r.delta)} ms={800} /></span>
           <span className="meta"> · {r.before} → {r.after}{r.rankAfter != null && <> · #{r.rankAfter}</>}</span>
           {r.rankMove !== 0 && <span className={r.rankMove > 0 ? 'up-t' : 'down-t'}> {r.rankMove > 0 ? '▲' : '▼'}{Math.abs(r.rankMove)}</span>}
           {r.tierUp && <span className="pill ok"> now a {r.tierUp.name}</span>}

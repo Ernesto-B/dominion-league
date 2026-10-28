@@ -1,0 +1,14 @@
+{
+  "name": "Dominion Night",
+  "short_name": "Dominion",
+  "description": "Ratings, seasons and records for our weekly Dominion night.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B1015",
+  "theme_color": "#0B1015",
+  "icons": [
+    { "src": "icons/emperor.png", "sizes": "144x144", "type": "image/png", "purpose": "any" }
+  ]
+}

@@ -193,14 +193,21 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   key whenever the shape of the raw catalog rows changes. `React.lazy` splits the Collection, Admin, the Add Game dialog and a
   game's kingdom list out of the main bundle; `vite.config.js` gives React and the Supabase client their own long-cached chunks.
 
-## UX experiments (branch `ux-experiment`)
+## The current UI (the former UX experiments are now just the site)
 
-- Every experiment sits behind a flag in `src/ux.js` (`?ux=none|all|nav,home,...`, remembered in localStorage, switchable from the footer),
-  and becomes a class on `<html>` (`ux-nav`, `ux-lists`, ...). With the flags off the site must behave exactly as on `main` — the CSS is all
-  keyed on those classes, and the old Add Game dialog was verified to send the identical payload.
+- There are no feature flags any more (`src/ux.js` and the footer switcher are gone). A phone gets the bottom tab bar (`components/BottomNav.jsx`, with Log out in
+  its More sheet), game cards, and the dense ladder; a wide screen gets the sticky top nav and card grids with a Cards/Table switch on Games.
+- Because the old `.ux-*` class prefixes were removed from `style.css`, selectors lost one class of specificity. When a rule seems to lose, check for a later,
+  equally specific base rule (this bit `nav a[aria-current=page]` and `h3`). Compare computed styles before/after (CDP, `prefers-reduced-motion: reduce`) rather than trusting the eye.
 - `npm run dev:fake` runs the whole site on in-memory data (`dev/fakeSupabase.js`, swapped in by `vite.fake.config.js`; never part of the
-  real build). `dev/cdp.mjs` + `dev/ab-tasks.mjs` drive an emulated phone to compare A and B.
-- The `lists` flag also swaps the phone's game tables for `components/GameCards.jsx` (Last night and the Games page share the open/closed
+  real build). `dev/cdp.mjs` drives an emulated phone.
+- Offline: `public/sw.js` (registered in production only) keeps the site's own files; `src/lib/snapshot.js` keeps the last league this device loaded
+  (`dl.snapshot.v1`, cleared on sign-out) and `League.jsx` falls back to it when the network fails, marked by `offlineAt` and `OfflineBar`. A dropped connection
+  must never sign the viewer out. `components/PullToRefresh.jsx` refetches on a pull from the top of a touch screen (the browser's own is off via `overscroll-behavior`).
+- Motion is small and honours `prefers-reduced-motion` (all of it sits in one `no-preference` block near the end of `style.css`; `components/CountUp.jsx`
+  counts numbers). The app is installable (`public/manifest.webmanifest`); its icon is still the owner's `icons/emperor.png` until they supply a 192/512 one.
+- The Admin page has two tabs: People (new player, who plays in which group) and Settings (sets, groups, seasons).
+- The `lists` styling swaps the phone's game tables for `components/GameCards.jsx` (Last night and the Games page share the open/closed
   state with the table beside them), shows the form dots under each ladder name, and draws `RatingChart` at phone width with tappable name
   chips.
 - The Overview's charts live in `dominion/components/charts.jsx`, one chart type per question (donut, plain bars for the printed types, lollipop, segmented bar, waffle, columns, heat chips). Keep every number
@@ -209,11 +216,11 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   Randomizer page (state in the URL) and the Game night Kingdom step (state in the step; the roll is saved as `rolledQ`, the compact link form) share it.
 - `dominion/components/RandomizerOptions.jsx` is the one options panel (expansions, counts, rules, include/exclude) used by the Randomizer
   page and the Game night Kingdom step. Rules in `REQUIRE_RULES` are either mechanic `tags` (positive-only) or an exact printed `coins` cost.
-- The `redesign` flag: Rankings opens with you (`MeCard`), then `SinceVisit` (what changed since the viewer last looked, from `lib/lastVisit.js`;
+- Rankings opens with you (`MeCard`), then `SinceVisit` (what changed since the viewer last looked, from `lib/lastVisit.js`;
   a snapshot per group in localStorage `dl.seen.<group>`, shown until dismissed, never nudging), the ladder, last night, the chart and highlights,
   with the explanations folded into "How ratings and tiers work". The Games filters fold on a phone (`components/FilterFold.jsx`), the Games page
   shows game cards in a two-column grid on a wide screen (a Cards/Table switch, remembered in `dl.gamesview`), and "Game saved" says what the game did (`gameSummary` in `lib/night.js`). The Season table
-  keeps six columns on a phone under `lists`.
+  keeps six columns on a phone.
 - Shared pieces extracted so the dialog and the Game night flow can't drift: `src/lib/gameForm.js` (VP sort, results, RPC arguments),
   `components/FinishOrder.jsx`, `components/EloPreview.jsx`. Flow state: `src/lib/night.js`.
 

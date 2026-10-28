@@ -4,7 +4,6 @@ import GameFinish, { ordered } from './GameFinish.jsx';
 import GameDetail from './GameDetail.jsx';
 import TypePill from './TypePill.jsx';
 import GameCards from './GameCards.jsx';
-import { uxOn } from '../ux.js';
 
 // The most recent night's tables, newest first, each expandable into its per-player breakdown.
 export default function LastNight({ games }) {
@@ -13,13 +12,11 @@ export default function LastNight({ games }) {
   const { day, date } = games[games.length - 1];
   const todays = games.filter(g => g.day === day).slice().reverse();
   const toggle = line => setOpen(o => { const n = new Set(o); n.has(line) ? n.delete(line) : n.add(line); return n; });
-  const cards = uxOn('lists') || uxOn('redesign');
-  const Wrap = uxOn('redesign') ? 'div' : Fragment, wrap = uxOn('redesign') ? { className: 'gview-cards' } : {};   // on a wide screen the redesign shows the cards, as the Games page does
   return (
     <>
       <h2>Last night, {long(date)}</h2>
-      <Wrap {...wrap}>
-      <div className={'tablewrap' + (cards ? ' gtable' : '')}><table className="plain">
+      <div className="gview-cards">
+      <div className="tablewrap gtable"><table className="plain">
         <thead><tr><th></th><th className="l">Finish</th><th></th><th className="l">Elo change</th></tr></thead>
         <tbody>{todays.map(g => {
           const isOpen = open.has(g.line);
@@ -40,8 +37,8 @@ export default function LastNight({ games }) {
           );
         })}</tbody>
       </table></div>
-      {cards && <GameCards games={todays} open={open} toggle={toggle} link />}
-      </Wrap>
+      <GameCards games={todays} open={open} toggle={toggle} link />
+      </div>
     </>
   );
 }

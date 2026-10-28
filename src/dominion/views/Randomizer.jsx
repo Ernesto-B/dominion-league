@@ -9,7 +9,6 @@ import { useLeagueGames } from '../useLeagueGames.js';
 import { DEFAULT_OPTIONS, formatSeed, kingdomFromParams, kingdomToParams, optionsFromParams, optionsToParams, toGameItems } from '../randomizer.js';
 import { expansionMeta } from '../constants.js';
 import RandomizerPanel from '../components/RandomizerPanel.jsx';
-import { uxOn } from '../../ux.js';
 import { kingdomCode, renderKingdomImage, shareKingdomImage } from '../kingdomImage.js';
 
 const expansionName = e => expansionMeta(e).label;
@@ -58,7 +57,7 @@ export default function Randomizer({ query = '' }) {
   const actions = (
     <>
       <button type="button" className="ghost" onClick={copy}>Copy link</button>
-      {uxOn('share') && <button type="button" className="ghost" onClick={shareImage}>Share image</button>}
+      <button type="button" className="ghost" onClick={shareImage}>Share image</button>
       {canLog && <button type="button" className="ghost" onClick={logIt} title="Open Add a game with this kingdom filled in">Use for a game →</button>}
       <span className="meta" role="status" aria-live="polite">{copied}</span>
     </>
