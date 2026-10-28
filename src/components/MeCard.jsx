@@ -6,7 +6,7 @@ import CountUp from './CountUp.jsx';
 import HoverPopup from './HoverPopup.jsx';
 import { tierRange } from './TierLegend.jsx';
 import { steadyPayout } from '../lib/steadyElo.js';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { achievements, earnedIds, loadBadgesSeen, newBadges, rivalries, saveBadgesSeen } from '../lib/achievements.js';
 
 /* The Rankings page opens with the signed-in player, not the whole ladder — where they stand, how far to the next spot, and how the
@@ -16,7 +16,8 @@ export default function MeCard({ ranked }) {
   const store = () => { try { return window.localStorage; } catch { return null; } };
   // badges the viewer hasn't been told about: a first look records what is already earned and says nothing; "Nice" marks the rest as seen
   const mineP = me && D.players.find(x => x.name === me.name);
-  const list = mineP && mineP.rated ? achievements(mineP, D.tiers, ranked.map(x => x.name)) : [];
+  const list = useMemo(() => (mineP && mineP.rated ? achievements(mineP, D.tiers, ranked.map(x => x.name)) : []), [mineP, D, ranked]);
+  const nem = useMemo(() => (mineP && mineP.rated ? rivalries(D.h2h(null), me.name).nem : null), [mineP, D, me]);
   const [fresh, setFresh] = useState(() => {
     const s = store(); if (!s || !list.length) return [];
     const seen = loadBadgesSeen(s, gid);
@@ -24,7 +25,6 @@ export default function MeCard({ ranked }) {
     return newBadges(list, seen);
   });
   if (!me) return null;
-  const nem = mineP && mineP.rated ? rivalries(D.h2h(null), me.name).nem : null;
   const gotIt = () => { const s = store(); if (s) saveBadgesSeen(s, gid, earnedIds(list)); setFresh([]); };
   const s = meSummary(ranked, me.name, D.E.start, steadyPayout(4, D.E)[0]);
   const mine = hashFor('players', gid, encodeURIComponent(me.name));

@@ -74,7 +74,7 @@ export default function SortableTable({ head, rows, empty, stack = false }) {
             <tr className={r.className} data-g={r.data} onClick={r.onClick}>
               {r.cells.map((c, i) => { const cell = asCell(c); return <td key={i} data-label={head[i].label || undefined} className={'className' in cell ? cell.className : head[i].cls}>{cell.node}</td>; })}
             </tr>
-            {r.detail && <tr className="gdetail" data-g={r.data} hidden={!r.open}><td colSpan={head.length}>{r.detail}</td></tr>}
+            {r.detail && r.open && <tr className="gdetail" data-g={r.data}><td colSpan={head.length}>{r.detail}</td></tr>}
           </Fragment>
         )) : empty && <tr><td colSpan={head.length} className="l">{empty}</td></tr>}
       </tbody>

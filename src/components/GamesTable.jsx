@@ -7,6 +7,7 @@ import TypePill from './TypePill.jsx';
 import LandscapePills from './LandscapePills.jsx';
 import SortableTable from './SortableTable.jsx';
 import GameCards from './GameCards.jsx';
+import { useWide } from '../useMedia.js';
 
 // Sortable list of games, each row expandable into its per-player breakdown. `onEdit(line)` adds the
 // admin Edit column. Re-key it (e.g. on filter changes) to reset the sort and collapse every row.
@@ -14,6 +15,8 @@ import GameCards from './GameCards.jsx';
 export default function GamesTable({ games, onEdit, highlight, view = 'cards', link = false }) {   // a wide screen shows cards unless the Games page's switch says table
   const [open, setOpen] = useState(() => new Set(highlight != null ? [highlight] : []));
   const wrap = useRef(null);
+  const wide = useWide();
+  const showTable = wide && view === 'table', showCards = !showTable;   // render only the layout in use: a phone never needs the wide table's thousands of cells
   useEffect(() => {
     if (highlight == null || !wrap.current) return;
     const row = [...wrap.current.querySelectorAll(`[data-g="${highlight}"]`)].find(e => e.offsetParent !== null);   // the table row or, on a phone with the card list, the card
@@ -23,7 +26,7 @@ export default function GamesTable({ games, onEdit, highlight, view = 'cards', l
   // on a phone only the date and the finish order stay as columns; sets, VP, landscapes and notes live in the expanded row
   const head = [{ label: '' }, { label: 'Date', cls: 'l' }, { label: '' }, { label: 'Finish', cls: 'l' }, { label: 'Sets', cls: 'l dn-hide-sm' },
     { label: 'VP', cls: 'dn-hide-sm' }, { label: 'Landscapes', cls: 'l dn-hide-sm' }, { label: 'Notes', cls: 'l dn-hide-sm' }, ...(onEdit ? [{ label: '', cls: 'dn-hide-sm' }] : [])];
-  const rows = games.map(g => {
+  const rows = !showTable ? [] : games.map(g => {
     const isOpen = open.has(g.line);
     return {
       key: g.line, data: g.line, className: 'grow' + (isOpen ? ' open' : '') + (g.line === highlight ? ' hl' : ''), onClick: () => toggle(g.line), open: isOpen,
@@ -42,5 +45,5 @@ export default function GamesTable({ games, onEdit, highlight, view = 'cards', l
     };
   });
   // the cards are the phone layout; a wide screen shows them too (view 'cards') or keeps the sortable table (view 'table')
-  return <div ref={wrap} className={'gview-' + view}><div className="gtable"><SortableTable head={head} rows={rows} /></div><GameCards games={games} open={open} toggle={toggle} onEdit={onEdit} showDate highlight={highlight} link={link} /></div>;
+  return <div ref={wrap} className={'gview-' + view}>{showTable && <div className="gtable"><SortableTable head={head} rows={rows} /></div>}{showCards && <GameCards games={games} open={open} toggle={toggle} onEdit={onEdit} showDate highlight={highlight} link={link} />}</div>;
 }

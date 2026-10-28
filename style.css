@@ -588,11 +588,16 @@ a.dn-kchip:hover{border-color:var(--muted)}
    and e.g. the Player page alone renders 10+ .stat tiles, so one blurred
    surface per card instead of a dozen-plus keeps this cheap to render. */
 @media (prefers-color-scheme:dark){
-  .top,.ladder,.tablewrap,.stats,.chip,.builder,.story,.tierpopup,.popbox,.tierkey,th{
+  .top,.ladder,.tablewrap,.stats,.chip,.builder,.story,.tierpopup,.popbox,.tierkey{
     background:rgba(23,32,42,.55);
     backdrop-filter:blur(14px);
   }
   .stat{background:transparent}
+  th{background:transparent}   /* inside .tablewrap, which is already the glass panel; blurring every heading cell cost a lot while scrolling */
+  /* a phone repaints these on every scroll frame, so there the panels are plain translucent (the background is already dimmed) instead of blurred */
+  @media (max-width:720px),(pointer:coarse){
+    .top,.ladder,.tablewrap,.stats,.chip,.builder,.story,.tierpopup,.popbox,.tierkey{backdrop-filter:none;background:rgba(18,26,35,.86)}
+  }
   /* The dialog sits over a busy page, so unlike the other panels it is nearly opaque: a see-through
      one let the Games table show through the text. The overlay behind it dims and blurs the page. */
   .modal-box{background:rgba(20,28,37,.97)}
@@ -874,7 +879,7 @@ html{overscroll-behavior-y:contain}   /* the browser's own pull-to-refresh would
 @media (prefers-reduced-motion:no-preference){
   .ptr.busy i{animation:dnspin .7s linear infinite}
   /* the ladder deals itself in, a row at a time (--i is the row's place, capped) */
-  .lrow{animation:dnrise .45s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 45ms)}
+  .lrow{animation:dnrise .3s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 22ms)}
   .night-did li{animation:dnrise .5s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 160ms + 150ms)}
   .night-did .pill.ok{animation:dnpop .6s cubic-bezier(.3,1.6,.5,1) both;animation-delay:calc(var(--i,0) * 160ms + 700ms)}
   .night-did .pill.warn{animation:dnrise .5s ease both;animation-delay:calc(var(--i,0) * 160ms + 700ms)}

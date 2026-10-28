@@ -5,11 +5,6 @@ import Banner from '../components/Banner.jsx';
 import PlayerLink from '../components/PlayerLink.jsx';
 import NameIcon from '../components/NameIcon.jsx';
 import TierIcon from '../components/TierIcon.jsx';
-import SetIcon from '../components/SetIcon.jsx';
-import TypePill from '../components/TypePill.jsx';
-import LandscapePills from '../components/LandscapePills.jsx';
-import GameFinish, { finishText } from '../components/GameFinish.jsx';
-import GameDetail from '../components/GameDetail.jsx';
 import StatTile, { SetStatTile, SetBreakdown, PopText } from '../components/StatTile.jsx';
 import TierProgressBar from '../components/TierProgressBar.jsx';
 import GameCards from '../components/GameCards.jsx';
@@ -17,11 +12,7 @@ import H2HMatrix from '../components/H2HMatrix.jsx';
 import Badges from '../components/Badges.jsx';
 import { rivalries } from '../lib/achievements.js';
 import RatingChart from '../components/RatingChart.jsx';
-import SortableTable from '../components/SortableTable.jsx';
-import { setIconPath } from '../lib/sets.js';
-import { Fragment, useState } from 'react';
-
-const tone = (d, eps = 0.5) => d > eps ? 'up-t' : d < -eps ? 'down-t' : '';
+import { useState } from 'react';
 
 export default function Players() {
   const { D, gid, arg, hashFor, enabledSets } = usePage();
@@ -134,28 +125,8 @@ export default function Players() {
 
 // This player's rated games, newest first, each expandable into the full table's breakdown.
 function Results({ p }) {
-  const { gid, hashFor } = usePage();
   const [open, setOpen] = useState(() => new Set());
   const toggle = line => setOpen(o => { const n = new Set(o); n.has(line) ? n.delete(line) : n.add(line); return n; });
-  const head = [{ label: '' }, { label: 'Date', cls: 'l' }, { label: '' }, { label: 'Finish', cls: 'l' }, { label: 'Sets', cls: 'l' },
-    { label: 'Landscapes', cls: 'l' }, { label: 'Points' }, { label: 'Elo', cls: 'c' }, { label: 'Change' }];
-  const rows = p.results.slice().reverse().map(r => {
-    const d = r.after - r.before, g = r.game, isOpen = open.has(g.line);
-    return {
-      key: g.line, data: g.line, className: 'grow' + (isOpen ? ' open' : ''), onClick: () => toggle(g.line), open: isOpen, detail: <GameDetail game={g} me={p.name} />,
-      cells: [
-        { node: '▸', className: 'chev' },
-        { node: <a className="gamelink" href={hashFor('games', gid, g.line)} title="Open this game in the Games page" onClick={e => e.stopPropagation()}>{g.date}</a>, text: g.date, className: undefined },
-        { node: <TypePill type={g.type} />, text: g.type === 'Playoff' || g.type === 'Friendly' ? g.type : '', className: undefined },
-        { node: <GameFinish game={g} me={p.name} />, text: finishText(g), className: 'wrap' },
-        { node: g.sets.map((s, i) => <Fragment key={s}>{i > 0 && ' '}{setIconPath(s) ? <SetIcon name={s} size={20} /> : s}</Fragment>), text: g.sets.map(s => setIconPath(s) ? '' : s).join(' '), className: 'wrap' },
-        { node: <LandscapePills game={g} />, text: (g.landscapes || []).join(' '), className: 'wrap' },
-        { node: f2(r.pts), text: f2(r.pts), className: undefined },
-        { node: `${f0(r.before)} → ${f0(r.after)}`, text: `${f0(r.before)} → ${f0(r.after)}`, className: 'c' },
-        { node: sgn(d), text: sgn(d), className: tone(d) },
-      ],
-    };
-  });
   // the same games as on the Games page: cards on a phone and a wide screen; this player's own line is marked
-  return <div className="gview-cards"><div className="gtable"><SortableTable head={head} rows={rows} /></div><GameCards games={p.results.slice().reverse().map(r => r.game)} open={open} toggle={toggle} showDate link me={p.name} /></div>;
+  return <div className="gview-cards"><GameCards games={p.results.slice().reverse().map(r => r.game)} open={open} toggle={toggle} showDate link me={p.name} /></div>;
 }
