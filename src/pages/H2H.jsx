@@ -1,9 +1,8 @@
 import { usePage } from '../PageContext.js';
-import { pc } from '../lib/format.js';
 import GroupSwitcher from '../components/GroupSwitcher.jsx';
 import Banner from '../components/Banner.jsx';
 import PlayerLink from '../components/PlayerLink.jsx';
-import NameIcon from '../components/NameIcon.jsx';
+import H2HMatrix from '../components/H2HMatrix.jsx';
 
 export default function H2H() {
   const { D, gid, arg, hashFor } = usePage();
@@ -44,25 +43,7 @@ export default function H2H() {
           {closest && <div className="story"><span className="slabel">Closest rivalry</span><PlayerLink name={closest.a} /> and <PlayerLink name={closest.b} /> are split <b>{closest.w}–{closest.l}</b></div>}
         </div>
       )}
-      <div className="tablewrap"><table className="matrix">
-        <thead><tr><th>Row vs column</th>{hh.players.map(n => <th key={n}><NameIcon name={n} size={26} /><br />{n}</th>)}</tr></thead>
-        <tbody>{hh.players.map(a => (
-          <tr key={a}>
-            <td><PlayerLink name={a} /></td>
-            {hh.players.map(b => {
-              if (a === b) return <td key={b} className="self">–</td>;
-              const w = hh.ahead[a][b], l = hh.ahead[b][a], t = w + l;
-              if (!t) return <td key={b}></td>;
-              const r = w / t, col = r >= 0.5 ? 'var(--felt)' : 'var(--brick)', a8 = Math.round(Math.abs(r - 0.5) * 2 * 55);
-              return (
-                <td key={b} style={{ background: `color-mix(in srgb, ${col} ${a8}%, transparent)` }} title={`${a} finished ahead of ${b} ${w} of ${t} times`}>
-                  <b>{pc(r)}</b><br /><span className="meta">{w}–{l}</span>
-                </td>
-              );
-            })}
-          </tr>
-        ))}</tbody>
-      </table></div>
+      <H2HMatrix hh={hh} />
       <p className="note">Only rated games where both players sat at the same table. Ties are ignored. Small samples swing wildly, so give any cell under five games a pinch of salt.</p>
     </>
   );

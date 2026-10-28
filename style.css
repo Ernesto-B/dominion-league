@@ -189,6 +189,8 @@ button.iconbtn img{display:block;height:72px;width:auto}
 .matrix td,.matrix th{text-align:center;padding:8px 6px;min-width:56px}
 .matrix td:first-child,.matrix th:first-child{text-align:left;position:sticky;left:0;background:var(--panel);font-weight:600;min-width:100px}
 .matrix td.self{color:var(--muted)}
+.matrix tr.me td:first-child,.matrix th.me{color:var(--brass)}
+.matrix tr.me td:first-child{box-shadow:inset 3px 0 0 var(--brass)}
 
 /* two column */
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
@@ -687,6 +689,7 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
   .gcard-rows{list-style:none;margin:0;padding:0}
   .gcard-row{display:grid;grid-template-columns:36px 1fr auto;align-items:center;column-gap:8px;min-height:34px}
   .gc-place{color:var(--muted);font-size:13px}
+  .gcard-row.me{background:color-mix(in srgb, var(--brass) 14%, transparent);border-radius:6px;margin:0 -6px;padding:0 6px}
   .gc-name{display:flex;align-items:center;gap:6px;min-width:0}
   .gc-chg{font-weight:700;font-variant-numeric:tabular-nums}
   .gc-sub{grid-column:2 / 4;color:var(--muted);font-size:13px;padding:0 0 8px}
@@ -749,7 +752,21 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
 .night-players{margin:14px 0 0}
 .night-text{display:grid;gap:10px;margin-top:6px}
 /* each card's text is its own small block, so where one ends and the next begins is obvious */
-.night-text li{background:color-mix(in srgb, var(--bg) 55%, transparent);border:1px solid var(--line);border-left:3px solid var(--brass);border-radius:8px;padding:9px 12px 4px}
+.night-text li{background:color-mix(in srgb, var(--bg) 55%, transparent);border:1px solid var(--line);border-left:4px solid rgb(var(--t-action));border-radius:8px;padding:9px 12px 4px}
+.night-text li.t-action{border-left-color:rgb(var(--t-action))}
+.night-text li.t-treasure{border-left-color:rgb(var(--t-treasure))}
+.night-text li.t-duration{border-left-color:rgb(var(--t-duration))}
+.night-text li.t-attack{border-left-color:rgb(var(--t-attack))}
+.night-text li.t-reaction{border-left-color:rgb(var(--t-reaction))}
+.night-text li.t-victory{border-left-color:rgb(var(--t-victory))}
+.night-text li.t-project{border-left-color:rgb(var(--t-project))}
+.night-text li.t-trait{border-left-color:rgb(var(--t-trait))}
+.night-text li.t-event{border-left-color:rgb(var(--t-event))}
+.night-text li.t-way{border-left-color:rgb(var(--t-way))}
+.night-text li.t-landmark{border-left-color:rgb(var(--t-landmark))}
+.night-text li.t-command{border-left-color:rgb(var(--t-command))}
+.night-text li.t-gathering{border-left-color:rgb(var(--t-gathering))}
+.night-text li.t-looter{border-left-color:rgb(var(--t-looter))}
 .night-text li>b{display:block;margin-bottom:4px;font-size:15px}
 .night-text .dn-cardtext p{margin:0 0 8px}
 .night-notes{margin:10px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;gap:6px}
@@ -766,8 +783,3 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
 @media (max-width:520px){.night-steps li:not(.now) em{display:none}.night-steps li:not(.now){padding:7px 10px;flex:0 0 auto}.night-steps li.now{flex:1 1 auto}}
 
 /* --- ux "elo": the rating system preview on Rankings --- */
-.ratelab{margin-top:28px}
-.ratelab-dials{margin:12px 0}
-.ratelab-stats{margin:0 0 16px}
-.ratelab-table td,.ratelab-table th{white-space:nowrap}
-.ratelab h3{margin:20px 0 8px}

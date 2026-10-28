@@ -10,7 +10,6 @@ import TierLegend from '../components/TierLegend.jsx';
 import LastNight from '../components/LastNight.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import MeCard from '../components/MeCard.jsx';
-import RatingLab from '../components/RatingLab.jsx';
 import { uxOn } from '../ux.js';
 
 function Ladder({ ranked: rk, highlight, setHighlight }) {
@@ -81,7 +80,6 @@ export default function Rankings() {
         <p className="note">This ladder is Elo — a lifetime skill rating that never resets. It's not what decides a season's winner; that's points, on the <a href={hashFor('season', gid)}>Season page</a>.</p>
         <h2>Rating history</h2>
         <RatingChart names={rk.map(p => p.name)} highlight={highlight} onHover={setHighlight} />
-        {uxOn('elo') && <RatingLab />}
       </>}
     </>
   );

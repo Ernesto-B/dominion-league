@@ -15,8 +15,8 @@ const tone = (d, eps) => (d > eps ? 'up-t' : d < -eps ? 'down-t' : '');
 /* ux experiment "lists": a game as a small card on a phone instead of a row of a wide table. The card is the finish order, one line
    per player (place, name, Elo change) with the sets underneath; tapping it opens each player's Elo, season points and VP stacked
    under their line, then the kingdom and notes. Used by Last night and by the Games page; the table stays for desktop.
-   `open` is a Set of game ids and `toggle(id)` flips one, owned by the table next to it, so the two views agree. */
-export default function GameCards({ games, open, toggle, onEdit, showDate = false, highlight }) {
+   `me` marks one player's line (the Players page). `open` is a Set of game ids and `toggle(id)` flips one, owned by the table next to it, so the two views agree. */
+export default function GameCards({ games, open, toggle, onEdit, showDate = false, highlight, me = null }) {
   const { D } = usePage();
   return (
     <ul className="gcards" aria-label="Games">
@@ -37,7 +37,7 @@ export default function GameCards({ games, open, toggle, onEdit, showDate = fals
                 const score = g.score && g.score[n], sd = score ? score.after - score.before : null, vp = g.playerVP && g.playerVP[n];
                 const won = g.places[n] === 1;
                 return (
-                  <li key={n} className="gcard-row">
+                  <li key={n} className={'gcard-row' + (n === me ? ' me' : '')}>
                     <span className="gc-place">{ord(g.places[n])}</span>
                     <span className="gc-name">{isOpen ? <PlayerLink name={n} at={g.snapshot[n]} /> : <>{t && <TierIcon id={t.icon} size={20} alt={t.name + ' tier'} />}{won ? <b>{n}</b> : n}</>}</span>
                     <span className={'gc-chg ' + (d != null ? tone(d, 0.5) : '')}>{d != null ? sgn(d) : ''}</span>

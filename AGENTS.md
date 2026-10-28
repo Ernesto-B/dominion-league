@@ -60,6 +60,12 @@ index.html     — the shell Vite builds from: #root (React mounts here), #modal
                  everything routes through #/<route>/<arg> in src/App.jsx.
 ```
 
+**The rating model** is chosen by `config.elo.model` in `public/data/config.json`. `classic` (the engine's default when the key is absent, and what the
+spreadsheet verified) is pairwise Elo, K=200. The league runs `steady` (`src/lib/steadyElo.js`): K=100 (200 while provisional), a points-per-finish
+table that pays the top half first and the win second, half the top-half bonus for the exact middle of an odd table, and a table that pays `target`
+(0.52) of the points on average, which is the deliberate slow upward drift. Tier thresholds in `config.json` are the K=200 ones scaled by K/200
+(1125 / 1275 / 1475 / 1700): change K and the tiers together. Ratings are recomputed from the games on every load, so changing the model rewrites history.
+
 **Data flow**: `boot()` in `src/League.jsx` → Supabase queries (`loadData()` in `src/lib/data.js`) (`players`, `games`,
 `game_results`, `groups`, `seasons`) → `loadData()` reconstructs them into the exact
 row shape `engine.js` has always expected (a `finish` string like `"Jose > Bob = Cara"`,
@@ -190,8 +196,7 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   real build). `dev/cdp.mjs` + `dev/ab-tasks.mjs` drive an emulated phone to compare A and B.
 - The `lists` flag also swaps the phone's game tables for `components/GameCards.jsx` (Last night and the Games page share the open/closed
   state with the table beside them), shows the form dots under each ladder name, and draws `RatingChart` at phone width with tappable name
-  chips. The `elo` flag's `RatingLab` scales the tier thresholds with K (distance from the start rating x K/200), so a smaller K doesn't make
-  every tier harder to reach.
+  chips.
 - `dominion/components/RandomizerOptions.jsx` is the one options panel (expansions, counts, rules, include/exclude) used by the Randomizer
   page and the Game night Kingdom step. Rules in `REQUIRE_RULES` are either mechanic `tags` (positive-only) or an exact printed `coins` cost.
 - Shared pieces extracted so the dialog and the Game night flow can't drift: `src/lib/gameForm.js` (VP sort, results, RPC arguments),

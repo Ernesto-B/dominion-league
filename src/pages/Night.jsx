@@ -14,7 +14,7 @@ import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
 import { CardText } from '../dominion/components/bits.jsx';
 import { DEFAULT_OPTIONS, generate, toGameItems } from '../dominion/randomizer.js';
 import RandomizerOptions from '../dominion/components/RandomizerOptions.jsx';
-import { impliedSets, resolveKingdom } from '../dominion/kingdom.js';
+import { impliedSets, primaryType, resolveKingdom } from '../dominion/kingdom.js';
 
 const storage = () => { try { return window.sessionStorage; } catch { return null; } };
 
@@ -189,7 +189,7 @@ function KingdomText({ resolved, catalog, show, setShow }) {
   return (
     <>
       <label className="dn-check" style={{ margin: '10px 0' }}><input type="checkbox" checked={show} onChange={e => setShow(e.target.checked)} /> Show card text</label>
-      {show && <ul className="dn-plain-list night-text">{resolved.filter(r => !r.missing).map(r => <li key={`${r.kind}:${r.id}`}><b>{r.obj.name}</b>{catalog && <CardText text={r.obj.text} hasAnyText={catalog.meta.textRecordCount > 0} />}</li>)}</ul>}
+      {show && <ul className="dn-plain-list night-text">{resolved.filter(r => !r.missing).map(r => <li key={`${r.kind}:${r.id}`} className={'t-' + (r.kind === 'landscape' ? r.obj.type : primaryType(r.obj) || 'action').toLowerCase()}><b>{r.obj.name}</b>{catalog && <CardText text={r.obj.text} hasAnyText={catalog.meta.textRecordCount > 0} />}</li>)}</ul>}
     </>
   );
 }

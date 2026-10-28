@@ -3,6 +3,8 @@
    (each time with only that group's players/games/seasons), so a player who
    belongs to two groups gets two completely independent results — separate
    Elo, separate everything — not one blended number filtered two ways. */
+import { finishScores } from './steadyElo.js';
+
 const DAY = 86400000;
 
 function parseISO(s) {
@@ -61,8 +63,12 @@ function roundUp9(x) { return Math.ceil(+x.toFixed(9)); }
 function compute(config, csvRows, today) {
   config = config || {};
   today = today == null ? todayDay() : today;
-  const E = Object.assign({ k: 200, provisionalK: 300, provisionalGames: 10, start: 1000, scale: 400 }, config.elo || {});
-  const S = Object.assign({ prior: 3, minGamesForRecords: 5 }, config.season || {});
+  // model 'classic' = the original pairwise Elo (what the spreadsheet verified); 'steady' = the points-per-finish system of steadyElo.js,
+  // whose weights (linear, topHalf, middle, win, target) may also be set here.
+  const E = Object.assign({ k: 200, provisionalK: 300, provisionalGames: 10, start: 1000, scale: 400, model: 'classic' }, config.elo || {});
+  const steady = E.model === 'steady';
+  // streakBonus / vpBonus are optional extras on a Regular game's season points (both 0 = the plain finishing points); see seasonPoints below
+  const S = Object.assign({ prior: 3, minGamesForRecords: 5, streakBonus: 0, streakCap: 3, vpBonus: 0 }, config.season || {});
   const warnings = [];
   const tiers = (Array.isArray(config.tiers) && config.tiers.length ? config.tiers : DEFAULT_TIERS)
     .map(t => ({ id: t.id, name: t.name || t.id, icon: t.icon || t.id, min: t.min == null ? -Infinity : +t.min }))
@@ -169,16 +175,18 @@ function compute(config, csvRows, today) {
     if (g.n >= 2) g.names.forEach(nm => { g.pts[nm] = avgPts(g, nm); });
     if (rated(g)) {
       const next = {};
-      g.names.forEach(a => {
+      const scores = steady ? finishScores(g.names.map(nm => g.places[nm]), E) : null;
+      g.names.forEach((a, ai) => {
         const pa = ensure(a);
-        let tot = 0;
+        let tot = 0, sumE = 0;
         g.names.forEach(b => {
           if (a === b) return;
           const act = g.places[b] > g.places[a] ? 1 : g.places[b] === g.places[a] ? 0.5 : 0;
-          tot += act - 1 / (1 + Math.pow(10, ((cur[b] ?? E.start) - (cur[a] ?? E.start)) / E.scale));
+          const e = 1 / (1 + Math.pow(10, ((cur[b] ?? E.start) - (cur[a] ?? E.start)) / E.scale));
+          tot += act - e; sumE += e;
         });
         const k = pa.rated < E.provisionalGames ? E.provisionalK : E.k;
-        next[a] = (cur[a] ?? E.start) + k / (g.n - 1) * tot;
+        next[a] = (cur[a] ?? E.start) + (steady ? k * (scores[ai] - sumE / (g.n - 1)) : k / (g.n - 1) * tot);
       });
       g.names.forEach(a => {
         const pa = ensure(a);
@@ -200,6 +208,29 @@ function compute(config, csvRows, today) {
      season — mirrors g.elo[name] = {before, after} exactly, same formula
      seasonStandings() uses, so a player's last g.score[name].after for a
      season always equals their final seasonStandings() score by construction. */
+  /* A Regular game's SEASON points per player (g.sp): the finishing points (1 for a win down to 0 for last) plus, when switched on,
+       - a win-streak bonus: streakBonus x the number of wins in a row beyond the first, counting back within the season, capped at
+         streakCap (so with 0.04 and a cap of 3: 2nd straight win +0.04, 3rd +0.08, 4th and on +0.12; any non-win resets it);
+       - a VP bonus: vpBonus x (your VP / the winner's VP, minus the table's average of that ratio). A RATIO to the winner, so a Prosperity
+         game won 80-60 counts the same as a Base game won 40-30, and CENTRED on the table, so it only moves points between the players at
+         a table. It needs everyone's VP, and is skipped for a game missing any.
+     With both at 0, g.sp[name] === g.pts[name] exactly. g.pts itself (average finish, used all over the site) is never changed. */
+  const winRun = {};   // `${name}|${seasonNum}` -> consecutive wins so far
+  games.forEach(g => {
+    g.sp = {};
+    if (g.type !== 'Regular' || g.n < 2 || g.season == null) return;
+    const top = Math.max(...g.names.map(n => g.playerVP[n] ?? -Infinity));
+    const useVP = S.vpBonus > 0 && top > 0 && g.names.every(n => g.playerVP[n] != null);
+    const ratio = {}; let mean = 0;
+    if (useVP) { g.names.forEach(n => { ratio[n] = Math.min(1, Math.max(0, g.playerVP[n] / top)); mean += ratio[n] / g.names.length; }); }
+    g.names.forEach(a => {
+      const key = a + '|' + g.season;
+      winRun[key] = g.places[a] === 1 ? (winRun[key] || 0) + 1 : 0;
+      let bonus = S.streakBonus * Math.min(Math.max(winRun[key] - 1, 0), S.streakCap);
+      if (useVP) bonus += S.vpBonus * (ratio[a] - mean);
+      g.sp[a] = g.pts[a] + bonus;
+    });
+  });
   const seasonRunning = {}; // `${name}|${seasonNum}` -> { pts, games }
   games.forEach(g => {
     if (g.type !== 'Regular' || g.n < 2 || g.season == null) return;
@@ -208,7 +239,7 @@ function compute(config, csvRows, today) {
       const key = a + '|' + g.season;
       const run = seasonRunning[key] || (seasonRunning[key] = { pts: 0, games: 0 });
       const before = (run.pts + S.prior * 0.5) / (run.games + S.prior);
-      run.pts += g.pts[a]; run.games += 1;
+      run.pts += g.sp[a]; run.games += 1;
       const after = (run.pts + S.prior * 0.5) / (run.games + S.prior);
       g.score[a] = { before, after };
     });
@@ -303,16 +334,16 @@ function compute(config, csvRows, today) {
     const after = s.ok ? snapshotAtOrBefore(g => g.day <= s.end) : null;
     const rows = [];
     roster.forEach((n, ri) => {
-      let gp = 0, w = 0, pts = 0;
-      reg.forEach(g => { if (g.places[n] != null) { gp++; if (g.places[n] === 1) w++; pts += g.pts[n]; } });
+      let gp = 0, w = 0, pts = 0, spts = 0;
+      reg.forEach(g => { if (g.places[n] != null) { gp++; if (g.places[n] === 1) w++; pts += g.pts[n]; spts += g.sp[n]; } });
       if (!gp) return;
       const nights = new Set(sg.filter(g => g.places[n] != null).map(g => g.day)).size;
-      const score = (pts + S.prior * 0.5) / (gp + S.prior);
+      const score = (spts + S.prior * 0.5) / (gp + S.prior);
       const q = s.ok && gp >= s.minGames;
       const eloB = before ? (before.snapshot[n] ?? E.start) : E.start;
       const eloA = after ? (after.snapshot[n] ?? E.start) : E.start;
       rows.push({
-        name: n, order: ri, games: gp, wins: w, winPct: w / gp, avgPts: pts / gp, score, qualified: q,
+        name: n, order: ri, games: gp, wins: w, winPct: w / gp, avgPts: pts / gp, bonusPts: spts - pts, score, qualified: q,
         need: q ? 0 : Math.max(0, s.minGames - gp), eloChange: eloA - eloB, nights, attendance: nightsHeld ? nights / nightsHeld : null, seed: null,
       });
     });
@@ -451,11 +482,14 @@ function compute(config, csvRows, today) {
     const list = names.map(n => ({ name: n, elo: (P[n] ? P[n].elo : E.start), rated: (P[n] ? P[n].rated : 0) }));
     const n = list.length;
     if (n < 2) return [];
+    const byPlace = steady ? finishScores(list.map((_, i) => i + 1), E) : null;   // what 1st .. last would score at a table this size
     return list.map(a => {
       let sumE = 0;
       list.forEach(b => { if (b !== a) sumE += 1 / (1 + Math.pow(10, (b.elo - a.elo) / E.scale)); });
       const k = a.rated < E.provisionalGames ? E.provisionalK : E.k;
-      return { name: a.name, elo: a.elo, k, expected: sumE / (n - 1), ifWin: k / (n - 1) * (n - 1 - sumE), ifLast: -k / (n - 1) * sumE };
+      return steady
+        ? { name: a.name, elo: a.elo, k, expected: sumE / (n - 1), ifWin: k * (byPlace[0] - sumE / (n - 1)), ifLast: k * (byPlace[n - 1] - sumE / (n - 1)) }
+        : { name: a.name, elo: a.elo, k, expected: sumE / (n - 1), ifWin: k / (n - 1) * (n - 1 - sumE), ifLast: -k / (n - 1) * sumE };
     });
   }
 

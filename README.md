@@ -81,7 +81,7 @@ Seasons and friend groups are managed from the **Admin** page on the site (admin
 
 With more than one group, every page grows a small pill switcher — but only listing groups you're actually in.
 
-`elo` in `config.json` holds K, the provisional K and window, the start rating and the scale. `season.prior` is the season-score smoothing (3 means three imaginary average games) — these are the rare-change settings still worth a conscious file edit rather than a casual web form, since changing them recomputes every historical Elo.
+`elo` in `config.json` holds the rating model (`steady` or the original `classic`), K, the provisional K and window, the start rating, the scale and (for `steady`) `target`, the slow upward drift. The tier thresholds in the same file go with K: change one, change the other. `season.prior` is the season-score smoothing (3 means three imaginary average games) — these are the rare-change settings still worth a conscious file edit rather than a casual web form, since changing them recomputes every historical Elo.
 
 ## Rank titles and icons
 

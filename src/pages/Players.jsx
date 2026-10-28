@@ -12,6 +12,9 @@ import GameFinish, { finishText } from '../components/GameFinish.jsx';
 import GameDetail from '../components/GameDetail.jsx';
 import StatTile, { SetStatTile, SetBreakdown, PopText } from '../components/StatTile.jsx';
 import TierProgressBar from '../components/TierProgressBar.jsx';
+import GameCards from '../components/GameCards.jsx';
+import { uxOn } from '../ux.js';
+import H2HMatrix from '../components/H2HMatrix.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import SortableTable from '../components/SortableTable.jsx';
 import { setIconPath } from '../lib/sets.js';
@@ -120,9 +123,8 @@ export default function Players() {
       <RatingChart names={rankedHere.map(x => x.name)} hot={p.name} highlight={highlight} onHover={n => setHover({ of: p.name, name: n })} />
       {opp.length > 0 && <>
         <h2>Against each opponent</h2>
-        <SortableTable stack head={[{ label: 'Opponent', cls: 'l' }, { label: 'Finished ahead' }, { label: 'Finished behind' }, { label: 'Share ahead' }]}
-          rows={opp.map(x => ({ key: x.o, cells: [{ node: <PlayerLink name={x.o} />, text: x.o, className: 'name' }, x.w, x.l, x.w + x.l ? pc(x.w / (x.w + x.l)) : ''] }))} />
-        <p className="note">Counts tables where both of you played, rated games only. Tied finishes aren't counted either way.</p>
+        <H2HMatrix hh={D.h2h(null)} focus={p.name} />
+        <p className="note">Each cell is how often the row player finished ahead of the column player; your row is highlighted. Rated games where both sat at the same table; ties aren't counted either way.</p>
       </>}
       <h2>Results</h2>
       <Results key={p.name} p={p} />
@@ -154,5 +156,7 @@ function Results({ p }) {
       ],
     };
   });
-  return <SortableTable head={head} rows={rows} />;
+  if (!uxOn('lists')) return <SortableTable head={head} rows={rows} />;
+  // on a phone (ux "lists") the same games as on the Games page: cards, with this player's own line marked
+  return <><div className="gtable"><SortableTable head={head} rows={rows} /></div><GameCards games={p.results.slice().reverse().map(r => r.game)} open={open} toggle={toggle} showDate me={p.name} /></>;
 }
