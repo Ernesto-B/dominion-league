@@ -205,7 +205,8 @@ button.iconbtn img{display:block;height:72px;width:auto}
 .grid2>section{display:flex;flex-direction:column;min-width:0}
 .grid2>section>.builder,.grid2>section>.tablewrap{flex:1}
 .grid2>section>.builder{display:flex;flex-direction:column}
-.grid2>section>.builder>.dn-bars,.grid2>section>.builder>.dn-lol,.grid2>section>.builder>.dn-cols,.grid2>section>.builder>.dn-donut{flex:1}
+.grid2>section>.builder>.dn-bars,.grid2>section>.builder>.dn-lol,.grid2>section>.builder>.dn-donut{flex:1}
+.grid2>section>.builder>.dn-cols{flex:1 0 auto}   /* not flex:1 — a zero basis collapses the 230px height when the card is not stretched (phones) */
 .grid2>section>.builder>.dn-bars,.grid2>section>.builder>.dn-lol{align-content:space-between}
 .grid2>section>.builder>.dn-donut{align-content:space-between}
 .grid2>section>.tablewrap table{height:100%}
@@ -674,6 +675,7 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
 @media (max-width:720px){
   .ux-nav .nav-toggle,.ux-nav #nav{display:none}
   .ux-nav .top-inner{justify-content:space-between;padding-top:10px;padding-bottom:10px}
+  .ux-nav #navuser a{display:none}   /* Log out lives in the More sheet */
   .ux-nav .brand{display:block;font:800 18px var(--display);color:#E6EBF0;margin-right:auto}
   .ux-nav .bottomnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0B1015;border-top:1px solid var(--line);padding:0 4px env(safe-area-inset-bottom)}
   .ux-nav .bottomnav a,.ux-nav .bottomnav button{flex:1;min-width:0;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 2px;
