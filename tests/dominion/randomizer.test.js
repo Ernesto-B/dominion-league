@@ -80,12 +80,28 @@ describe('include, keep and the impossible', () => {
 });
 
 describe('landscapes', () => {
-  it('rolls the asked-for number, from the chosen types and expansions only', () => {
-    for (const r of rolls({ landscapes: 2, landscapeTypes: ['Way', 'Event'], expansions: ['Menagerie', 'Empires', 'Dominion Base Game'] }, 60)) {
+  it('rolls the asked-for number, from the chosen types only', () => {
+    for (const r of rolls({ landscapes: 2, landscapeTypes: ['Way', 'Event'] }, 60)) {
       expect(r.landscapes).toHaveLength(2);
-      r.landscapes.forEach(l => { expect(['Way', 'Event']).toContain(l.landscape.type); expect(['Menagerie', 'Empires']).toContain(l.landscape.expansion); });
+      r.landscapes.forEach(l => expect(['Way', 'Event']).toContain(l.landscape.type));
     }
     expect(roll({ landscapes: 0 }).landscapes).toEqual([]);
+  });
+  it('draws landscapes from ANY expansion, whichever expansions the Kingdom cards are limited to', () => {
+    const seen = new Set();
+    for (const r of rolls({ expansions: ['Dominion Base Game'], landscapes: 4 }, 120)) {
+      expect(r.slots.every(s => s.expansion === 'Dominion Base Game')).toBe(true);   // the Kingdom stays inside Base...
+      r.landscapes.forEach(l => seen.add(l.landscape.expansion));                       // ...the landscapes don't
+    }
+    expect([...seen].sort()).toEqual(['Empires', 'Menagerie', 'Plunder', 'Renaissance']);   // every expansion that has landscapes
+    expect(seen.has('Dominion Base Game')).toBe(false);                                      // (Base has none)
+  });
+  it('re-rolling a landscape also looks beyond the chosen expansions', () => {
+    const opts = { expansions: ['Dominion Base Game'], landscapes: 2 }, r = roll(opts, 3);
+    const next = rerollLandscape(catalog, opts, r, 0, { rng: seededRng(8) });
+    expect(next.ok).toBe(true); expect(next.landscapes).toHaveLength(2);
+    const outside = new Set(); for (let i = 0; i < 60; i++) { const n = rerollLandscape(catalog, opts, r, 0, { rng: seededRng(i + 100) }); n.landscapes.forEach(l => outside.add(l.landscape.expansion)); }
+    expect(outside.size).toBeGreaterThan(1);
   });
   it('puts every Trait on a different Kingdom pile in the kingdom', () => {
     for (const r of rolls({ landscapes: 4, landscapeTypes: ['Trait'] }, 40)) {

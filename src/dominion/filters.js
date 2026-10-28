@@ -17,7 +17,8 @@ export const DEFAULT_LANDSCAPE_FILTERS = Object.freeze({
 
 export const norm = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 const matchesText = (haystacks, q) => { const toks = norm(q).split(/\s+/).filter(Boolean); if (!toks.length) return true; const hs = haystacks.filter(Boolean).map(norm); return toks.every(t => hs.some(h => h.includes(t))); };
-const hits = (have, want, mode) => !want.length || (mode === 'any' ? want.some(w => have.includes(w)) : want.every(w => have.includes(w)));
+// 'exact' = the card's printed types are precisely the chosen ones (what a row of "Most common type combinations" counts)
+const hits = (have, want, mode) => !want.length || (mode === 'any' ? want.some(w => have.includes(w)) : mode === 'exact' ? want.length === have.length && want.every(w => have.includes(w)) : want.every(w => have.includes(w)));
 
 export function debtMatches(debt, rule) {
   if (rule === 'any' || rule == null) return true;
@@ -143,7 +144,7 @@ export function cardFiltersFromQuery(qs) {
   const p = params(qs), d = DEFAULT_CARD_FILTERS, debt = p.get('debt');
   return {
     q: p.get('q') || '', text: p.get('text') === '1',
-    expansions: many(p, 'exp'), types: many(p, 'type'), typeMode: oneOf(p.get('tmode'), ['all', 'any'], d.typeMode),
+    expansions: many(p, 'exp'), types: many(p, 'type'), typeMode: oneOf(p.get('tmode'), ['all', 'any', 'exact'], d.typeMode),
     mechanics: many(p, 'mech'), mechanicMode: oneOf(p.get('mmode'), ['all', 'any'], d.mechanicMode),
     costs: many(p, 'cost').filter(v => /^\d{1,2}$/.test(v)).map(Number),
     debt: debt && (['any', 'none', 'has'].includes(debt) || /^\d{1,2}$/.test(debt)) ? debt : d.debt,

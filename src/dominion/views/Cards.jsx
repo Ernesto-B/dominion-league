@@ -60,11 +60,12 @@ export default function Cards({ query = '' }) {
           <div className="dn-chips">{s.byType.map(t => (
             <Chip key={t.key} tone={t.key.toLowerCase()} pressed={f.types.includes(t.key)} count={t.count} onClick={() => update({ types: toggle(f.types, t.key) })}>{t.key}</Chip>
           ))}</div>
-          {f.types.length > 1 && (
+          {(f.types.length > 1 || f.typeMode === 'exact') && (
             <div className="dn-mode" role="group" aria-label="How to match the selected printed types">
               <span className="meta">A card must have</span>
               <Chip pressed={f.typeMode === 'all'} onClick={() => update({ typeMode: 'all' })}>all selected types</Chip>
               <Chip pressed={f.typeMode === 'any'} onClick={() => update({ typeMode: 'any' })}>any selected type</Chip>
+              <Chip pressed={f.typeMode === 'exact'} onClick={() => update({ typeMode: 'exact' })}>only these types</Chip>
             </div>
           )}
         </fieldset>

@@ -26,7 +26,7 @@ export const MAX_ATTACK_CHOICES = [0, 1, 2, 3];   // "no Attacks", "at most 1"..
 export const DEFAULT_OPTIONS = Object.freeze({
   expansions: [],          // empty = every owned expansion
   cards: 10,               // Kingdom piles
-  landscapes: 0,           // how many Events/Landmarks/Projects/Ways/Traits
+  landscapes: 0,           // how many Events/Landmarks/Projects/Ways/Traits (from ANY expansion — independent of `expansions`)
   landscapeTypes: [],      // empty = all five types
   maxAttacks: null,        // null = any number of Attack piles
   reaction: false,         // if there is an Attack, make sure there is a Reaction too
@@ -166,7 +166,9 @@ function finish(catalog, o, chosen, keepLandscapes, plays, rng, prior = null) {
 
 function pickLandscapes(catalog, o, slots, keepLandscapes, rng, prior) {
   const types = o.landscapeTypes.length ? o.landscapeTypes : LANDSCAPE_TYPES;
-  const pool = catalog.landscapes.filter(l => types.includes(l.type) && (!o.expansions.length || o.expansions.includes(l.expansion)));
+  // Landscapes come from every expansion that has them, whatever expansions the Kingdom cards are drawn from: the expansion
+  // choice is about the Kingdom, and a landscape can be added to any game. Only the landscape TYPES chosen narrow them.
+  const pool = catalog.landscapes.filter(l => types.includes(l.type));
   const kept = keepLandscapes.map(id => catalog.landscapesById.get(id)).filter(Boolean);
   const chosen = kept.slice();
   while (chosen.length < o.landscapes) {
@@ -241,7 +243,7 @@ export function rerollLandscape(catalog, options, state, index, { rng = Math.ran
   const o = normalize(options);
   const types = o.landscapeTypes.length ? o.landscapeTypes : LANDSCAPE_TYPES;
   const have = new Set(state.landscapes.map(l => l.landscape.id));
-  const cands = catalog.landscapes.filter(l => types.includes(l.type) && !have.has(l.id) && (!o.expansions.length || o.expansions.includes(l.expansion)));
+  const cands = catalog.landscapes.filter(l => types.includes(l.type) && !have.has(l.id));
   if (!cands.length) return { ok: false, message: 'There is no other landscape to swap in.' };
   const swap = cands[Math.floor(rng() * cands.length)];
   const ids = state.landscapes.map((l, i) => (i === index ? swap.id : l.landscape.id));

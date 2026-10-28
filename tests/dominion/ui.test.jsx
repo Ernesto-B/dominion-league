@@ -593,6 +593,29 @@ describe('cost icons', () => {
   });
 });
 
+describe('the Players link in the nav', () => {
+  const D = players => ({ players: players.map(([name, allGames]) => ({ name, allGames })) });
+  const ready = (me, players, groups = [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], gid = 'a') =>
+    ({ route: { route: 'home', gid }, me: { name: me, is_admin: false }, allGroups: groups, computedByGroup: { a: D(players), b: D([['Zed', 3]]) } });
+  const playersHref = r => renderToStaticMarkup(<Header ready={r} hash="" />).match(/<a href="([^"]+)"[^>]*><img src="icons\/nav\/players\.png"/)[1];
+  it('opens the signed-in player\'s own page when they have played in the group being viewed', () => {
+    expect(playersHref(ready('Ann', [['Bob', 4], ['Ann', 2]]))).toBe('#/players/a/Ann');
+    expect(playersHref(ready('Ann', [['Ann', 2]], [{ id: 'a', name: 'A' }]))).toBe('#/players/Ann');          // one group: no group segment
+    expect(playersHref(ready('Ann Lee', [['Ann Lee', 2]]))).toBe('#/players/a/Ann%20Lee');                       // the name is encoded like every other player link
+  });
+  it('goes to the front page of Players (the ladder\'s top player) when they have not played there, or are not in the group', () => {
+    expect(playersHref(ready('Ann', [['Bob', 4], ['Ann', 0]]))).toBe('#/players/a');
+    expect(playersHref(ready('Ann', [['Bob', 4]]))).toBe('#/players/a');
+    expect(playersHref(ready('Zed', [['Bob', 4]], undefined, 'b'))).toBe('#/players/b/Zed');                      // follows the group being viewed
+  });
+  it('changes nothing else in the nav, and still works for a viewer with no league data yet', () => {
+    const nav = renderToStaticMarkup(<Header ready={ready('Ann', [['Ann', 2]])} hash="" />);
+    expect(nav).toContain('<a href="#/games/a"'); expect(nav).toContain('<a href="#/h2h/a"'); expect(nav).toContain('<a href="#/dominion"');
+    const bare = { route: { route: 'home', gid: 'a' }, me: { name: 'Ann', is_admin: false }, allGroups: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] };
+    expect(playersHref(bare)).toBe('#/players/a');
+  });
+});
+
 describe('the page is called "Collection"', () => {
   it('uses that name in the nav (still linking to #/dominion) and for the browser tab title', () => {
     const ready = { route: { route: 'dominion', gid: 'a' }, me: { name: 'Ann', is_admin: false }, allGroups: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] };

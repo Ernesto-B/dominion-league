@@ -170,6 +170,11 @@ describe('the chart', () => {
     expect(h).toContain('aria-label="Dark Ages, Attack: 15 of 44 card names"'); expect(h).not.toContain('dn-sb-legend'); expect(h).toContain('rgb(var(--t-attack))');
     expect(h).toContain('icons/sets/');
   });
+  it('never hides the card names on a phone: they are drawn larger there instead (see useNarrow), not removed by CSS', () => {
+    const css = readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+    expect(css).not.toMatch(/\.dn-sb-card\s*\{\s*display\s*:\s*none/);
+    expect(readFileSync(path.join(ROOT, 'src/dominion/components/SunburstChart.jsx'), 'utf8')).toMatch(/narrow \? 14\.5 : 10\.5/);
+  });
   it('an unknown or missing zoom falls back to the overview, and the overview invites a click', () => {
     expect(html('expansion', { zoom: 'Nope' })).not.toContain('All expansions');
     const h = html('expansion'); expect(h).toContain('Click an expansion in the inner ring to zoom in'); expect(h).toContain('click an expansion');

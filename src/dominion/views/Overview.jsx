@@ -6,7 +6,7 @@ import { chartFromQuery, chartToQuery } from '../sunburst.js';
 import { artifactHref, dominionHref, cardsFilterHref, landscapesFilterHref } from '../links.js';
 import { PLURAL, humanize } from '../constants.js';
 import BarChart from '../components/BarChart.jsx';
-import { Section, Stat } from '../components/bits.jsx';
+import { Section, Stat, rowLink } from '../components/bits.jsx';
 import CostIcons, { PlainDebtIcon } from '../components/Cost.jsx';
 import TypeMatrix from '../components/TypeMatrix.jsx';
 import SetIcon from '../../components/SetIcon.jsx';
@@ -95,7 +95,11 @@ export default function Overview({ query = '' }) {
         <div className="tablewrap"><table className="plain dn-table">
           <caption className="dn-sr">The most common combinations of printed types on a single card</caption>
           <thead><tr><th className="l" scope="col">Printed together</th><th scope="col">Card names</th><th scope="col">Share of {s.names}</th></tr></thead>
-          <tbody>{s.combos.slice(0, 10).map(c => <tr key={c.key}><td className="l">{c.key}</td><td>{c.count}</td><td>{pct(c.count, s.names)}</td></tr>)}</tbody>
+          <tbody>{s.combos.slice(0, 10).map(c => {
+            // a row counts cards whose printed types are EXACTLY this combination, so the link filters the same way
+            const href = cardsFilterHref({ types: c.key.split(' + '), typeMode: 'exact' });
+            return <tr key={c.key} {...rowLink(href)}><td className="l"><a href={href} title={`Show the ${c.count} cards that are exactly ${c.key}`}>{c.key}</a></td><td>{c.count}</td><td>{pct(c.count, s.names)}</td></tr>;
+          })}</tbody>
         </table></div>
         <p className="note">{s.multiType} of {s.names} card names have more than one printed type.</p>
       </Section>

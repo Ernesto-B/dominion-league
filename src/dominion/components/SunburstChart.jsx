@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { arcLength, arcPath, centroid, layoutSunburst, shortName, sunburstData, typeVar, zoomData } from '../sunburst.js';
 import { cardHref, cardsFilterHref } from '../links.js';
 import { formatCost } from '../model.js';
@@ -6,6 +6,19 @@ import { setIconPath } from '../../lib/sets.js';
 
 const SIZE = 560, C = SIZE / 2, R = { hole: 80, in0: 84, in1: 160, out0: 164, out1: 266 };
 const PAD = 0.012;
+
+// true on a phone-width screen. The chart is drawn in a fixed 560-unit box and scaled to the screen, so on a phone (~0.6x) its
+// labels must be drawn larger, and shorter, to stay readable.
+function useNarrow(query = '(max-width: 720px)') {
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(query).matches);
+  useEffect(() => {
+    if (!window.matchMedia) return undefined;
+    const mq = window.matchMedia(query), on = () => setNarrow(mq.matches);
+    on(); mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, [query]);
+  return narrow;
+}
 
 /* The sunburst view of "Card types by expansion" (see sunburst.js), in two levels.
 
@@ -21,6 +34,8 @@ export default function SunburstChart({ matrix, by, cards = [], zoom = null, onZ
   const [pinned, setPinned] = useState(null);
   const [hover, setHover] = useState(null);
   const [only, setOnly] = useState(null);         // a printed type the legend is isolating
+  const narrow = useNarrow();
+  const nameSize = narrow ? 14.5 : 10.5, nameMax = narrow ? 12 : 15;   // a card's name on the ring: font size (chart units) and longest name
 
   const data = useMemo(() => (zoom != null && cards.length ? zoomData(matrix, cards, by, zoom) : null) || sunburstData(matrix, by), [matrix, cards, by, zoom]);
   const groups = useMemo(() => layoutSunburst(data), [data]);
@@ -93,7 +108,7 @@ export default function SunburstChart({ matrix, by, cards = [], zoom = null, onZ
   });
   const outerLabels = groups.flatMap(g => g.children.map(k => {
     const room = arcLength((R.out0 + R.out1) / 2, k.a0, k.a1);
-    if (zoomed) return room >= 12.5 ? <text key={k.key} transform={radial(k.a0, k.a1, R.out0, R.out1)} className="dn-sb-card" textAnchor="middle" dominantBaseline="central" pointerEvents="none">{shortName(k.name)}</text> : null;
+    if (zoomed) return room >= nameSize + 2 ? <text key={k.key} transform={radial(k.a0, k.a1, R.out0, R.out1)} className="dn-sb-card" style={{ fontSize: nameSize }} textAnchor="middle" dominantBaseline="central" pointerEvents="none">{shortName(k.name, nameMax)}</text> : null;
     const [x, y] = centroid(C, C, R.out0, R.out1, k.a0, k.a1);
     if (room < 17) return null;
     if (by === 'type' && room > 30 && k.icon && setIconPath(k.icon)) return icon(k.key, k.icon, x, y, 20);

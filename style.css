@@ -411,6 +411,7 @@ a.dn-kchip:hover{border-color:var(--muted)}
 .dn-rz-lists{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:8px}
 .dn-rz-listh{margin:0 0 4px}
 .dn-rz-opts .controls{margin-top:16px}
+.dn-rz-hint{margin:0 0 8px;font-size:13px}
 .dn-rz-go{margin:16px 0 0}
 .dn-rz-go button[type=submit]{min-height:44px;padding:10px 22px;font-size:16px}
 .dn-rz-msg{margin:12px 0 0;padding:10px 12px;border:1px solid var(--line);border-left:4px solid rgb(var(--t-attack));border-radius:8px;background:var(--panel)}
@@ -587,5 +588,8 @@ tr.grow.hl td.chev + td{box-shadow:inset 3px 0 0 var(--brass),inset 0 1px 0 var(
   .dn-rztile-btns button{min-height:44px}
 }
 
-/* on a phone the ring is ~60% of its drawn size, so card names on it would be ~6px: leave them off and let a tap read the card */
-@media (max-width:720px){.dn-sb-card{display:none}}
+/* Head to head: the header row sticks to the top and the first column to the left, so when the table scrolls sideways the player
+   names (later in the page) would paint over the "Row vs column" corner. Stack them: corner above headers above the sticky names. */
+.matrix th{z-index:2}
+.matrix thead th:first-child{z-index:3}
+.matrix tbody td:first-child{z-index:1}

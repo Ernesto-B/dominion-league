@@ -29,10 +29,15 @@ export function resolveKingdom(catalog, items) {
   });
 }
 
-// the Sets and landscape groups a kingdom implies, for pre-filling the Add Game pills
+/* The Sets and landscape groups a kingdom implies, for pre-filling the Add Game pills. A game's SETS are only ever implied by its
+   Kingdom CARDS: a landscape (a Renaissance Project, a Menagerie Way...) can be added to any game, so it says nothing about
+   which expansions were in play. A landscape only implies its group (Events, Ways, ...). */
 export function impliedSets(resolved) {
   const sets = new Set(), groups = new Set();
-  resolved.forEach(r => { if (r.missing) return; (r.kind === 'card' ? sets.add(setNameFor(r.obj.expansion)) : (sets.add(setNameFor(r.obj.expansion)), groups.add(landscapeGroupFor(r.obj.type)))); });
+  resolved.forEach(r => {
+    if (r.missing) return;
+    if (r.kind === 'card') sets.add(setNameFor(r.obj.expansion)); else groups.add(landscapeGroupFor(r.obj.type));
+  });
   return { sets: [...sets], landscapes: [...groups] };
 }
 

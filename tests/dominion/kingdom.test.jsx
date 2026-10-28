@@ -29,9 +29,13 @@ describe('kingdom helpers', () => {
     const r = resolveKingdom(catalog, [{ kind: 'card', id: card('Militia').id }, { kind: 'card', id: 'gone:card' }, { kind: 'landscape', id: land('Way of the Mole').id }]);
     expect(r[0].obj.name).toBe('Militia'); expect(r[1].missing).toBe(true); expect(r[2].obj.name).toBe('Way of the Mole');
   });
-  it('derives the Sets and landscape groups a kingdom implies', () => {
+  it('derives the Sets from the Kingdom CARDS only, and the landscape groups from the landscapes', () => {
     const r = resolveKingdom(catalog, [{ kind: 'card', id: card('Militia').id }, { kind: 'card', id: card('Village').id }, { kind: 'landscape', id: land('Way of the Mole').id }]);
-    expect(impliedSets(r)).toEqual({ sets: expect.arrayContaining(['Base', 'Menagerie']), landscapes: ['Ways'] });
+    expect(impliedSets(r)).toEqual({ sets: ['Base'], landscapes: ['Ways'] });          // the Menagerie Way does NOT make Menagerie a set in play
+    expect(impliedSets(resolveKingdom(catalog, [{ kind: 'landscape', id: land('Way of the Mole').id }]))).toEqual({ sets: [], landscapes: ['Ways'] });
+    const project = catalog.landscapes.find(l => l.expansion === 'Renaissance' && l.type === 'Project');     // a Renaissance landscape in a Base game
+    const mixed = resolveKingdom(catalog, [{ kind: 'card', id: card('Witch').id }, { kind: 'landscape', id: project.id }]);
+    expect(impliedSets(mixed)).toEqual({ sets: ['Base'], landscapes: ['Projects'] });                       // Renaissance is NOT a set in play
     expect(impliedSets(resolveKingdom(catalog, [{ kind: 'card', id: 'gone:card' }]))).toEqual({ sets: [], landscapes: [] });
   });
   it('searches cards and landscapes by every word, names starting with the first word first, never re-offering what is taken', () => {

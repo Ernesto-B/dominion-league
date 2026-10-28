@@ -7,7 +7,9 @@ import { PageContext } from '../../src/PageContext.js';
 import { playStats, insights, pilesPlayed, winners, MIN_GAMES_FOR_RECORD } from '../../src/dominion/playStats.js';
 import { DEFAULT_CARD_FILTERS, browseCards, cardFiltersFromQuery, cardFiltersToQuery, activeCardFilters } from '../../src/dominion/filters.js';
 
+import { summarize } from '../../src/dominion/stats.js';
 const catalog = realCatalog();
+const s2 = summarize(catalog);
 const card = n => catalog.cards.find(c => c.name === n);
 const land = n => catalog.landscapes.find(l => l.name === n);
 const K = (...items) => items.map(i => (i.id ? { kind: 'landscape', id: i.id } : { kind: 'card', id: i.id ?? i }));
@@ -91,6 +93,31 @@ describe('filtering and sorting by play', () => {
 const page = over => ({ D: { games }, gid: 'g1', me: { name: 'Ann', is_admin: false }, allGroups: [{ id: 'g1', name: 'Friends' }], hashFor: (r, g, rest) => `#/${r}/${g}${rest != null ? '/' + rest : ''}`, ...over });
 const view = (arg, ctx) => renderToStaticMarkup(<CatalogProvider catalog={catalog}><PageContext.Provider value={ctx === null ? null : page(ctx)}><DominionView arg={arg} /></PageContext.Provider></CatalogProvider>);
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&#x27;|&#39;/g, "'").replace(/\s+/g, ' ');
+
+describe('"only these types" and the combinations table', () => {
+  const exact = types => browseCards(catalog.cards, { ...DEFAULT_CARD_FILTERS, types, typeMode: 'exact' });
+  it('matches cards whose printed types are exactly the chosen ones, no more', () => {
+    const aa = exact(['Action', 'Attack']);
+    expect(aa.every(c => c.types.length === 2 && c.types.includes('Action') && c.types.includes('Attack'))).toBe(true);
+    expect(aa.some(c => c.types.includes('Knight'))).toBe(false);                                               // Action+Attack+Knight is a different combination
+    expect(browseCards(catalog.cards, { ...DEFAULT_CARD_FILTERS, types: ['Action', 'Attack'], typeMode: 'all' }).length).toBeGreaterThan(aa.length);   // "all" would include those
+    expect(exact(['Attack', 'Action']).length).toBe(aa.length);                                                  // order doesn't matter
+    expect(exact(['Treasure']).every(c => c.types.length === 1)).toBe(true);
+  });
+  it('is in the URL, and a stale or junk mode falls back to "all"', () => {
+    expect(cardFiltersToQuery({ ...DEFAULT_CARD_FILTERS, types: ['Action', 'Attack'], typeMode: 'exact' })).toBe('?type=Action&type=Attack&tmode=exact');
+    expect(cardFiltersFromQuery('?type=Action&tmode=exact').typeMode).toBe('exact'); expect(cardFiltersFromQuery('?tmode=banana').typeMode).toBe('all');
+  });
+  it('every row of "Most common type combinations" opens the cards it counts, on the whole row or its name', () => {
+    const h = view(''), sec = h.slice(h.indexOf('id="st-combos"')), tbody = sec.match(/<tbody>[\s\S]*?<\/tbody>/)[0];
+    expect((tbody.match(/<tr class="dn-rowlink"/g) || []).length).toBe(10);
+    for (const c of s2.combos.slice(0, 10)) {
+      const types = c.key.split(' + '), href = `#/dominion/cards?${types.map(t => 'type=' + t).join('&amp;')}&amp;tmode=exact`;   // the markup escapes & in attributes
+      expect(tbody, c.key).toContain(`<a href="${href}"`);
+      expect(exact(types).length, c.key).toBe(c.count);                                                      // the list the row opens is exactly the number the row shows
+    }
+  });
+});
 
 describe('the Collection pages with play data', () => {
   it('a card page shows how often it was played, its recent games as links, and the viewer\'s record', () => {

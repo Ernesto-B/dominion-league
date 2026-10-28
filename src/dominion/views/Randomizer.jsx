@@ -106,6 +106,7 @@ export default function Randomizer({ query = '' }) {
 
         {opts.landscapes > 0 && (
           <fieldset className="dn-fieldset"><legend>Landscape types: <span className="meta">{opts.landscapeTypes.length ? `${opts.landscapeTypes.length} chosen` : 'all of them'}</span></legend>
+            <p className="meta dn-rz-hint">Landscapes can come from any expansion, whichever ones are chosen above.</p>
             <div className="dn-chips">{catalog.landscapeTypes.map(t => (
               <Chip key={t} tone={t.toLowerCase()} pressed={opts.landscapeTypes.includes(t)} onClick={() => setOpts({ landscapeTypes: toggle(opts.landscapeTypes, t) })}>{PLURAL[t] || t}</Chip>
             ))}</div>
