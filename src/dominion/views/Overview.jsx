@@ -5,7 +5,7 @@ import { writeQuery } from '../urlState.js';
 import { chartFromQuery, chartToQuery } from '../sunburst.js';
 import { cardsFilterHref, landscapesFilterHref } from '../links.js';
 import { PLURAL, humanize } from '../constants.js';
-import { Columns, Donut, HeatChips, Lollipop, Segments, Treemap, Waffle } from '../components/charts.jsx';
+import { Bars, Columns, Donut, HeatChips, Lollipop, Segments, Waffle } from '../components/charts.jsx';
 import { Section, Stat, rowLink } from '../components/bits.jsx';
 import CostIcons, { PlainDebtIcon } from '../components/Cost.jsx';
 import TypeMatrix from '../components/TypeMatrix.jsx';
@@ -62,7 +62,7 @@ export default function Overview({ query = '' }) {
         <div>
           <Section title="Printed card types" id="ov-types">
             <div className="builder">
-              <Treemap label="Kingdom card names per printed type"
+              <Bars label="Kingdom card names per printed type"
                 items={s.byType.map(t => ({ key: t.key, label: t.key, value: t.count, href: cardsFilterHref({ types: [t.key] }) }))} />
             </div>
           </Section>
@@ -145,14 +145,6 @@ export default function Overview({ query = '' }) {
           </div>
         </Section>
       </div>
-
-      <Section title="Data checks" id="st-checks">
-        <ul className="dn-checks">
-          <li className={s.checks.copiesAgree ? 'ok' : 'bad'}>{s.checks.copiesAgree ? '✓' : '✗'} Physical cards add up the same way over cards and over piles ({s.copies.toLocaleString()} / {s.copiesFromCards.toLocaleString()}).</li>
-          <li className={s.checks.pileNamesAgree ? 'ok' : 'bad'}>{s.checks.pileNamesAgree ? '✓' : '✗'} Every pile lists as many card names as it says it holds.</li>
-          <li className={s.checks.relationshipsAgree ? 'ok' : 'bad'}>{s.checks.relationshipsAgree ? '✓' : '✗'} The {m.relationships.toLocaleString()} mechanic tags on the cards match the {(m.expectedRelationships ?? m.relationships).toLocaleString()} rows in the database.</li>
-        </ul>
-      </Section>
     </>
   );
 }

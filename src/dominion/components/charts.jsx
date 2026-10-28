@@ -2,7 +2,7 @@
    and every item may carry an `href` (its label becomes a link to the matching filtered list). Each chart answers a different question,
    so the page doesn't read as one chart repeated:
      Donut       how a whole splits between a few parts (share)
-     Treemap     many categories of very different size, at a glance
+     Bars        a plain ranking, label, bar, number
      Lollipop    a ranking where the exact value matters
      Segments    one whole split into a handful of parts, in a single bar
      Waffle      "one square per thing" — how many there are, and of what kind
@@ -40,36 +40,19 @@ export function Donut({ items, label, center }) {
   );
 }
 
-/* ---- Treemap: each category a rectangle whose AREA is its size (a recursive halving of the sorted list, alternating across and down) */
-function treemap(items, x, y, w, h, out = []) {
-  if (items.length === 1) { out.push({ ...items[0], x, y, w, h }); return out; }
-  const total = sum(items); let acc = 0, i = 0;
-  while (i < items.length - 1 && acc + items[i].value < total / 2) { acc += items[i].value; i++; }
-  i = Math.max(1, i);
-  const a = items.slice(0, i), b = items.slice(i), fa = sum(a) / total;
-  if (w >= h) { treemap(a, x, y, w * fa, h, out); treemap(b, x + w * fa, y, w * (1 - fa), h, out); } else { treemap(a, x, y, w, h * fa, out); treemap(b, x, y + h * fa, w, h * (1 - fa), out); }
-  return out;
-}
-const isSmall = t => t.w < 16 || t.h < 19;   // too little room for a name: its number stays, and the name is listed under the chart
-export function Treemap({ items, label }) {
-  const data = items.filter(i => i.value > 0).slice().sort((a, b) => b.value - a.value);
-  const tiles = data.length ? treemap(data, 0, 0, 100, 100) : [];
+/* ---- Bars: label, proportional bar, number. The plain ranking; all bars share one scale (`max`, default the largest value) */
+export function Bars({ items, label, max, format = fmt }) {
+  const top = max ?? Math.max(1, ...items.map(i => i.value));
   return (
-    <>
-    <div className="dn-treemap" role="group" aria-label={label}>
-      {tiles.map(t => {
-        const small = isSmall(t);
-        const style = { left: `${t.x}%`, top: `${t.y}%`, width: `${t.w}%`, height: `${t.h}%`, background: `color-mix(in srgb, ${t.color || typeColor(t.key)} 42%, transparent)`, borderColor: t.color || typeColor(t.key) };
-        const inner = <><span className="dn-tm-name">{t.label}</span><b>{fmt(t.value)}</b></>;
-        return t.href
-          ? <a key={t.key} href={t.href} className={'dn-tm-tile' + (small ? ' sm' : '')} style={style} title={`${t.label}: ${fmt(t.value)}`}>{inner}</a>
-          : <span key={t.key} className={'dn-tm-tile' + (small ? ' sm' : '')} style={style} title={`${t.label}: ${fmt(t.value)}`}>{inner}</span>;
-      })}
-    </div>
-    {tiles.some(isSmall) && (
-      <p className="meta dn-tm-more">The small tiles: {tiles.filter(isSmall).map((t, k) => <span key={t.key}>{k > 0 && ' · '}{t.href ? <a href={t.href}>{t.label}</a> : t.label} {fmt(t.value)}</span>)}</p>
-    )}
-    </>
+    <ol className="dn-bars" aria-label={label}>
+      {items.map(i => (
+        <li key={i.key ?? i.label}>
+          <span className="dn-bar-label"><Name i={i} /></span>
+          <span className="dn-bar-track" aria-hidden="true"><span style={{ width: `${Math.max(i.value ? 2 : 0, (i.value / top) * 100)}%` }} /></span>
+          <span className="dn-bar-value">{format(i.value)}</span>
+        </li>
+      ))}
+    </ol>
   );
 }
 

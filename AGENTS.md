@@ -203,7 +203,7 @@ technique is the best way to prove any refactor *doesn't* change what users see:
 - The `lists` flag also swaps the phone's game tables for `components/GameCards.jsx` (Last night and the Games page share the open/closed
   state with the table beside them), shows the form dots under each ladder name, and draws `RatingChart` at phone width with tappable name
   chips.
-- The Overview's charts live in `dominion/components/charts.jsx`, one chart type per question (donut, treemap, lollipop, segmented bar, waffle, columns, heat chips). Keep every number
+- The Overview's charts live in `dominion/components/charts.jsx`, one chart type per question (donut, plain bars for the printed types, lollipop, segmented bar, waffle, columns, heat chips). Keep every number
   as real text and every label a link where there is a filter for it; don't reach for a bar chart again just because it is the easy default.
 - `dominion/components/RandomizerPanel.jsx` is the whole working randomizer (options, roll, tiles with Lock/Re-roll, landscapes, setup notes). It is controlled, so the
   Randomizer page (state in the URL) and the Game night Kingdom step (state in the step; the roll is saved as `rolledQ`, the compact link form) share it.

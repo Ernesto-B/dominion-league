@@ -13,10 +13,13 @@ export default function LastNight({ games }) {
   const { day, date } = games[games.length - 1];
   const todays = games.filter(g => g.day === day).slice().reverse();
   const toggle = line => setOpen(o => { const n = new Set(o); n.has(line) ? n.delete(line) : n.add(line); return n; });
+  const cards = uxOn('lists') || uxOn('redesign');
+  const Wrap = uxOn('redesign') ? 'div' : Fragment, wrap = uxOn('redesign') ? { className: 'gview-cards' } : {};   // on a wide screen the redesign shows the cards, as the Games page does
   return (
     <>
       <h2>Last night, {long(date)}</h2>
-      <div className={'tablewrap' + (uxOn('lists') ? ' gtable' : '')}><table className="plain">
+      <Wrap {...wrap}>
+      <div className={'tablewrap' + (cards ? ' gtable' : '')}><table className="plain">
         <thead><tr><th></th><th className="l">Finish</th><th></th><th className="l">Elo change</th></tr></thead>
         <tbody>{todays.map(g => {
           const isOpen = open.has(g.line);
@@ -37,7 +40,8 @@ export default function LastNight({ games }) {
           );
         })}</tbody>
       </table></div>
-      {uxOn('lists') && <GameCards games={todays} open={open} toggle={toggle} />}
+      {cards && <GameCards games={todays} open={open} toggle={toggle} />}
+      </Wrap>
     </>
   );
 }
