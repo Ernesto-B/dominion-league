@@ -698,3 +698,10 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
 .night-card .order li{grid-template-areas:"nm up dn" "vp tie tie"}
 .night-card .order label.tie{justify-self:start}
 @media (max-width:520px){.night-steps li:not(.now) em{display:none}.night-steps li:not(.now){padding:7px 10px;flex:0 0 auto}.night-steps li.now{flex:1 1 auto}}
+
+/* --- ux "elo": the rating system preview on Rankings --- */
+.ratelab{margin-top:28px}
+.ratelab-dials{margin:12px 0}
+.ratelab-stats{margin:0 0 16px}
+.ratelab-table td,.ratelab-table th{white-space:nowrap}
+.ratelab h3{margin:20px 0 8px}
