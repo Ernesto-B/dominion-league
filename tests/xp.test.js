@@ -11,9 +11,10 @@ const D = (games, extra = {}) => ({ E: { start: 1000, scale: 400 }, games, seaso
 const king = [{ kind: 'card', id: 1 }, { kind: 'card', id: 2 }, { kind: 'landscape', id: 9 }];
 
 describe('levels', () => {
-  it('take about 90 XP each plus a gentle rise, and never skip or go down', () => {
-    expect([0, 89, 90, 364, 365, 1846, 1847, 12790, 12791, 33671].map(levelAt)).toEqual([1, 1, 2, 4, 5, 19, 20, 99, 100, 200]);
-    expect([2, 20, 50, 100, 200].map(xpForLevel)).toEqual([90, 1847, 5351, 12791, 33671]);
+  it('cost 90 XP up to level 9, then step up every tenth level to a cap of 350, and never skip or go down', () => {
+    expect([0, 89, 90, 359, 360, 2394, 2395, 23569, 23570, 58570].map(levelAt)).toEqual([1, 1, 2, 4, 5, 19, 20, 99, 100, 200]);
+    expect([2, 10, 20, 50, 100, 200].map(xpForLevel)).toEqual([90, 870, 2395, 8470, 23570, 58570]);
+    expect([9, 10, 19, 20, 89, 90, 91, 250].map(L => xpForLevel(L) - xpForLevel(L - 1))).toEqual([90, 150, 150, 175, 325, 350, 350, 350]);
     let last = -1; for (let L = 1; L <= 250; L++) { expect(xpForLevel(L)).toBeGreaterThan(last); last = xpForLevel(L); expect(levelAt(xpForLevel(L))).toBe(L); }
   });
 });
@@ -59,7 +60,7 @@ describe('computeXp', () => {
     const big = computeXp(D([game({ Me: 1, A: 2 }, { vp: { Me: 1000, A: 5 } })])).get('Me');
     expect(big.steps.filter(s => s.earned).map(s => s.level)).toEqual([5, 10]);
     expect(big.total).toBe(33 + 15 + 20 + 1010 + (30 + 10) + (30 + 20));   // 1,078, then the Apprentice (+10) and Adept (+20) badges on top of their 30 each
-    expect(big.level).toBe(13);
+    expect(big.level).toBe(11);
   });
   it('is only ever added to', () => {
     const x = computeXp(D([game({ Me: 4, A: 1, B: 2, C: 3 }), game({ Me: 4, A: 1, B: 2, C: 3 })])).get('Me');
@@ -88,7 +89,7 @@ describe('gameXp', () => {
     const rows = gameXp(computeXp(D([g])), g);
     expect(rows.map(r => r.name)).toEqual(['A', 'Me']);
     expect(rows[0].levelUp).toBeNull();
-    expect(rows[1].levelUp).toBe(12);   // 25 + 1,010 and two level badges expect(rows[1].xp).toBeGreaterThan(1000);
+    expect(rows[1].levelUp).toBe(11);   // 25 + 1,010 and two level badges expect(rows[1].xp).toBeGreaterThan(1000);
     expect(gameXp(null, g)).toEqual([]); expect(gameXp(computeXp(D([g])), null)).toEqual([]);
   });
   it('pays XP in a friendly game too', () => {

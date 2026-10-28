@@ -30,15 +30,17 @@ export const XP = {
 // the Renown track's badges: the level, and the XP a step pays on top of the standard badge XP
 export const LEVEL_STEPS = [{ level: 5, bonus: 10 }, { level: 10, bonus: 20 }, { level: 20, bonus: 40 }, { level: 50, bonus: 100 }, { level: 100, bonus: 250 }, { level: 200, bonus: 600 }];
 
-/* Total XP to reach a level: 90 for each level so far plus a gentle rise, so level 2 is 90, 20 is 1,847, 50 is 5,351, 100 is 12,791 and
-   200 is 33,671 (about 100 XP a game: level 20 in ~20 games, level 200 in ~330). Never skips a level and never goes down. */
-export const xpForLevel = L => Math.round(90 * (L - 1) + 0.4 * (L - 1) * (L - 2));
+/* What one level costs: 90 XP up to level 9, then a jump at every tenth level (150 from level 10, 175 from 20, 200 from 30, ... +25 a decade), flat inside
+   each decade and capped at 350 (from level 90 on). Total XP: level 10 is 870, 20 is 2,395, 50 is 8,470, 100 is 23,570, 200 is 58,570
+   (at about 200 XP a week: level 100 in ~2.3 years, 200 in ~5.6). Never skips a level and never goes down. */
+export const levelCost = L => (L < 2 ? 0 : L < 10 ? 90 : Math.min(350, 150 + 25 * (Math.floor(L / 10) - 1)));
+const CUM = [0, 0];   // CUM[L] = total XP to reach level L, grown on demand
+export function xpForLevel(L) { while (CUM.length <= L) CUM.push(CUM[CUM.length - 1] + levelCost(CUM.length)); return CUM[Math.max(1, L)]; }
 export function levelAt(xp) {
-  const x = Math.max(0, xp), u = (-89.6 + Math.sqrt(89.6 * 89.6 + 1.6 * x)) / 0.8;
-  let L = Math.max(1, Math.floor(u) + 1);
-  while (xpForLevel(L + 1) <= x) L++;
-  while (L > 1 && xpForLevel(L) > x) L--;
-  return L;
+  const x = Math.max(0, xp);
+  let hi = 2; while (xpForLevel(hi) <= x) hi *= 2;   // the level is below hi
+  let lo = 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (xpForLevel(mid) <= x) lo = mid; else hi = mid; }
+  return lo;
 }
 
 const PART_LABEL = {
