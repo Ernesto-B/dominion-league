@@ -33,7 +33,7 @@ export function Donut({ items, label, center }) {
         <text x="100" y="98" textAnchor="middle" className="dn-donut-n">{fmt(sum(data))}</text>
         <text x="100" y="118" textAnchor="middle" className="dn-donut-c">{center}</text>
       </svg>
-      <ol className="dn-legend">
+      <ol className="dn-legend dn-legend-2" style={{ '--rows': Math.ceil(data.length / 2) }}>
         {data.map(i => <li key={i.key}><i style={{ background: i.color }} aria-hidden="true" /><span className="dn-legend-name"><Name i={i} /></span><span className="dn-legend-n">{fmt(i.value)}</span><span className="dn-legend-p">{share(i.value, total)}</span></li>)}
       </ol>
     </div>
