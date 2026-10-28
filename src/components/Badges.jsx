@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import TierIcon from './TierIcon.jsx';
 import { achievements, grouped } from '../lib/achievements.js';
@@ -41,25 +41,32 @@ function Badge({ b, when }) {
   );
 }
 
-/* A ladder of badges as one box: the step you are on and how far to the next; opening it lists every step. */
+/* A ladder of badges as one box: the step you are on, a rail of every step (earned ones filled in, the next one marked) and how far to the
+   next; tapping the box slides open the detail (what each step asks for and when it was earned). */
 function Track({ t, when }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
   const cur = t.current, nx = t.next, ref = nx || cur;
+  const fill = Math.min(100, (t.got + (nx && nx.value != null ? Math.min(1, Math.max(0, nx.value / nx.target)) : 0)) / t.of * 100);
   const pct = nx && nx.value != null ? Math.max(0, Math.min(100, Math.round(nx.value / nx.target * 100))) : 100;
   return (
-    <li className={'badge-track ' + (cur ? 'got' : 'locked')}>
-      <details>
-        <summary>
-          <span className="badge-ico" aria-hidden="true">{icon(cur || ref)}</span>
-          <span className="badge-txt">
-            <b>{t.name} <span className="meta">{t.got} of {t.of}</span></b>
-            <small>{cur ? cur.name : 'Not started'}{nx ? <> → {nx.name}</> : ' · all done'}</small>
-            {nx && nx.value != null && <span className="mecard-bar badge-bar" role="img" aria-label={`${pct}% of the way to ${nx.name}`}><i style={{ width: pct + '%' }}></i></span>}
-          </span>
-        </summary>
+    <li className={'badge-track ' + (cur ? 'got' : 'locked') + (open ? ' open' : '')} onClick={e => { if (!e.target.closest('a')) setOpen(o => !o); }}>
+      <button type="button" className="badge-head" aria-expanded={open} aria-controls={id}>
+        <span className="badge-ico" aria-hidden="true">{icon(cur || ref)}</span>
+        <span className="badge-txt">
+          <b>{t.name} <span className="meta">{t.got} of {t.of}</span></b>
+          <small>{cur ? cur.name : 'Not started'}{nx ? <> → {nx.name}</> : ' · all done'}</small>
+        </span>
+        <span className="badge-chev" aria-hidden="true">▾</span>
+      </button>
+      <div className="badge-rail" role="img" aria-label={`${t.got} of ${t.of} steps${nx && nx.value != null ? `, ${pct}% of the way to ${nx.name}` : ''}`} style={{ '--fill': fill + '%' }}>
+        {t.steps.map((b, k) => <i key={b.id} className={b.earned ? 'got' : b === nx ? 'next' : ''} title={b.name} style={{ left: ((k + 1) / t.of * 100) + '%' }}></i>)}
+      </div>
+      <div className="badge-more" id={id}>
         <ol className="badge-steps">
           {t.steps.map(b => <li key={b.id} className={b.earned ? 'got' : 'locked'}><span aria-hidden="true">{b.earned ? '✓' : '○'}</span><span><b>{b.name}</b> <small>{b.hint}</small> {when(b)}</span></li>)}
         </ol>
-      </details>
+      </div>
     </li>
   );
 }
