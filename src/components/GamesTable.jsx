@@ -6,6 +6,8 @@ import SetIcon from './SetIcon.jsx';
 import TypePill from './TypePill.jsx';
 import LandscapePills from './LandscapePills.jsx';
 import SortableTable from './SortableTable.jsx';
+import GameCards from './GameCards.jsx';
+import { uxOn } from '../ux.js';
 
 // Sortable list of games, each row expandable into its per-player breakdown. `onEdit(line)` adds the
 // admin Edit column. Re-key it (e.g. on filter changes) to reset the sort and collapse every row.
@@ -15,7 +17,7 @@ export default function GamesTable({ games, onEdit, highlight }) {
   const wrap = useRef(null);
   useEffect(() => {
     if (highlight == null || !wrap.current) return;
-    const row = wrap.current.querySelector(`tr.grow[data-g="${highlight}"]`);
+    const row = [...wrap.current.querySelectorAll(`[data-g="${highlight}"]`)].find(e => e.offsetParent !== null);   // the table row or, on a phone with the card list, the card
     if (row) row.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [highlight]);
   const toggle = line => setOpen(o => { const n = new Set(o); n.has(line) ? n.delete(line) : n.add(line); return n; });
@@ -40,5 +42,6 @@ export default function GamesTable({ games, onEdit, highlight }) {
       ],
     };
   });
-  return <div ref={wrap}><SortableTable head={head} rows={rows} /></div>;
+  if (!uxOn('lists')) return <div ref={wrap}><SortableTable head={head} rows={rows} /></div>;
+  return <div ref={wrap}><div className="gtable"><SortableTable head={head} rows={rows} /></div><GameCards games={games} open={open} toggle={toggle} onEdit={onEdit} showDate highlight={highlight} /></div>;
 }

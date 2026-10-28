@@ -11,8 +11,9 @@ import FinishOrder from '../components/FinishOrder.jsx';
 import KingdomPicker from '../components/KingdomPicker.jsx';
 import { useCatalogLoad } from '../dominion/CatalogContext.jsx';
 import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
-import { CardText, ExpansionBadge, Chip } from '../dominion/components/bits.jsx';
-import { generate, toGameItems } from '../dominion/randomizer.js';
+import { CardText } from '../dominion/components/bits.jsx';
+import { DEFAULT_OPTIONS, generate, toGameItems } from '../dominion/randomizer.js';
+import RandomizerOptions from '../dominion/components/RandomizerOptions.jsx';
 import { impliedSets, resolveKingdom } from '../dominion/kingdom.js';
 
 const storage = () => { try { return window.sessionStorage; } catch { return null; } };
@@ -27,7 +28,8 @@ export default function Night() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [done, setDone] = useState(null);                 // { id } after a successful save
-  const [roll, setRoll] = useState({ expansions: [], landscapes: 0 });
+  const [roll, setRoll] = useState(DEFAULT_OPTIONS);          // every rule of the Randomizer, here too
+  const setRollOpts = patch => { setMsg(''); setRoll(r => ({ ...r, ...patch })); };
   const [showText, setShowText] = useState(false);
   const [now, setNow] = useState(Date.now());
 
@@ -49,7 +51,7 @@ export default function Night() {
     setSt(s => ({ ...s, kingdom, kingdomTouched: true, rolled, sets: [...new Set([...(rolled ? [] : s.sets), ...implied.sets])], landscapes: [...new Set([...(rolled ? [] : s.landscapes), ...implied.landscapes])] }));
   };
   const rollNow = () => {
-    const res = generate(catalog, { expansions: roll.expansions, landscapes: roll.landscapes });
+    const res = generate(catalog, roll);
     if (!res.ok) { setMsg(res.message); return; }
     setMsg(''); applyKingdom(toGameItems(res), res);
   };
@@ -65,6 +67,11 @@ export default function Night() {
     if (storage()) clearNight(storage(), gid);
     setMsg(''); setDone({ id: data });
     await reload();
+  };
+  // on the first step Back leaves the flow: to the page the viewer came from, or the rankings when there is none (a fresh tab)
+  const goBack = () => {
+    if (st.step !== 'players') { setSt(s => back(s)); return; }
+    if (window.history.length > 1) window.history.back(); else window.location.hash = hashFor('', gid);
   };
   const startOver = () => { if (storage()) clearNight(storage(), gid); setSt(blankNight()); setDone(null); setMsg(''); };
 
@@ -113,17 +120,13 @@ export default function Night() {
             {!catalog ? (cat.status === 'error' ? <p className="meta">The card list isn’t available right now. You can skip the kingdom and still save the game. <button type="button" className="ghost" onClick={cat.retry}>Try again</button></p> : <p className="meta">Loading the card list…</p>) : (
               <>
                 <p className="meta">Roll a kingdom, pick the cards yourself, or skip this step.</p>
-                <div className="controls">
-                  <button type="button" onClick={rollNow}>{st.rolled ? 'Roll again' : 'Roll a kingdom'}</button>
-                  <label className="f">Landscapes <select value={roll.landscapes} onChange={e => setRoll(r => ({ ...r, landscapes: Number(e.target.value) }))}>{[0, 1, 2, 3].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
-                </div>
-                <details className="dn-mech night-exp"><summary>Expansions: <span className="meta">{roll.expansions.length ? `${roll.expansions.length} chosen` : 'all of them'}</span></summary>
-                  <div className="dn-chips" style={{ marginTop: 8 }}>{catalog.ownedExpansions.map(e => <Chip key={e.name} pressed={roll.expansions.includes(e.name)} onClick={() => setRoll(r => ({ ...r, expansions: toggle(r.expansions, e.name) }))}><ExpansionBadge name={e.name} /></Chip>)}</div>
-                </details>
+                <RandomizerOptions catalog={catalog} opts={roll} setOpts={setRollOpts} rulesOpen foldExpansions />
+                <p className="night-roll"><button type="button" onClick={rollNow}>{st.rolled ? 'Roll again' : 'Roll a kingdom'}</button></p>
                 {msg && <p className="dn-rz-msg" role="alert">{msg}</p>}
                 {st.rolled && st.rolled.setup && <RolledNotes setup={st.rolled.setup} />}
                 <h3>{items.length ? 'Your kingdom — change it if you like' : 'Or pick by hand'}</h3>
                 <KingdomPicker items={items} onChange={(kingdom, implied) => setSt(s => ({ ...s, kingdom, rolled: null, kingdomTouched: true, sets: [...new Set([...s.sets, ...implied.sets])], landscapes: [...new Set([...s.landscapes, ...implied.landscapes])] }))} />
+                {items.length > 0 && <KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />}
               </>
             )}
           </>
@@ -138,8 +141,7 @@ export default function Night() {
                 <div className="dn-kchips">{kingdomCards.map(r => <KingdomChip key={r.id} r={r} plain />)}</div>
                 {kingdomLands.length > 0 && <div className="dn-kchips">{kingdomLands.map(r => <KingdomChip key={r.id} r={r} plain />)}</div>}
                 {st.rolled && st.rolled.setup && <RolledNotes setup={st.rolled.setup} />}
-                <label className="dn-check" style={{ margin: '10px 0' }}><input type="checkbox" checked={showText} onChange={e => setShowText(e.target.checked)} /> Show card text</label>
-                {showText && <ul className="dn-plain-list night-text">{resolved.filter(r => !r.missing).map(r => <li key={`${r.kind}:${r.id}`}><b>{r.obj.name}</b>{catalog && <CardText text={r.obj.text} hasAnyText={catalog.meta.textRecordCount > 0} />}</li>)}</ul>}
+                <KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />
               </>
             ) : <p className="meta">No kingdom was picked. Have a great game — come back here when it ends.</p>}
             <p className="night-players meta">{st.picked.join(' · ')}</p>
@@ -172,12 +174,22 @@ export default function Night() {
       </section>
 
       <div className="night-actions">
-        <button type="button" className="ghost" onClick={() => setSt(s => back(s))} disabled={st.step === 'players'}>← Back</button>
+        <button type="button" className="ghost" onClick={goBack}>← Back</button>
         {st.step === 'review'
           ? <button type="button" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save game'}</button>
           : <button type="button" onClick={() => { setMsg(''); setSt(s => advance(s)); }} disabled={!ok}>{st.step === 'kingdom' ? (items.length ? 'Next →' : 'Skip →') : st.step === 'play' ? 'Game over — scores →' : 'Next →'}</button>}
       </div>
       <p className="meta night-reset"><button type="button" className="linkish" onClick={startOver}>Start over</button></p>
+    </>
+  );
+}
+
+// "Show card text" and the text of every card and landscape in the kingdom: on the Kingdom step (to judge a roll) and at the table
+function KingdomText({ resolved, catalog, show, setShow }) {
+  return (
+    <>
+      <label className="dn-check" style={{ margin: '10px 0' }}><input type="checkbox" checked={show} onChange={e => setShow(e.target.checked)} /> Show card text</label>
+      {show && <ul className="dn-plain-list night-text">{resolved.filter(r => !r.missing).map(r => <li key={`${r.kind}:${r.id}`}><b>{r.obj.name}</b>{catalog && <CardText text={r.obj.text} hasAnyText={catalog.meta.textRecordCount > 0} />}</li>)}</ul>}
     </>
   );
 }

@@ -8,20 +8,18 @@ import { displayName, impliedSets, primaryType, resolveKingdom } from '../kingdo
 import { pilesPlayed } from '../playStats.js';
 import { useLeagueGames } from '../useLeagueGames.js';
 import {
-  CARD_COUNTS, DEFAULT_OPTIONS, REQUIRE_RULES, generate, kingdomFromParams, kingdomToParams, optionsFromParams, optionsToParams,
+  DEFAULT_OPTIONS, generate, kingdomFromParams, kingdomToParams, optionsFromParams, optionsToParams,
   rerollLandscape, rerollSlot, toGameItems,
 } from '../randomizer.js';
-import { toggle } from '../filters.js';
-import { PLURAL, expansionMeta } from '../constants.js';
-import { Chip, CardText, ExpansionBadge, LandscapePill, TypePills } from '../components/bits.jsx';
+import { expansionMeta } from '../constants.js';
+import { CardText, ExpansionBadge, LandscapePill, TypePills } from '../components/bits.jsx';
 import CostIcons from '../components/Cost.jsx';
-import ItemSearch from '../components/ItemSearch.jsx';
+import RandomizerOptions from '../components/RandomizerOptions.jsx';
 import { KingdomChip } from '../components/KingdomChips.jsx';
 import { uxOn } from '../../ux.js';
 import { renderKingdomImage, shareKingdomImage } from '../kingdomImage.js';
 
 const expansionName = e => expansionMeta(e).label;
-const ATTACK_CHOICES = [['', 'Any number of Attacks'], ['0', 'No Attacks'], ['1', 'At most 1 Attack'], ['2', 'At most 2 Attacks'], ['3', 'At most 3 Attacks']];
 
 /* The Kingdom randomizer. Everything — the options AND the kingdom that was rolled — lives in the URL
    (#/dominion/randomizer?exp=Seaside&c=...), so a kingdom can be shared, reopened, and left for a card page and come back
@@ -94,10 +92,6 @@ export default function Randomizer({ query = '' }) {
 
   useEffect(() => { if (fresh == null) return; const t = setTimeout(() => setFresh(null), 1800); return () => clearTimeout(t); }, [fresh]);
 
-  const expansions = catalog.ownedExpansions;
-  const rulesOn = (opts.maxAttacks != null ? 1 : 0) + (opts.reaction ? 1 : 0) + opts.require.length + (opts.favor ? 1 : 0);
-  const listsOn = opts.include.length + opts.exclude.length;
-  const itemsOf = ids => ids.map(id => ({ kind: 'card', id }));
   const changed = JSON.stringify(opts) !== JSON.stringify(DEFAULT_OPTIONS);
 
   return (
@@ -105,56 +99,7 @@ export default function Randomizer({ query = '' }) {
       <div className="head"><div><h1>Kingdom randomizer</h1><p className="lede">Roll a Kingdom for your next game. Choose the expansions and any rules, roll, then lock the cards you like and re-roll the rest.</p></div></div>
 
       <form className="builder dn-filters dn-rz-opts" aria-label="Randomizer options" onSubmit={e => { e.preventDefault(); roll(); }}>
-        <fieldset className="dn-fieldset"><legend>Expansions: <span className="meta">{opts.expansions.length ? `${opts.expansions.length} chosen` : 'all of them'}</span></legend>
-          <div className="dn-chips">{expansions.map(e => (
-            <Chip key={e.name} pressed={opts.expansions.includes(e.name)} onClick={() => setOpts({ expansions: toggle(opts.expansions, e.name) })}><ExpansionBadge name={e.name} /></Chip>
-          ))}</div>
-        </fieldset>
-
-        <div className="controls">
-          <label className="f">Kingdom cards <select value={opts.cards} onChange={e => setOpts({ cards: Number(e.target.value) })}>{[...CARD_COUNTS].sort((a, b) => a - b).map(n => <option key={n} value={n}>{n}</option>)}</select></label>
-          <label className="f">Landscapes <select value={opts.landscapes} onChange={e => setOpts({ landscapes: Number(e.target.value) })}>{[0, 1, 2, 3, 4].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
-        </div>
-
-        {opts.landscapes > 0 && (
-          <fieldset className="dn-fieldset"><legend>Landscape types: <span className="meta">{opts.landscapeTypes.length ? `${opts.landscapeTypes.length} chosen` : 'all of them'}</span></legend>
-            <p className="meta dn-rz-hint">Landscapes can come from any expansion, whichever ones are chosen above.</p>
-            <div className="dn-chips">{catalog.landscapeTypes.map(t => (
-              <Chip key={t} tone={t.toLowerCase()} pressed={opts.landscapeTypes.includes(t)} onClick={() => setOpts({ landscapeTypes: toggle(opts.landscapeTypes, t) })}>{PLURAL[t] || t}</Chip>
-            ))}</div>
-          </fieldset>
-        )}
-
-        <details className="dn-mech dn-rz-details">
-          <summary>Rules{rulesOn ? <span className="meta"> · {rulesOn} on</span> : null}</summary>
-          <div className="dn-rz-rules">
-            <label className="f">Attacks <select value={opts.maxAttacks ?? ''} onChange={e => setOpts({ maxAttacks: e.target.value === '' ? null : Number(e.target.value) })}>{ATTACK_CHOICES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
-            <label className="dn-check"><input type="checkbox" checked={opts.reaction} onChange={e => setOpts({ reaction: e.target.checked })} /> Include a Reaction whenever there is an Attack</label>
-            <fieldset className="dn-fieldset dn-rz-require"><legend>Make sure the kingdom has</legend>
-              {Object.entries(REQUIRE_RULES).map(([k, r]) => (
-                <label key={k} className="dn-check"><input type="checkbox" checked={opts.require.includes(k)} onChange={() => setOpts({ require: toggle(opts.require, k) })} /> {r.label}</label>
-              ))}
-              <p className="note" style={{ margin: '4px 0 0' }}>These use the recorded mechanics, so a card that does this but isn’t tagged won’t count towards it.</p>
-            </fieldset>
-            <label className={'dn-check' + (canFavor ? '' : ' dn-off')}><input type="checkbox" disabled={!canFavor} checked={opts.favor && canFavor} onChange={e => setOpts({ favor: e.target.checked })} /> Favor cards we’ve played less{canFavor ? '' : ' (once games with a kingdom are logged)'}</label>
-          </div>
-        </details>
-
-        <details className="dn-mech dn-rz-details">
-          <summary>Always include / never include{listsOn ? <span className="meta"> · {listsOn} chosen</span> : null}</summary>
-          <div className="dn-rz-lists">
-            <div>
-              <p className="meta dn-rz-listh">Always include</p>
-              <div className="dn-kchips">{resolveKingdom(catalog, itemsOf(opts.include)).map(r => <KingdomChip key={r.id} r={r} onRemove={() => setOpts({ include: opts.include.filter(id => id !== r.id) })} />)}</div>
-              <ItemSearch catalog={catalog} kind="card" taken={[...itemsOf(opts.include), ...itemsOf(opts.exclude)]} label="Add a card" onAdd={x => { if (opts.include.length >= opts.cards) return `That’s already ${opts.cards} cards.`; setOpts({ include: [...opts.include, x.obj.id] }); }} />
-            </div>
-            <div>
-              <p className="meta dn-rz-listh">Never include</p>
-              <div className="dn-kchips">{resolveKingdom(catalog, itemsOf(opts.exclude)).map(r => <KingdomChip key={r.id} r={r} onRemove={() => setOpts({ exclude: opts.exclude.filter(id => id !== r.id) })} />)}</div>
-              <ItemSearch catalog={catalog} kind="card" taken={[...itemsOf(opts.include), ...itemsOf(opts.exclude)]} label="Add a card" onAdd={x => setOpts({ exclude: [...opts.exclude, x.obj.id] })} />
-            </div>
-          </div>
-        </details>
+        <RandomizerOptions catalog={catalog} opts={opts} setOpts={setOpts} canFavor={canFavor} />
 
         <div className="controls dn-rz-go">
           <button type="submit">{state ? 'Roll a new kingdom' : 'Roll a kingdom'}</button>

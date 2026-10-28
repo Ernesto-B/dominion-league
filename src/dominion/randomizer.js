@@ -15,12 +15,19 @@
 import { pileMembers } from './model.js';
 import { LANDSCAPE_TYPES } from './constants.js';
 
+/* `tags` rules need a recorded mechanic (positive-only, see above); `coins` rules need a card whose PRINTED cost is that many coins
+   (no Debt), which is complete data, so those can't miss a card. */
 export const REQUIRE_RULES = {
-  village: { label: 'a Village (+Actions)', tags: ['village'] },
+  village: { label: 'a +Actions card (a Village)', tags: ['village'] },
   draw: { label: 'card drawing', tags: ['draw', 'terminal_draw'] },
   trash: { label: 'trashing', tags: ['trashing_from_hand', 'trashing_from_deck', 'trashing_from_play', 'trashing_from_discard'] },
-  buy: { label: 'a +Buy', tags: ['plus_buy'] },
+  buy: { label: 'a +Buy card', tags: ['plus_buy'] },
+  cost2: { label: 'a card costing $2', coins: 2 },
+  cost3: { label: 'a card costing $3', coins: 3 },
+  cost4: { label: 'a card costing $4', coins: 4 },
+  cost5: { label: 'a card costing $5', coins: 5 },
 };
+export const ruleIsExact = rule => REQUIRE_RULES[rule].coins != null;   // by printed cost, not by a recorded mechanic
 
 export const MAX_ATTACK_CHOICES = [0, 1, 2, 3];   // "no Attacks", "at most 1"... ; null = any number
 export const DEFAULT_OPTIONS = Object.freeze({
@@ -62,7 +69,11 @@ function pileInfos(catalog) {
   return out;
 }
 export const pileKeyOf = (catalog, cardId) => pileInfos(catalog).byCardId.get(cardId)?.key ?? null;
-const satisfies = (info, rule) => REQUIRE_RULES[rule].tags.some(t => info.tags.has(t));
+export const satisfiesRule = (info, rule) => {
+  const r = REQUIRE_RULES[rule];
+  return r.coins != null ? info.cards.some(c => c.coins === r.coins && c.debt === 0) : r.tags.some(t => info.tags.has(t));
+};
+const satisfies = satisfiesRule;
 
 // a slot is what callers and the UI see
 const toSlot = info => ({ key: info.key, name: info.name, expansion: info.expansion, cards: info.cards });

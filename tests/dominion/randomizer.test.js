@@ -10,7 +10,9 @@ const card = name => catalog.cards.find(c => c.name === name);
 const roll = (opts, seed = 1, extra = {}) => generate(catalog, opts, { rng: seededRng(seed), ...extra });
 const rolls = (opts, n = 150, extra = {}) => Array.from({ length: n }, (_, i) => roll(opts, i + 1, extra));
 const attacks = r => r.slots.filter(s => s.cards.some(c => c.types.includes('Attack'))).length;
-const has = (r, rule) => r.slots.some(s => s.cards.some(c => c.mechanicIds.some(t => REQUIRE_RULES[rule].tags.includes(t))));
+const has = (r, rule) => r.slots.some(s => s.cards.some(c => (REQUIRE_RULES[rule].coins != null
+  ? c.coins === REQUIRE_RULES[rule].coins && c.debt === 0
+  : c.mechanicIds.some(t => REQUIRE_RULES[rule].tags.includes(t)))));
 
 describe('the draw', () => {
   it('rolls ten distinct supply piles, cheapest first, and is repeatable for one seed', () => {

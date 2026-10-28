@@ -16,18 +16,23 @@ export default function RatingLab() {
   const [k, setK] = useState(DEFAULT_STEADY.k);
   const [target, setTarget] = useState(DEFAULT_STEADY.target);
   const params = { k, provisionalK: k * 2, target };
+  /* Tier thresholds shrink with K: the ladder's tiers (Knight 1250 ...) were set for K=200, so at K=100 each one sits half as far from
+     the starting rating. Otherwise a smaller K would make every tier twice as hard to reach. */
+  const scaledTiers = useMemo(() => D.tiers.map(t => ({ ...t, min: Math.round(D.E.start + (t.min - D.E.start) * (k / 200)) })), [D, k]);
+  const tierAt = r => scaledTiers.reduce((best, t) => (Math.round(r) >= t.min ? t : best), scaledTiers[0]);
   const lab = useMemo(() => {
     const steady = computeSteady(D.games, D.roster, params);
     const avg = list => (list.length ? list.reduce((a, b) => a + b, 0) / list.length : 0);
     const nowRated = D.ranked, steadyRated = steady.ranked;
     const aboveStart = elo => D.tiers.indexOf(D.tierFor(elo)) >= 1;   // past the first tier (Knight or higher)
+    const aboveStartSteady = r => r >= scaledTiers[1].min;
     return {
       steady, now: ladderStats(classicRecords(D.games)), then: ladderStats(steady.records),
       avgNow: avg(nowRated.map(p => p.elo)), avgSteady: avg(steadyRated.map(p => p.rating)),
-      knightsNow: nowRated.filter(p => aboveStart(p.elo)).length, knightsSteady: steadyRated.filter(p => aboveStart(p.rating)).length,
+      knightsNow: nowRated.filter(p => aboveStart(p.elo)).length, knightsSteady: steadyRated.filter(p => aboveStartSteady(p.rating)).length,
       byName: new Map(steadyRated.map(p => [p.name, p])),
     };
-  }, [D, k, target]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [D, k, target, scaledTiers]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!D.ranked.length) return null;
   const rows = D.ranked.map(p => ({ p, s: lab.byName.get(p.name) })).sort((a, b) => (a.s ? a.s.rank : 99) - (b.s ? b.s.rank : 99) || a.p.rank - b.p.rank);
@@ -45,6 +50,8 @@ export default function RatingLab() {
         <button type="button" className="ghost" onClick={reset} disabled={!changed}>Back to suggested</button>
       </div>
 
+      <p className="note" style={{ marginTop: 0 }}>Tiers in the preview scale with K: {scaledTiers.slice(1).map(t => `${t.name} ${t.min}`).join(' · ')}.</p>
+
       <div className="stats ratelab-stats" role="group" aria-label="How the two systems compare">
         <div className="stat"><b>{f0(lab.now.swing)} → {f0(lab.then.swing)}</b><span>typical points moved by one game</span></div>
         <div className="stat"><b>{pct(lab.now.erasesWin)} → {pct(lab.then.erasesWin)}</b><span>of losses that undo the player’s last win</span></div>
@@ -59,7 +66,7 @@ export default function RatingLab() {
           const move = s ? p.rank - s.rank : 0, vs = s ? s.rating - lab.avgSteady : 0;
           return (
             <tr key={p.name}>
-              <td className="l name"><TierIcon id={(s ? D.tierFor(s.rating) : p.tier).icon} size={22} alt="" /> {p.name}</td>
+              <td className="l name"><TierIcon id={(s ? tierAt(s.rating) : p.tier).icon} size={22} alt="" /> {p.name}</td>
               <td>{f0(p.elo)}</td><td className="dn-hide-sm">{p.rank}</td>
               <td><b>{s ? f0(s.rating) : '—'}</b></td>
               <td>{s ? s.rank : '—'}{move !== 0 && <span className={move > 0 ? 'up-t' : 'down-t'} title={move > 0 ? `up ${move} from now` : `down ${-move} from now`}> {move > 0 ? '▲' : '▼'}{Math.abs(move)}</span>}</td>

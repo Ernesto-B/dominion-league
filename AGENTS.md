@@ -188,6 +188,12 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   keyed on those classes, and the old Add Game dialog was verified to send the identical payload.
 - `npm run dev:fake` runs the whole site on in-memory data (`dev/fakeSupabase.js`, swapped in by `vite.fake.config.js`; never part of the
   real build). `dev/cdp.mjs` + `dev/ab-tasks.mjs` drive an emulated phone to compare A and B.
+- The `lists` flag also swaps the phone's game tables for `components/GameCards.jsx` (Last night and the Games page share the open/closed
+  state with the table beside them), shows the form dots under each ladder name, and draws `RatingChart` at phone width with tappable name
+  chips. The `elo` flag's `RatingLab` scales the tier thresholds with K (distance from the start rating x K/200), so a smaller K doesn't make
+  every tier harder to reach.
+- `dominion/components/RandomizerOptions.jsx` is the one options panel (expansions, counts, rules, include/exclude) used by the Randomizer
+  page and the Game night Kingdom step. Rules in `REQUIRE_RULES` are either mechanic `tags` (positive-only) or an exact printed `coins` cost.
 - Shared pieces extracted so the dialog and the Game night flow can't drift: `src/lib/gameForm.js` (VP sort, results, RPC arguments),
   `components/FinishOrder.jsx`, `components/EloPreview.jsx`. Flow state: `src/lib/night.js`.
 

@@ -72,6 +72,7 @@ export default function Rankings() {
       <Banner />
       {!rk.length ? <p className="empty">No rated games yet. Once the admin adds one, the rankings show up here.</p> : <>
         <Ladder ranked={rk} highlight={highlight} setHighlight={setHighlight} />
+        {uxOn('lists') && <p className="note dn-only-sm form-key"><span className="form"><i className="w"></i></span> strong finish <span className="form"><i className="m"></i></span> middling <span className="form"><i className="l"></i></span> weak — each player’s last five games, oldest first.</p>}
         <LastNight games={gl} />
         <h2>Rank tiers</h2>
         <TierLegend />

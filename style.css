@@ -646,10 +646,13 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
 
 /* --- ux "lists": denser lists and stacked tables on phones --- */
 .stack-sort{display:none}
+.gcards,.chart-keys{display:none}
 @media (max-width:720px){
   /* the ladder: one tight line per player (rank, name, Elo, last change); the bar and form dots stay on the player's page */
-  .ux-lists .lrow{grid-template-columns:30px 1fr auto 52px;grid-template-areas:"rk nm elo dl";row-gap:0;column-gap:8px;padding:7px 12px;min-height:52px}
-  .ux-lists .lrow .bar,.ux-lists .lrow .form{display:none}
+  .ux-lists .lrow{grid-template-columns:30px 1fr auto 52px;grid-template-areas:"rk nm elo dl" "rk fm elo dl";row-gap:3px;column-gap:8px;padding:8px 12px;min-height:52px}
+  .ux-lists .lrow .bar{display:none}
+  .ux-lists .lrow .form{display:flex;justify-content:flex-start;gap:5px}
+  .ux-lists .lrow .form i{width:9px;height:9px}
   .ux-lists .lrow .lelo{font-size:20px}
   .ux-lists .lrow .ldelta{grid-area:dl;text-align:right;font-size:14px}
   .ux-lists .lrow .lname{min-width:0;flex-wrap:nowrap;overflow:hidden}
@@ -670,6 +673,35 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
   .ux-lists table.stack td:first-child{font-weight:700;font-size:16px;text-align:left;justify-content:flex-start}
   .ux-lists table.stack td:first-child::before{display:none}
   .ux-lists table.stack td.wrap{min-width:0}
+  /* games as cards (GameCards.jsx) instead of a wide table */
+  .ux-lists .gtable{display:none}
+  .ux-lists .gcards{display:block;list-style:none;margin:0;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .gcard{padding:2px 14px 10px;border-top:1px solid var(--line);cursor:pointer}
+  .gcard:first-child{border-top:0}
+  .gcard-head{display:flex;align-items:center;gap:8px;min-height:44px}
+  .gcard-toggle{background:none;border:0;color:var(--ink);font:inherit;padding:0;display:flex;align-items:center;gap:8px;min-height:44px;min-width:44px;cursor:pointer}
+  .gcard-toggle .chev{display:inline-block;color:var(--muted);transition:transform .15s}
+  .gcard.open .gcard-toggle .chev{transform:rotate(90deg)}
+  .gcard-sets{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .gcard-rows{list-style:none;margin:0;padding:0}
+  .gcard-row{display:grid;grid-template-columns:36px 1fr auto;align-items:center;column-gap:8px;min-height:34px}
+  .gc-place{color:var(--muted);font-size:13px}
+  .gc-name{display:flex;align-items:center;gap:6px;min-width:0}
+  .gc-chg{font-weight:700;font-variant-numeric:tabular-nums}
+  .gc-sub{grid-column:2 / 4;color:var(--muted);font-size:13px;padding:0 0 8px}
+  .gcard-more{margin-top:4px;padding-top:8px;border-top:1px dashed var(--line);cursor:default}
+  .gcard.hl{background:color-mix(in srgb, var(--brass) 18%, transparent)}
+  /* the rating chart at phone width, its players as chips underneath */
+  .ux-lists .chart{overflow-x:visible}
+  .ux-lists .chart svg{width:100%;max-width:100%}
+  .ux-lists .chart text{font-size:13px}
+  .ux-lists .chart .ln{opacity:.55}
+  .ux-lists .chart.has-lit .ln:not(.on){opacity:.2}
+  .chart-keys{display:flex;list-style:none;margin:8px 0 0;padding:0 6px 6px;flex-wrap:wrap;gap:8px}
+  .chart-keys button{min-height:44px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+  .chart-keys button.on{border-color:var(--felt);background:var(--felt-soft)}
+  .chart-keys b{margin-left:4px}
+  .form-key .form{display:inline-flex;vertical-align:middle;margin:0 2px 0 6px}
 }
 
 /* --- ux "flow": the Game night page --- */
