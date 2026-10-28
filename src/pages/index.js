@@ -9,6 +9,7 @@ import Games from './Games.jsx';
 // The Collection and Admin are big and not everyone opens them, so they load on first visit (App renders pages inside <Suspense>).
 const Dominion = lazy(() => import('./Dominion.jsx'));
 const Admin = lazy(() => import('./Admin.jsx'));
+const Night = lazy(() => import('./Night.jsx'));   // ux experiment "flow": the guided way to log a game
 
 // Routes already ported to React; every route is React now.
-export const PAGES = { home: Rankings, season: Season, players: Players, h2h: H2H, records: Records, games: Games, dominion: Dominion, admin: Admin };
+export const PAGES = { home: Rankings, season: Season, players: Players, h2h: H2H, records: Records, games: Games, night: Night, dominion: Dominion, admin: Admin };

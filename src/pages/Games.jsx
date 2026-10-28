@@ -6,6 +6,7 @@ import GroupSwitcher from '../components/GroupSwitcher.jsx';
 import Banner from '../components/Banner.jsx';
 import GamesTable from '../components/GamesTable.jsx';
 import { takeKingdomDraft } from '../dominion/kingdomDraft.js';
+import { uxOn } from '../ux.js';
 
 // the Add/Edit dialog (with the kingdom picker and its catalog code) is only needed once someone opens it
 const GameModal = lazy(() => import('../components/GameModal.jsx'));
@@ -14,7 +15,7 @@ const GameModal = lazy(() => import('../components/GameModal.jsx'));
 let saved = { season: 'all', type: 'all', player: 'all', set: 'all' };
 
 export default function Games() {
-  const { D, me, enabledSets, arg } = usePage();
+  const { D, me, enabledSets, arg, gid, hashFor } = usePage();
   const [gf, setGf] = useState(saved);
   // null, or { editId, draft? } (editId null = a new game). Arriving from the Randomizer's "Use this kingdom" opens a new game already filled in.
   const [modal, setModal] = useState(() => { const d = me && me.is_admin ? takeKingdomDraft() : null; return d ? { editId: null, draft: d } : null; });
@@ -39,6 +40,7 @@ export default function Games() {
     <>
       <div className="head">
         <div><h1>Games</h1><p className="lede">Every table we've logged, newest first. Winners in bold.</p></div>
+        {canEdit && uxOn('flow') && <a className="btn ghost" href={hashFor('night', gid)} style={{ marginRight: 8 }}>Game night</a>}
         {canEdit && <button id="gAddBtn" className="iconbtn" type="button" onClick={() => setModal({ editId: null })}><img src="icons/nav/add-a-game.png" alt="Add a game" /></button>}
       </div>
       <GroupSwitcher route="games" />

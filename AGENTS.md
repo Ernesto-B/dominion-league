@@ -181,6 +181,16 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   key whenever the shape of the raw catalog rows changes. `React.lazy` splits the Collection, Admin, the Add Game dialog and a
   game's kingdom list out of the main bundle; `vite.config.js` gives React and the Supabase client their own long-cached chunks.
 
+## UX experiments (branch `ux-experiment`)
+
+- Every experiment sits behind a flag in `src/ux.js` (`?ux=none|all|nav,home,...`, remembered in localStorage, switchable from the footer),
+  and becomes a class on `<html>` (`ux-nav`, `ux-lists`, ...). With the flags off the site must behave exactly as on `main` — the CSS is all
+  keyed on those classes, and the old Add Game dialog was verified to send the identical payload.
+- `npm run dev:fake` runs the whole site on in-memory data (`dev/fakeSupabase.js`, swapped in by `vite.fake.config.js`; never part of the
+  real build). `dev/cdp.mjs` + `dev/ab-tasks.mjs` drive an emulated phone to compare A and B.
+- Shared pieces extracted so the dialog and the Game night flow can't drift: `src/lib/gameForm.js` (VP sort, results, RPC arguments),
+  `components/FinishOrder.jsx`, `components/EloPreview.jsx`. Flow state: `src/lib/night.js`.
+
 ## Game kingdoms (the Collection <-> the league)
 
 - A game's kingdom lives in `game_kingdom` (`supabase/schema.sql`): one row per card/landscape, `item_id` a Dominion catalog

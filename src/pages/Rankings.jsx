@@ -9,6 +9,8 @@ import TierIcon from '../components/TierIcon.jsx';
 import TierLegend from '../components/TierLegend.jsx';
 import LastNight from '../components/LastNight.jsx';
 import RatingChart from '../components/RatingChart.jsx';
+import MeCard from '../components/MeCard.jsx';
+import { uxOn } from '../ux.js';
 
 function Ladder({ ranked: rk, highlight, setHighlight }) {
   const { D, gid, hashFor } = usePage();
@@ -59,6 +61,7 @@ export default function Rankings() {
   return (
     <>
       <GroupSwitcher route="" />
+      {uxOn('home') && <MeCard ranked={rk} />}
       <div className="chips toprow">
         <SeasonChip />
         {last && <span className="chip">Last night <b>{short(last)}</b></span>}

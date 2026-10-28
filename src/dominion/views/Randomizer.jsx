@@ -12,12 +12,15 @@ import {
   rerollLandscape, rerollSlot, toGameItems,
 } from '../randomizer.js';
 import { toggle } from '../filters.js';
-import { PLURAL } from '../constants.js';
+import { PLURAL, expansionMeta } from '../constants.js';
 import { Chip, CardText, ExpansionBadge, LandscapePill, TypePills } from '../components/bits.jsx';
 import CostIcons from '../components/Cost.jsx';
 import ItemSearch from '../components/ItemSearch.jsx';
 import { KingdomChip } from '../components/KingdomChips.jsx';
+import { uxOn } from '../../ux.js';
+import { renderKingdomImage, shareKingdomImage } from '../kingdomImage.js';
 
+const expansionName = e => expansionMeta(e).label;
 const ATTACK_CHOICES = [['', 'Any number of Attacks'], ['0', 'No Attacks'], ['1', 'At most 1 Attack'], ['2', 'At most 2 Attacks'], ['3', 'At most 3 Attacks']];
 
 /* The Kingdom randomizer. Everything — the options AND the kingdom that was rolled — lives in the URL
@@ -72,6 +75,15 @@ export default function Randomizer({ query = '' }) {
 
   const copy = async () => {
     try { await navigator.clipboard.writeText(location.href); setCopied('Link copied'); } catch { setCopied('Couldn’t copy — copy the address from your browser’s address bar.'); }
+    setTimeout(() => setCopied(''), 3500);
+  };
+  const shareImage = async () => {
+    setCopied('Making the picture…');
+    try {
+      const blob = await renderKingdomImage(state, { title: 'Kingdom', subtitle: `${[...new Set(state.slots.map(s => s.expansion))].map(e => expansionName(e)).join(' · ')}` });
+      const how = await shareKingdomImage(blob, { name: 'kingdom.png', title: 'Dominion kingdom' });
+      setCopied(how === 'shared' ? '' : how === 'downloaded' ? 'Picture saved to your downloads' : '');
+    } catch { setCopied('The picture couldn’t be made on this device.'); }
     setTimeout(() => setCopied(''), 3500);
   };
   const logIt = () => {
@@ -159,6 +171,7 @@ export default function Randomizer({ query = '' }) {
             <div className="dn-rz-actions">
               <label className="dn-check"><input type="checkbox" checked={showText} onChange={e => setShowText(e.target.checked)} /> Show card text</label>
               <button type="button" className="ghost" onClick={copy}>Copy link</button>
+              {uxOn('share') && <button type="button" className="ghost" onClick={shareImage}>Share image</button>}
               {canLog && <button type="button" className="ghost" onClick={logIt} title="Open Add a game with this kingdom filled in">Use for a game →</button>}
               <span className="meta" role="status" aria-live="polite">{copied}</span>
             </div>

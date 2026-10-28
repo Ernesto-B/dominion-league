@@ -120,7 +120,7 @@ export default function Players() {
       <RatingChart names={rankedHere.map(x => x.name)} hot={p.name} highlight={highlight} onHover={n => setHover({ of: p.name, name: n })} />
       {opp.length > 0 && <>
         <h2>Against each opponent</h2>
-        <SortableTable head={[{ label: 'Opponent', cls: 'l' }, { label: 'Finished ahead' }, { label: 'Finished behind' }, { label: 'Share ahead' }]}
+        <SortableTable stack head={[{ label: 'Opponent', cls: 'l' }, { label: 'Finished ahead' }, { label: 'Finished behind' }, { label: 'Share ahead' }]}
           rows={opp.map(x => ({ key: x.o, cells: [{ node: <PlayerLink name={x.o} />, text: x.o, className: 'name' }, x.w, x.l, x.w + x.l ? pc(x.w / (x.w + x.l)) : ''] }))} />
         <p className="note">Counts tables where both of you played, rated games only. Tied finishes aren't counted either way.</p>
       </>}

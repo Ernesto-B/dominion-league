@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:fake": "vite --config vite.fake.config.js",
+    "build:fake": "vite build --config vite.fake.config.js",
+    "dev:ab": "node dev/ab-tasks.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",

@@ -12,6 +12,9 @@ import PageBoundary from './components/PageBoundary.jsx';
 import ScrollTopButton from './components/ScrollTopButton.jsx';
 import PopLayer from './components/PopLayer.jsx';
 import { popup } from './components/popup.js';
+import UxSwitch from './components/UxSwitch.jsx';
+import BottomNav from './components/BottomNav.jsx';
+import { uxOn } from './ux.js';
 
 function Shell() {
   const { state, boot } = useLeague();
@@ -59,9 +62,10 @@ function Shell() {
       <a className="skip" href="#main" onClick={skip}>Skip to content</a>
       <Header ready={ready ? { ...state, route } : null} hash={hash} />
       {body}
+      {ready && uxOn('nav') && <BottomNav ready={{ ...state, route }} hash={hash} />}
       {ready && (route.route === 'games' || route.route === 'dominion') && <ScrollTopButton />}
       <PopLayer />
-      <footer className="foot"><span id="foot">{ready ? 'Ratings are recalculated in your browser each time the page loads.' : ''}</span></footer>
+      <footer className="foot"><span id="foot">{ready ? 'Ratings are recalculated in your browser each time the page loads.' : ''}</span>{ready && <UxSwitch />}</footer>
     </>
   );
 }

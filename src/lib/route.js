@@ -4,10 +4,10 @@
    always means exactly that, not "group 'season', page edit/5".
    The Dominion collection is site-wide too (the same boxes whichever friend group is playing), so it also
    never carries a group segment: #/dominion/cards/<card id>. */
-export const ROUTES = ['home', 'season', 'players', 'h2h', 'records', 'games', 'dominion', 'admin'];
+export const ROUTES = ['home', 'season', 'players', 'h2h', 'records', 'games', 'night', 'dominion', 'admin'];
 export const GLOBAL_ROUTES = ['dominion', 'admin'];   // not scoped to a group
 // What a route is called on screen when that isn't just its capitalised id (the browser tab title uses this)
-export const ROUTE_TITLES = { dominion: 'Collection' };
+export const ROUTE_TITLES = { dominion: 'Collection', night: 'Game night' };
 
 /* `lastGid` is the group the viewer last picked. It stands in whenever the URL doesn't name one — a site-wide page
    (Dominion/Admin) or a bare #/records — so leaving to such a page and coming back doesn't reset the group.

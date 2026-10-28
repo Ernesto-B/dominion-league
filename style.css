@@ -593,3 +593,108 @@ tr.grow.hl td.chev + td{box-shadow:inset 3px 0 0 var(--brass),inset 0 1px 0 var(
 .matrix th{z-index:2}
 .matrix thead th:first-child{z-index:3}
 .matrix tbody td:first-child{z-index:1}
+
+/* ---------- UX experiments (src/ux.js). Everything an experiment adds is keyed on a class on <html> (.ux-nav, .ux-home, ...), so with
+   the switch off the stylesheet behaves exactly as it did. */
+button.linkish{background:none;border:0;padding:0;min-height:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer;display:inline}
+button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
+.uxswitch{display:block;margin-top:6px;font-size:13px}
+.uxswitch-list{display:grid;gap:2px;margin-top:6px}
+
+/* --- ux "nav": a bottom tab bar on phones in place of the hamburger menu --- */
+.brand,.bottomnav,.moresheet-back{display:none}
+@media (max-width:720px){
+  .ux-nav .nav-toggle,.ux-nav #nav{display:none}
+  .ux-nav .top-inner{justify-content:space-between;padding-top:10px;padding-bottom:10px}
+  .ux-nav .brand{display:block;font:800 18px var(--display);color:#E6EBF0;margin-right:auto}
+  .ux-nav .bottomnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0B1015;border-top:1px solid var(--line);padding:0 4px env(safe-area-inset-bottom)}
+  .ux-nav .bottomnav a,.ux-nav .bottomnav button{flex:1;min-width:0;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 2px;
+    background:none;border:0;border-radius:0;color:#9AA7B4;font:600 12px var(--text);text-decoration:none;cursor:pointer}
+  .ux-nav .bottomnav img{width:26px;height:26px;opacity:.75}
+  .ux-nav .bottomnav a[aria-current=page],.ux-nav .bottomnav button.on,.ux-nav .bottomnav button[aria-expanded=true]{color:#fff}
+  .ux-nav .bottomnav a[aria-current=page] img{opacity:1}
+  .ux-nav .bottomnav .dots{display:flex;gap:4px;align-items:center;height:26px}
+  .ux-nav .bottomnav .dots b{width:5px;height:5px;border-radius:50%;background:currentColor;display:block}
+  .ux-nav body,.ux-nav #root{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
+  .ux-nav .totop{bottom:calc(74px + env(safe-area-inset-bottom))}
+  .ux-nav .moresheet-back{display:flex;position:fixed;inset:0;z-index:60;background:rgba(6,9,13,.6);align-items:flex-end}
+  .ux-nav .moresheet{width:100%;background:#0F151B;border-top:1px solid var(--line);border-radius:16px 16px 0 0;padding:8px 16px calc(14px + env(safe-area-inset-bottom));max-height:80vh;overflow:auto}
+  .ux-nav .moresheet ul{list-style:none;margin:0;padding:0}
+  .ux-nav .moresheet li a{display:flex;align-items:center;gap:14px;min-height:52px;color:#E6EBF0;text-decoration:none;font:600 17px var(--text);border-bottom:1px solid var(--line)}
+  .ux-nav .moresheet li a img{width:28px;height:28px}
+  .ux-nav .moresheet li a[aria-current=page]{color:#fff;text-decoration:underline}
+  .ux-nav .moresheet-groups{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 0}
+  .ux-nav .moresheet-groups .meta{margin:0 6px 0 0}
+  .ux-nav .moresheet-user{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 0;color:#9AA7B4}
+}
+
+/* --- ux "home": the card that opens Rankings --- */
+.mecard{display:flex;gap:16px;align-items:center;margin:0 0 16px;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.mecard-main{min-width:0;flex:1}
+.mecard-main p{margin:0 0 4px}
+.mecard-hi{font:700 14px var(--text);color:var(--muted)}
+.mecard-rank{font-size:20px}
+.mecard-rank b{font:800 28px var(--display)}
+.mecard-elo{margin-left:10px;font-weight:600;color:var(--muted)}
+.mecard-line{font-size:14px}
+.mecard-last{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:14px;margin-top:8px !important}
+.mecard-last .form{display:inline-flex;gap:3px}
+.mecard-go{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px !important}
+.mecard-go .btn{min-height:44px;display:inline-flex;align-items:center;font-size:15px}
+@media (max-width:480px){.mecard{gap:12px;padding:14px}.mecard>img.tier{width:44px;height:44px;align-self:flex-start}.mecard-rank{font-size:17px}.mecard-rank b{font-size:26px}}
+.mecard-rank .tag{margin-left:8px}
+
+/* --- ux "lists": denser lists and stacked tables on phones --- */
+.stack-sort{display:none}
+@media (max-width:720px){
+  /* the ladder: one tight line per player (rank, name, Elo, last change); the bar and form dots stay on the player's page */
+  .ux-lists .lrow{grid-template-columns:30px 1fr auto 52px;grid-template-areas:"rk nm elo dl";row-gap:0;column-gap:8px;padding:7px 12px;min-height:52px}
+  .ux-lists .lrow .bar,.ux-lists .lrow .form{display:none}
+  .ux-lists .lrow .lelo{font-size:20px}
+  .ux-lists .lrow .ldelta{grid-area:dl;text-align:right;font-size:14px}
+  .ux-lists .lrow .lname{min-width:0;flex-wrap:nowrap;overflow:hidden}
+  .ux-lists .lrow .lname .tag{display:none}
+  /* the headline chips and story cards become one swipeable strip each instead of a tall stack */
+  .ux-lists .chips.toprow,.ux-lists .storyrow{flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:4px;margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}
+  .ux-lists .chips.toprow>*{flex:0 0 auto}
+  .ux-lists .story{flex:0 0 82%;max-width:none;scroll-snap-align:start}
+  /* tables marked "stack": each row a small card, each cell labelled by its column */
+  .ux-lists .stack-sort{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--muted);font-size:14px}
+  .ux-lists .stack-sort select{min-height:44px}
+  .ux-lists table.stack,.ux-lists table.stack tbody,.ux-lists table.stack tr,.ux-lists table.stack td{display:block}
+  .ux-lists table.stack thead{display:none}
+  .ux-lists table.stack tr{padding:10px 14px;border-top:1px solid var(--line)}
+  .ux-lists table.stack tr:first-child{border-top:0}
+  .ux-lists table.stack td{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:3px 0;border:0;text-align:right}
+  .ux-lists table.stack td::before{content:attr(data-label);color:var(--muted);font-size:13px;text-align:left;flex:none}
+  .ux-lists table.stack td:first-child{font-weight:700;font-size:16px;text-align:left;justify-content:flex-start}
+  .ux-lists table.stack td:first-child::before{display:none}
+  .ux-lists table.stack td.wrap{min-width:0}
+}
+
+/* --- ux "flow": the Game night page --- */
+.night-steps{display:flex;gap:6px;list-style:none;margin:0 0 14px;padding:0;overflow-x:auto}
+.night-steps li{flex:1 0 auto;display:flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;color:var(--muted);white-space:nowrap}
+.night-steps li span{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--line);font-size:12px;font-weight:700}
+.night-steps li.now{color:var(--ink);border-color:var(--ink);font-weight:600}
+.night-steps li.now span{background:var(--ink);color:var(--bg)}
+.night-steps li.done span{background:rgba(var(--t-victory),.6);color:#fff}
+.night-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 14px}
+.night-actions{position:sticky;bottom:0;z-index:30;display:flex;justify-content:space-between;gap:12px;padding:10px 0 calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 30%)}
+.night-actions button{min-height:48px;padding:10px 22px;font-size:16px}
+.night-reset{text-align:center;margin:4px 0 20px}
+.night-timer{margin:0 0 12px;font:800 40px var(--display)}
+.night-players{margin:14px 0 0}
+.night-text{display:grid;gap:12px;margin-top:6px}
+.night-notes{margin:10px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;gap:6px}
+.night-result{list-style:none;margin:12px 0;padding:0;display:grid;gap:4px;font-size:17px}
+.night-result b{display:inline-block;min-width:1.4em}
+.night-go{display:flex;flex-wrap:wrap;gap:10px}
+.night-go .btn{min-height:44px;display:inline-flex;align-items:center}
+@media (max-width:720px){.ux-nav .night-actions{bottom:calc(58px + env(safe-area-inset-bottom))}}
+
+.night-steps li em{font-style:normal}
+.night-exp{margin:12px 0 4px}
+.night-card .order li{grid-template-areas:"nm up dn" "vp tie tie"}
+.night-card .order label.tie{justify-self:start}
+@media (max-width:520px){.night-steps li:not(.now) em{display:none}.night-steps li:not(.now){padding:7px 10px;flex:0 0 auto}.night-steps li.now{flex:1 1 auto}}
