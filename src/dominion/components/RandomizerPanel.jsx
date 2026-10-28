@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { displayName, primaryType } from '../kingdom.js';
-import { DEFAULT_OPTIONS, generate, rerollLandscape, rerollSlot } from '../randomizer.js';
+import { DEFAULT_OPTIONS, formatSeed, newSeed, parseSeed, rerollLandscape, rerollSlot, rollSeeded } from '../randomizer.js';
 import { cardHref, landscapeHref } from '../links.js';
 import { CardText, ExpansionBadge, LandscapePill, TypePills } from './bits.jsx';
 import CostIcons from './Cost.jsx';
@@ -20,18 +20,19 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
   const [locked, setLocked] = useState(() => new Set());        // pile keys kept on a re-roll
   const [lockedL, setLockedL] = useState(() => new Set());      // landscape ids kept on a re-roll
   const [message, setMessage] = useState('');
+  const [seedText, setSeedText] = useState('');                // a seed typed in to repeat a roll; empty = a new random one
   const [showText, setShowText] = useState(false);
   const [fresh, setFresh] = useState(null);                     // the tile that just changed, briefly highlighted
   const resultRef = useRef(null);
   const canFavor = !!plays && plays.size > 0;
   const setOpts = patch => { setMessage(''); setOptsProp(patch); };
-  const gen = extra => generate(catalog, opts, { plays: opts.favor ? plays : null, ...extra });
 
   const roll = () => {
     // a locked card keeps its place on the table as well as its seat in the kingdom
     const at = (list, keyOf, held) => new Map(list.flatMap((x, i) => (held.has(keyOf(x)) ? [[keyOf(x), i]] : [])));
-    const res = gen({
-      keep: [...locked], keepLandscapes: [...lockedL],
+    if (seedText.trim() && parseSeed(seedText) == null) { setMessage('A seed is a number, like 182736.'); return; }
+    const res = rollSeeded(catalog, opts, parseSeed(seedText) ?? newSeed(), {
+      plays: opts.favor ? plays : null, keep: [...locked], keepLandscapes: [...lockedL],
       lockedAt: state ? at(state.slots, s => s.key, locked) : null, lockedLandscapeAt: state ? at(state.landscapes, l => l.landscape.id, lockedL) : null,
     });
     if (!res.ok) { setMessage(res.message); return; }
@@ -63,9 +64,11 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
 
         <div className="controls dn-rz-go">
           <button type="submit">{state ? 'Roll a new kingdom' : 'Roll a kingdom'}</button>
+          <label className="f dn-seed-in">Seed <input type="text" inputMode="numeric" size={8} placeholder="random" value={seedText} aria-describedby="rz-seed-help" onChange={e => setSeedText(e.target.value.replace(/[^\d]/g, '').slice(0, 9))} /></label>
           <button type="button" className="ghost" onClick={reset} disabled={!changed}>Reset options</button>
           {(locked.size > 0 || lockedL.size > 0) && state && <span className="meta">Locked cards stay when you roll again.</span>}
         </div>
+        <p className="meta dn-rz-seedhelp" id="rz-seed-help">Every roll has a seed. Roll again with the same seed and the same options and you get the same kingdom.</p>
         {message && <p className="dn-rz-msg" role="alert">{message}</p>}
       </form>
 
@@ -75,6 +78,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
             {heading ? <h2 id="rz-result">Your kingdom</h2> : <h3 id="rz-result" style={{ margin: 0 }}>Your kingdom</h3>}
             <div className="dn-rz-actions">
               <label className="dn-check"><input type="checkbox" checked={showText} onChange={e => setShowText(e.target.checked)} /> Show card text</label>
+              {state.seed != null && <span className="dn-seed" title="Roll again with this seed and the same options to get this exact kingdom">Seed <b>{formatSeed(state.seed)}</b></span>}
               {actions}
             </div>
           </div>

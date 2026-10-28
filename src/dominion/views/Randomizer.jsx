@@ -6,7 +6,7 @@ import { setKingdomDraft } from '../kingdomDraft.js';
 import { impliedSets, resolveKingdom } from '../kingdom.js';
 import { pilesPlayed } from '../playStats.js';
 import { useLeagueGames } from '../useLeagueGames.js';
-import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, optionsFromParams, optionsToParams, toGameItems } from '../randomizer.js';
+import { DEFAULT_OPTIONS, formatSeed, kingdomFromParams, kingdomToParams, optionsFromParams, optionsToParams, toGameItems } from '../randomizer.js';
 import { expansionMeta } from '../constants.js';
 import RandomizerPanel from '../components/RandomizerPanel.jsx';
 import { uxOn } from '../../ux.js';
@@ -42,7 +42,7 @@ export default function Randomizer({ query = '' }) {
   const shareImage = async () => {
     setCopied('Making the picture…');
     try {
-      const code = kingdomCode(state);
+      const code = state.seed != null ? formatSeed(state.seed) : kingdomCode(state);   // the roll's seed when it has one, else a fingerprint of the kingdom
       const blob = await renderKingdomImage(state, { title: 'Kingdom', code, subtitle: `${[...new Set(state.slots.map(s => s.expansion))].map(e => expansionName(e)).join(' · ')}` });
       const how = await shareKingdomImage(blob, { name: `kingdom-${code}.png`, title: 'Dominion kingdom' });
       setCopied(how === 'shared' ? '' : how === 'downloaded' ? 'Picture saved to your downloads' : '');

@@ -227,6 +227,10 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   only when there is something to say** (a new game with cards, or an edit that touched the kingdom), which keeps an older
   database working with a newer site. The game rows the engine sees carry `kingdom` (display only, never read by the maths).
 - A split pile (Knights, Gladiator / Fortune) is ONE kingdom slot and is logged as one card id; `displayName()` shows the pile.
+- Rolls are reproducible: `rollSeeded(catalog, options, seed)` (`randomizer.js`) gives the same kingdom for the same options and seed, because every random choice
+  comes from one seeded generator. The seed (up to six digits) is shown with the kingdom, kept in its link (`seed=`) and used in the picture's file name. Only a
+  fresh roll carries one: locked cards, a single re-roll, and "favor cards we've played less" all depend on something other than the seed, so they set `seed: null`.
+  Never use `Math.random` inside `generate` or its helpers; take the injected `rng`.
 - The randomizer's rules: *excluding* uses printed types (complete); *requiring* uses mechanic tags (positive-only — a card can
   be missed, never wrongly counted). Keep it that way. Setup notes (Bane, Platinum/Colony, Shelters, Ruins) follow the official rules.
 - Filters AND the rolled kingdom live in the URL hash query (`urlState.js` writes with `replaceState`; `useHash` only scrolls

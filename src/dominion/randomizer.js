@@ -50,6 +50,23 @@ export function seededRng(seed) {
   return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 
+/* ---------------------------------------------------------------- seeds
+   A roll is reproducible: the same options and the same seed always give the same kingdom (every random choice comes from one seeded
+   generator). The seed is a number of up to six digits, shown with the kingdom, kept in its link and used in the picture's file name.
+   It only means something for a FRESH roll: a roll that keeps locked cards starts from the previous kingdom, a single re-roll changes one
+   card, and "favor cards we've played less" depends on the games logged so far, so none of those carry a seed. */
+export const newSeed = (rnd = Math.random) => Math.floor(rnd() * 1000000);
+export const parseSeed = v => { const s = String(v ?? '').trim(); return /^\d{1,9}$/.test(s) ? Number(s) : null; };
+export const formatSeed = n => String(n).padStart(6, '0');
+
+/* generate(), but from a seed. The result carries `seed` when it can be reproduced from it, otherwise `seed: null`. */
+export function rollSeeded(catalog, options, seed, extra = {}) {
+  const res = generate(catalog, options, { ...extra, rng: seededRng(seed) });
+  if (!res.ok) return res;
+  const fresh = !(extra.keep && extra.keep.length) && !(extra.keepLandscapes && extra.keepLandscapes.length) && !extra.plays;
+  return { ...res, seed: fresh ? seed : null };
+}
+
 // ---------------------------------------------------------------- piles
 const infoCache = new WeakMap();
 function pileInfos(catalog) {
@@ -312,6 +329,7 @@ export function kingdomToParams(state, p = new URLSearchParams()) {
   state.slots.forEach(s => p.append('c', slotCardId(s)));
   state.landscapes.forEach(l => p.append('l', l.landscape.id));
   state.landscapes.forEach(l => { if (l.on) p.append('t', `${l.landscape.id}~${l.on}`); });
+  if (state.seed != null) p.set('seed', String(state.seed));
   if (state.setup.bane) p.set('bane', slotCardId(state.setup.bane));
   if (state.setup.platinumColony != null) p.set('pc', flag(state.setup.platinumColony));
   if (state.setup.shelters != null) p.set('sh', flag(state.setup.shelters));
@@ -331,7 +349,7 @@ export function kingdomFromParams(catalog, p) {
   const baneInfo = byCardId.get(p.get('bane'));
   const flagOf = k => (p.get(k) === '1' ? true : p.get(k) === '0' ? false : null);
   return {
-    slots, landscapes,
+    slots, landscapes, seed: parseSeed(p.get('seed')),
     setup: {
       bane: baneInfo && !seen.has(baneInfo.key) ? toSlot(baneInfo) : null, platinumColony: flagOf('pc'), shelters: flagOf('sh'),
       ruins: slots.some(s => s.cards.some(c => c.types.includes('Looter'))),
