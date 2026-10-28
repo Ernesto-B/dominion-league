@@ -28,7 +28,12 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
   const gen = extra => generate(catalog, opts, { plays: opts.favor ? plays : null, ...extra });
 
   const roll = () => {
-    const res = gen({ keep: [...locked], keepLandscapes: [...lockedL] });
+    // a locked card keeps its place on the table as well as its seat in the kingdom
+    const at = (list, keyOf, held) => new Map(list.flatMap((x, i) => (held.has(keyOf(x)) ? [[keyOf(x), i]] : [])));
+    const res = gen({
+      keep: [...locked], keepLandscapes: [...lockedL],
+      lockedAt: state ? at(state.slots, s => s.key, locked) : null, lockedLandscapeAt: state ? at(state.landscapes, l => l.landscape.id, lockedL) : null,
+    });
     if (!res.ok) { setMessage(res.message); return; }
     setMessage(''); setFresh(null); onState(res);
     requestAnimationFrame(() => resultRef.current?.scrollIntoView?.({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));

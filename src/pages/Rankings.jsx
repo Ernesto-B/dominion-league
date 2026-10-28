@@ -11,6 +11,7 @@ import LastNight from '../components/LastNight.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import MeCard from '../components/MeCard.jsx';
 import SinceVisit from '../components/SinceVisit.jsx';
+import { steadyPayout } from '../lib/steadyElo.js';
 import { uxOn } from '../ux.js';
 
 function Ladder({ ranked: rk, highlight, setHighlight }) {
@@ -59,7 +60,15 @@ export default function Rankings() {
   const last = gl.length ? gl[gl.length - 1].date : null;
   const R = D.records, nights = R.overview.nights;
 
+  // what one game pays at an even table of four, from the league's own settings (only the 'steady' model has this shape)
+  const pay4 = D.E.model === 'steady' ? steadyPayout(4, D.E).map(v => Math.round(v)) : null;
+  const sg = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v);
   const notes = <>
+    <div className="how-key">
+      <p><b>The fastest way up: finish in the top half.</b></p>
+      <p>Finish ahead of the middle of the table and your Elo goes up; finish behind it and it goes down. Winning pays a little extra on top. At an odd-sized table, the exact middle seat (3rd of 5) is roughly break-even.</p>
+      {pay4 && <p className="meta">A table of four, everyone rated the same: 1st {sg(pay4[0])} · 2nd {sg(pay4[1])} · 3rd {sg(pay4[2])} · 4th {sg(pay4[3])}.</p>}
+    </div>
     <h2>Rank tiers</h2>
     <TierLegend />
     <p className="note">Your tier follows your current Elo, so it can go down as well as up. The trophy is for winning a season and never goes away.</p>

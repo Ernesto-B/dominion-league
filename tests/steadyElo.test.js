@@ -97,6 +97,6 @@ describe('the shipped configuration', () => {
   });
   it('turns on both season bonuses (win streaks and VP)', async () => {
     const cfg = JSON.parse((await import('node:fs')).readFileSync('public/data/config.json', 'utf8'));
-    expect(cfg.season).toMatchObject({ streakBonus: 0.04, streakCap: 3, vpBonus: 0.4 });
+    expect(cfg.season).toMatchObject({ streakBonus: 0.04, streakCap: 3, vpWeight: 0.3 });
   });
 });

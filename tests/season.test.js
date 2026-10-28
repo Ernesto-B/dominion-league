@@ -29,23 +29,29 @@ describe('season score bonuses', () => {
     expect(D.games[2].sp.Ann - D.games[2].pts.Ann).toBeCloseTo(0.05, 10);   // the Friendly loss in between didn't break the streak
   });
 
-  it('the VP bonus is zero-sum at a table and rewards a close finish over a blowout', () => {
-    const close = run([g('Ann > Bob > Cy > Dee', { Ann: 60, Bob: 58, Cy: 30, Dee: 20 })], { vpBonus: 0.5 }).games[0];
-    const blow = run([g('Ann > Bob > Cy > Dee', { Ann: 60, Bob: 30, Cy: 30, Dee: 20 })], { vpBonus: 0.5 }).games[0];
-    const bonus = x => Object.fromEntries(Object.keys(x.sp).map(n => [n, x.sp[n] - x.pts[n]]));
-    expect(sum(Object.values(bonus(close)))).toBeCloseTo(0, 10);
-    expect(bonus(close).Bob).toBeGreaterThan(bonus(blow).Bob);
+  it('with vpWeight 0.3 a game’s points are 70% finish place and 30% share of the winner’s VP; a win is still worth exactly 1', () => {
+    const d = run([g('Ernesto > Dan', { Ernesto: 41, Dan: 38 })], { vpWeight: 0.3 }).games[0];
+    expect(d.sp.Ernesto).toBeCloseTo(1, 12); expect(d.sp.Dan).toBeCloseTo(0.3 * (38 / 41), 12);
   });
 
-  it('the VP bonus does not care how many VP a game has: the same shape of result earns the same bonus', () => {
-    const low = run([g('Ann > Bob > Cy', { Ann: 40, Bob: 30, Cy: 20 })], { vpBonus: 0.5 }).games[0], high = run([g('Ann > Bob > Cy', { Ann: 120, Bob: 90, Cy: 60 })], { vpBonus: 0.5 }).games[0];
+  it('a narrow loss keeps most of the VP share and a blowout keeps little (the 41-38 game that prompted this)', () => {
+    const near = run([g('Ernesto > Dan', { Ernesto: 41, Dan: 38 })], { vpWeight: 0.3 }).games[0], far = run([g('Ernesto > Dan', { Ernesto: 41, Dan: 10 })], { vpWeight: 0.3 }).games[0];
+    expect(near.sp.Dan).toBeGreaterThan(far.sp.Dan + 0.15); expect(near.sp.Dan).toBeLessThan(0.3);   // still worth less than any win
+  });
+
+  it('works at bigger tables: finish place still orders the points when VP is close', () => {
+    const d = run([g('Ann > Bob > Cy > Dee', { Ann: 60, Bob: 59, Cy: 58, Dee: 57 })], { vpWeight: 0.3 }).games[0];
+    expect(d.sp.Ann).toBeGreaterThan(d.sp.Bob); expect(d.sp.Bob).toBeGreaterThan(d.sp.Cy); expect(d.sp.Cy).toBeGreaterThan(d.sp.Dee);
+  });
+
+  it('does not care how many VP a game has: the same shape of result earns the same points', () => {
+    const low = run([g('Ann > Bob > Cy', { Ann: 40, Bob: 30, Cy: 20 })], { vpWeight: 0.3 }).games[0], high = run([g('Ann > Bob > Cy', { Ann: 120, Bob: 90, Cy: 60 })], { vpWeight: 0.3 }).games[0];
     Object.keys(low.sp).forEach(n => expect(high.sp[n]).toBeCloseTo(low.sp[n], 10));
   });
 
-  it('a game missing anyone’s VP gets no VP bonus, and negative VP counts as zero', () => {
-    expect(run([g('Ann > Bob > Cy', { Ann: 40, Bob: 30 })], { vpBonus: 0.5 }).games[0].sp.Ann).toBe(1);
-    const d = run([g('Ann > Bob', { Ann: 20, Bob: -6 })], { vpBonus: 0.5 }).games[0];
-    expect(d.sp.Bob - d.pts.Bob).toBeCloseTo(0.5 * (0 - 0.5), 10);
+  it('a game missing anyone’s VP uses finish points only, and negative VP counts as zero', () => {
+    expect(run([g('Ann > Bob > Cy', { Ann: 40, Bob: 30 })], { vpWeight: 0.3 }).games[0].sp.Bob).toBeCloseTo(0.5, 12);
+    expect(run([g('Ann > Bob', { Ann: 20, Bob: -6 })], { vpWeight: 0.3 }).games[0].sp.Bob).toBe(0);
   });
 
   it('feeds the standings and the per-game season score, and leaves average finish alone', () => {

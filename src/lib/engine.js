@@ -67,8 +67,8 @@ function compute(config, csvRows, today) {
   // whose weights (linear, topHalf, middle, win, target) may also be set here.
   const E = Object.assign({ k: 200, provisionalK: 300, provisionalGames: 10, start: 1000, scale: 400, model: 'classic' }, config.elo || {});
   const steady = E.model === 'steady';
-  // streakBonus / vpBonus are optional extras on a Regular game's season points (both 0 = the plain finishing points); see seasonPoints below
-  const S = Object.assign({ prior: 3, minGamesForRecords: 5, streakBonus: 0, streakCap: 3, vpBonus: 0 }, config.season || {});
+  // streakBonus / vpWeight shape a Regular game's season points (both 0 = the plain finishing points); see g.sp below
+  const S = Object.assign({ prior: 3, minGamesForRecords: 5, streakBonus: 0, streakCap: 3, vpWeight: 0 }, config.season || {});
   const warnings = [];
   const tiers = (Array.isArray(config.tiers) && config.tiers.length ? config.tiers : DEFAULT_TIERS)
     .map(t => ({ id: t.id, name: t.name || t.id, icon: t.icon || t.id, min: t.min == null ? -Infinity : +t.min }))
@@ -208,27 +208,27 @@ function compute(config, csvRows, today) {
      season — mirrors g.elo[name] = {before, after} exactly, same formula
      seasonStandings() uses, so a player's last g.score[name].after for a
      season always equals their final seasonStandings() score by construction. */
-  /* A Regular game's SEASON points per player (g.sp): the finishing points (1 for a win down to 0 for last) plus, when switched on,
-       - a win-streak bonus: streakBonus x the number of wins in a row beyond the first, counting back within the season, capped at
-         streakCap (so with 0.04 and a cap of 3: 2nd straight win +0.04, 3rd +0.08, 4th and on +0.12; any non-win resets it);
-       - a VP bonus: vpBonus x (your VP / the winner's VP, minus the table's average of that ratio). A RATIO to the winner, so a Prosperity
-         game won 80-60 counts the same as a Base game won 40-30, and CENTRED on the table, so it only moves points between the players at
-         a table. It needs everyone's VP, and is skipped for a game missing any.
-     With both at 0, g.sp[name] === g.pts[name] exactly. g.pts itself (average finish, used all over the site) is never changed. */
+  /* A Regular game's SEASON points per player (g.sp):
+       - finish points (1 for a win down to 0 for last), blended with each player's share of the winner's VP when vpWeight > 0:
+           sp = (1 - vpWeight) x finish points + vpWeight x (your VP / the winner's VP)
+         so with 0.3 a win is still worth 1, and a loss by 38 to 41 keeps most of that 30% instead of getting nothing. It is a RATIO to the
+         winner, so a Prosperity game won 80-60 counts the same as a Base game won 40-30. It needs everyone's VP and is skipped (plain
+         finish points) for a game missing any; negative VP counts as zero;
+       - plus, when streakBonus > 0, a win-streak bonus: streakBonus x the wins in a row beyond the first, counted within the season and
+         capped at streakCap (0.04 and 3: 2nd straight win +0.04, 3rd +0.08, 4th and on +0.12); any non-win resets it.
+     With both settings at 0, g.sp[name] === g.pts[name] exactly. g.pts itself (average finish, used all over the site) is never changed. */
   const winRun = {};   // `${name}|${seasonNum}` -> consecutive wins so far
   games.forEach(g => {
     g.sp = {};
     if (g.type !== 'Regular' || g.n < 2 || g.season == null) return;
     const top = Math.max(...g.names.map(n => g.playerVP[n] ?? -Infinity));
-    const useVP = S.vpBonus > 0 && top > 0 && g.names.every(n => g.playerVP[n] != null);
-    const ratio = {}; let mean = 0;
-    if (useVP) { g.names.forEach(n => { ratio[n] = Math.min(1, Math.max(0, g.playerVP[n] / top)); mean += ratio[n] / g.names.length; }); }
+    const useVP = S.vpWeight > 0 && top > 0 && g.names.every(n => g.playerVP[n] != null);
     g.names.forEach(a => {
       const key = a + '|' + g.season;
       winRun[key] = g.places[a] === 1 ? (winRun[key] || 0) + 1 : 0;
-      let bonus = S.streakBonus * Math.min(Math.max(winRun[key] - 1, 0), S.streakCap);
-      if (useVP) bonus += S.vpBonus * (ratio[a] - mean);
-      g.sp[a] = g.pts[a] + bonus;
+      const share = useVP ? Math.min(1, Math.max(0, g.playerVP[a] / top)) : 0;
+      const base = useVP ? (1 - S.vpWeight) * g.pts[a] + S.vpWeight * share : g.pts[a];
+      g.sp[a] = base + S.streakBonus * Math.min(Math.max(winRun[key] - 1, 0), S.streakCap);
     });
   });
   const seasonRunning = {}; // `${name}|${seasonNum}` -> { pts, games }

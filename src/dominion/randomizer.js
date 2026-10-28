@@ -124,9 +124,11 @@ function pick(candidates, o, plays, rng) {
 // ---------------------------------------------------------------- the draw
 /* generate(catalog, options, { rng, keep, keepLandscapes, plays })
      keep            pile keys that must stay (locked cards)        keepLandscapes   landscape ids that must stay
+     lockedAt        Map(pile key -> position): a locked card also keeps its PLACE on the table; the rest fill the other places cheapest first
+     lockedLandscapeAt  the same for landscapes (id -> position)
      plays           Map(pile key -> games played, see playStats.js pilesPlayed), used when options.favor is on
    Returns { ok: true, slots, landscapes: [{ landscape, on }], setup } or { ok: false, message }. */
-export function generate(catalog, options = {}, { rng = Math.random, keep = [], keepLandscapes = [], plays = null } = {}) {
+export function generate(catalog, options = {}, { rng = Math.random, keep = [], keepLandscapes = [], plays = null, lockedAt = null, lockedLandscapeAt = null } = {}) {
   const o = normalize(options);
   const { byKey, byCardId } = pileInfos(catalog);
   const pool = poolFor(catalog, o);
@@ -162,20 +164,33 @@ export function generate(catalog, options = {}, { rng = Math.random, keep = [], 
       if (swappable.length && rx.length) chosen[chosen.indexOf(swappable[Math.floor(rng() * swappable.length)])] = pick(rx, o, plays, rng);
     }
     const why = breaks(chosen, o, wanted);
-    if (!why) return finish(catalog, o, chosen, keepLandscapes, plays, rng);
+    if (!why) return finish(catalog, o, chosen, keepLandscapes, plays, rng, null, { lockedAt, lockedLandscapeAt });
     last = `${why}, and no kingdom was found that meets all of the rules together — try relaxing one.`;
   }
   return { ok: false, message: last };
 }
 
-/* Landscapes and the setup notes for a chosen set of piles. */
-function finish(catalog, o, chosen, keepLandscapes, plays, rng, prior = null) {
-  const slots = sortSlots(chosen.map(toSlot));
-  const picked = pickLandscapes(catalog, o, slots, keepLandscapes, rng, prior);
+/* Put sorted items in the table's places: an item with an entry in `lockedAt` takes that place (if it is free and in range), and the others
+   fill the remaining places in their sorted order. With no locks this is just the sorted list. */
+function placeLocked(sorted, keyOf, lockedAt) {
+  if (!lockedAt || !lockedAt.size) return sorted;
+  const n = sorted.length, out = new Array(n).fill(null), rest = [];
+  sorted.forEach(x => { const at = lockedAt.get(keyOf(x)); if (at != null && at >= 0 && at < n && !out[at]) out[at] = x; else rest.push(x); });
+  let r = 0;
+  return out.map(x => x || rest[r++]);
+}
+
+/* Landscapes and the setup notes for a chosen set of piles.
+   layout.keepOrder      the piles (and landscapes) are already in the order to show, so a re-roll of ONE card changes only that card
+                         and nothing around it moves;
+   layout.lockedAt, .lockedLandscapeAt   places held by locked cards (see generate). */
+function finish(catalog, o, chosen, keepLandscapes, plays, rng, prior = null, layout = {}) {
+  const slots = layout.keepOrder ? chosen.map(toSlot) : placeLocked(sortSlots(chosen.map(toSlot)), s => s.key, layout.lockedAt);
+  const picked = pickLandscapes(catalog, o, slots, keepLandscapes, rng, prior, layout);
   return { ok: true, slots, landscapes: picked, setup: setupFor(catalog, o, slots, rng, prior?.setup) };
 }
 
-function pickLandscapes(catalog, o, slots, keepLandscapes, rng, prior) {
+function pickLandscapes(catalog, o, slots, keepLandscapes, rng, prior, layout = {}) {
   const types = o.landscapeTypes.length ? o.landscapeTypes : LANDSCAPE_TYPES;
   // Landscapes come from every expansion that has them, whatever expansions the Kingdom cards are drawn from: the expansion
   // choice is about the Kingdom, and a landscape can be added to any game. Only the landscape TYPES chosen narrow them.
@@ -200,7 +215,8 @@ function pickLandscapes(catalog, o, slots, keepLandscapes, rng, prior) {
     }
     out.push({ landscape: l, on });
   }
-  return out;
+  if (layout.keepOrder) { const pos = new Map(chosen.map((l, i) => [l.id, i])); return out.sort((a, b) => pos.get(a.landscape.id) - pos.get(b.landscape.id)); }
+  return placeLocked(out, x => x.landscape.id, layout.lockedLandscapeAt);
 }
 
 /* The things players forget at setup, derived from the kingdom. All of these follow the official rules:
@@ -243,7 +259,7 @@ export function rerollSlot(catalog, options, state, index, { rng = Math.random, 
       const replaced = state.slots[index];
       const res = finish(catalog, { ...o, landscapes: state.landscapes.length }, next, state.landscapes.map(l => l.landscape.id), plays, rng, {
         landscapes: state.landscapes.map(l => (l.on && replaced.cards.some(c => c.id === l.on) ? { ...l, on: null } : l)), setup: state.setup,
-      });
+      }, { keepOrder: true });   // the new card takes the old one's place; nothing else moves
       return res;
     }
   }
@@ -259,7 +275,7 @@ export function rerollLandscape(catalog, options, state, index, { rng = Math.ran
   const swap = cands[Math.floor(rng() * cands.length)];
   const ids = state.landscapes.map((l, i) => (i === index ? swap.id : l.landscape.id));
   const slots = state.slots.map(s => infoOfSlot(catalog, s));
-  return finish(catalog, { ...o, landscapes: ids.length }, slots, ids, null, rng, { landscapes: state.landscapes.filter((_, i) => i !== index), setup: state.setup });
+  return finish(catalog, { ...o, landscapes: ids.length }, slots, ids, null, rng, { landscapes: state.landscapes.filter((_, i) => i !== index), setup: state.setup }, { keepOrder: true });
 }
 
 // ---------------------------------------------------------------- the link
@@ -308,10 +324,9 @@ export function kingdomFromParams(catalog, p) {
   const seen = new Set(), infos = [];
   for (const id of many(p, 'c')) { const i = byCardId.get(id); if (i && !seen.has(i.key)) { seen.add(i.key); infos.push(i); } }
   if (!infos.length) return null;
-  const slots = sortSlots(infos.slice(0, 12).map(toSlot));
+  const slots = infos.slice(0, 12).map(toSlot);   // in the order written: a locked card's place is part of the kingdom
   const hosts = new Map(many(p, 't').map(t => t.split('~')).filter(t => t.length === 2));
   const landscapes = [...new Set(many(p, 'l'))].map(id => catalog.landscapesById.get(id)).filter(Boolean)
-    .sort((a, b) => LANDSCAPE_TYPES.indexOf(a.type) - LANDSCAPE_TYPES.indexOf(b.type) || a.name.localeCompare(b.name))
     .map(landscape => { const on = hosts.get(landscape.id); return { landscape, on: landscape.type === 'Trait' && on && byCardId.get(on) && seen.has(byCardId.get(on).key) ? on : null }; });
   const baneInfo = byCardId.get(p.get('bane'));
   const flagOf = k => (p.get(k) === '1' ? true : p.get(k) === '0' ? false : null);

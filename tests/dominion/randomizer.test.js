@@ -209,3 +209,36 @@ describe('the link', () => {
   });
   it('maps any card of a pile to the pile', () => { expect(pileKeyOf(catalog, card('Fortune').id)).toBe(pileKeyOf(catalog, card('Gladiator').id)); expect(pileKeyOf(catalog, 'nope')).toBeNull(); });
 });
+
+describe('re-rolling one card and locking a place', () => {
+  const keys = r => r.slots.map(s => s.key);
+  it('re-rolling ONE card changes only that card, in the same place — nothing else moves', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const r = roll({ landscapes: 2 }, seed), i = seed % 10, next = rerollSlot(catalog, {}, r, i, { rng: seededRng(seed + 100) });
+      expect(next.ok).toBe(true);
+      keys(r).forEach((k, j) => { if (j === i) expect(keys(next)[j], `seed ${seed}`).not.toBe(k); else expect(keys(next)[j], `seed ${seed} slot ${j}`).toBe(k); });
+      expect(next.landscapes.map(l => l.landscape.id)).toEqual(r.landscapes.map(l => l.landscape.id));
+    }
+  });
+  it('re-rolling one landscape changes only that landscape, in the same place', () => {
+    const r = roll({ landscapes: 3 }, 7), next = rerollLandscape(catalog, {}, r, 1, { rng: seededRng(3) });
+    expect(keys(next)).toEqual(keys(r));
+    r.landscapes.forEach((l, j) => { if (j === 1) expect(next.landscapes[j].landscape.id).not.toBe(l.landscape.id); else expect(next.landscapes[j].landscape.id).toBe(l.landscape.id); });
+  });
+  it('a locked card keeps its PLACE across a whole new roll, and the rest fill the other places cheapest first', () => {
+    const r = roll({ landscapes: 3 }, 11), lockedSlots = [2, 9], lockedLand = [0];
+    const next = roll({ landscapes: 3 }, 12, {
+      keep: lockedSlots.map(i => r.slots[i].key), keepLandscapes: lockedLand.map(i => r.landscapes[i].landscape.id),
+      lockedAt: new Map(lockedSlots.map(i => [r.slots[i].key, i])), lockedLandscapeAt: new Map(lockedLand.map(i => [r.landscapes[i].landscape.id, i])),
+    });
+    lockedSlots.forEach(i => expect(next.slots[i].key).toBe(r.slots[i].key));
+    lockedLand.forEach(i => expect(next.landscapes[i].landscape.id).toBe(r.landscapes[i].landscape.id));
+    const free = next.slots.filter((_, i) => !lockedSlots.includes(i)), cost = s => s.cards[0].coins;
+    for (let i = 1; i < free.length; i++) expect(cost(free[i])).toBeGreaterThanOrEqual(cost(free[i - 1]));   // free places stay cheapest-first
+    expect(new Set(keys(next)).size).toBe(10);
+  });
+  it('a rolled kingdom keeps its order in the link, so a locked place survives sharing and reloading', () => {
+    const r = roll({}, 3), scrambled = { ...r, slots: [...r.slots.slice(5), ...r.slots.slice(0, 5)] };
+    expect(kingdomFromParams(catalog, kingdomToParams(scrambled)).slots.map(s => s.key)).toEqual(keys(scrambled));
+  });
+});
