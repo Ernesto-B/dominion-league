@@ -6,20 +6,23 @@ const soleLast = (g, place) => place === g.n && Object.values(g.places).filter(x
 
 const firstIndex = (results, ok) => { for (let i = 0; i < results.length; i++) if (ok(results[i], i)) return i; return -1; };
 
+/* `group` files a badge under a heading on the Player page. A badge with a `track` is one step of a ladder (games played, ranks): the page draws a
+   track as one box showing the current step and the next, with every step inside it. Ids never change, so "seen" lists keep working. */
+export const GROUPS = ['Winning', 'Comebacks and upsets', 'The table', 'Milestones', 'Seasons'];
 export const BADGES = [
-  { id: 'first-win', name: 'First blood', hint: 'Win a game outright.' },
-  { id: 'hat-trick', name: 'Hat trick', hint: 'Win three games in a row.' },
-  { id: 'redemption', name: 'Redemption', hint: 'Win the game right after finishing last.' },
-  { id: 'giant-slayer', name: 'Giant slayer', hint: 'Win at a table with someone rated 100+ Elo above you.' },
-  { id: 'big-swing', name: 'Big swing', hint: 'Gain 50 or more Elo in a single game.' },
-  { id: 'clean-sweep', name: 'Clean sweep', hint: 'Win every game of a night (two or more games).' },
-  { id: 'know-your-enemy', name: 'Know your enemy', hint: 'Play at least one game against every other player.' },
-  { id: 'regular', name: 'Regular', hint: 'Play 10 rated games.' },
-  { id: 'veteran', name: 'Veteran', hint: 'Play 25 rated games.' },
+  { id: 'first-win', group: 'Winning', name: 'First blood', hint: 'Win a game outright.' },
+  { id: 'hat-trick', group: 'Winning', name: 'Hat trick', hint: 'Win three games in a row.' },
+  { id: 'clean-sweep', group: 'Winning', name: 'Clean sweep', hint: 'Win every game of a night (two or more games).' },
+  { id: 'redemption', group: 'Comebacks and upsets', name: 'Redemption', hint: 'Win the game right after finishing last.' },
+  { id: 'giant-slayer', group: 'Comebacks and upsets', name: 'Giant slayer', hint: 'Win at a table with someone rated 100+ Elo above you.' },
+  { id: 'big-swing', group: 'Comebacks and upsets', name: 'Big swing', hint: 'Gain 50 or more Elo in a single game.' },
+  { id: 'know-your-enemy', group: 'The table', name: 'Know your enemy', hint: 'Play at least one game against every other player.' },
+  { id: 'regular', group: 'Milestones', track: 'games', trackName: 'Games played', name: 'Regular', hint: 'Play 10 rated games.', target: 10 },
+  { id: 'veteran', group: 'Milestones', track: 'games', trackName: 'Games played', name: 'Veteran', hint: 'Play 25 rated games.', target: 25 },
 ];
 
 /* `p` is a player from the engine (results, titles, peak); `tiers` D.tiers; `everyone` the other rated players' names. */
-export function achievements(p, tiers = [], everyone = []) {
+export function achievements(p, tiers = [], everyone = [], xp = null) {
   const rs = p.results || [];
   const at = i => (i >= 0 && rs[i] ? { date: rs[i].game.date, line: rs[i].game.line } : null);
   const out = new Map();
@@ -46,14 +49,40 @@ export function achievements(p, tiers = [], everyone = []) {
   out.set('regular', at(rs.length >= 10 ? 9 : -1));
   out.set('veteran', at(rs.length >= 25 ? 24 : -1));
 
-  const list = BADGES.map(b => ({ ...b, earned: out.get(b.id) || null }));
+  const list = BADGES.map(b => ({ ...b, earned: out.get(b.id) || null, ...(b.track === 'games' ? { value: rs.length } : {}) }));
+  const peak = rs.reduce((m, r) => Math.max(m, Math.round(r.after)), 0);
   // reaching each tier above the first; the date is the game that took the player over the line
   (tiers || []).forEach((t, k) => {
     if (!k || t.min == null) return;
-    list.push({ id: 'tier-' + t.id, name: `Reached ${t.name}`, hint: `Get to ${t.min} Elo.`, tier: t, earned: at(firstIndex(rs, r => Math.round(r.after) >= t.min)) });
+    list.push({ id: 'tier-' + t.id, group: 'Milestones', track: 'rank', trackName: 'Rank', name: `Reached ${t.name}`, hint: `Get to ${t.min} Elo.`, tier: t, target: t.min, value: peak, earned: at(firstIndex(rs, r => Math.round(r.after) >= t.min)) });
   });
-  if (p.titles > 0) list.push({ id: 'champion', name: p.titles > 1 ? `Season champion ×${p.titles}` : 'Season champion', hint: 'Win a season.', earned: { date: null, line: null } });
+  // the Level track comes from XP (lib/xp.js), which itself needs the other badges, so it is only added when the caller passes the XP in
+  if (xp) for (const st of xp.steps) list.push({ id: 'level-' + st.level, group: 'Milestones', track: 'level', trackName: 'Level', name: `Level ${st.level}`, hint: `Earn enough XP to reach level ${st.level}.`, target: st.level, value: xp.level, earned: st.earned });
+  if (p.titles > 0) list.push({ id: 'champion', group: 'Seasons', name: p.titles > 1 ? `Season champion ×${p.titles}` : 'Season champion', hint: 'Win a season.', earned: { date: null, line: null } });
   return list;
+}
+
+/* The list as the page draws it: sections in GROUPS order, each holding single badges and tracks (one entry per ladder, its steps inside).
+   A track knows its `current` step (the highest earned) and `next` (the first not yet), with `value` / `target` for a progress bar. Entries
+   with something earned come first inside a section; otherwise the order is the order they are defined in. */
+export function grouped(list) {
+  const secs = new Map(GROUPS.map(g => [g, []]));
+  for (const b of list) {
+    const items = secs.get(b.group) || secs.set(b.group, []).get(b.group);
+    if (!b.track) { items.push({ kind: 'badge', id: b.id, badge: b, got: b.earned ? 1 : 0, of: 1 }); continue; }
+    let t = items.find(x => x.kind === 'track' && x.id === b.track);
+    if (!t) items.push(t = { kind: 'track', id: b.track, name: b.trackName, steps: [] });
+    t.steps.push(b);
+  }
+  return [...secs].filter(([, items]) => items.length).map(([group, items]) => {
+    for (const t of items) if (t.kind === 'track') {
+      t.got = t.steps.filter(x => x.earned).length; t.of = t.steps.length;
+      t.current = [...t.steps].reverse().find(x => x.earned) || null;
+      t.next = t.steps.find(x => !x.earned) || null;
+    }
+    const sorted = items.map((x, i) => [x, i]).sort((a, b) => (b[0].got > 0) - (a[0].got > 0) || a[1] - b[1]).map(x => x[0]);
+    return { group, got: items.reduce((n, x) => n + x.got, 0), of: items.reduce((n, x) => n + x.of, 0), items: sorted };
+  });
 }
 
 // badges earned that the viewer hasn't been told about. A first look (seen === null) records everything and announces nothing.

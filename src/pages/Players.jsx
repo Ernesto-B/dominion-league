@@ -10,6 +10,7 @@ import TierProgressBar from '../components/TierProgressBar.jsx';
 import GameCards from '../components/GameCards.jsx';
 import H2HMatrix from '../components/H2HMatrix.jsx';
 import Badges from '../components/Badges.jsx';
+import XpPanel from '../components/XpPanel.jsx';
 import { rivalries } from '../lib/achievements.js';
 import RatingChart from '../components/RatingChart.jsx';
 import { useState } from 'react';
@@ -109,6 +110,7 @@ export default function Players() {
           {vic && <p><b>Favourite victim</b> <PlayerLink name={vic.o} />, finished behind {vic.w} of {vic.w + vic.l} times.</p>}
         </div>
       )}
+      <XpPanel name={p.name} />
       <Badges p={p} />
       <h2>Rating history</h2>
       <RatingChart names={rankedHere.map(x => x.name)} hot={p.name} highlight={highlight} onHover={n => setHover({ of: p.name, name: n })} />

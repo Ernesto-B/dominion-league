@@ -7,6 +7,7 @@ import HoverPopup from './HoverPopup.jsx';
 import { tierRange } from './TierLegend.jsx';
 import { steadyPayout } from '../lib/steadyElo.js';
 import { useMemo, useState } from 'react';
+import { xpOf } from '../lib/xp.js';
 import { achievements, earnedIds, loadBadgesSeen, newBadges, rivalries, saveBadgesSeen } from '../lib/achievements.js';
 
 /* The Rankings page opens with the signed-in player, not the whole ladder — where they stand, how far to the next spot, and how the
@@ -16,7 +17,7 @@ export default function MeCard({ ranked }) {
   const store = () => { try { return window.localStorage; } catch { return null; } };
   // badges the viewer hasn't been told about: a first look records what is already earned and says nothing; "Nice" marks the rest as seen
   const mineP = me && D.players.find(x => x.name === me.name);
-  const list = useMemo(() => (mineP && mineP.rated ? achievements(mineP, D.tiers, ranked.map(x => x.name)) : []), [mineP, D, ranked]);
+  const list = useMemo(() => (mineP && mineP.rated ? achievements(mineP, D.tiers, ranked.map(x => x.name), xpOf(D, mineP.name)) : []), [mineP, D, ranked]);
   const nem = useMemo(() => (mineP && mineP.rated ? rivalries(D.h2h(null), me.name).nem : null), [mineP, D, me]);
   const [fresh, setFresh] = useState(() => {
     const s = store(); if (!s || !list.length) return [];
@@ -24,6 +25,7 @@ export default function MeCard({ ranked }) {
     if (!seen) { saveBadgesSeen(s, gid, earnedIds(list)); return []; }
     return newBadges(list, seen);
   });
+  const xp = me ? xpOf(D, me.name) : null;
   if (!me) return null;
   const gotIt = () => { const s = store(); if (s) saveBadgesSeen(s, gid, earnedIds(list)); setFresh([]); };
   const s = meSummary(ranked, me.name, D.E.start, steadyPayout(4, D.E)[0]);
@@ -60,6 +62,7 @@ export default function MeCard({ ranked }) {
             <b className="mc-big">{ord(s.last.place)}<small> of {s.last.of}</small> <span className={'mc-delta ' + (s.last.delta > 0 ? 'up-t' : s.last.delta < 0 ? 'down-t' : '')}>{sgn(s.last.delta)}</span></b>
             <span className="mc-sub"><span className="form" aria-label="Recent form">{s.form.map((f, i) => <i key={i} className={f.tone} title={`${short(f.date)}: ${ord(f.place)} of ${f.of}`}></i>)}</span></span></div>
         )}
+        {xp && xp.perGame.length > 0 && <div className="mc-tile"><span className="mc-label">Level</span><b className="mc-big">{xp.level}<small> · {xp.total.toLocaleString()} XP</small></b><span className="mc-sub">{xp.need.toLocaleString()} XP to level {xp.level + 1}</span></div>}
         {s.streak >= 3 && <div className="mc-tile"><span className="mc-label">Win streak</span><b className="mc-big">{s.streak}</b><span className="mc-sub">wins in a row</span></div>}
         {nem && <div className="mc-tile"><span className="mc-label">Nemesis</span><b className="mc-big mc-name">{who(nem.o)}</b><span className="mc-sub">finished ahead {nem.l} of {nem.w + nem.l} times</span></div>}
       </div>
@@ -72,6 +75,7 @@ export default function MeCard({ ranked }) {
           <span className="mc-next-txt"><b>{s.next.need} Elo</b> to {s.next.tier.name}{s.next.wins ? <> — about {s.next.wins === 1 ? 'one win' : `${s.next.wins} wins`} at a table of four</> : null}</span>
         </div></HoverPopup>
       )}
+      {list.length > 0 && <p className="mc-badges"><a href={mine}>Badges <b>{list.filter(b => b.earned).length}</b> of {list.length}</a><span className="meta"> — see what’s next</span></p>}
       {fresh.length > 0 && <p className="badge-new" role="status"><span>New badge{fresh.length === 1 ? '' : 's'}: <b>{fresh.map(b => b.name).join(', ')}</b></span><button type="button" className="ghost" onClick={gotIt}>Nice</button></p>}
     </section>
   );

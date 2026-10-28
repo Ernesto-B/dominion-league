@@ -1,0 +1,96 @@
+import { describe, it, expect } from 'vitest';
+import { computeXp, gameXp, levelAt, xpForLevel, XP } from '../src/lib/xp.js';
+
+let line = 0;
+const game = (places, o = {}) => {
+  const names = Object.keys(places), n = names.length;
+  const pts = Object.fromEntries(names.map(x => [x, (n - places[x]) / (n - 1)]));
+  return { line: ++line, day: o.day ?? line, date: 'D' + line, n, names, places, pts, playerVP: o.vp || {}, vp: o.vp ? Math.max(...Object.values(o.vp)) : null, landscapes: o.landscapes || [], kingdom: o.kingdom || [], elo: o.elo };
+};
+const D = (games, extra = {}) => ({ E: { start: 1000, scale: 400 }, games, seasons: [], players: ['Me', 'A', 'B', 'C'].map(name => ({ name })), ...extra });
+const king = [{ kind: 'card', id: 1 }, { kind: 'card', id: 2 }, { kind: 'landscape', id: 9 }];
+
+describe('levels', () => {
+  it('follow 50 x L x (L-1) and never skip', () => {
+    expect([0, 99, 100, 299, 300, 999, 1000, 4499, 4500].map(levelAt)).toEqual([1, 1, 2, 2, 3, 4, 5, 9, 10]);
+    expect(xpForLevel(5)).toBe(1000);
+  });
+});
+
+describe('computeXp', () => {
+  it('pays each part of a four-player game by hand', () => {
+    const g = game({ Me: 1, A: 2, B: 3, C: 4 }, { vp: { Me: 40, A: 30 }, landscapes: ['Event'], kingdom: king });
+    const x = computeXp(D([g]));
+    expect(x.get('Me').perGame[0].parts).toEqual({ finish: 50, win: 15, surprise: 20, vp: 50, landscapes: 10, cards: 10 });   // 3+3 for cards, 4 for the landscape
+    expect(x.get('Me').total).toBe(155);
+    expect(x.get('A').perGame[0].parts).toMatchObject({ finish: 40, half: 8, surprise: 7, vp: 38 });   // 2nd of four is the top half; 30 VP + 10 x 30/40
+    expect(x.get('B').perGame[0].parts).toEqual({ finish: 30, landscapes: 10, cards: 10 });           // 3rd of four: no top-half prize, and it did no better than Elo expected
+    expect(x.get('C').total).toBe(20 + 10 + 10);                                                      // last place still earns
+  });
+  it('doubles finish + win XP on a win streak, up to 100 in all; cards only pay the first time', () => {
+    const x = computeXp(D([game({ Me: 1, A: 2, B: 3, C: 4 }, { kingdom: king }), game({ Me: 1, A: 2, B: 3, C: 4 }, { kingdom: king })]));
+    const second = x.get('Me').perGame[1].parts;
+    expect(second.streak).toBe(35);          // 65 doubled is 130, capped at 100
+    expect(second.cards).toBeUndefined();    // seen those already
+    expect(x.get('A').perGame[1].parts.streak).toBeUndefined();
+  });
+  it('pays an improvement bonus for finishing clearly higher than last time, and counts friendly games', () => {
+    const x = computeXp(D([game({ Me: 4, A: 1, B: 2, C: 3 }), game({ Me: 2, A: 1, B: 3, C: 4 })]));
+    expect(x.get('Me').perGame[1].parts.improve).toBe(20);   // last to 2nd of four: a rise of 2/3 of the table's points
+    expect(computeXp(D([game({ Me: 4, A: 1, B: 2, C: 3 }), game({ Me: 3, A: 1, B: 2, C: 4 })])).get('Me').perGame[1].parts.improve).toBe(10);   // last to 2nd last: 1/3
+    expect(x.get('Me').perGame).toHaveLength(2);
+  });
+  it('beating a much higher rating pays more than beating an equal one', () => {
+    const elo = { Me: { before: 900, after: 900 }, A: { before: 1100, after: 1100 } };
+    const hi = computeXp(D([game({ Me: 1, A: 2 }, { elo })])).get('Me').perGame[0].parts.surprise;
+    const eq = computeXp(D([game({ Me: 1, A: 2 })])).get('Me').perGame[0].parts.surprise;
+    expect(hi).toBeGreaterThan(eq);
+    expect(computeXp(D([game({ Me: 2, A: 1 })])).get('Me').perGame[0].parts.surprise).toBeUndefined();   // losing as the favourite earns none
+  });
+  it('a badge pays 30, a season title 100 + 30 on the last game of the season, and a level reached pays its badge', () => {
+    const g1 = game({ Me: 1, A: 2 }, { day: 1 }), g2 = game({ Me: 2, A: 1 }, { day: 9 });
+    const base = computeXp(D([g1, g2])).get('Me').total;
+    const badges = new Map([['Me', [{ id: 'first-win', earned: { date: 'D', line: g1.line } }]]]);
+    expect(computeXp(D([g1, g2]), badges).get('Me').total).toBe(base + XP.badge);
+    const t = computeXp(D([g1, g2], { seasons: [{ champion: 'me', end: 5 }] })).get('Me');
+    expect(t.total).toBe(base + XP.season + XP.badge);
+    expect(t.perGame[0].parts.season).toBe(XP.season);      // game 2 is after the season ended
+    const big = computeXp(D([game({ Me: 1, A: 2 }, { vp: { Me: 1000, A: 5 } })])).get('Me');
+    expect(big.level).toBe(5); expect(big.steps.find(s => s.level === 5).earned).not.toBeNull();
+    expect(big.total).toBe(30 + 15 + 20 + 1010 + 30);       // 1,075 and then the level-5 badge's 30
+  });
+  it('is only ever added to', () => {
+    const x = computeXp(D([game({ Me: 4, A: 1, B: 2, C: 3 }), game({ Me: 4, A: 1, B: 2, C: 3 })])).get('Me');
+    expect(x.perGame.every(g => g.xp > 0)).toBe(true);
+  });
+});
+
+describe('showing up and improving on yourself', () => {
+  it('pays 3 XP more for each game night in a row, once a night, and a missed night starts it over', () => {
+    const x = computeXp(D([game({ Me: 1, A: 2 }, { day: 1 }), game({ Me: 1, A: 2 }, { day: 2 }), game({ Me: 2, A: 1 }, { day: 2 }), game({ Me: 1, A: 2 }, { day: 3 }), game({ A: 1, B: 2 }, { day: 4 }), game({ Me: 1, A: 2 }, { day: 5 })]));
+    expect(x.get('Me').perGame.map(g => g.parts.attendance)).toEqual([undefined, 3, undefined, 6, undefined]);   // nights 1, 2, 2 again, 3; night 4 missed; night 5 is a fresh start
+    expect(x.get('A').perGame.map(g => g.parts.attendance)).toEqual([undefined, 3, undefined, 6, 9, 12]);
+  });
+  it('improvement compares with your own recent average, not just the last game', () => {
+    // 1st, 1st, 1st, then 2nd of four: worse than the average, so no bonus; and last, last, then 2nd of four is a rise of 2/3
+    const strong = computeXp(D([...[1, 1, 1].map(() => game({ Me: 1, A: 2, B: 3, C: 4 })), game({ Me: 2, A: 1, B: 3, C: 4 })])).get('Me');
+    expect(strong.perGame[3].parts.improve).toBeUndefined();
+    const weak = computeXp(D([...[4, 4].map(p => game({ Me: p, A: 1, B: 2, C: 3 })), game({ Me: 2, A: 1, B: 3, C: 4 })])).get('Me');
+    expect(weak.perGame[2].parts.improve).toBe(20);
+  });
+});
+
+describe('gameXp', () => {
+  it('lists what one game paid each player in finishing order, and flags a level reached in it', () => {
+    const g = game({ Me: 2, A: 1 }, { vp: { Me: 1000, A: 5 } });   // the loser's 1,000 VP is a level-up by itself
+    const rows = gameXp(computeXp(D([g])), g);
+    expect(rows.map(r => r.name)).toEqual(['A', 'Me']);
+    expect(rows[0].levelUp).toBeNull();
+    expect(rows[1].levelUp).toBe(5); expect(rows[1].xp).toBeGreaterThan(1000);
+    expect(gameXp(null, g)).toEqual([]); expect(gameXp(computeXp(D([g])), null)).toEqual([]);
+  });
+  it('pays XP in a friendly game too', () => {
+    const g = { ...game({ Me: 1, A: 2 }), type: 'Friendly' };
+    expect(gameXp(computeXp(D([g])), g).every(r => r.xp > 0)).toBe(true);
+  });
+});

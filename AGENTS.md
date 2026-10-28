@@ -209,6 +209,11 @@ technique is the best way to prove any refactor *doesn't* change what users see:
 - Badges and rivalries are pure (`lib/achievements.js`, tested): every badge is a fact about a player's results with the game that earned it, never expiring. The me card shows
   the next tier (`meSummary` `next`), the nemesis and a one-time "New badge" (seen ids in localStorage `dl.badges.<group>`; a first look announces nothing). Game night's
   "Undo and fix" deletes the game just saved and restores the form from `savedSt`.
+- Badges on the Player page are filed by `group` and a stepped badge has a `track` (`achievements.js` `grouped()`; one box per ladder showing the current and next step, opened to list every step). Open/closed is remembered in
+  localStorage `dl.badgesopen` (open by default). Level badges are only added when `achievements()` is given the player's XP.
+- XP (`lib/xp.js`, pure, tested; `XP` holds every number) is experience, never skill: finish, win, top half, win streak, improvement, beating Elo's odds, raw VP and VP share, landscapes, new kingdom cards,
+  badges and season titles, from every game including friendlies, and it only goes up. It is recomputed on each load (`leagueXp(D)`, cached per D) so retuning a number rewrites history. It reads the engine's
+  output and never changes it. Shown as `Lv N` on the ladder, a me-card tile and the Player page's `XpPanel`.
 - The snake draft (`dominion/draft.js`, pure and tested; `components/SnakeDraft.jsx`) is a mode of Game night's Kingdom step: a pool twice the kingdom size (first half under all the
   randomizer's rules), picks in snake order on one device, then `finishDraft` rebuilds the kingdom (with setup notes) the same shape as a roll. It is in memory only: a reload mid-draft starts over.
 - The Admin page has two tabs: People (new player, who plays in which group) and Settings (sets, groups, seasons).

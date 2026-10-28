@@ -11,6 +11,7 @@ import LastNight from '../components/LastNight.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import MeCard from '../components/MeCard.jsx';
 import SinceVisit from '../components/SinceVisit.jsx';
+import { xpOf } from '../lib/xp.js';
 import { steadyPayout } from '../lib/steadyElo.js';
 
 function Ladder({ ranked: rk, highlight, setHighlight }) {
@@ -23,7 +24,7 @@ function Ladder({ ranked: rk, highlight, setHighlight }) {
         const d = p.elo - D.E.start, wpx = Math.abs(d) / mx * 50;
         const lastR = p.results[p.results.length - 1];
         const dl = lastR ? lastR.after - lastR.before : 0;
-        const rm = p.rankDelta;
+        const rm = p.rankDelta, lv = xpOf(D, p.name);
         return (
           <div key={p.name} className={'lrow' + (highlight === p.name ? ' hot' : '')} data-p={p.name} role="row" style={{ '--i': Math.min(idx, 12) }}
             onMouseEnter={() => setHighlight(p.name)} onFocus={() => setHighlight(p.name)}>
@@ -34,6 +35,7 @@ function Ladder({ ranked: rk, highlight, setHighlight }) {
             </span>
             <a className="lname" href={hashFor('players', gid, encodeURIComponent(p.name))}>
               <TierIcon id={p.tier.icon} size={28} alt={p.tier.name + ' tier'} />{p.name}
+              {lv && lv.perGame.length > 0 ? <span className="lvl" title={`Level ${lv.level} · ${lv.total.toLocaleString()} XP`}>Lv {lv.level}</span> : null}
               {p.titles ? <span className="crown" title={`${p.titles} season title${p.titles > 1 ? 's' : ''}`}><TierIcon id="champion" size={20} alt="Season champion" />{p.titles > 1 ? '×' + p.titles : ''}</span> : null}
               {p.streak >= 3 ? <span className="pill hot" title={`${p.streak}-game win streak`}>🔥 {p.streak}</span> : null}
               {p.status === 'Provisional' ? <span className="tag">provisional</span> : null}

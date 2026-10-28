@@ -69,3 +69,24 @@ describe('rivalries', () => {
     expect(rivalries(hh, 'Nobody')).toEqual({ nem: null, vic: null });
   });
 });
+
+describe('grouped', () => {
+  it('files badges under headings and folds the stepped ones into tracks with a current and next step', async () => {
+    const { grouped } = await import('../src/lib/achievements.js');
+    const tiers = [{ id: 'peasant', name: 'Peasant', min: null }, { id: 'knight', name: 'Knight', min: 1125 }, { id: 'lord', name: 'Lord', min: 1275 }];
+    const rs = Array.from({ length: 12 }, (_, i) => win(i + 1, { before: 1100, after: 1130 }));
+    const secs = grouped(achievements(player(rs), tiers));
+    const ms = secs.find(s => s.group === 'Milestones');
+    const games = ms.items.find(i => i.id === 'games'), rank = ms.items.find(i => i.id === 'rank');
+    expect(games.current.id).toBe('regular'); expect(games.next.id).toBe('veteran'); expect(games.next.value).toBe(12); expect(games.next.target).toBe(25);
+    expect(rank.current.id).toBe('tier-knight'); expect(rank.next.id).toBe('tier-lord'); expect(rank.next.value).toBe(1130);
+    expect(secs.reduce((n, s) => n + s.of, 0)).toBe(achievements(player(rs), tiers).length);   // nothing dropped or doubled
+    expect(secs.map(s => s.group)).not.toContain('Seasons');                                    // empty headings are not drawn
+  });
+  it('puts entries with something earned first inside a section', async () => {
+    const { grouped } = await import('../src/lib/achievements.js');
+    const w = grouped(achievements(player([lose(1), win(2)]))).find(s => s.group === 'Comebacks and upsets');
+    expect(w.items[0].badge.id).toBe('redemption');   // earned, though defined first anyway; giant slayer and big swing stay behind it
+    expect(w.got).toBe(1);
+  });
+});
