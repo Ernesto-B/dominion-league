@@ -553,6 +553,10 @@ a.dn-kchip:hover{border-color:var(--muted)}
 /* A game reached from a link (#/games/<group>/<id>): tint its row and pulse once so the eye finds it. */
 tr.grow.hl td:not(.chev){background:color-mix(in srgb, var(--brass) 22%, transparent);box-shadow:inset 0 1px 0 var(--brass),inset 0 -1px 0 var(--brass)}
 tr.grow.hl td.chev + td{box-shadow:inset 3px 0 0 var(--brass),inset 0 1px 0 var(--brass),inset 0 -1px 0 var(--brass)}
+/* the opened game under a highlighted row is part of it: tint the whole expanded block, as the card is on a phone */
+tr.grow.hl + tr.gdetail > td{background:color-mix(in srgb, var(--brass) 14%, transparent);box-shadow:inset 3px 0 0 var(--brass),inset 0 -1px 0 var(--brass)}
+tr.grow.hl:has(+ tr.gdetail:not([hidden])) td:not(.chev){box-shadow:inset 0 1px 0 var(--brass)}
+tr.grow.hl:has(+ tr.gdetail:not([hidden])) td.chev + td{box-shadow:inset 3px 0 0 var(--brass),inset 0 1px 0 var(--brass)}
 @media (prefers-reduced-motion:no-preference){tr.grow.hl td:not(.chev){animation:hlpulse 1.6s ease-out 1}}
 @keyframes hlpulse{0%{background:color-mix(in srgb, var(--brass) 60%, transparent)}100%{background:color-mix(in srgb, var(--brass) 22%, transparent)}}
 
