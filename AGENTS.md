@@ -209,8 +209,8 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   page and the Game night Kingdom step. Rules in `REQUIRE_RULES` are either mechanic `tags` (positive-only) or an exact printed `coins` cost.
 - The `redesign` flag: Rankings opens with you (`MeCard`), then `SinceVisit` (what changed since the viewer last looked, from `lib/lastVisit.js`;
   a snapshot per group in localStorage `dl.seen.<group>`, shown until dismissed, never nudging), the ladder, last night, the chart and highlights,
-  with the explanations folded into "How ratings and tiers work". The Games filters fold on a phone (`components/FilterFold.jsx`), the desktop
-  ladder's bar becomes a thin line under the name, and "Game saved" says what the game did (`gameSummary` in `lib/night.js`). The Season table
+  with the explanations folded into "How ratings and tiers work". The Games filters fold on a phone (`components/FilterFold.jsx`), the Games page
+  shows game cards in a two-column grid on a wide screen (a Cards/Table switch, remembered in `dl.gamesview`), and "Game saved" says what the game did (`gameSummary` in `lib/night.js`). The Season table
   keeps six columns on a phone under `lists`.
 - Shared pieces extracted so the dialog and the Game night flow can't drift: `src/lib/gameForm.js` (VP sort, results, RPC arguments),
   `components/FinishOrder.jsx`, `components/EloPreview.jsx`. Flow state: `src/lib/night.js`.

@@ -3,7 +3,7 @@ import { useCatalog } from '../CatalogContext.jsx';
 import { useListScroll } from '../useUrlFilters.js';
 import { writeQuery } from '../urlState.js';
 import { chartFromQuery, chartToQuery } from '../sunburst.js';
-import { artifactHref, dominionHref, cardsFilterHref, landscapesFilterHref } from '../links.js';
+import { cardsFilterHref, landscapesFilterHref } from '../links.js';
 import { PLURAL, humanize } from '../constants.js';
 import BarChart from '../components/BarChart.jsx';
 import { Section, Stat, rowLink } from '../components/bits.jsx';
@@ -91,20 +91,19 @@ export default function Overview({ query = '' }) {
         <TypeMatrix matrix={s.typeMatrix} names={s.names} cards={catalog.cards} chart={chart} onChart={setChart} />
       </Section>
 
-      <Section title="Most common type combinations" id="st-combos">
-        <div className="tablewrap"><table className="plain dn-table">
-          <caption className="dn-sr">The most common combinations of printed types on a single card</caption>
-          <thead><tr><th className="l" scope="col">Printed together</th><th scope="col">Card names</th><th scope="col">Share of {s.names}</th></tr></thead>
-          <tbody>{s.combos.slice(0, 10).map(c => {
-            // a row counts cards whose printed types are EXACTLY this combination, so the link filters the same way
-            const href = cardsFilterHref({ types: c.key.split(' + '), typeMode: 'exact' });
-            return <tr key={c.key} {...rowLink(href)}><td className="l"><a href={href} title={`Show the ${c.count} cards that are exactly ${c.key}`}>{c.key}</a></td><td>{c.count}</td><td>{pct(c.count, s.names)}</td></tr>;
-          })}</tbody>
-        </table></div>
-        <p className="note">{s.multiType} of {s.names} card names have more than one printed type.</p>
-      </Section>
-
       <div className="grid2">
+        <Section title="Most common type combinations" id="st-combos">
+          <div className="tablewrap"><table className="plain dn-table">
+            <caption className="dn-sr">The most common combinations of printed types on a single card</caption>
+            <thead><tr><th className="l" scope="col">Printed together</th><th scope="col">Card names</th><th scope="col">Share of {s.names}</th></tr></thead>
+            <tbody>{s.combos.slice(0, 10).map(c => {
+              // a row counts cards whose printed types are EXACTLY this combination, so the link filters the same way
+              const href = cardsFilterHref({ types: c.key.split(' + '), typeMode: 'exact' });
+              return <tr key={c.key} {...rowLink(href)}><td className="l"><a href={href} title={`Show the ${c.count} cards that are exactly ${c.key}`}>{c.key}</a></td><td>{c.count}</td><td>{pct(c.count, s.names)}</td></tr>;
+            })}</tbody>
+          </table></div>
+          <p className="note">{s.multiType} of {s.names} card names have more than one printed type.</p>
+        </Section>
         <Section title="Landscapes" id="st-land">
           <div className="builder">
             <p className="meta" style={{ marginTop: 0 }}>By type</p>
@@ -114,16 +113,6 @@ export default function Overview({ query = '' }) {
             <p className="note" style={{ marginBottom: 0 }}>{s.landscapes} landscape designs, one card each. Not Kingdom cards.</p>
           </div>
         </Section>
-        <div>
-          <Section title="Artifacts" id="ov-art">
-            <div className="builder">
-              <ul className="dn-plain-list">
-                {catalog.artifacts.map(a => <li key={a.id}><a href={artifactHref(a.id)}><b>{a.name}</b></a> <span className="meta">· {a.expansion}</span></li>)}
-              </ul>
-              <p className="note" style={{ marginBottom: 0 }}>Artifacts are tracked on their own — they are neither Kingdom cards nor landscapes. <a href={dominionHref('landscapes')}>See them with the landscapes</a>.</p>
-            </div>
-          </Section>
-        </div>
       </div>
 
       <Section title="Coin cost" id="st-cost">

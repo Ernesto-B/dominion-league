@@ -14,7 +14,7 @@ export default function GameDetail({ game: g, onEdit }) {
   // Season score is a 0-1 ratio internally, but displayed x1000 so it reads as a whole-number
   // points total instead of a 3-decimal fraction.
   const sc = x => f0(x * 1000);
-  const sgnSc = x => (x > 0.5 ? '+' : x < -0.5 ? '−' : '') + Math.abs(Math.round(x * 1000));
+  const sgnSc = x => (x > 0.0005 ? '+' : x < -0.0005 ? '−' : '') + Math.abs(Math.round(x * 1000));
   const tone = (d, eps) => d > eps ? 'up-t' : d < -eps ? 'down-t' : '';
   return (
     <>

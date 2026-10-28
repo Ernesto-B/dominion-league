@@ -12,12 +12,16 @@ import { uxOn } from '../ux.js';
 // the Add/Edit dialog (with the kingdom picker and its catalog code) is only needed once someone opens it
 const GameModal = lazy(() => import('../components/GameModal.jsx'));
 
+const readView = () => { try { return localStorage.getItem('dl.gamesview') === 'table' ? 'table' : 'cards'; } catch { return 'cards'; } };
+
 // Filters live at module level so they survive navigating away and back, as they always have.
 let saved = { season: 'all', type: 'all', player: 'all', set: 'all' };
 
 export default function Games() {
   const { D, me, enabledSets, arg, gid, hashFor } = usePage();
   const [gf, setGf] = useState(saved);
+  const [view, setViewState] = useState(readView);   // 'cards' | 'table' on a wide screen (ux 'redesign'); a phone always gets cards
+  const setView = v => { setViewState(v); try { localStorage.setItem('dl.gamesview', v); } catch { /* not remembered */ } };
   // null, or { editId, draft? } (editId null = a new game). Arriving from the Randomizer's "Use this kingdom" opens a new game already filled in.
   const [modal, setModal] = useState(() => { const d = me && me.is_admin ? takeKingdomDraft() : null; return d ? { editId: null, draft: d } : null; });
   // Changing a filter resets the sort and collapses expanded rows, as the old full re-render did
@@ -72,14 +76,20 @@ export default function Games() {
           <FilterFold active={['season', 'type', 'player', 'set'].filter(k => gf[k] !== 'all').length}>
             <div className="controls" style={{ marginTop: 8 }}>{selects}</div>
           </FilterFold>
-          <p className="meta" role="status">{list.length} table{list.length === 1 ? '' : 's'}</p>
+          <div className="gview-bar">
+            <p className="meta" role="status">{list.length} table{list.length === 1 ? '' : 's'}</p>
+            <div className="gview-switch" role="group" aria-label="Show games as">
+              <button type="button" aria-pressed={view === 'cards'} onClick={() => setView('cards')}>Cards</button>
+              <button type="button" aria-pressed={view === 'table'} onClick={() => setView('table')}>Table</button>
+            </div>
+          </div>
         </>
       ) : (
         <div className="controls">{selects}
           <span className="meta">{list.length} table{list.length === 1 ? '' : 's'}</span></div>
       )}
       {modal && <Suspense fallback={null}><GameModal key={String(modal.editId)} editId={modal.editId} draft={modal.draft} onClose={() => setModal(null)} /></Suspense>}
-      {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${target ? target.line : ''}`} games={list} highlight={target ? target.line : undefined} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
+      {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${target ? target.line : ''}`} games={list} highlight={target ? target.line : undefined} view={view} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
     </>
   );
 }

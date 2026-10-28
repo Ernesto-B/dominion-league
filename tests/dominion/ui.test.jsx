@@ -422,8 +422,10 @@ describe('clickable table rows', () => {
 
 describe('Artifacts', () => {
   const art = catalog.artifacts.find(a => a.name === 'Horn');
-  it('link from the Overview and from the Landscapes page to their own page', () => {
-    for (const h of [render(''), render('landscapes')]) for (const a of catalog.artifacts) expect(h, a.name).toContain(`href="#/dominion/artifacts/${encodeURIComponent(a.id)}"`);
+  it('are listed on the Landscapes page (each linking to its own page) and no longer as a section of the Overview', () => {
+    const land = render('landscapes'), overview = render('');
+    for (const a of catalog.artifacts) { expect(land, a.name).toContain(`href="#/dominion/artifacts/${encodeURIComponent(a.id)}"`); expect(overview, a.name).not.toContain(`href="#/dominion/artifacts/${encodeURIComponent(a.id)}"`); }
+    expect(text(overview)).not.toMatch(/Artifacts are tracked on their own/);
   });
   it('have a details page with their text, how they are held and their tags', () => {
     const h = render(`artifacts/${encodeURIComponent(art.id)}`), t = text(h);

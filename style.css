@@ -49,6 +49,8 @@ a,button,select,summary,label,input{touch-action:manipulation}
 .skip:focus{left:8px;top:8px}
 
 .top{background:var(--ink);color:var(--bg)}
+/* on a wide screen the navbar stays pinned as the page scrolls (a phone has its own bottom bar); anchors land below it */
+@media (min-width:721px){.top{position:sticky;top:0;z-index:40}html{scroll-padding-top:76px}}
 @media (prefers-color-scheme:dark){.top{background:#0B1015;border-bottom:1px solid var(--line)}}
 .top-inner{max-width:1080px;margin:0 auto;padding:14px 16px;display:flex;gap:20px;align-items:center;flex-wrap:wrap}
 nav{display:flex;gap:2px;flex-wrap:wrap;flex:1 1 0;min-width:0}
@@ -647,6 +649,24 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
 @media (max-width:480px){.mecard{gap:12px;padding:14px}.mecard>img.tier{width:44px;height:44px;align-self:flex-start}.mecard-rank{font-size:17px}.mecard-rank b{font-size:26px}}
 .mecard-rank .tag{margin-left:8px}
 
+/* a game as a card (GameCards.jsx): used on phones, and on desktop as a grid (the 'redesign' flag) */
+.gcard{padding:2px 14px 10px;border-top:1px solid var(--line);cursor:pointer}
+.gcard:first-child{border-top:0}
+.gcard-head{display:flex;align-items:center;gap:8px;min-height:44px}
+.gcard-toggle{background:none;border:0;color:var(--ink);font:inherit;padding:0;display:flex;align-items:center;gap:8px;min-height:44px;min-width:44px;cursor:pointer}
+.gcard-toggle .chev{display:inline-block;color:var(--muted);transition:transform .15s}
+.gcard.open .gcard-toggle .chev{transform:rotate(90deg)}
+.gcard-sets{margin-left:auto;display:flex;gap:6px;align-items:center}
+.gcard-rows{list-style:none;margin:0;padding:0}
+.gcard-row{display:grid;grid-template-columns:36px 1fr auto;align-items:center;column-gap:8px;min-height:34px}
+.gc-place{color:var(--muted);font-size:13px}
+.gcard-row.me{background:color-mix(in srgb, var(--brass) 14%, transparent);border-radius:6px;margin:0 -6px;padding:0 6px}
+.gc-name{display:flex;align-items:center;gap:6px;min-width:0}
+.gc-chg{font-weight:700;font-variant-numeric:tabular-nums}
+.gc-sub{grid-column:2 / 4;color:var(--muted);font-size:13px;padding:0 0 8px}
+.gcard-more{margin-top:4px;padding-top:8px;border-top:1px dashed var(--line);cursor:default}
+.gcard.hl{background:color-mix(in srgb, var(--brass) 18%, transparent)}
+
 /* --- ux "lists": denser lists and stacked tables on phones --- */
 .stack-sort{display:none}
 .since{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--brass);border-radius:10px;padding:12px 16px;margin:0 0 16px}
@@ -659,15 +679,22 @@ details.how .how-key p{margin:0 0 6px}
 details.how .how-key p:last-child{margin:0}
 details.how>summary{font-size:16px;font-weight:600;color:var(--ink);padding:12px 0}
 details.how>h2:first-of-type{margin-top:8px}
-/* desktop ladder: the rating-vs-start bar becomes a thin line under each row, so the form dots and the numbers carry the row */
 @media (min-width:721px){
-  .ux-redesign .lhead,.ux-redesign .lrow{grid-template-columns:44px minmax(150px,1fr) 78px 64px 110px}
-  .ux-redesign .lhead span:nth-child(3){display:none}
-  .ux-redesign .lrow{row-gap:6px}
-  .ux-redesign .lrow .bar{grid-column:2;grid-row:2;height:4px;max-width:340px}
-  .ux-redesign .lrow .bar i{top:0;height:4px}
-  .ux-redesign .lrow .bar::before{top:-2px;bottom:-2px}
+  .ux-redesign .gview-cards .gtable,.ux-redesign .gview-table .gcards{display:none}
+  .ux-redesign .gview-cards .gcards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start;list-style:none;margin:0;padding:0}
+  .ux-redesign .gview-cards .gcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 18px 12px;transition:border-color .15s}
+  .ux-redesign .gview-cards .gcard:hover{border-color:color-mix(in srgb, var(--ink) 30%, var(--line))}
+  .ux-redesign .gview-cards .gcard-row{min-height:38px}
+  .ux-redesign .gview-cards .gc-name{font-size:16px}
+  .ux-redesign .gview-cards .gc-chg{font-size:16px}
 }
+@media (min-width:721px) and (max-width:900px){.ux-redesign .gview-cards .gcards{grid-template-columns:1fr}}
+.gview-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}
+.gview-bar p{margin:0}
+.gview-switch{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.gview-switch button{background:transparent;color:var(--ink);border-radius:0;min-height:36px;padding:0 16px}
+.gview-switch button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+@media (max-width:720px){.gview-switch{display:none}}
 /* the same dark pill as the group buttons (.pills a), with the add-a-game icon inside */
 .btn.gamenight{display:inline-flex;align-items:center;gap:10px;padding:4px 18px 4px 8px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;min-height:44px}
 .btn.gamenight img{height:34px;width:auto;border-radius:6px}
@@ -699,25 +726,9 @@ details.how>h2:first-of-type{margin-top:8px}
   .ux-lists table.stack td:first-child{font-weight:700;font-size:16px;text-align:left;justify-content:flex-start}
   .ux-lists table.stack td:first-child::before{display:none}
   .ux-lists table.stack td.wrap{min-width:0}
-  /* games as cards (GameCards.jsx) instead of a wide table */
+  /* games as cards (GameCards.jsx) instead of a wide table: the list container on a phone (the card styles themselves are above, for every width) */
   .ux-lists .gtable{display:none}
   .ux-lists .gcards{display:block;list-style:none;margin:0;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-  .gcard{padding:2px 14px 10px;border-top:1px solid var(--line);cursor:pointer}
-  .gcard:first-child{border-top:0}
-  .gcard-head{display:flex;align-items:center;gap:8px;min-height:44px}
-  .gcard-toggle{background:none;border:0;color:var(--ink);font:inherit;padding:0;display:flex;align-items:center;gap:8px;min-height:44px;min-width:44px;cursor:pointer}
-  .gcard-toggle .chev{display:inline-block;color:var(--muted);transition:transform .15s}
-  .gcard.open .gcard-toggle .chev{transform:rotate(90deg)}
-  .gcard-sets{margin-left:auto;display:flex;gap:6px;align-items:center}
-  .gcard-rows{list-style:none;margin:0;padding:0}
-  .gcard-row{display:grid;grid-template-columns:36px 1fr auto;align-items:center;column-gap:8px;min-height:34px}
-  .gc-place{color:var(--muted);font-size:13px}
-  .gcard-row.me{background:color-mix(in srgb, var(--brass) 14%, transparent);border-radius:6px;margin:0 -6px;padding:0 6px}
-  .gc-name{display:flex;align-items:center;gap:6px;min-width:0}
-  .gc-chg{font-weight:700;font-variant-numeric:tabular-nums}
-  .gc-sub{grid-column:2 / 4;color:var(--muted);font-size:13px;padding:0 0 8px}
-  .gcard-more{margin-top:4px;padding-top:8px;border-top:1px dashed var(--line);cursor:default}
-  .gcard.hl{background:color-mix(in srgb, var(--brass) 18%, transparent)}
   /* the rating chart at phone width, its players as chips underneath */
   .ux-lists .chart{overflow-x:visible}
   .ux-lists .chart svg{width:100%;max-width:100%}
