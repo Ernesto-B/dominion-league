@@ -6,7 +6,7 @@ import SortableTable from './SortableTable.jsx';
 const SECONDARY = new Set(['Win %', 'Avg points', 'Qualified', 'Elo change', 'Nights', 'Attendance']);
 const HEAD = [
   { label: 'Rank' }, { label: 'Player', cls: 'l' }, { label: 'Games' }, { label: 'Wins' }, { label: 'Win %' }, { label: 'Avg points' },
-  { label: 'Season score' }, { label: 'Qualified' }, { label: 'Seed' }, { label: 'Elo change' }, { label: 'Nights' }, { label: 'Attendance' },
+  { label: 'Season score', short: 'Score' }, { label: 'Qualified' }, { label: 'Seed' }, { label: 'Elo change' }, { label: 'Nights' }, { label: 'Attendance' },
 ];
 
 // Season standings (from D.seasonStandings()); green rows are playoff seeds.

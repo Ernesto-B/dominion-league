@@ -65,7 +65,7 @@ export default function SortableTable({ head, rows, empty, stack = false }) {
               'aria-sort': dir ? (dir === 'asc' ? 'ascending' : 'descending') : undefined,
               onClick: () => go(i),
               onKeyDown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(i); } },
-            } : {})}>{h.label}</th>
+            } : {})}>{h.short ? <><span className="th-full">{h.label}</span><span className="th-short" aria-hidden="true">{h.short}</span></> : h.label}</th>
         );
       })}</tr></thead>
       <tbody>
