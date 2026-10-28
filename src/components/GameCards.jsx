@@ -31,7 +31,7 @@ export default function GameCards({ games, open, toggle, onEdit, showDate = fals
               <TypePill type={g.type} />
               <span className="gcard-sets">{g.sets.map(s => (setIconPath(s) ? <SetIcon key={s} name={s} size={20} /> : <span key={s} className="meta">{s}</span>))}</span>
             </div>
-            <ol className="gcard-rows">
+            <ol className={'gcard-rows' + (g.names.length > 3 ? ' cols2' : '')} style={{ '--rows': Math.ceil(g.names.length / 2) }}>
               {ordered(g).map(n => {
                 const elo = g.elo && g.elo[n], d = elo ? elo.after - elo.before : null, t = D.tierFor(g.snapshot[n]);
                 const score = g.score && g.score[n], sd = score ? score.after - score.before : null, vp = g.playerVP && g.playerVP[n];

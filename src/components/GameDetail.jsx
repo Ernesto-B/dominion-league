@@ -1,4 +1,4 @@
-import { f0, sgn } from '../lib/format.js';
+import { f0, ord, sgn } from '../lib/format.js';
 import PlayerLink from './PlayerLink.jsx';
 import LandscapePills from './LandscapePills.jsx';
 import { ordered } from './GameFinish.jsx';
@@ -19,12 +19,13 @@ export default function GameDetail({ game: g, onEdit, me = null }) {
   return (
     <>
       <div className="tablewrap"><table className="plain">
-        <thead><tr><th className="l">Player</th><th>Elo</th><th>Change</th><th>Season score</th><th>Change</th><th>VP</th></tr></thead>
+        <thead><tr><th className="l">Place</th><th className="l">Player</th><th>Elo</th><th>Change</th><th>Season score</th><th>Change</th><th>VP</th></tr></thead>
         <tbody>{ordered(g).map(n => {
           const elo = g.elo && g.elo[n], score = g.score && g.score[n], vp = g.playerVP && g.playerVP[n];
           const d = elo ? elo.after - elo.before : null, sd = score ? score.after - score.before : null;
           return (
             <tr key={n} className={n === me ? 'gme' : undefined}>
+              <td className="l meta">{ord(g.places[n])}</td>
               <td className="name"><PlayerLink name={n} at={g.snapshot[n]} /></td>
               <td>{elo ? f0(elo.before) + ' → ' + f0(elo.after) : '—'}</td>
               <td className={tone(d, 0.5)}>{d != null ? sgn(d) : ''}</td>

@@ -158,14 +158,28 @@ describe('sortable landscape headers', () => {
   });
 });
 
-describe('bar chart label width', () => {
-  it('gives the coin-cost chart a narrow label column (its labels are small icons), and leaves the other charts alone', () => {
-    const html = render('');
-    const coin = html.match(/<ol class="dn-bars" aria-label="Kingdom card names per coin cost"[^>]*>/)[0];
-    expect(coin).toContain('--dn-bar-label:34px');
-    const others = [...html.matchAll(/<ol class="dn-bars" aria-label="([^"]+)"([^>]*)>/g)].filter(m => !/coin cost/.test(m[1]));
-    expect(others.length).toBeGreaterThan(3);
-    others.forEach(m => expect(m[2], m[1]).not.toContain('--dn-bar-label'));
+describe('the Overview charts', () => {
+  const html = render(''), t = text(html);
+  it('uses a different kind of chart for each question, not one bar chart repeated', () => {
+    expect(html).not.toContain('dn-bars');
+    for (const [cls, label] of [['dn-donut', 'Kingdom card names per expansion'], ['dn-treemap', 'Kingdom card names per printed type'], ['dn-lol', 'Physical Kingdom cards per expansion'],
+      ['dn-seg', 'Supply piles by number of card names'], ['dn-waffle-wrap', 'Landscape designs per type'], ['dn-cols', 'Kingdom card names per coin cost'], ['dn-heat', 'Card names recorded with each mechanic, most common first']])
+      expect(html, label).toMatch(new RegExp(`class="${cls}"[^>]*aria-label="${label}"`));
+  });
+  it('keeps every number as real text and the filter links', () => {
+    expect(t).toMatch(/Base Game.*\d+/); expect(t).toMatch(/Events.*48/); expect(t).toMatch(/Traits.*15/);
+    expect(html).toContain('href="#/dominion/cards?exp=');                                   // an expansion links to its cards
+    expect(html).toMatch(/href="#\/dominion\/landscapes\?[^"]*"[^>]*>Events</);              // a landscape type links to its list
+  });
+  it('shows the coin-cost columns in order, the Debt-only column at the end', () => {
+    const cols = html.match(/<ol class="dn-cols" aria-label="Kingdom card names per coin cost">[\s\S]*?<\/ol>/)[0];
+    const lis = cols.split('<li').slice(1);
+    expect(lis).toHaveLength(11);                                   // costs 1 to 10, then Debt-only
+    expect(lis[lis.length - 1]).toContain('Debt only'); expect(lis[0]).toContain('<b class="dn-col-n">1</b>');   // one card costs 1
+  });
+  it('draws the treemap with an area for every printed type, Knight included', () => {
+    const tm = html.match(/class="dn-treemap"[\s\S]*?<\/div>/)[0];
+    expect(tm).toContain('Action'); expect(tm).toContain('Knight'); expect(tm).toMatch(/width:[\d.]+%/);
   });
 });
 
