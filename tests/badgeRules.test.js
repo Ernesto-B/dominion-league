@@ -220,7 +220,7 @@ describe('expansion-mix badges (need the catalog)', () => {
     const b7 = run([g(false, ['e0p0', 'e1p0', 'e2p0', 'e3p0', 'e4p0', 'e5p0', 'e6p0', 'e0p1', 'e1p1', 'e2p1'])], { catalog: cat });
     expect(earned(b7, 'melting-pot')).not.toBeNull(); expect(b7['melting-pot'].value).toBe(7);
   });
-  it('Cultural Exchange and United Kingdoms are WINS with 5 and 8 expansions in one game', () => {
+  it('Cultural Exchange and Royal Conqueror (united-kingdoms) are WINS with 5 and 8 expansions in one game', () => {
     const five = ['e0p0', 'e1p0', 'e2p0', 'e3p0', 'e4p0', 'e0p1', 'e1p1', 'e2p1', 'e3p1', 'e4p1'];
     expect(earned(run([g(true, five)], { catalog: cat }), 'cultural-exchange')).not.toBeNull();
     expect(earned(run([g(false, five)], { catalog: cat }), 'cultural-exchange')).toBeNull();           // played, not won
@@ -328,7 +328,7 @@ describe('Dominion Legend and tiers', () => {
 });
 
 describe('tracks made from single badges', () => {
-  it('Big swing and Bigfoot (100+ Elo) share the Elo Swing track; War Zone then Trial by Fire share Warpath; Terraformer is the landscape mix track', () => {
+  it('The Rumored (50+ Elo) and Ascendant (100+ Elo) share the Acclaim track; War Zone then Trial by Fire share Warpath; Terraformer is the landscape mix track', () => {
     const list = Object.values(run([win2()], { catalog: mkCatalog(), baseXp: new Map() }));
     const t = id => list.find(b => b.id === id);
     expect([t('big-swing').track, t('bigfoot').track]).toEqual(['swing', 'swing']);

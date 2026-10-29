@@ -41,12 +41,12 @@ export const BADGES = [
   { id: 'god-slayer', group: 'Comebacks and upsets', track: 'slayer', trackName: 'Challenger', tier: 'rare', name: 'Regicide', hint: 'Win at a table with someone rated 200+ Elo above you.', bonus: 50 },
   { id: 'phoenix', group: 'Comebacks and upsets', tier: 'epic', name: 'The Phoenix', hint: 'Win a rated game of 3 or more as the lowest-rated player at the table.', bonus: 75 },
   { id: 'the-chosen-one', group: 'Comebacks and upsets', tier: 'legendary', name: 'The Chosen One', hint: 'Win a 6-player rated game as the lowest-rated player at the table.', bonus: 500 },
-  { id: 'big-swing', group: 'Comebacks and upsets', track: 'swing', trackName: 'Elo Swing', tier: 'uncommon', name: 'Big swing', hint: 'Gain 50 or more Elo in a single game.' },
-  { id: 'bigfoot', group: 'Comebacks and upsets', track: 'swing', trackName: 'Elo Swing', tier: 'rare', name: 'Bigfoot', hint: 'Gain 100 or more Elo in a single game.', bonus: 40 },
+  { id: 'big-swing', group: 'Comebacks and upsets', track: 'swing', trackName: 'Acclaim', tier: 'uncommon', name: 'The Rumored', hint: 'Gain 50 or more Elo in a single game.' },
+  { id: 'bigfoot', group: 'Comebacks and upsets', track: 'swing', trackName: 'Acclaim', tier: 'rare', name: 'Ascendant', hint: 'Gain 100 or more Elo in a single game.', bonus: 40 },
   { id: 'bounty-hunter', group: 'Comebacks and upsets', tier: 'uncommon', name: 'Bounty Hunter', hint: 'Finish ahead of a higher-rated player in 5 different rated games.', target: 5, bonus: 40 },
   { id: 'kingslayer', group: 'Comebacks and upsets', tier: 'epic', name: 'Kingslayer', hint: 'Finish ahead of the league’s highest-rated player, as they stood going into the game.', bonus: 100 },
   // The table
-  { id: 'know-your-enemy', group: 'The table', tier: 'uncommon', name: 'Know your enemy', hint: 'Play at least one game against every other player.' },
+  { id: 'know-your-enemy', group: 'The table', tier: 'uncommon', name: 'Know Thy Enemy', hint: 'Play at least one game against every other player.' },
   { id: 'unbeaten-blade', group: 'The table', tier: 'rare', name: 'Unbeaten Blade', hint: 'Win three 1v1 games in a row.', bonus: 30 },
   { id: 'lone-wolf', group: 'The table', tier: 'uncommon', name: 'Lone Wolf', hint: 'Win 10 1v1 games.', target: 10, bonus: 40 },
   { id: 'royal-court', group: 'The table', tier: 'uncommon', name: 'Royal Court', hint: 'Win 10 games with 4 or more players.', target: 10, bonus: 40 },
@@ -316,7 +316,7 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
     ex('world-traveler', 'World Traveler', 'Play a game with cards from 5 different expansions.', 5, 'uncommon', 25, 'expeditions', 'Expeditions');
     ex('melting-pot', 'The Melting Pot', 'Play a game with cards from 7 different expansions.', 7, 'rare', 60, 'expeditions', 'Expeditions');
     ex('cultural-exchange', 'Cultural Exchange', 'Win a game with cards from 5 or more expansions.', 5, 'rare', 50, 'unity', 'Unity');
-    ex('united-kingdoms', 'United Kingdoms', 'Win a game with cards from 8 or more expansions.', 8, 'epic', 120, 'unity', 'Unity');
+    ex('united-kingdoms', 'Royal Conqueror', 'Win a game with cards from 8 or more expansions.', 8, 'epic', 120, 'unity', 'Unity');
     list.push({ id: 'territorial-expansion', group: 'Expansions', tier: 'epic', name: 'Territorial Expansion', hint: 'Win 5 matches featuring 5 or more expansions in the kingdom.', target: 5, bonus: 100, value: vals.get('territorial-expansion'), earned: out.get('territorial-expansion') || null });
     list.push({ id: 'jack-of-all-trades', group: 'Expansions', tier: 'epic', name: 'Jack of All Trades', hint: 'Win at least one game with each expansion in the kingdom, over any number of games.', bonus: 150, earned: out.get('jack-of-all-trades') || null });
     list.push({ id: 'the-specialist', group: 'Expansions', tier: 'uncommon', name: 'The Specialist', hint: 'Win 10 games featuring the same expansion.', target: 10, bonus: 40, value: vals.get('the-specialist'), earned: out.get('the-specialist') || null });
