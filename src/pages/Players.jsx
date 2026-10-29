@@ -127,8 +127,9 @@ export default function Players() {
 
 // This player's rated games, newest first, each expandable into the full table's breakdown.
 function Results({ p }) {
+  const { me } = usePage();
   const [open, setOpen] = useState(() => new Set());
   const toggle = line => setOpen(o => { const n = new Set(o); n.has(line) ? n.delete(line) : n.add(line); return n; });
-  // the same games as on the Games page: cards on a phone and a wide screen; this player's own line is marked
-  return <div className="gview-cards"><GameCards games={p.results.slice().reverse().map(r => r.game)} open={open} toggle={toggle} showDate link me={p.name} /></div>;
+  // the same games as on the Games page: cards on a phone and a wide screen; the signed-in player's own line is marked
+  return <div className="gview-cards"><GameCards games={p.results.slice().reverse().map(r => r.game)} open={open} toggle={toggle} showDate link me={me ? me.name : undefined} /></div>;
 }

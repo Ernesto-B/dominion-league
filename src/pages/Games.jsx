@@ -79,7 +79,7 @@ export default function Games() {
         </div>
       </div>
       {modal && <Suspense fallback={null}><GameModal key={String(modal.editId)} editId={modal.editId} draft={modal.draft} onClose={() => setModal(null)} /></Suspense>}
-      {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${target ? target.line : ''}`} games={list} highlight={target ? target.line : undefined} view={view} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
+      {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${target ? target.line : ''}`} games={list} mark={gf.player !== 'all' ? gf.player : null} highlight={target ? target.line : undefined} view={view} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
     </>
   );
 }

@@ -8,14 +8,17 @@ import LandscapePills from './LandscapePills.jsx';
 import SortableTable from './SortableTable.jsx';
 import GameCards from './GameCards.jsx';
 import { useWide } from '../useMedia.js';
+import { usePage } from '../PageContext.js';
 
 // Sortable list of games, each row expandable into its per-player breakdown. `onEdit(line)` adds the
 // admin Edit column. Re-key it (e.g. on filter changes) to reset the sort and collapse every row.
 // `highlight` (a game id) opens that row, tints it and scrolls it into view — used by links to a game.
-export default function GamesTable({ games, onEdit, highlight, view = 'cards', link = false }) {   // a wide screen shows cards unless the Games page's switch says table
+export default function GamesTable({ games, onEdit, highlight, view = 'cards', link = false, mark }) {   // a wide screen shows cards unless the Games page's switch says table
   const [open, setOpen] = useState(() => new Set(highlight != null ? [highlight] : []));
   const wrap = useRef(null);
   const wide = useWide();
+  const { me } = usePage();
+  const marked = mark === undefined ? (me ? me.name : null) : mark;   // whose name is highlighted: the signed-in player unless the page says otherwise (null = nobody)
   const showTable = wide && view === 'table', showCards = !showTable;   // render only the layout in use: a phone never needs the wide table's thousands of cells
   useEffect(() => {
     if (highlight == null || !wrap.current) return;
@@ -35,7 +38,7 @@ export default function GamesTable({ games, onEdit, highlight, view = 'cards', l
         { node: '▸', className: 'chev' },
         g.date,
         { node: <TypePill type={g.type} />, text: g.type === 'Playoff' || g.type === 'Friendly' ? g.type : '' },
-        { node: <GameFinish game={g} />, text: finishText(g), className: 'wrap' },
+        { node: <GameFinish game={g} me={marked} />, text: finishText(g), className: 'wrap' },
         { node: g.sets.map((s, i) => <Fragment key={s}>{i > 0 && ' '}{setIconPath(s) ? <SetIcon name={s} size={22} /> : s}</Fragment>), text: g.sets.map(s => setIconPath(s) ? '' : s).join(' '), className: 'wrap dn-hide-sm' },
         g.vp ?? '',
         { node: <LandscapePills game={g} />, text: (g.landscapes || []).join(' '), className: 'wrap dn-hide-sm' },
@@ -45,5 +48,5 @@ export default function GamesTable({ games, onEdit, highlight, view = 'cards', l
     };
   });
   // the cards are the phone layout; a wide screen shows them too (view 'cards') or keeps the sortable table (view 'table')
-  return <div ref={wrap} className={'gview-' + view}>{showTable && <div className="gtable"><SortableTable head={head} rows={rows} /></div>}{showCards && <GameCards games={games} open={open} toggle={toggle} onEdit={onEdit} showDate highlight={highlight} link={link} />}</div>;
+  return <div ref={wrap} className={'gview-' + view}>{showTable && <div className="gtable"><SortableTable head={head} rows={rows} /></div>}{showCards && <GameCards games={games} open={open} toggle={toggle} onEdit={onEdit} showDate highlight={highlight} link={link} me={marked || undefined} />}</div>;
 }
