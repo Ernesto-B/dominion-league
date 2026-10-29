@@ -83,10 +83,28 @@ describe('grouped', () => {
     expect(secs.reduce((n, s) => n + s.of, 0)).toBe(achievements(player(rs), tiers).length);   // nothing dropped or doubled
     expect(secs.map(s => s.group)).not.toContain('Seasons');                                    // empty headings are not drawn
   });
-  it('puts entries with something earned first inside a section', async () => {
-    const { grouped } = await import('../src/lib/achievements.js');
-    const w = grouped(achievements(player([lose(1), win(2)]))).find(s => s.group === 'Comebacks and upsets');
-    expect(w.items[0].badge.id).toBe('redemption');   // earned, though defined first anyway; giant slayer and big swing stay behind it
-    expect(w.got).toBe(1);
+  it('orders each section from common to legendary, a track by the tier it shows', async () => {
+    const { grouped, TIERS } = await import('../src/lib/achievements.js');
+    const rank = x => { const b = x.kind === 'track' ? (x.next || x.steps[x.steps.length - 1]) : x.badge; return TIERS.findIndex(t => t.id === b.tier); };
+    for (const sec of grouped(achievements(player([lose(1), win(2)])))) {
+      const r = sec.items.map(rank);
+      expect(r).toEqual([...r].sort((a, b) => a - b));
+    }
+  });
+});
+
+describe('badgeRecords', () => {
+  it('finds the most badges, the rarest and the most widely held badge', async () => {
+    const { badgeRecords } = await import('../src/lib/achievements.js');
+    const b = (id, tier, earned = true) => ({ id, name: id, tier, earned });
+    const r = badgeRecords([
+      { name: 'Ann', list: [b('a', 'common'), b('b', 'rare'), b('c', 'epic')] },
+      { name: 'Bo', list: [b('a', 'common'), b('b', 'rare', false), b('d', 'legendary', false)] },
+    ]);
+    expect(r.most).toEqual({ value: 3, names: ['Ann'] });
+    expect(r.rarest.badge.id).toBe('c');            // held by one, harder than b
+    expect(r.hard).toEqual({ value: 1, names: ['Ann'] });
+    expect(r.common.badge.id).toBe('a'); expect(r.common.count).toBe(2);
+    expect(badgeRecords([]).most).toBeNull();
   });
 });

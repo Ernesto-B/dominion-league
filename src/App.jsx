@@ -67,7 +67,7 @@ function Shell() {
       {body}
       {ready && <PullToRefresh onRefresh={boot} />}
       {ready && <BottomNav ready={{ ...state, route }} hash={hash} />}
-      {ready && (route.route === 'games' || route.route === 'dominion') && <ScrollTopButton />}
+      {ready && (['games', 'players', 'dominion'].includes(route.route)) && <ScrollTopButton />}
       <PopLayer />
       <footer className="foot"><span id="foot">{ready ? 'Ratings are recalculated in your browser each time the page loads.' : ''}</span></footer>
     </>

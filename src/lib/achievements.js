@@ -334,8 +334,8 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
 }
 
 /* The list as the page draws it: sections in GROUPS order, each holding single badges and tracks (one entry per ladder, its steps inside).
-   A track knows its `current` step (the highest earned) and `next` (the first not yet), with `value` / `target` for a progress bar. Entries
-   with something earned come first inside a section; otherwise the order is the order they are defined in. */
+   A track knows its `current` step (the highest earned) and `next` (the first not yet), with `value` / `target` for a progress bar. Inside a
+   section entries run from common to legendary (a track by the tier it shows: its next step, or its last once finished); ties keep the order they are defined in. */
 export function grouped(list) {
   const secs = new Map(GROUPS.map(g => [g, []]));
   for (const b of list) {
@@ -351,9 +351,32 @@ export function grouped(list) {
       t.current = [...t.steps].reverse().find(x => x.earned) || null;
       t.next = t.steps.find(x => !x.earned) || null;
     }
-    const sorted = items.map((x, i) => [x, i]).sort((a, b) => (b[0].got > 0) - (a[0].got > 0) || a[1] - b[1]).map(x => x[0]);
+    const rank = x => { const b = x.kind === 'track' ? (x.next || x.steps[x.steps.length - 1]) : x.badge; const k = TIERS.findIndex(t => t.id === b.tier); return k < 0 ? TIERS.length : k; };
+    const sorted = items.map((x, i) => [x, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]);
     return { group, got: items.reduce((n, x) => n + x.got, 0), of: items.reduce((n, x) => n + x.of, 0), items: sorted };
   });
+}
+
+/* League-wide badge records from each player's badge list ([{ name, list }]): who holds the most, the earned badge the fewest players hold (ties go to the
+   harder tier), who holds the most epic and legendary ones, and the earned badge most players hold. Ties name every holder. */
+export function badgeRecords(held) {
+  const tierRank = id => TIERS.findIndex(t => t.id === id);
+  const players = held.map(h => ({ name: h.name, got: h.list.filter(b => b.earned) }));
+  const top = (score, min = 1) => {
+    const best = Math.max(0, ...players.map(score));
+    return best >= min ? { value: best, names: players.filter(x => score(x) === best).map(x => x.name) } : null;
+  };
+  const holders = new Map();
+  for (const x of players) for (const b of x.got) { const e = holders.get(b.id) || { badge: b, names: [] }; e.names.push(x.name); holders.set(b.id, e); }
+  const all = [...holders.values()];
+  const pick = cmp => { const s = all.slice().sort(cmp)[0]; return s ? { badge: s.badge, names: s.names, count: s.names.length } : null; };
+  return {
+    most: top(x => x.got.length),
+    hard: top(x => x.got.filter(b => tierRank(b.tier) >= 3).length),
+    rarest: pick((a, b) => a.names.length - b.names.length || tierRank(b.badge.tier) - tierRank(a.badge.tier)),
+    common: all.length ? pick((a, b) => b.names.length - a.names.length || tierRank(a.badge.tier) - tierRank(b.badge.tier)) : null,
+    of: players.length,
+  };
 }
 
 // badges earned that the viewer hasn't been told about. A first look (seen === null) records everything and announces nothing.

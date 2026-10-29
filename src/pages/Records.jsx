@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { usePage } from '../PageContext.js';
 import * as Eng from '../lib/engine.js';
 import { f0, f1, f2, pc, sgn } from '../lib/format.js';
@@ -7,13 +8,15 @@ import Banner from '../components/Banner.jsx';
 import PlayerLink from '../components/PlayerLink.jsx';
 import SetIcon from '../components/SetIcon.jsx';
 import TierIcon from '../components/TierIcon.jsx';
+import { badgesFor } from '../lib/xp.js';
+import { badgeRecords } from '../lib/achievements.js';
 import SortableTable from '../components/SortableTable.jsx';
 
 const winnerOf = g => g.names.filter(n => g.places[n] === 1).join(' & ');
 const L = 'l';
 
 export default function Records() {
-  const { D, gid, hashFor } = usePage();
+  const { D, gid, hashFor, catalog } = usePage();
   const R = D.records, O = R.overview, min = D.S.minGamesForRecords;
 
   const rec = (label, x, fmt, iconSrc) => ({
@@ -33,6 +36,19 @@ export default function Records() {
     rec(`Best average points (min ${min} games)`, R.bestAvgPts, f2, 'icons/stats/average-points.png'),
     rec('Longest win streak', R.bestStreak, f0, 'icons/stats/win-streak.png'),
     rec('Most season titles', R.mostTitles?.value > 0 ? R.mostTitles : null, f0, 'icons/champion.png'),
+  ];
+
+  // badge records, from every rated player's badges (kingdom badges count once the catalog has loaded)
+  const BR = useMemo(() => badgeRecords(D.players.filter(p => p.rated).map(p => ({ name: p.name, list: badgesFor(D, p, catalog) }))), [D, catalog]);
+  const who = names => names.map((n, i) => <span key={n}>{i > 0 && ', '}<PlayerLink name={n} /></span>);
+  const brow = (label, x, value) => ({
+    key: label,
+    cells: [label, { node: x ? who(x.names) : '—', text: x ? x.names.join(', ') : '—', className: 'name' }, { node: <b>{x ? value(x) : ''}</b>, text: x ? String(value(x)) : '' }],
+  });
+  const badgeRows = [
+    brow('Most badges earned', BR.most, x => x.value),
+    brow('Rarest badge held', BR.rarest, x => x.badge.name),
+    brow('Most epic and legendary badges', BR.hard, x => x.value),
   ];
 
   // [label, who, when (a link to that game), value]
@@ -68,6 +84,8 @@ export default function Records() {
           <h2>Table sizes</h2>
           <SortableTable head={[{ label: 'Players at the table', cls: L }, { label: 'Tables' }]}
             rows={Object.entries(R.tableSizes).map(([k, v]) => ({ key: k, cells: [k, v] }))} empty="None yet" />
+          <h2>Badges</h2>
+          <SortableTable stack head={[{ label: 'Record', cls: L }, { label: 'Holder', cls: L }, { label: 'Value' }]} rows={badgeRows} />
         </div>
       </div>
 
