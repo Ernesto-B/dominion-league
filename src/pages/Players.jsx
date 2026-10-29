@@ -12,6 +12,7 @@ import H2HMatrix from '../components/H2HMatrix.jsx';
 import Badges from '../components/Badges.jsx';
 import XpPanel from '../components/XpPanel.jsx';
 import { rivalries } from '../lib/achievements.js';
+import PlayerPicker from '../components/PlayerPicker.jsx';
 import PinnedBadges from '../components/PinnedBadges.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import { useState } from 'react';
@@ -29,18 +30,15 @@ export default function Players() {
 
   const header = (
     <>
-      <div className="head">
+      <div className="head headc">
         <div className="who">
           {p.tier && <TierIcon id={p.tier.icon} size={72} alt={p.tier.name + ' tier'} />}
           <div>
-            <h1>{p.name}</h1>
+            <div className="namerow"><h1>{p.name}</h1><PinnedBadges p={p} /></div>
             {p.tier && <p className="lede">{p.tier.name} tier{p.nextTier ? `, ${p.nextTier.need} Elo to ${p.nextTier.tier.name}` : ', top tier'}{p.peakTier && p.peakTier.id !== p.tier.id ? `. Best ever: ${p.peakTier.name}.` : ''}</p>}
-            <PinnedBadges p={p} />
           </div>
         </div>
-        <div className="pills" aria-label="Choose a player">
-          {all.map(x => <a key={x.name} href={hashFor('players', gid, encodeURIComponent(x.name))} aria-current={x.name === p.name ? 'true' : undefined}><NameIcon name={x.name} size={18} />{x.name}</a>)}
-        </div>
+        <PlayerPicker names={all.map(x => x.name)} current={p.name} hrefFor={n => hashFor('players', gid, encodeURIComponent(n))} />
       </div>
       <GroupSwitcher route="players" />
       <TierProgressBar p={p} />

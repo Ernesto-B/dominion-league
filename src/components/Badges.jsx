@@ -4,7 +4,7 @@ import TierIcon from './TierIcon.jsx';
 import { TIERS, MAX_PINS, pinKey, pinnedBadges, grouped } from '../lib/achievements.js';
 import { usePins } from '../usePins.js';
 import { badgesFor } from '../lib/xp.js';
-import SetIcon from './SetIcon.jsx';
+import { badgeIcon } from './badgeIcon.jsx';
 import { short } from '../lib/format.js';
 
 const KEY = 'dl.badgesopen';
@@ -77,7 +77,7 @@ const LABEL = Object.fromEntries(TIERS.map(t => [t.id, t.label]));
 // the small coloured dot that says how hard a badge is (the colour key is the legend at the top of the section)
 const Dot = ({ tier }) => (tier ? <i className={'tier-dot td-' + tier} title={LABEL[tier]} aria-label={LABEL[tier]} role="img"></i> : null);
 
-const icon = b => b.set ? <SetIcon name={b.set} size={26} /> : b.tierIcon ? <TierIcon id={b.tierIcon.icon} size={26} alt="" /> : b.id === 'champion' ? <TierIcon id="champion" size={26} alt="" /> : b.earned ? '★' : '☆';
+const icon = b => badgeIcon(b);
 
 // While choosing pins, the star of an earned badge becomes a circle to fill (a fourth is ignored until one is taken off)
 const PickMark = ({ n }) => <span className={'badge-pick' + (n ? ' on' : '')}>{n || ''}</span>;

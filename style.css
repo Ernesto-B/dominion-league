@@ -662,6 +662,7 @@ tr.grow.hl + tr.gdetail > td{background:color-mix(in srgb, var(--brass) 14%, tra
 .matrix tbody td:first-child{z-index:1}
 
 /* ---------- phone navigation, lists and cards ---------- */
+@media (max-width:720px){.pinned .pin-chip{font-size:12px;padding:2px 9px 2px 6px;gap:4px}}
 button.linkish{background:none;border:0;padding:0;min-height:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer;display:inline}
 button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
 
@@ -988,9 +989,36 @@ a.dn-cell-link:hover .dn-pct{color:var(--ink)}
 .badges li.blocked{opacity:.5;cursor:default}
 .badge-save{min-height:0;padding:3px 10px;font-size:12px;border-radius:6px;background:none;border:1px solid var(--brass);color:var(--brass)}
 .badge-save:disabled{opacity:.5}
-.pinned{display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px;margin:6px 0 0;font-size:13px}
-.pinned-b{white-space:nowrap}
-.pinned .tier-dot{margin-right:5px}
+.head .who{flex:1 1 0;min-width:min(100%,360px)}   /* pinned chips wrap inside the name block instead of pushing the player chooser onto its own row */
+.head.headc{align-items:center}
+.pp{position:relative;flex:none;display:flex;align-items:center;gap:6px}
+.pp-step{display:inline-grid;place-items:center;width:30px;height:30px;border:1px solid var(--line);border-radius:50%;background:var(--panel);color:inherit;text-decoration:none;font-size:18px;line-height:1}
+.pp-step:hover{border-color:var(--muted)}
+@media (pointer:coarse){.pp-step{width:40px;height:40px}}
+.pp-btn{display:inline-flex;align-items:center;gap:8px;min-height:0;padding:6px 12px 6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:inherit;font:600 14px var(--text)}
+.pp-chev{font-size:11px;color:var(--muted)}
+.pp-hint{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.pp-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:35;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:2px;width:max-content;min-width:200px;max-width:min(92vw,440px);max-height:60vh;overflow:auto;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.pp-menu a{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;color:inherit;text-decoration:none;font-size:14px}
+.pp-menu a:hover{background:color-mix(in srgb, var(--ink) 10%, transparent)}
+.pp-menu a[aria-current=true]{background:var(--ink);color:var(--bg)}
+.namerow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+.pinned{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.pin-wrap{display:inline-flex;outline-offset:3px;border-radius:999px}
+.pin-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 8px;border:1px solid color-mix(in srgb, var(--td) 70%, transparent);border-radius:999px;background:color-mix(in srgb, var(--td) 12%, transparent);font-size:13px;font-weight:600;white-space:nowrap;cursor:default}
+.pin-ico{display:inline-grid;place-items:center;min-width:18px;color:var(--td);font-size:15px;line-height:1}
+.pin-chip.td-epic,.pin-chip.td-legendary{position:relative;overflow:hidden}
+@media (prefers-reduced-motion:no-preference){
+  /* a slow glint across epic and legendary chips: a soft diagonal band that crosses now and then, each chip a little out of step */
+  .pin-chip.td-epic::after,.pin-chip.td-legendary::after{content:'';position:absolute;top:-30%;bottom:-30%;left:0;width:38%;pointer-events:none;
+    background:linear-gradient(105deg,transparent 0,rgba(255,255,255,.38) 50%,transparent 100%);transform:translateX(-160%) skewX(-18deg);animation:pinglint 5.5s ease-in-out infinite}
+  .pin-chip.td-legendary::after{animation-duration:4s;background:linear-gradient(105deg,transparent 0,rgba(255,244,205,.6) 50%,transparent 100%)}
+  .pinned .pin-wrap:nth-child(2) .pin-chip::after{animation-delay:1.3s}
+  .pinned .pin-wrap:nth-child(3) .pin-chip::after{animation-delay:2.6s}
+}
+@keyframes pinglint{0%{transform:translateX(-160%) skewX(-18deg)}28%,100%{transform:translateX(420%) skewX(-18deg)}}
+.pin-chip.td-epic{box-shadow:0 0 9px color-mix(in srgb, var(--td) 40%, transparent)}
+.pin-chip.td-legendary{box-shadow:0 0 12px color-mix(in srgb, var(--td) 55%, transparent);background:color-mix(in srgb, var(--td) 18%, transparent)}
 .badge-tools .ghost{min-height:0;padding:3px 10px;font-size:12px}
 .badge-sec h3{margin:0 0 8px;font-size:16px}
 .badges li.badge-track{display:flex;flex-direction:column;align-items:stretch;padding:0;cursor:pointer}
