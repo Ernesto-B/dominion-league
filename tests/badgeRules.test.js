@@ -125,7 +125,7 @@ describe('the whole list', () => {
   it('has unique ids, sorts into the documented groups, and keeps tracks together', () => {
     const ids = BADGES.map(b => b.id); expect(new Set(ids).size).toBe(ids.length);
     const secs = grouped(Object.values(run([win2()], { catalog: mkCatalog(), baseXp: new Map() })));
-    expect(secs.map(s => s.group)).toEqual(['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones', 'Secrets']);
+    expect(secs.map(s => s.group)).toEqual(['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones']);
     const slayer = secs.find(s => s.group === 'Comebacks and upsets').items.find(i => i.id === 'slayer');
     expect(slayer.steps.map(s => s.id)).toEqual(['giant-slayer', 'god-slayer']);
   });
@@ -340,22 +340,24 @@ describe('tracks made from single badges', () => {
   });
 });
 
-describe('secret badges', () => {
-  const six = () => rated({ Me: 1, A: 2, B: 3, C: 4, D: 5, E: 6 }, 1000);
-  it('are masked until earned: no name, rule, progress or difficulty leaks, and the real badge appears once found', () => {
-    const hidden = run([win2()], { catalog: mkCatalog(), baseXp: new Map() })['secret-test'];
-    expect(hidden.earned).toBeNull(); expect(hidden.secret).toBe(true);
-    expect(hidden.name).toBe('???'); expect(hidden.hint).not.toMatch(/six|table/i);
+describe('secret badges (the mechanism; there are no real ones yet)', () => {
+  const secret = over => ({ id: 's1', group: 'Secrets', secret: true, tier: 'secret', name: 'Hidden Name', hint: 'The hidden rule', target: 5, value: 3, bonus: 25, earned: null, ...over });
+  it('are masked until earned: no name, rule, progress or difficulty leaks, and the real badge shows once found', async () => {
+    const { maskSecrets } = await import('../src/lib/achievements.js');
+    const [hidden, found, plain] = maskSecrets([secret(), secret({ id: 's2', earned: { date: 'D1', line: 1 } }), { id: 'p', group: 'Winning', tier: 'common', name: 'Plain', hint: 'h', earned: null }]);
+    expect(hidden).toMatchObject({ id: 's1', secret: true, tier: 'secret', name: '???', earned: null });
+    expect(hidden.hint).not.toMatch(/hidden rule/i);
     expect(hidden.bonus).toBeUndefined(); expect(hidden.target).toBeUndefined(); expect(hidden.value).toBeUndefined();
-    const found = run([six()], { catalog: mkCatalog(), baseXp: new Map() })['secret-test'];
-    expect(found.earned).not.toBeNull(); expect(found.name).toBe('TEST SECRET (delete me)'); expect(found.bonus).toBe(25);
+    expect(found.name).toBe('Hidden Name'); expect(found.bonus).toBe(25);   // once earned it is an ordinary badge
+    expect(plain.name).toBe('Plain');                                      // other badges are untouched
   });
   it('sit in the Secrets section, never in Next up, and are not needed for Dominion Legend', async () => {
     const { nextUp } = await import('../src/lib/hub.js');
-    const list = Object.values(run([win2()], { catalog: mkCatalog(), baseXp: new Map() }));
-    expect(nextUp(list, 200).some(b => b.id === 'secret-test')).toBe(false);
-    expect(grouped(list).find(s => s.group === 'Secrets').items.length).toBeGreaterThan(0);
+    const list = [secret({ name: '???' }), { id: 'p', group: 'Winning', tier: 'common', name: 'Plain', hint: 'h', earned: null }];
+    expect(nextUp(list, 10).some(b => b.id === 's1')).toBe(false);
+    expect(grouped(list).find(s => s.group === 'Secrets').items).toHaveLength(1);
     const all = [{ id: 'a', tier: 'common', earned: { line: 1 } }, { id: 's', tier: 'secret', secret: true, earned: null }];
     expect(legendFrom(all, [{ line: 1, date: '2026-01-01', idx: 0 }])).not.toBeNull();
   });
+  it('the real list has none yet', () => { expect(BADGES.filter(b => b.secret)).toEqual([]); });
 });
