@@ -638,6 +638,10 @@ tr.grow.hl + tr.gdetail > td{background:color-mix(in srgb, var(--brass) 14%, tra
   .dn-browse .dn-exp-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
   .dn-browse td:first-child,.dn-browse th:first-child{padding-right:2px}
   .dn-browse th:first-child{min-width:44px}
+  /* the gap between the card name and its types, 16px -> 8px, so the table fits a 390px phone without sideways scrolling */
+  .dn-browse td:nth-child(2),.dn-browse th:nth-child(2){padding-right:4px}
+  .dn-browse td:nth-child(3),.dn-browse th:nth-child(3){padding-left:4px}
+  .dn-browse td.name{white-space:normal}   /* and a long card name may wrap when even that is too narrow, instead of the table scrolling sideways */
 }
 @media (pointer:coarse){
   button,.btn,select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea{min-height:44px}
