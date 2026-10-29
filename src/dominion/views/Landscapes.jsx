@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useCatalog } from '../CatalogContext.jsx';
-import { browseLandscapes, activeLandscapeFilters, DEFAULT_LANDSCAPE_FILTERS, landscapeFiltersFromQuery, landscapeFiltersToQuery, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
+import { browseLandscapes, filterLandscapes, facetCount, landscapeMatchOf, landscapeMatchPatch, activeLandscapeFilters, DEFAULT_LANDSCAPE_FILTERS, landscapeFiltersFromQuery, landscapeFiltersToQuery, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
 import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
 import { useLeagueGames } from '../useLeagueGames.js';
 import { artifactHref, landscapeHref } from '../links.js';
 import { PLURAL, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
-import { Chip, ExpansionBadge, FilterFold, Section, ExternalLink, LandscapePill, statusLabel, rowLink } from '../components/bits.jsx';
+import { Chip, ExpansionBadge, FilterFold, ModeRow, Section, ExternalLink, LandscapePill, statusLabel, rowLink } from '../components/bits.jsx';
 
 const SORTS = [['name', 'Name'], ['type', 'Type'], ['expansion', 'Expansion'], ['trigger', 'When it applies']];
 // table columns that sort: [sort key, heading, th class]
@@ -28,11 +28,19 @@ export default function Landscapes({ query = '' }) {
 
   const rows = useMemo(() => browseLandscapes(catalog.landscapes, f, { plays }), [catalog, f, plays]);
   const active = activeLandscapeFilters(f);
-  const typeCount = t => catalog.landscapes.filter(l => l.type === t).length;
   const expansions = catalog.ownedExpansions.filter(e => catalog.landscapes.some(l => l.expansion === e.name));
-  const expCount = n => catalog.landscapes.filter(l => l.expansion === n).length;
   // tags are the landscapes' OWN vocabulary (most are not Kingdom taxonomy ids), so they get no Kingdom definitions
   const tagCounts = useMemo(() => { const m = new Map(); catalog.landscapes.forEach(l => l.mechanicIds.forEach(t => m.set(t, (m.get(t) || 0) + 1))); return [...m].map(([id, count]) => ({ id, count })).sort((a, b) => b.count - a.count || a.id.localeCompare(b.id)); }, [catalog]);
+  // the small number on every chip follows the other filters (see facetCount): "how many would show if I picked this"
+  const fc = useMemo(() => {
+    const n = (facet, v, mode) => facetCount(catalog.landscapes, f, filterLandscapes, { plays }, facet, v, mode);
+    return {
+      types: Object.fromEntries(catalog.landscapeTypes.map(t => [t, n('types', t, f.typeMode)])),
+      exp: Object.fromEntries(expansions.map(e => [e.name, n('expansions', e.name, f.expMode)])),
+      yes: n('played', 'yes'), no: n('played', 'no'),
+      tag: Object.fromEntries(tagCounts.map(t => [t.id, n('mechanics', t.id, f.mechanicMode)])),
+    };
+  }, [catalog, f, plays, tagCounts]);   // eslint-disable-line react-hooks/exhaustive-deps
   const tags = tagCounts.filter(t => !mq.trim() || norm(`${humanize(t.id)} ${t.id}`).includes(norm(mq)));
 
   return (
@@ -48,15 +56,17 @@ export default function Landscapes({ query = '' }) {
         </div>
         <FilterFold active={active - (f.q.trim() ? 1 : 0)}>
         <fieldset className="dn-fieldset"><legend>Type</legend>
-          <div className="dn-chips">{catalog.landscapeTypes.map(t => <Chip key={t} tone={t.toLowerCase()} pressed={f.types.includes(t)} count={typeCount(t)} onClick={() => update({ types: toggle(f.types, t) })}>{PLURAL[t] || t}</Chip>)}</div>
+          <div className="dn-chips">{catalog.landscapeTypes.map(t => <Chip key={t} tone={t.toLowerCase()} pressed={f.types.includes(t)} count={fc.types[t]} onClick={() => update({ types: toggle(f.types, t) })}>{PLURAL[t] || t}</Chip>)}</div>
         </fieldset>
         <fieldset className="dn-fieldset"><legend>Expansion</legend>
-          <div className="dn-chips">{expansions.map(e => <Chip key={e.name} pressed={f.expansions.includes(e.name)} count={expCount(e.name)} onClick={() => update({ expansions: toggle(f.expansions, e.name) })}><ExpansionBadge name={e.name} /></Chip>)}</div>
+          <div className="dn-chips">{expansions.map(e => <Chip key={e.name} pressed={f.expansions.includes(e.name)} count={fc.exp[e.name]} onClick={() => update({ expansions: toggle(f.expansions, e.name) })}><ExpansionBadge name={e.name} /></Chip>)}</div>
         </fieldset>
+        <ModeRow show ariaLabel="How to match the selected filters" value={landscapeMatchOf(f)} options={[['all'], ['any'], ['none']]} onChange={m => update(landscapeMatchPatch(m))} />
+        {f.typeMode === 'none' && f.mechanics.length > 0 && <p className="meta dn-mode-note">Recorded tags stay “any of”: a missing tag doesn’t prove a landscape lacks it.</p>}
         {plays && <fieldset className="dn-fieldset"><legend>Play history</legend>
           <div className="dn-chips">
-            <Chip pressed={f.played === 'yes'} count={catalog.landscapes.filter(l => plays.has(l.id)).length} onClick={() => update({ played: f.played === 'yes' ? 'any' : 'yes' })}>Played</Chip>
-            <Chip pressed={f.played === 'no'} count={catalog.landscapes.filter(l => !plays.has(l.id)).length} onClick={() => update({ played: f.played === 'no' ? 'any' : 'no' })}>Not played yet</Chip>
+            <Chip pressed={f.played === 'yes'} count={fc.yes} onClick={() => update({ played: f.played === 'yes' ? 'any' : 'yes' })}>Played</Chip>
+            <Chip pressed={f.played === 'no'} count={fc.no} onClick={() => update({ played: f.played === 'no' ? 'any' : 'no' })}>Not played yet</Chip>
           </div>
         </fieldset>}
         <fieldset className="dn-fieldset"><legend>Recorded tags</legend>
@@ -65,18 +75,11 @@ export default function Landscapes({ query = '' }) {
             <label className="f" style={{ margin: '8px 0' }}>Find a tag <input type="search" value={mq} onChange={e => setMq(e.target.value)} placeholder="e.g. draw" autoComplete="off" /></label>
             <ul className="dn-mech-list">
               {tags.map(t => (
-                <li key={t.id}><label><input type="checkbox" checked={f.mechanics.includes(t.id)} onChange={() => update({ mechanics: toggle(f.mechanics, t.id) })} />{humanize(t.id)} <span className="meta">{t.count}</span></label></li>
+                <li key={t.id}><label><input type="checkbox" checked={f.mechanics.includes(t.id)} onChange={() => update({ mechanics: toggle(f.mechanics, t.id) })} />{humanize(t.id)} <span className="meta">{fc.tag[t.id]}</span></label></li>
               ))}
               {!tags.length && <li className="meta">No recorded tag matches “{mq}”.</li>}
             </ul>
           </details>
-          {f.mechanics.length > 1 && (
-            <div className="dn-mode" role="group" aria-label="How to match the selected tags">
-              <span className="meta">A landscape must be recorded with</span>
-              <Chip pressed={f.mechanicMode === 'all'} onClick={() => update({ mechanicMode: 'all' })}>all selected</Chip>
-              <Chip pressed={f.mechanicMode === 'any'} onClick={() => update({ mechanicMode: 'any' })}>any selected</Chip>
-            </div>
-          )}
         </fieldset>
         </FilterFold>
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>

@@ -3,7 +3,8 @@ import { usePage } from '../PageContext.js';
 import { sb } from '../lib/supabase.js';
 import { SET_NAMES, LANDSCAPES } from '../lib/sets.js';
 import { buildGameArgs, resortByVP, toggle } from '../lib/gameForm.js';
-import { gameXp, leagueXp } from '../lib/xp.js';
+import { badgesFor, gameXp, leagueXp } from '../lib/xp.js';
+import { BadgeReward, LevelReward } from '../components/RewardCard.jsx';
 import { STEPS, advance, back, blankNight, canAdvance, clearNight, elapsed, gameSummary, loadNight, saveNight, stepNumber } from '../lib/night.js';
 import NameIcon from '../components/NameIcon.jsx';
 import SetIcon from '../components/SetIcon.jsx';
@@ -102,7 +103,7 @@ export default function Night() {
     <>
       <div className="head"><div><h1>Game saved</h1><p className="lede">{groupName ? `${groupName} — ` : ''}the standings are updated.</p></div></div>
       <div className="night-card night-done">
-        <GameResult game={done.id != null ? D.games.find(x => x.line === done.id) : null} before={before.current} ranked={D.ranked} tierFor={D.tierFor} xp={leagueXp(D, catalog)} />
+        <GameResult game={done.id != null ? D.games.find(x => x.line === done.id) : null} before={before.current} ranked={D.ranked} tierFor={D.tierFor} xp={leagueXp(D, catalog)} D={D} catalog={catalog} />
         <p className="night-go">
           <a className="btn" href={hashFor('', gid)}>See the rankings</a>
           <a className="btn ghost" href={done.id != null ? hashFor('games', gid, done.id) : hashFor('games', gid)}>See the game</a>
@@ -215,7 +216,7 @@ export default function Night() {
 }
 
 // what the saved game did: each player's Elo, their move on the ladder, any tier crossed, and the XP it paid (friendly games pay XP but move no rating)
-function GameResult({ game, before, ranked, tierFor, xp }) {
+function GameResult({ game, before, ranked, tierFor, xp, D, catalog }) {
   const rows = gameSummary(game, before, ranked, tierFor);
   if (!game) return <p className="meta" style={{ marginTop: 0 }}>Updating the standings…</p>;
   const paid = gameXp(xp, game), byName = Object.fromEntries((rows || []).map(r => [r.name, r]));
@@ -237,7 +238,25 @@ function GameResult({ game, before, ranked, tierFor, xp }) {
           </li>
         );
       })}</ol>
+      <Rewards game={game} paid={paid} D={D} catalog={catalog} />
     </>
+  );
+}
+
+// what this game unlocked: levels reached and badges first earned in it, as reward cards (nothing at all when there is nothing new)
+function Rewards({ game, paid, D, catalog }) {
+  const badges = useMemo(() => game.names.flatMap(n => {
+    const p = D.players.find(x => x.name === n);
+    return p && p.rated ? badgesFor(D, p, catalog).filter(b => b.earned && b.earned.line === game.line).map(b => ({ b, who: n })) : [];
+  }), [game, D, catalog]);
+  const levels = paid.filter(x => x.levelUp);
+  if (!badges.length && !levels.length) return null;
+  const many = new Set([...badges.map(x => x.who), ...levels.map(x => x.name)]).size > 1;
+  return (
+    <ul className="rewards" aria-label="Unlocked in this game">
+      {levels.map((x, i) => <LevelReward key={'l' + x.name} level={x.levelUp} who={many ? x.name : null} i={i} />)}
+      {badges.map((x, i) => <BadgeReward key={x.who + x.b.id} b={x.b} who={many ? x.who : null} i={levels.length + i} />)}
+    </ul>
   );
 }
 

@@ -6,6 +6,7 @@ import GroupSwitcher from '../components/GroupSwitcher.jsx';
 import Banner from '../components/Banner.jsx';
 import FilterFold from '../components/FilterFold.jsx';
 import GamesTable from '../components/GamesTable.jsx';
+import SetSelect from '../components/SetSelect.jsx';
 import { takeKingdomDraft } from '../dominion/kingdomDraft.js';
 
 // the Add/Edit dialog (with the kingdom picker and its catalog code) is only needed once someone opens it
@@ -53,10 +54,7 @@ export default function Games() {
           <option value="all">Everyone</option>
           {D.players.map(p => <option key={p.name}>{p.name}</option>)}
         </select></label>
-      <label className="f">Set <select id="gfset" value={gf.set} onChange={set('set')}>
-          <option value="all">All sets</option>
-          {SET_NAMES.filter(n => enabledSets.has(n) || D.records.sets[n]).map(n => <option key={n}>{n}</option>)}
-        </select></label>
+      <span className="f">Set <SetSelect id="gfset" value={gf.set} sets={SET_NAMES.filter(n => enabledSets.has(n) || D.records.sets[n])} onChange={v => { saved = { ...gf, set: v }; setGf(saved); }} /></span>
     </>
   );
 
@@ -79,7 +77,7 @@ export default function Games() {
         </div>
       </div>
       {modal && <Suspense fallback={null}><GameModal key={String(modal.editId)} editId={modal.editId} draft={modal.draft} onClose={() => setModal(null)} /></Suspense>}
-      {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${target ? target.line : ''}`} games={list} highlight={target ? target.line : undefined} view={view} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
+      {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${target ? target.line : ''}`} games={list} mark={gf.player !== 'all' ? gf.player : null} highlight={target ? target.line : undefined} view={view} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
     </>
   );
 }

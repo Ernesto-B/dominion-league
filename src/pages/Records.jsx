@@ -16,7 +16,7 @@ const winnerOf = g => g.names.filter(n => g.places[n] === 1).join(' & ');
 const L = 'l';
 
 export default function Records() {
-  const { D, gid, hashFor, catalog } = usePage();
+  const { D, gid, hashFor, catalog, me } = usePage();
   const R = D.records, O = R.overview, min = D.S.minGamesForRecords;
 
   const rec = (label, x, fmt, iconSrc) => ({
@@ -41,13 +41,15 @@ export default function Records() {
   // badge records, from every rated player's badges (kingdom badges count once the catalog has loaded)
   const BR = useMemo(() => badgeRecords(D.players.filter(p => p.rated).map(p => ({ name: p.name, list: badgesFor(D, p, catalog) }))), [D, catalog]);
   const who = names => names.map((n, i) => <span key={n}>{i > 0 && ', '}<PlayerLink name={n} /></span>);
+  // how many of the records above are yours: a small boast at the top of the page
+  const mine = me && [R.leader, R.peak, R.mostGames, R.mostWins, R.bestWinPct, R.bestAvgPts, R.bestStreak, R.mostTitles && R.mostTitles.value > 0 ? R.mostTitles : null].filter(x => x && x.name === me.name).length
+    + [BR.most, BR.hard].filter(x => x && x.names.includes(me.name)).length;
   const brow = (label, x, value) => ({
     key: label,
     cells: [label, { node: x ? who(x.names) : '—', text: x ? x.names.join(', ') : '—', className: 'name' }, { node: <b>{x ? value(x) : ''}</b>, text: x ? String(value(x)) : '' }],
   });
   const badgeRows = [
     brow('Most badges earned', BR.most, x => x.value),
-    brow('Rarest badge held', BR.rarest, x => x.badge.name),
     brow('Most epic and legendary badges', BR.hard, x => x.value),
   ];
 
@@ -75,6 +77,7 @@ export default function Records() {
         <div className="stat"><b>{O.avgTable ? f1(O.avgTable) : '—'}</b><span>players per table</span></div>
         <div className="stat"><b>{O.avgVP ? f1(O.avgVP) : '—'}</b><span>avg winning VP</span></div>
       </div>
+      {mine > 0 && <p className="holds"><b>You hold {mine} record{mine === 1 ? '' : 's'}</b> <span className="meta">on this page</span></p>}
       <div className="grid2">
         <div>
           <h2>Player records</h2>

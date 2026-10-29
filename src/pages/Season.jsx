@@ -38,7 +38,7 @@ export default function Season() {
       <Banner />
       <SeasonRecap standings={st} />
       <div className="stats">
-        <div className="stat"><b>{wk ? 'Week ' + wk + ' of ' + s.weeks : s.status}</b><span>{wk ? s.weeksLeft + ' week' + (s.weeksLeft === 1 ? '' : 's') + ' left' : 'status'}</span></div>
+        <div className="stat"><b>{wk ? 'Week ' + wk + '/' + s.weeks : s.status}</b><span>{wk ? s.weeksLeft + ' week' + (s.weeksLeft === 1 ? '' : 's') + ' left' : 'status'}</span></div>
         <div className="stat"><b>{s.regularGames}</b><span>regular games</span></div>
         <div className="stat"><b>{s.nightsHeld}</b><span>nights held</span></div>
         <div className="stat"><b>{s.minGames}</b><span>games to qualify ({s.target} target)</span></div>

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { realCatalog } from './fixtures.js';
 import { humanize } from '../../src/dominion/constants.js';
-import { DEFAULT_CARD_FILTERS as D0, DEFAULT_LANDSCAPE_FILTERS as L0, filterCards, browseCards, browseLandscapes, activeCardFilters, activeLandscapeFilters, debtMatches, norm } from '../../src/dominion/filters.js';
+import { DEFAULT_CARD_FILTERS as D0, DEFAULT_LANDSCAPE_FILTERS as L0, filterCards, browseCards, browseLandscapes, activeCardFilters, activeLandscapeFilters, debtMatches, norm, facetCount, filterLandscapes, cardFiltersToQuery, cardFiltersFromQuery, cardMatchOf, cardMatchPatch, landscapeMatchOf, landscapeMatchPatch, landscapeFiltersToQuery, landscapeFiltersFromQuery } from '../../src/dominion/filters.js';
 
 const { cards, landscapes } = realCatalog();
 const F = over => ({ ...D0, ...over });
@@ -211,5 +211,78 @@ describe('sorting landscapes by every table column', () => {
   it('an unknown key falls back to name; sorting never changes how many match', () => {
     expect(by('nonsense').slice(0, 3).map(l => l.name)).toEqual(by('name').slice(0, 3).map(l => l.name));
     expect(browseLandscapes(landscapes, LF({ sort: 'trigger', dir: 'desc', types: ['Way'] }))).toHaveLength(20);
+  });
+});
+
+describe('the number beside a filter chip follows the other filters', () => {
+  const count = (f, facet, v, mode) => facetCount(cards, F(f), filterCards, {}, facet, v, mode);
+  it('with no filters it is the plain total for the value', () => {
+    expect(count({}, 'expansions', 'Plunder')).toBe(40);
+    expect(count({}, 'types', 'Attack')).toBe(filterCards(cards, F({ types: ['Attack'] })).length);
+  });
+  it('counts only cards that also pass every OTHER filter', () => {
+    const attackInPlunder = filterCards(cards, F({ expansions: ['Plunder'], types: ['Attack'] })).length;
+    expect(count({ types: ['Attack'] }, 'expansions', 'Plunder')).toBe(attackInPlunder);   // the expansion chip, with Attack chosen
+    expect(count({ expansions: ['Plunder'] }, 'types', 'Attack')).toBe(attackInPlunder);   // and the other way round
+    expect(attackInPlunder).toBeLessThan(40);
+  });
+  it('a facet that takes any of its values ignores what else is chosen in that facet; one that takes all of them adds to it', () => {
+    expect(count({ expansions: ['Plunder'] }, 'expansions', 'Menagerie')).toBe(30);                                  // any-of: Menagerie on its own
+    const attackAndDuration = filterCards(cards, F({ types: ['Attack', 'Duration'] })).length;
+    expect(count({ types: ['Attack'] }, 'types', 'Duration', 'all')).toBe(attackAndDuration);                          // all-of: must have both
+    expect(count({ types: ['Attack'] }, 'types', 'Duration', 'any')).toBe(filterCards(cards, F({ types: ['Duration'] })).length);
+  });
+  it('a value that nothing matches under the other filters counts 0, and landscapes work the same way', () => {
+    expect(count({ expansions: ['Plunder'] }, 'types', 'Castle')).toBe(0);
+    const lf = over => ({ ...L0, ...over });
+    const eventsInEmpires = filterLandscapes(landscapes, lf({ types: ['Event'], expansions: ['Empires'] })).length;
+    expect(facetCount(landscapes, lf({ types: ['Event'] }), filterLandscapes, {}, 'expansions', 'Empires')).toBe(eventsInEmpires);
+  });
+});
+
+describe('"none of" (only where the data is complete)', () => {
+  it('excludes the chosen printed types, expansions and coin costs', () => {
+    const attackOrDuration = filterCards(cards, F({ types: ['Attack', 'Duration'], typeMode: 'any' })).length;
+    expect(filterCards(cards, F({ types: ['Attack', 'Duration'], typeMode: 'none' }))).toHaveLength(331 - attackOrDuration);
+    expect(filterCards(cards, F({ types: ['Attack', 'Duration'], typeMode: 'none' })).some(c => c.types.includes('Attack'))).toBe(false);
+    expect(filterCards(cards, F({ expansions: ['Plunder', 'Menagerie'], expMode: 'none' }))).toHaveLength(331 - 70);
+    const cost3or4 = filterCards(cards, F({ costs: [3, 4] })).length;
+    expect(filterCards(cards, F({ costs: [3, 4], costMode: 'none' }))).toHaveLength(331 - cost3or4);   // Debt-only cards have no coin cost, so they stay
+  });
+  it('excludes landscape types and expansions too', () => {
+    const lf = over => ({ ...L0, ...over });
+    const all = landscapes.length, ev = filterLandscapes(landscapes, lf({ types: ['Event', 'Way'] })).length;
+    expect(filterLandscapes(landscapes, lf({ types: ['Event', 'Way'], typeMode: 'none' }))).toHaveLength(all - ev);
+  });
+  it('is remembered in the link, and a made-up mode is ignored', () => {
+    const f = F({ types: ['Attack', 'Duration'], typeMode: 'none', expansions: ['Plunder'], expMode: 'none', costs: [3], costMode: 'none' });
+    expect(cardFiltersFromQuery(cardFiltersToQuery(f))).toMatchObject({ typeMode: 'none', expMode: 'none', costMode: 'none' });
+    expect(cardFiltersFromQuery('?tmode=bogus&emode=all').typeMode).toBe('all');
+    const lf = { ...L0, types: ['Event'], typeMode: 'none', expansions: ['Empires'], expMode: 'none' };
+    expect(landscapeFiltersFromQuery(landscapeFiltersToQuery(lf))).toMatchObject({ typeMode: 'none', expMode: 'none' });
+  });
+  it('the chip numbers follow it: with "none of" a chip counts what would remain once it is also excluded', () => {
+    const n = facetCount(cards, F({ types: ['Attack'], typeMode: 'none' }), filterCards, {}, 'types', 'Duration', 'none');
+    expect(n).toBe(filterCards(cards, F({ types: ['Attack', 'Duration'], typeMode: 'none' })).length);
+  });
+});
+
+describe('the single Match row drives every group', () => {
+  it('"none of" excludes types, expansions and costs together, but recorded mechanics stay positive ("any of")', () => {
+    const f = F({ ...cardMatchPatch('none'), types: ['Attack'], expansions: ['Plunder'], costs: [4], mechanics: ['trashing'] });
+    expect([f.typeMode, f.expMode, f.costMode, f.mechanicMode]).toEqual(['none', 'none', 'none', 'any']);
+    expect(cardMatchOf(f)).toBe('none');
+    const r = filterCards(cards, f);
+    expect(r.some(c => c.types.includes('Attack') || c.expansion === 'Plunder' || c.coins === 4)).toBe(false);
+  });
+  it('"all of" means all for types and mechanics and any for expansions and costs (a card has one of each)', () => {
+    const f = F({ ...cardMatchPatch('all') });
+    expect([f.typeMode, f.expMode, f.costMode, f.mechanicMode]).toEqual(['all', 'any', 'any', 'all']);
+    expect(filterCards(cards, F({ ...f, expansions: ['Plunder', 'Menagerie'] }))).toHaveLength(70);
+  });
+  it('works the same way for landscapes', () => {
+    const f = { ...L0, ...landscapeMatchPatch('none') };
+    expect(landscapeMatchOf(f)).toBe('none'); expect(landscapeMatchOf({ ...L0, ...landscapeMatchPatch('all') })).toBe('all'); expect(landscapeMatchOf(L0)).toBe('any');
+    expect(filterLandscapes(landscapes, { ...f, types: ['Event'] }).some(l => l.type === 'Event')).toBe(false);
   });
 });

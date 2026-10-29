@@ -22,9 +22,23 @@ export const TypePills = ({ types }) => <span className="dn-types">{types.map(t 
 // a toggle button for a filter value (aria-pressed so assistive tech announces on/off)
 export function Chip({ pressed, onClick, children, count, label, tone }) {
   return (
-    <button type="button" className={tone ? `dn-chip t-${tone}` : 'dn-chip'} aria-pressed={pressed} onClick={onClick} aria-label={label} title={label}>
+    <button type="button" className={(tone ? `dn-chip t-${tone}` : 'dn-chip') + (count === 0 && !pressed ? ' dn-zero' : '')} aria-pressed={pressed} onClick={onClick} aria-label={label} title={label}>
       {children}{count != null && <span className="n">{count}</span>}
     </button>
+  );
+}
+
+/* "Match: all of / any of / none of", always shown under its group of filter buttons.
+   `options` are [mode, label] pairs; only the modes that mean something for that facet are offered, and mechanic tags never get "none of" (they are
+   positive-only: a missing tag does not prove a card lacks the mechanic). */
+export const MODES = { all: 'all of', any: 'any of', none: 'none of' };
+export function ModeRow({ label = 'Match', ariaLabel, value, options, onChange, show }) {
+  if (!show) return null;
+  return (
+    <div className="dn-mode" role="group" aria-label={ariaLabel}>
+      <span className="meta">{label}</span>
+      {options.map(([v, text]) => <Chip key={v} pressed={value === v} onClick={() => onChange(v)}>{text || MODES[v]}</Chip>)}
+    </div>
   );
 }
 

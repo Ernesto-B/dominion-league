@@ -219,6 +219,10 @@ technique is the best way to prove any refactor *doesn't* change what users see:
 - XP (`lib/xp.js`, pure, tested; `XP` holds every number) is experience, never skill: finish, win, top half, win streak, improvement, beating Elo's odds, raw VP and VP share, landscapes, new kingdom cards,
   badges and season titles, from every game including friendlies, and it only goes up. A level costs 90 XP to level 9, then steps up every tenth level (150 from 10, 175 from 20, ... +25 a decade) capped at 350 (`levelCost`; level 20 = 2,395, 100 = 23,570, 200 = 58,570). It is recomputed on each load (`leagueXp(D)`, cached per D) so retuning a number rewrites history. It reads the engine's
   output and never changes it. Shown as `Lv N` on the ladder, a me-card tile and the Player page's `XpPanel`.
+- Branch `gamify` (game-menu look; see memory): `components/PlayerHud.jsx` (the signed-in player's tier, level bar, Elo and streak, in the top bar; on a phone the top bar is just the HUD), `components/Hub.jsx` (the front page's "Next up" badges to hunt, from `lib/hub.js` `nextUp`, plus a tile per section with a live status line),
+  `components/RewardCard.jsx` (level and badge reward cards, used on the Game saved screen and the front page), `PlayerPicker.jsx` (the Player page's compact switcher with arrows) and the theme block at the end of `style.css` (`--frame`, `--sheen`, brass accents). Motion rule: only `transform` and `opacity`, once or on a tap; the only loops are the pinned-chip glint and the streak flame.
+- Secret badges: `secret: true`, `group: 'Secrets'`, `tier: 'secret'` in `BADGES`. `achievements()` returns a masked "???" entry until the badge is earned (so no screen can leak the name, rule or progress); `nextUp` and Dominion Legend ignore them. When earned they get the ember colour (`--td-secret`), a reveal animation
+  on the reward card and a shimmering pin chip. The `secret-test` badge is a marked test: delete its line in `BADGES` and its `out.set('secret-test', ...)` rule.
 - The snake draft (`dominion/draft.js`, pure and tested; `components/SnakeDraft.jsx`) is a mode of Game night's Kingdom step: a pool twice the kingdom size (first half under all the
   randomizer's rules), picks in snake order on one device, then `finishDraft` rebuilds the kingdom (with setup notes) the same shape as a roll. It is in memory only: a reload mid-draft starts over.
 - The Admin page has two tabs: People (new player, who plays in which group) and Settings (sets, groups, seasons).
@@ -265,7 +269,7 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   pile, Knights and Castles are ONE pile with several names, so names >= piles), *physical* cards (sum of pile
   copies), landscapes and Artifacts are five different things. Landscapes and Artifacts are never Kingdom cards.
 - **Mechanic tags are positive-only and non-exhaustive.** A missing tag is NOT a confirmed "no". There is
-  deliberately no "without"/"exclude" filter anywhere (a test enforces this), the owner removed the on-page disclaimers and the
+  deliberately no "without"/"exclude" filter for MECHANIC tags (a test enforces this; "none of" exists only for printed types, expansions, coin costs and landscape types, whose data is complete), the owner removed the on-page disclaimers and the
   review-status table as clutter (the *behaviour* — never a "without" filter, rules that require tags only ever add cards — is
   what keeps this honest). Landscape/Artifact
   tags use a *different vocabulary* from the Kingdom taxonomy — never join them to it.

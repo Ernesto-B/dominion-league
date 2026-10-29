@@ -1,4 +1,3 @@
-import { sb } from '../lib/supabase.js';
 import { hashFor, ROUTES, GLOBAL_ROUTES } from '../lib/route.js';
 import { pickD } from '../lib/league.js';
 
@@ -23,7 +22,7 @@ export function navHref(route, ready) {
 
 // `ready` is null until a league is loaded: the nav is hidden on the loading,
 // sign-in and set-password screens.
-export default function Header({ ready, hash }) {
+export default function Header({ ready, hash, hud }) {
   const show = !!ready;
   const active = ready && ROUTES.includes(ready.route.route) ? ready.route.route : 'home';
   return (
@@ -39,7 +38,7 @@ export default function Header({ ready, hash }) {
           ))}
         </nav>
         <span id="navuser">
-          {show && <><span>{ready.me.name}</span><a href="#" onClick={e => { e.preventDefault(); sb.auth.signOut(); }}>Log out</a></>}
+          {show && (hud || <span>{ready.me.name}</span>)}
         </span>
       </div>
     </header>

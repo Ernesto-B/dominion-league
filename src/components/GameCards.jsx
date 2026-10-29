@@ -39,7 +39,7 @@ export default function GameCards({ games, open, toggle, onEdit, showDate = fals
                 const won = g.places[n] === 1;
                 return (
                   <li key={n} className={'gcard-row' + (n === me ? ' me' : '')}>
-                    <span className="gc-place">{ord(g.places[n])}</span>
+                    <span className={'gc-place' + (g.places[n] === 1 ? ' first' : '')}>{ord(g.places[n])}</span>
                     <span className="gc-name">{isOpen ? <PlayerLink name={n} at={g.snapshot[n]} /> : <>{t && <TierIcon id={t.icon} size={20} alt={t.name + ' tier'} />}{won ? <b>{n}</b> : n}</>}</span>
                     <span className={'gc-chg ' + (d != null ? tone(d, 0.5) : '')}>{d != null ? sgn(d) : ''}</span>
                     {isOpen && (
