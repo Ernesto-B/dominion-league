@@ -15,6 +15,7 @@ export function usePins(name) {
     const { error: e } = await sb.rpc('set_my_pinned_badges', { p_ids: next });
     if (e) setError('Couldn’t save your pinned badges.'); else await reload();
     setBusy(false);
+    return !e;
   };
-  return { ids, mine: !!me && me.name === name, busy, error, toggle: id => save(ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]) };
+  return { ids, mine: !!me && me.name === name, busy, error, save };
 }
