@@ -37,11 +37,12 @@ export const BADGES = [
   { id: 'shadow', group: 'Winning', tier: 'uncommon', name: 'Shadow of the Throne', hint: 'Finish in the top half three games in a row.', bonus: 20 },
   // Comebacks and upsets
   { id: 'redemption', group: 'Comebacks and upsets', tier: 'common', name: 'Redemption', hint: 'Win the game right after finishing last.' },
-  { id: 'giant-slayer', group: 'Comebacks and upsets', track: 'slayer', trackName: 'Slayer', tier: 'uncommon', name: 'Giant slayer', hint: 'Win at a table with someone rated 100+ Elo above you.' },
-  { id: 'god-slayer', group: 'Comebacks and upsets', track: 'slayer', trackName: 'Slayer', tier: 'rare', name: 'God Slayer', hint: 'Win at a table with someone rated 200+ Elo above you.', bonus: 50 },
+  { id: 'giant-slayer', group: 'Comebacks and upsets', track: 'slayer', trackName: 'Challenger', tier: 'uncommon', name: 'Revolutionary', hint: 'Win at a table with someone rated 100+ Elo above you.' },
+  { id: 'god-slayer', group: 'Comebacks and upsets', track: 'slayer', trackName: 'Challenger', tier: 'rare', name: 'Regicide', hint: 'Win at a table with someone rated 200+ Elo above you.', bonus: 50 },
   { id: 'phoenix', group: 'Comebacks and upsets', tier: 'epic', name: 'The Phoenix', hint: 'Win a rated game of 3 or more as the lowest-rated player at the table.', bonus: 75 },
   { id: 'the-chosen-one', group: 'Comebacks and upsets', tier: 'legendary', name: 'The Chosen One', hint: 'Win a 6-player rated game as the lowest-rated player at the table.', bonus: 500 },
-  { id: 'big-swing', group: 'Comebacks and upsets', tier: 'uncommon', name: 'Big swing', hint: 'Gain 50 or more Elo in a single game.' },
+  { id: 'big-swing', group: 'Comebacks and upsets', track: 'swing', trackName: 'Elo Swing', tier: 'uncommon', name: 'Big swing', hint: 'Gain 50 or more Elo in a single game.' },
+  { id: 'bigfoot', group: 'Comebacks and upsets', track: 'swing', trackName: 'Elo Swing', tier: 'rare', name: 'Bigfoot', hint: 'Gain 100 or more Elo in a single game.', bonus: 40 },
   { id: 'bounty-hunter', group: 'Comebacks and upsets', tier: 'uncommon', name: 'Bounty Hunter', hint: 'Finish ahead of a higher-rated player in 5 different rated games.', target: 5, bonus: 40 },
   { id: 'kingslayer', group: 'Comebacks and upsets', tier: 'epic', name: 'Kingslayer', hint: 'Finish ahead of the league’s highest-rated player, as they stood going into the game.', bonus: 100 },
   // The table
@@ -60,10 +61,10 @@ export const BADGES = [
   { id: 'gilded-hall', group: 'The kingdom', tier: 'uncommon', name: 'Gilded Hall', hint: 'Win with a kingdom whose cards cost 4.8 coins or more on average.', bonus: 25 },
   { id: 'the-great-divide', group: 'The kingdom', tier: 'rare', name: 'The Great Divide', hint: 'Win with 3 or more cards costing 2 coins or less and 3 or more costing 6 or more.', bonus: 50 },
   { id: 'pure-blood', group: 'The kingdom', tier: 'uncommon', name: 'Pure Blood', hint: 'Play a game where all 10 kingdom cards are from the same expansion.', bonus: 15 },
-  { id: 'a-world-divided', group: 'The kingdom', tier: 'rare', name: 'A World Divided', hint: 'Win with a kingdom of exactly 2 expansions, 5 piles from each.', bonus: 60 },
+  { id: 'a-world-divided', group: 'The kingdom', tier: 'rare', name: 'Crusader', hint: 'Win with a kingdom of exactly 2 expansions, 5 piles from each.', bonus: 60 },
   { id: 'ten-kingdoms', group: 'The kingdom', tier: 'epic', name: 'Ten Kingdoms, One Crown', hint: 'Win where every kingdom pile is from a different expansion.', bonus: 150 },
-  { id: 'trial-by-fire', group: 'The kingdom', tier: 'uncommon', name: 'Trial by Fire', hint: 'Win with 3 or more Attack cards in the kingdom.', bonus: 25 },
-  { id: 'war-zone', group: 'The kingdom', tier: 'uncommon', name: 'War Zone', hint: 'Play a game with 5 or more Attack cards in the kingdom.', bonus: 20 },
+  { id: 'war-zone', group: 'The kingdom', track: 'warpath', trackName: 'Warpath', tier: 'uncommon', name: 'War Zone', hint: 'Play a game with 5 or more Attack cards in the kingdom.', bonus: 20 },
+  { id: 'trial-by-fire', group: 'The kingdom', track: 'warpath', trackName: 'Warpath', tier: 'uncommon', name: 'Trial by Fire', hint: 'Win with 3 or more Attack cards in the kingdom.', bonus: 25 },
   { id: 'peaceful-realm', group: 'The kingdom', track: 'peace', trackName: 'Peace', tier: 'common', name: 'Peaceful Realm', hint: 'Play a game with no Attack card in the kingdom.', bonus: 10 },
   { id: 'the-pacifist', group: 'The kingdom', track: 'peace', trackName: 'Peace', tier: 'uncommon', name: 'The Pacifist', hint: 'Win a game with no Attack card in the kingdom.', bonus: 30 },
   { id: 'gold-rush', group: 'The kingdom', tier: 'common', name: 'Gold Rush', hint: 'Win a game with 3 or more Treasures in the kingdom.', bonus: 15 },
@@ -72,11 +73,11 @@ export const BADGES = [
   // Landscapes
   typeWins('changing-tides', 'Changing Tides', 'Trait', 'a'), typeWins('architect-of-victory', 'Architect of Victory', 'Project', 'a'), typeWins('the-wayfinder', 'The Wayfinder', 'Way', 'a'),
   typeWins('master-strategist', 'Master Strategist', 'Landmark', 'a'), typeWins('turning-point', 'Turning Point', 'Event', 'an'),
-  { id: 'shifting-realities', group: 'Landscapes', track: 'mix', trackName: 'Landscape Mix', tier: 'uncommon', name: 'Shifting Realities', hint: 'Win a game featuring at least two different landscape types.', target: 2, bonus: 30 },
-  { id: 'fortune-favors', group: 'Landscapes', track: 'mix', trackName: 'Landscape Mix', tier: 'rare', name: 'Fortune Favors the Bold', hint: 'Win a game featuring at least three different landscape types.', target: 3, bonus: 60 },
+  { id: 'shifting-realities', group: 'Landscapes', track: 'mix', trackName: 'Terraformer', tier: 'uncommon', name: 'Shifting Realities', hint: 'Win a game featuring at least two different landscape types.', target: 2, bonus: 30 },
+  { id: 'fortune-favors', group: 'Landscapes', track: 'mix', trackName: 'Terraformer', tier: 'rare', name: 'Fortune Favors the Bold', hint: 'Win a game featuring at least three different landscape types.', target: 3, bonus: 60 },
   { id: 'master-of-fate', group: 'Landscapes', tier: 'epic', name: 'Master of Fate', hint: 'Win at least one game featuring each landscape type, over any number of games.', bonus: 150 },
-  { id: 'landscape-connoisseur', group: 'Landscapes', track: 'lsee', trackName: 'Landscape Explorer', tier: 'uncommon', name: 'Landscape Connoisseur', hint: 'See 25 different landscape cards in your games.', target: 25, bonus: 40 },
-  { id: 'beyond-the-horizon', group: 'Landscapes', track: 'lsee', trackName: 'Landscape Explorer', tier: 'rare', name: 'Beyond the Horizon', hint: 'See 50 different landscape cards in your games.', target: 50, bonus: 100 },
+  { id: 'landscape-connoisseur', group: 'Landscapes', track: 'lsee', trackName: 'Pioneer', tier: 'uncommon', name: 'Landfall', hint: 'See 25 different landscape cards in your games.', target: 25, bonus: 40 },
+  { id: 'beyond-the-horizon', group: 'Landscapes', track: 'lsee', trackName: 'Pioneer', tier: 'rare', name: 'Beyond the Horizon', hint: 'See 50 different landscape cards in your games.', target: 50, bonus: 100 },
   // Milestones
   { id: 'regular', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'common', name: 'Regular', hint: 'Play 10 rated games.', target: 10 },
   { id: 'veteran', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'uncommon', name: 'Veteran', hint: 'Play 25 rated games.', target: 25 },
@@ -137,7 +138,7 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
   out.set('redemption', at(firstIndex(rs, (r, i) => i > 0 && sole(r.game, r.place) && soleLast(rs[i - 1].game, rs[i - 1].place))));
   const slayer = gap => at(firstIndex(rs, r => sole(r.game, r.place) && Object.entries(r.game.elo || {}).some(([n, e]) => n !== me && e && e.before - r.before >= gap)));
   out.set('giant-slayer', slayer(100)); out.set('god-slayer', slayer(200));
-  out.set('big-swing', at(firstIndex(rs, r => r.after - r.before >= 50)));
+  out.set('big-swing', at(firstIndex(rs, r => r.after - r.before >= 50))); out.set('bigfoot', at(firstIndex(rs, r => r.after - r.before >= 100)));
   // the lowest-rated player at a table beats everyone else there (three or more players; six for The Chosen One)
   const lowest = (r, size) => { const e = Object.entries(r.game.elo || {}); return (size ? e.length === size : e.length >= 3) && r.place === 1 && e.every(([n, x]) => n === me || (x && x.before > r.before)); };
   out.set('phoenix', at(firstIndex(rs, r => lowest(r, 0)))); out.set('the-chosen-one', at(firstIndex(rs, r => lowest(r, 6))));
@@ -263,6 +264,7 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
     for (const id of ['first-expedition', 'world-traveler', 'melting-pot']) vals.set(id, bestSpread);
     out.set('cultural-exchange', gat(spread.findIndex((n, i) => won[i] && n >= 5))); out.set('united-kingdoms', gat(spread.findIndex((n, i) => won[i] && n >= 8)));
     vals.set('cultural-exchange', bestWonSpread); vals.set('united-kingdoms', bestWonSpread);
+    const [terrAt, terrN] = countAt((g, i) => won[i] && spread[i] >= 5, 5); out.set('territorial-expansion', gat(terrAt)); vals.set('territorial-expansion', terrN);
 
     // cards (supply piles, a split pile once) ever seen, and wins per expansion
     const owned = cat.ownedExpansions.map(e => e.name), piles = new Set();
@@ -315,6 +317,7 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
     ex('melting-pot', 'The Melting Pot', 'Play a game with cards from 7 different expansions.', 7, 'rare', 60, 'expeditions', 'Expeditions');
     ex('cultural-exchange', 'Cultural Exchange', 'Win a game with cards from 5 or more expansions.', 5, 'rare', 50, 'unity', 'Unity');
     ex('united-kingdoms', 'United Kingdoms', 'Win a game with cards from 8 or more expansions.', 8, 'epic', 120, 'unity', 'Unity');
+    list.push({ id: 'territorial-expansion', group: 'Expansions', tier: 'epic', name: 'Territorial Expansion', hint: 'Win 5 matches featuring 5 or more expansions in the kingdom.', target: 5, bonus: 100, value: vals.get('territorial-expansion'), earned: out.get('territorial-expansion') || null });
     list.push({ id: 'jack-of-all-trades', group: 'Expansions', tier: 'epic', name: 'Jack of All Trades', hint: 'Win at least one game with each expansion in the kingdom, over any number of games.', bonus: 150, earned: out.get('jack-of-all-trades') || null });
     list.push({ id: 'the-specialist', group: 'Expansions', tier: 'uncommon', name: 'The Specialist', hint: 'Win 10 games featuring the same expansion.', target: 10, bonus: 40, value: vals.get('the-specialist'), earned: out.get('the-specialist') || null });
   }

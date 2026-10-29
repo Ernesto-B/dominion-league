@@ -26,7 +26,7 @@ describe('achievements', () => {
     const tie = res(1, { Me: 1, A: 1, B: 3 });
     expect(byId(achievements(player([tie])))['first-win'].earned).toBeNull();
   });
-  it('giant slayer needs a win over someone rated 100+ above', () => {
+  it('Revolutionary (giant-slayer) needs a win over someone rated 100+ above', () => {
     expect(byId(achievements(player([win(1, { others: { A: 1100 } })])))['giant-slayer'].earned.date).toBe('D1');
     expect(byId(achievements(player([win(1, { others: { A: 1099 } })])))['giant-slayer'].earned).toBeNull();
   });

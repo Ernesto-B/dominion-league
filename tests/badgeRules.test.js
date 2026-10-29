@@ -68,7 +68,7 @@ describe('table badges', () => {
     expect(earned(run(five), 'world-voyage')).toBeNull(); expect(run(five)['world-voyage'].earned).toBeNull();
     expect(earned(run([...five, at(6)]), 'world-voyage')).not.toBeNull();
   });
-  it('The Phoenix is a win as the lowest-rated at a table of three or more; God Slayer needs a rival 200 above', () => {
+  it('The Phoenix is a win as the lowest-rated at a table of three or more; Regicide (God Slayer) needs a rival 200 above', () => {
     const g = game({ Me: 1, A: 2, B: 3 }, { elo: { Me: 900, A: 1000, B: 1100 } });
     expect(earned(run([g]), 'phoenix')).not.toBeNull(); expect(earned(run([g]), 'giant-slayer')).not.toBeNull(); expect(earned(run([g]), 'god-slayer')).not.toBeNull();
     expect(earned(run([game({ Me: 1, A: 2, B: 3 }, { elo: { Me: 900, A: 1000, B: 899 } })]), 'phoenix')).toBeNull();   // B is lower
@@ -228,6 +228,14 @@ describe('expansion-mix badges (need the catalog)', () => {
     const eight = ['e0p0', 'e1p0', 'e2p0', 'e3p0', 'e4p0', 'e5p0', 'e6p0', 'e7p0', 'e0p1', 'e1p1'];
     expect(earned(run([g(true, eight)], { catalog: cat }), 'united-kingdoms')).not.toBeNull();
   });
+  it('Territorial Expansion is five WINS with 5 or more expansions in the kingdom', () => {
+    const five = ['e0p0', 'e1p0', 'e2p0', 'e3p0', 'e4p0', 'e0p1', 'e1p1', 'e2p1', 'e3p1', 'e4p1'];
+    const four = ['e0p0', 'e1p0', 'e2p0', 'e3p0', 'e0p1', 'e1p1', 'e2p1', 'e3p1', 'e0p2', 'e1p2'];
+    const n = k => run(Array.from({ length: k }, () => g(true, five)), { catalog: cat });
+    expect(earned(n(4), 'territorial-expansion')).toBeNull(); expect(n(4)['territorial-expansion'].value).toBe(4);
+    expect(earned(n(5), 'territorial-expansion')).not.toBeNull();
+    expect(earned(run([...Array.from({ length: 4 }, () => g(true, five)), g(true, four), g(false, five)], { catalog: cat }), 'territorial-expansion')).toBeNull();   // fewer expansions, or lost
+  });
   it('The Specialist is ten wins in games featuring the same expansion, a game counting for every expansion in it', () => {
     const wins = n => Array.from({ length: n }, (_, i) => withKingdom(win2(), ['e0p0', `e${1 + (i % 3)}p0`]));
     expect(earned(run(wins(10), { catalog: cat }), 'the-specialist')).not.toBeNull();   // all ten feature expansion 0
@@ -316,5 +324,18 @@ describe('Dominion Legend and tiers', () => {
     expect(list.find(b => b.id === 'dominion-legend').bonus).toBe(2000);
     expect(list.find(b => b.id === 'the-immortal').bonus).toBe(1000); expect(list.find(b => b.id === 'the-unbreakable').bonus).toBe(600);
     expect(list.find(b => b.id === 'grand-archivist').name).toBe('Grand Archivist');
+  });
+});
+
+describe('tracks made from single badges', () => {
+  it('Big swing and Bigfoot (100+ Elo) share the Elo Swing track; War Zone then Trial by Fire share Warpath; Terraformer is the landscape mix track', () => {
+    const list = Object.values(run([win2()], { catalog: mkCatalog(), baseXp: new Map() }));
+    const t = id => list.find(b => b.id === id);
+    expect([t('big-swing').track, t('bigfoot').track]).toEqual(['swing', 'swing']);
+    expect(list.findIndex(b => b.id === 'big-swing')).toBeLessThan(list.findIndex(b => b.id === 'bigfoot'));
+    expect(list.findIndex(b => b.id === 'war-zone')).toBeLessThan(list.findIndex(b => b.id === 'trial-by-fire'));
+    expect([t('war-zone').track, t('trial-by-fire').track]).toEqual(['warpath', 'warpath']);
+    expect(t('shifting-realities').trackName).toBe('Terraformer');
+    expect(t('a-world-divided').name).toBe('Crusader');   // the id never changed, only the name
   });
 });
