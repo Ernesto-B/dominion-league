@@ -3,6 +3,7 @@ import { meSummary } from '../lib/meSummary.js';
 import { ord, short, sgn } from '../lib/format.js';
 import TierIcon from './TierIcon.jsx';
 import { BadgeReward, LevelReward } from './RewardCard.jsx';
+import PinnedBadges from './PinnedBadges.jsx';
 import CountUp from './CountUp.jsx';
 import HoverPopup from './HoverPopup.jsx';
 import { tierRange } from './TierLegend.jsx';
@@ -63,7 +64,10 @@ export default function MeCard({ ranked }) {
         <TierIcon id={s.tier.icon} size={72} alt={s.tier.name + ' tier'} />
         <div className="mc-who">
           <p className="mecard-hi">Hi {me.name}{s.titles ? ' · season champion' : ''}</p>
-          <p className="mc-tier">{s.tier.name}{s.provisional && <span className="tag">provisional</span>}</p>
+          <div className="mc-tierrow">
+            <p className="mc-tier">{s.tier.name}{s.provisional && <span className="tag">provisional</span>}</p>
+            {mineP && <PinnedBadges p={mineP} list={list} fit />}
+          </div>
         </div>
         <p className="mecard-go"><a className="btn ghost" href={mine}>Your page</a>{me.is_admin && <a className="btn" href={hashFor('night', gid)}>Game night</a>}</p>
       </div>

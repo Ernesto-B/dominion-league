@@ -72,7 +72,16 @@ describe('Kingdom cards browser', () => {
     // the controls (buttons, options, labels, legends) — not the prose, which legitimately says "a card without a tag may still..."
     const controls = [...html.matchAll(/<(?:button|option|label|legend|summary)\b[^>]*>([\s\S]*?)<\/(?:button|option|label|legend|summary)>/g)].map(m => text(m[1])).join(' | ');
     expect(controls.length).toBeGreaterThan(200);
-    expect(controls).not.toMatch(/\b(without|exclude|excluding|except|not have|lacks?|missing|none of)\b/i);
+    expect(controls).not.toMatch(/\b(without|exclude|excluding|except|not have|lacks?|missing)\b/i);   // "none of" is allowed for printed types, expansions and costs (complete data), never for mechanics: see the next test
+  });
+  it('has ONE "Match: all of / any of / none of" row, right under the Debt buttons, and never offers "none of" inside Recorded mechanics', () => {
+    const h = render('cards');
+    expect(h.match(/aria-label="How to match the selected filters"/g)).toHaveLength(1);
+    const cost = h.split('<fieldset').find(x => x.includes('<legend>Cost</legend>')) || '';
+    const tail = text(cost.slice(cost.indexOf('aria-label="Debt cost"')));
+    expect(tail).toMatch(/Match all of any of none of/);
+    const mech = h.split('<fieldset').find(x => x.includes('<legend>Recorded mechanics</legend>')) || '';
+    expect(text(mech)).not.toMatch(/none of|without|exclude/i);
   });
   it('shows each card\'s printed types (several for a multi-type card), cost, and a shared pile where there is one', () => {
     const lurk = catalog.cards.find(c => c.types.length === 3);
@@ -91,7 +100,7 @@ describe('Kingdom cards browser', () => {
     expect((coin.match(/<button/g) || []).length).toBe(10);
     expect(coin).toContain('coin-1.png'); expect(coin).toContain('coin-10.png'); expect(coin).not.toContain('coin-0.png');
     const debt = html.match(/aria-label="Debt cost"[\s\S]*?<\/div>/)[0];
-    expect(debt).toContain('No Debt'); expect(debt).toContain('Any Debt'); expect(debt).toContain('debt-4.png'); expect(debt).toContain('debt-8.png');
+    expect(debt).not.toContain('No Debt'); expect(debt).toContain('Any Debt'); expect(debt).toContain('debt-4.png'); expect(debt).toContain('debt-8.png');
     expect(html).not.toMatch(/Coins from|<select[^>]*>\s*<option value="">Any<\/option>\s*<option value="1"/);          // the old min/max selects are gone
   });
   it('links every card to its own detail page', () => { expect((html.match(/href="#\/dominion\/cards\/[^"]+"/g) || []).length).toBe(331); });

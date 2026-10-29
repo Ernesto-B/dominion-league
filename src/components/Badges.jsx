@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import TierIcon from './TierIcon.jsx';
 import { TIERS, MAX_PINS, pinKey, pinnedBadges, grouped } from '../lib/achievements.js';
@@ -11,10 +11,10 @@ const KEY = 'dl.badgesopen';
 const readOpen = () => { try { return localStorage.getItem(KEY) !== '0'; } catch { return true; } };   // open unless the viewer closed it
 
 /* The badges on a Player page: earned ones with the game that earned them, the rest dimmed with how to get them. */
-export default function Badges({ p }) {
+export default function Badges({ p, focus = null }) {
   const { D, gid, hashFor, catalog } = usePage();
   const list = badgesFor(D, p, catalog);
-  const [open, setOpen] = useState(readOpen);
+  const [open, setOpen] = useState(() => (focus ? true : readOpen()));   // a link to one badge opens the section
   const got = list.filter(b => b.earned).length;
   const pins = usePins(p.name);
   // "Pin badges" mode: null normally, else the keys chosen so far (a badge's id, or 'track:<id>'). Saved once, on "Save pins".
@@ -25,8 +25,25 @@ export default function Badges({ p }) {
   const [owned, setOwned] = useState(false);
   const [tiers, setTiers] = useState([]);   // empty = every difficulty
   const flipTier = id => setTiers(t => (t.includes(id) ? t.filter(x => x !== id) : [...t, id]));
-  const secs = filterSections(grouped(list), { q, owned, tiers });
+  const sections = grouped(list);
+  const secs = filterSections(sections, { q, owned, tiers });
   const filtering = q.trim() || owned || tiers.length > 0;
+  // arriving with ?badge=<id>: open the section, scroll to that badge (or the track holding it) and flash it once
+  const holder = focus && sections.flatMap(sec => sec.items).find(it => (it.kind === 'track' ? it.steps.some(x => x.id === focus) : it.badge.id === focus));
+  const holderDom = holder ? (holder.kind === 'track' ? 'bt-' + holder.id : 'bd-' + holder.badge.id) : null;
+  const flashed = useRef(null);
+  useEffect(() => {
+    if (!focus) return undefined;
+    setOpen(true);
+    if (!holderDom || flashed.current === focus) return undefined;   // the badge list may still be loading: try again on the next render
+    const t = setTimeout(() => {
+      const el = document.getElementById(holderDom); if (!el) return;
+      flashed.current = focus;
+      el.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      el.classList.add('badge-flash'); setTimeout(() => el.classList.remove('badge-flash'), 2600);
+    }, 450);
+    return () => clearTimeout(t);
+  }, [focus, holderDom]);
   const when = b => b.earned && (b.earned.line != null ? <small className="badge-when">Earned <a href={hashFor('games', gid, b.earned.line)}>{short(b.earned.date)}</a></small> : <small className="badge-when">Earned</small>);
   return (
     <details className="badges-fold" open={open} onToggle={e => { const o = e.currentTarget.open; setOpen(o); try { localStorage.setItem(KEY, o ? '1' : '0'); } catch { /* not remembered */ } }}>
@@ -40,7 +57,7 @@ export default function Badges({ p }) {
         <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search badges" aria-label="Search badges by name or description" />
         {pins.mine && !picking && <button type="button" className="ghost" onClick={() => setPicking(pinnedBadges(pins.ids, list).map(pinKey))}>Pin badges</button>}
         {pick && <><button type="button" className="badge-save" disabled={pins.busy} onClick={savePicks}>Save pins · {picking.length} of {MAX_PINS}</button><button type="button" className="ghost" onClick={() => setPicking(null)}>Cancel</button></>}
-        {filtering && <button type="button" className="ghost dn-hide-sm" onClick={() => { setQ(''); setOwned(false); setTiers([]); }}>Clear</button>}
+        <button type="button" className="ghost dn-hide-sm" disabled={!filtering} onClick={() => { setQ(''); setOwned(false); setTiers([]); }}>Clear</button>
       </div>
       </div>
       {pins.error && <p className="meta badge-pinnote"><b className="down-t">{pins.error}</b></p>}
@@ -49,7 +66,7 @@ export default function Badges({ p }) {
         <section key={sec.group} className="badge-sec">
           <h3>{sec.group} <span className="meta">{sec.got} of {sec.of}</span></h3>
           <ul className="badges">
-            {sec.items.map(it => it.kind === 'track' ? <Track key={it.id} t={it} when={when} pick={pick} /> : <Badge key={it.id} b={it.badge} when={when} pick={pick} />)}
+            {sec.items.map(it => it.kind === 'track' ? <Track key={it.id} t={it} when={when} pick={pick} focus={focus} /> : <Badge key={it.id} b={it.badge} when={when} pick={pick} />)}
           </ul>
         </section>
       ))}
@@ -89,7 +106,7 @@ const pickState = (b, pick) => {
 function Badge({ b, when, pick }) {
   const { key, ok, on, n, blocked } = pickState(b, pick);
   return (
-    <li className={(b.earned ? 'got' : 'locked') + (b.secret ? ' secret' : '') + (ok ? ' pickable' : '') + (blocked ? ' blocked' : '')}
+    <li id={'bd-' + b.id} className={(b.earned ? 'got' : 'locked') + (b.secret ? ' secret' : '') + (ok ? ' pickable' : '') + (blocked ? ' blocked' : '')}
       {...(ok ? { role: 'checkbox', 'aria-checked': on, tabIndex: 0, onClick: e => { if (!e.target.closest('a')) pick.toggle(key); }, onKeyDown: e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); pick.toggle(key); } } } : {})}>
       <span className="badge-ico" aria-hidden="true">{ok ? <PickMark n={n} /> : icon(b)}</span>
       <span className="badge-txt"><b><Dot tier={b.tier} />{b.name}</b><small>{b.hint}</small>{when(b)}</span>
@@ -99,15 +116,16 @@ function Badge({ b, when, pick }) {
 
 /* A ladder of badges as one box: the step you are on, a rail of every step (earned ones filled in, the next one marked) and how far to the
    next; tapping the box slides open the detail (what each step asks for and when it was earned). */
-function Track({ t, when, pick }) {
-  const [open, setOpen] = useState(false);
+function Track({ t, when, pick, focus }) {
+  const [open, setOpen] = useState(() => !!focus && t.steps.some(x => x.id === focus));   // a link to one of its steps opens it
+
   const id = useId();
   const cur = t.current, nx = t.next, ref = nx || cur;
   const fill = Math.min(100, (t.got + (nx && nx.value != null ? Math.min(1, Math.max(0, nx.value / nx.target)) : 0)) / t.of * 100);
   const { key, ok, on, n, blocked } = pickState(cur, pick);
   const pct = nx && nx.value != null ? Math.max(0, Math.min(100, Math.round(nx.value / nx.target * 100))) : 100;
   return (
-    <li className={'badge-track ' + (cur ? 'got' : 'locked') + (open ? ' open' : '') + (ok ? ' pickable' : '') + (blocked ? ' blocked' : '')} onClick={e => { if (e.target.closest('a')) return; if (ok) pick.toggle(key); else setOpen(o => !o); }}>
+    <li id={'bt-' + t.id} className={'badge-track ' + (cur ? 'got' : 'locked') + (open ? ' open' : '') + (ok ? ' pickable' : '') + (blocked ? ' blocked' : '')} onClick={e => { if (e.target.closest('a')) return; if (ok) pick.toggle(key); else setOpen(o => !o); }}>
       <button type="button" className="badge-head" {...(ok ? { 'aria-pressed': on } : { 'aria-expanded': open, 'aria-controls': id })}>
         <span className="badge-ico" aria-hidden="true">{ok ? <PickMark n={n} /> : icon(cur || ref)}</span>
         <span className="badge-txt">

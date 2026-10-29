@@ -69,7 +69,7 @@ function Shell() {
       {body}
       {ready && <PullToRefresh onRefresh={boot} />}
       {ready && <BottomNav ready={{ ...state, route }} hash={hash} />}
-      {ready && (['games', 'players', 'dominion'].includes(route.route)) && <ScrollTopButton />}
+      {ready && (['home', 'season', 'games', 'players', 'records', 'night', 'dominion'].includes(route.route)) && <ScrollTopButton lift={route.route === 'night'} />}
       <PopLayer />
       <footer className="foot"><span id="foot">{ready ? 'Ratings are recalculated in your browser each time the page loads.' : ''}</span>
         {ready && <a className="logout" href="#" onClick={e => { e.preventDefault(); sb.auth.signOut(); }}>Log out</a>}</footer>

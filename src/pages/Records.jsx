@@ -43,14 +43,13 @@ export default function Records() {
   const who = names => names.map((n, i) => <span key={n}>{i > 0 && ', '}<PlayerLink name={n} /></span>);
   // how many of the records above are yours: a small boast at the top of the page
   const mine = me && [R.leader, R.peak, R.mostGames, R.mostWins, R.bestWinPct, R.bestAvgPts, R.bestStreak, R.mostTitles && R.mostTitles.value > 0 ? R.mostTitles : null].filter(x => x && x.name === me.name).length
-    + [BR.most, BR.rarest, BR.hard].filter(x => x && x.names.includes(me.name)).length;
+    + [BR.most, BR.hard].filter(x => x && x.names.includes(me.name)).length;
   const brow = (label, x, value) => ({
     key: label,
     cells: [label, { node: x ? who(x.names) : '—', text: x ? x.names.join(', ') : '—', className: 'name' }, { node: <b>{x ? value(x) : ''}</b>, text: x ? String(value(x)) : '' }],
   });
   const badgeRows = [
     brow('Most badges earned', BR.most, x => x.value),
-    brow('Rarest badge held', BR.rarest, x => x.badge.name),
     brow('Most epic and legendary badges', BR.hard, x => x.value),
   ];
 

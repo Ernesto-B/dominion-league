@@ -6,6 +6,7 @@ import GroupSwitcher from '../components/GroupSwitcher.jsx';
 import Banner from '../components/Banner.jsx';
 import FilterFold from '../components/FilterFold.jsx';
 import GamesTable from '../components/GamesTable.jsx';
+import SetSelect from '../components/SetSelect.jsx';
 import { takeKingdomDraft } from '../dominion/kingdomDraft.js';
 
 // the Add/Edit dialog (with the kingdom picker and its catalog code) is only needed once someone opens it
@@ -53,10 +54,7 @@ export default function Games() {
           <option value="all">Everyone</option>
           {D.players.map(p => <option key={p.name}>{p.name}</option>)}
         </select></label>
-      <label className="f">Set <select id="gfset" value={gf.set} onChange={set('set')}>
-          <option value="all">All sets</option>
-          {SET_NAMES.filter(n => enabledSets.has(n) || D.records.sets[n]).map(n => <option key={n}>{n}</option>)}
-        </select></label>
+      <span className="f">Set <SetSelect id="gfset" value={gf.set} sets={SET_NAMES.filter(n => enabledSets.has(n) || D.records.sets[n])} onChange={v => { saved = { ...gf, set: v }; setGf(saved); }} /></span>
     </>
   );
 

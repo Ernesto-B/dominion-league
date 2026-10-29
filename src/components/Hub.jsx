@@ -19,7 +19,7 @@ export default function Hub() {
       <ul>
         {next.map(x => (
           <li key={x.id}>
-            <a href={hashFor('players', gid, encodeURIComponent(me.name))}>
+            <a href={hashFor('players', gid, `${encodeURIComponent(me.name)}?badge=${encodeURIComponent(x.id)}`)} title="Show this badge on your page">
               <b><i className={'tier-dot td-' + x.tier} title={LABEL[x.tier]}></i>{x.name}{x.track ? <span className="meta"> · {x.track}</span> : null}</b>
               <small>{x.hint}</small>
               {x.pct != null ? <>

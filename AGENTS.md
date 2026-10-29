@@ -269,7 +269,7 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   pile, Knights and Castles are ONE pile with several names, so names >= piles), *physical* cards (sum of pile
   copies), landscapes and Artifacts are five different things. Landscapes and Artifacts are never Kingdom cards.
 - **Mechanic tags are positive-only and non-exhaustive.** A missing tag is NOT a confirmed "no". There is
-  deliberately no "without"/"exclude" filter anywhere (a test enforces this), the owner removed the on-page disclaimers and the
+  deliberately no "without"/"exclude" filter for MECHANIC tags (a test enforces this; "none of" exists only for printed types, expansions, coin costs and landscape types, whose data is complete), the owner removed the on-page disclaimers and the
   review-status table as clutter (the *behaviour* — never a "without" filter, rules that require tags only ever add cards — is
   what keeps this honest). Landscape/Artifact
   tags use a *different vocabulary* from the Kingdom taxonomy — never join them to it.

@@ -23,7 +23,10 @@ export default function Players() {
   const all = D.players.filter(p => p.allGames > 0);
   if (!all.length) return <><h1>Players</h1><GroupSwitcher route="players" /><p className="empty">No games yet.</p></>;
   const rankedHere = D.ranked;
-  const name = arg ? decodeURIComponent(arg) : (rankedHere[0] || all[0]).name;
+  // the arg is the player's name, plus an optional ?badge=<id> that points at one badge (from the front page's Next up)
+  const [argName, argQuery] = (arg || '').split('?');
+  const focusBadge = new URLSearchParams(argQuery || '').get('badge');
+  const name = argName ? decodeURIComponent(argName) : (rankedHere[0] || all[0]).name;
   const p = D.players.find(x => x.name === name) || all[0];
   // Hovering a chart label lights up that line; switching players starts fresh, like a re-render did.
   const highlight = hover.of === p.name ? hover.name : null;
@@ -111,7 +114,7 @@ export default function Players() {
         </div>
       )}
       <XpPanel name={p.name} />
-      <Badges p={p} />
+      <Badges p={p} focus={focusBadge} />
       <h2>Rating history</h2>
       <RatingChart names={rankedHere.map(x => x.name)} hot={p.name} highlight={highlight} onHover={n => setHover({ of: p.name, name: n })} />
       {opp.length > 0 && <>
