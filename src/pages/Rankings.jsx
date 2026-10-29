@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { f0, ord, short, sgn } from '../lib/format.js';
 import GroupSwitcher from '../components/GroupSwitcher.jsx';
@@ -10,12 +10,26 @@ import TierLegend from '../components/TierLegend.jsx';
 import LastNight from '../components/LastNight.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import MeCard from '../components/MeCard.jsx';
+import Hub from '../components/Hub.jsx';
 import SinceVisit from '../components/SinceVisit.jsx';
-import { xpOf } from '../lib/xp.js';
+import { badgesFor, xpOf } from '../lib/xp.js';
+import { pinnedBadges, TIERS } from '../lib/achievements.js';
 import { steadyPayout } from '../lib/steadyElo.js';
 
+const TIER_LABEL = { ...Object.fromEntries(TIERS.map(t => [t.id, t.label])), secret: 'Secret' };
+
 function Ladder({ ranked: rk, highlight, setHighlight }) {
-  const { D, gid, hashFor, catalog } = usePage();
+  const { D, gid, hashFor, catalog, rawPlayers } = usePage();
+  // each player's first pinned badge, shown beside their name (badges are only worked out for players who pinned something)
+  const showcase = useMemo(() => {
+    const m = new Map();
+    for (const r of rawPlayers || []) {
+      const ids = r.pinned_badges || []; if (!ids.length) continue;
+      const p = D.players.find(x => x.name === r.name); if (!p || !p.rated) continue;
+      const b = pinnedBadges(ids, badgesFor(D, p, catalog))[0]; if (b) m.set(r.name, b);
+    }
+    return m;
+  }, [D, catalog, rawPlayers]);
   const mx = Math.max(60, ...rk.map(p => Math.abs(p.elo - D.E.start))) * 1.08;
   return (
     <div className="ladder" role="table" aria-label="Elo rankings">
@@ -37,6 +51,7 @@ function Ladder({ ranked: rk, highlight, setHighlight }) {
               <TierIcon id={p.tier.icon} size={28} alt={p.tier.name + ' tier'} />{p.name}
               {lv && lv.perGame.length > 0 ? <span className="lvl" title={`Level ${lv.level} · ${lv.total.toLocaleString()} XP`}>Lv {lv.level}</span> : null}
               {p.titles ? <span className="crown" title={`${p.titles} season title${p.titles > 1 ? 's' : ''}`}><TierIcon id="champion" size={20} alt="Season champion" />{p.titles > 1 ? '×' + p.titles : ''}</span> : null}
+              {showcase.get(p.name) ? <span className={'pin-chip lpin dn-hide-sm td-' + showcase.get(p.name).tier} title={`${TIER_LABEL[showcase.get(p.name).tier] || ''}: ${showcase.get(p.name).hint}`}>{showcase.get(p.name).name}</span> : null}
               {p.streak >= 3 ? <span className="pill hot" title={`${p.streak}-game win streak`}>🔥 {p.streak}</span> : null}
               {p.status === 'Provisional' ? <span className="tag">provisional</span> : null}
             </a>
@@ -89,6 +104,7 @@ export default function Rankings() {
     <>
       <GroupSwitcher route="" />
       <MeCard ranked={rk} />
+      {rk.length > 0 && <Hub />}
       {rk.length > 0 && <SinceVisit ranked={rk} />}
       {chips}
       <Banner />

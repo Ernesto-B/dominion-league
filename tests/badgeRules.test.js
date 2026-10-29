@@ -125,7 +125,7 @@ describe('the whole list', () => {
   it('has unique ids, sorts into the documented groups, and keeps tracks together', () => {
     const ids = BADGES.map(b => b.id); expect(new Set(ids).size).toBe(ids.length);
     const secs = grouped(Object.values(run([win2()], { catalog: mkCatalog(), baseXp: new Map() })));
-    expect(secs.map(s => s.group)).toEqual(['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones']);
+    expect(secs.map(s => s.group)).toEqual(['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones', 'Secrets']);
     const slayer = secs.find(s => s.group === 'Comebacks and upsets').items.find(i => i.id === 'slayer');
     expect(slayer.steps.map(s => s.id)).toEqual(['giant-slayer', 'god-slayer']);
   });
@@ -319,7 +319,7 @@ describe('Dominion Legend and tiers', () => {
   });
   it('every badge has one of the five tiers, and each group has a place in the page order', () => {
     const ok = new Set(TIERS.map(t => t.id)), list = Object.values(run([win2()], { catalog: mkBig(), baseXp: new Map() }));
-    expect(list.filter(b => !ok.has(b.tier)).map(b => b.id)).toEqual([]);
+    expect(list.filter(b => !ok.has(b.tier) && !b.secret).map(b => b.id)).toEqual([]);
     expect(list.filter(b => !GROUPS.includes(b.group)).map(b => b.id)).toEqual([]);
     expect(list.find(b => b.id === 'dominion-legend').bonus).toBe(2000);
     expect(list.find(b => b.id === 'the-immortal').bonus).toBe(1000); expect(list.find(b => b.id === 'the-unbreakable').bonus).toBe(600);
@@ -337,5 +337,25 @@ describe('tracks made from single badges', () => {
     expect([t('war-zone').track, t('trial-by-fire').track]).toEqual(['warpath', 'warpath']);
     expect(t('shifting-realities').trackName).toBe('Terraformer');
     expect(t('a-world-divided').name).toBe('Crusader');   // the id never changed, only the name
+  });
+});
+
+describe('secret badges', () => {
+  const six = () => rated({ Me: 1, A: 2, B: 3, C: 4, D: 5, E: 6 }, 1000);
+  it('are masked until earned: no name, rule, progress or difficulty leaks, and the real badge appears once found', () => {
+    const hidden = run([win2()], { catalog: mkCatalog(), baseXp: new Map() })['secret-test'];
+    expect(hidden.earned).toBeNull(); expect(hidden.secret).toBe(true);
+    expect(hidden.name).toBe('???'); expect(hidden.hint).not.toMatch(/six|table/i);
+    expect(hidden.bonus).toBeUndefined(); expect(hidden.target).toBeUndefined(); expect(hidden.value).toBeUndefined();
+    const found = run([six()], { catalog: mkCatalog(), baseXp: new Map() })['secret-test'];
+    expect(found.earned).not.toBeNull(); expect(found.name).toBe('TEST SECRET (delete me)'); expect(found.bonus).toBe(25);
+  });
+  it('sit in the Secrets section, never in Next up, and are not needed for Dominion Legend', async () => {
+    const { nextUp } = await import('../src/lib/hub.js');
+    const list = Object.values(run([win2()], { catalog: mkCatalog(), baseXp: new Map() }));
+    expect(nextUp(list, 200).some(b => b.id === 'secret-test')).toBe(false);
+    expect(grouped(list).find(s => s.group === 'Secrets').items.length).toBeGreaterThan(0);
+    const all = [{ id: 'a', tier: 'common', earned: { line: 1 } }, { id: 's', tier: 'secret', secret: true, earned: null }];
+    expect(legendFrom(all, [{ line: 1, date: '2026-01-01', idx: 0 }])).not.toBeNull();
   });
 });

@@ -2,6 +2,7 @@ import { usePage } from '../PageContext.js';
 import { meSummary } from '../lib/meSummary.js';
 import { ord, short, sgn } from '../lib/format.js';
 import TierIcon from './TierIcon.jsx';
+import { BadgeReward, LevelReward } from './RewardCard.jsx';
 import CountUp from './CountUp.jsx';
 import HoverPopup from './HoverPopup.jsx';
 import { tierRange } from './TierLegend.jsx';
@@ -28,8 +29,21 @@ export default function MeCard({ ranked }) {
   }, [catalog, seen, list, gid]);
   const fresh = seen && catalog ? newBadges(list, seen) : [];
   const xp = me ? xpOf(D, me.name, catalog) : null;
+  // the level this device last saw: a first look only records it; a higher level afterwards is announced
+  const lvKey = 'dl.level.' + (gid ?? 'all');
+  const [lvSeen, setLvSeen] = useState(() => { try { const v = store() && store().getItem(lvKey); return v == null ? null : Number(v); } catch { return null; } });
+  const level = xp && xp.perGame.length ? xp.level : null;
+  useEffect(() => {
+    if (!catalog || lvSeen != null || level == null) return;
+    try { const s = store(); if (s) s.setItem(lvKey, String(level)); } catch { /* not remembered */ }
+    setLvSeen(level);
+  }, [catalog, lvSeen, level, lvKey]);
+  const lvlUp = level != null && lvSeen != null && catalog && level > lvSeen ? level : null;
   if (!me) return null;
-  const gotIt = () => { const s = store(); if (s) saveBadgesSeen(s, gid, earnedIds(list)); setSeen(earnedIds(list)); };
+  const gotIt = () => {
+    const s = store(); if (s) { saveBadgesSeen(s, gid, earnedIds(list)); try { if (level != null) s.setItem(lvKey, String(level)); } catch { /* not remembered */ } }
+    setSeen(earnedIds(list)); if (level != null) setLvSeen(level);
+  };
   const s = meSummary(ranked, me.name, D.E.start, steadyPayout(4, D.E)[0]);
   const mine = hashFor('players', gid, encodeURIComponent(me.name));
   if (!s) return (
@@ -78,7 +92,15 @@ export default function MeCard({ ranked }) {
         </div></HoverPopup>
       )}
       {list.length > 0 && <p className="mc-badges"><a href={mine}>Badges <b>{list.filter(b => b.earned).length}</b> of {list.length}</a><span className="meta"> — see what’s next</span></p>}
-      {fresh.length > 0 && <p className="badge-new" role="status"><span>New badge{fresh.length === 1 ? '' : 's'}: <b>{fresh.slice(0, 3).map(b => b.name).join(', ')}</b>{fresh.length > 3 ? ` and ${fresh.length - 3} more` : ''}</span><button type="button" className="ghost" onClick={gotIt}>Nice</button></p>}
+      {(fresh.length > 0 || lvlUp) && (
+        <div role="status">
+          <ul className="rewards">
+            {lvlUp && <LevelReward level={lvlUp} from={lvSeen} />}
+            {fresh.slice(0, 3).map((b, i) => <BadgeReward key={b.id} b={b} i={i + (lvlUp ? 1 : 0)} />)}
+          </ul>
+          <p className="badge-new"><span>{fresh.length > 3 ? `and ${fresh.length - 3} more new badges` : ''}</span><button type="button" className="ghost" onClick={gotIt}>Nice</button></p>
+        </div>
+      )}
     </section>
   );
 }

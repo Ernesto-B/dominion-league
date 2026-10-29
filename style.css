@@ -108,6 +108,7 @@ details.help .note{margin:8px 0 0}
 .form i{width:10px;height:10px;border-radius:50%;background:var(--line)}
 .form i.w{background:var(--felt)} .form i.l{background:var(--brick)} .form i.m{background:var(--muted);opacity:.55}
 .lhead{display:grid;grid-template-columns:44px minmax(150px,210px) minmax(160px,1fr) 78px 64px 92px;gap:10px;padding:6px 16px 8px;color:var(--muted);font-size:13px}
+.lhead span:nth-child(3){text-align:center}   /* over the bar chart's centre line */
 .lhead span:nth-child(n+4){text-align:right}
 .axis{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
 
@@ -228,7 +229,9 @@ button.iconbtn img{display:block;height:72px;width:auto}
 .steps{padding-left:20px;max-width:70ch} .steps li{margin:6px 0}
 code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;background:var(--line);padding:1px 5px;border-radius:4px}
 
-.foot{max-width:1080px;margin:0 auto;padding:0 16px 40px;color:var(--muted);font-size:13px}
+.foot{max-width:1080px;margin:0 auto;padding:0 16px 40px;color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:4px 16px;justify-content:space-between}
+.foot .logout{color:var(--muted)}
+@media (max-width:720px){.foot .logout{display:none}}   /* on a phone Log out is in the More sheet */
 
 @media (max-width:720px){
   .lhead{display:none}
@@ -669,7 +672,9 @@ button.linkish[aria-pressed=true]{font-weight:700;text-decoration:none}
 /* --- a bottom tab bar on phones --- */
 .brand,.bottomnav,.moresheet-back{display:none}
 @media (max-width:720px){
-  .top{display:none}   /* the bottom bar is the navigation, and the name and Log out live in its More sheet */
+  #nav,.brand,#navuser .logout{display:none}   /* the bottom bar is the navigation, and Log out lives in its More sheet; the top bar is just the HUD */
+  .top-inner{padding:6px 12px;gap:0}
+  #navuser{flex:1;margin:0}
   .bottomnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0B1015;border-top:1px solid var(--line);padding:0 4px env(safe-area-inset-bottom);transform:translateZ(0);will-change:transform;backface-visibility:hidden}   /* its own compositor layer, so it stays put while the page scrolls under it */
   .bottomnav a,.bottomnav button{flex:1;min-width:0;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 2px;
     background:none;border:0;border-radius:0;color:#9AA7B4;font:600 12px var(--text);text-decoration:none;cursor:pointer}
@@ -977,9 +982,10 @@ a.dn-cell-link:hover .dn-pct{color:var(--ink)}
 .badges-fold>.badges{margin-top:12px}
 .badge-when{color:var(--brass)!important;font-weight:600}
 .badge-sec{margin-top:18px}
-:root{--td-common:#9aa3ad;--td-uncommon:#5fc79a;--td-rare:#5b9bf0;--td-epic:#a678e8;--td-legendary:#e8bf5a}
+:root{--td-secret:#ff7a59;--td-common:#9aa3ad;--td-uncommon:#5fc79a;--td-rare:#5b9bf0;--td-epic:#a678e8;--td-legendary:#e8bf5a}
 .tier-dot{display:inline-block;width:9px;height:9px;margin-right:7px;border-radius:50%;vertical-align:1px;background:var(--td)}
 .td-common{--td:var(--td-common)}.td-uncommon{--td:var(--td-uncommon)}.td-rare{--td:var(--td-rare)}.td-epic{--td:var(--td-epic)}
+.td-secret{--td:var(--td-secret)}
 .td-legendary{--td:var(--td-legendary);box-shadow:0 0 0 2px color-mix(in srgb, var(--td-legendary) 35%, transparent)}
 .badge-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 20px;margin-top:10px}
 .tier-legend{display:flex;flex-wrap:wrap;gap:4px 16px;margin:0;font-size:13px;color:var(--muted)}
@@ -1155,3 +1161,92 @@ a:hover .dn-exp-label{text-decoration:underline}
 }
 .dn-namecost{display:inline-flex;align-items:center;gap:8px}
 @media (max-width:720px){.dn-iconset .dn-exp-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}}   /* a phone shows just the set's icon (the name stays for screen readers) */
+
+/* ---------- gamify theme (branch gamify): a HUD, framed panels, brass accents ---------- */
+:root{--frame:color-mix(in srgb, var(--brass) 38%, var(--line));--sheen:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0) 55%)}
+#navuser a.hud{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 6px;border:1px solid var(--frame);border-radius:999px;background:var(--sheen),rgba(255,255,255,.04);color:#E6EBF0;text-decoration:none;min-width:0}
+#navuser a.hud:hover{border-color:var(--brass)}
+.hud img.tier{flex:none}
+.hud-name{display:none}   /* the name is in the me card; the HUD is icons and numbers */
+.hud-lvl{font:600 12px var(--text);color:var(--brass);white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.hud-lvl b{font:800 18px var(--display);letter-spacing:0;margin-left:2px}
+.hud-bar{flex:none;width:60px;height:8px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden}
+.hud-bar i{display:block;height:100%;border-radius:inherit;transform-origin:left;transform:scaleX(var(--p));background:linear-gradient(90deg,var(--brass),#f5df9b)}
+.hud-stat{display:inline-flex;align-items:center;gap:4px;font:700 14px var(--text);white-space:nowrap}
+@media (max-width:720px){
+  #navuser a.hud{flex:1;padding:5px 12px 5px 8px;gap:9px}
+  .hud-bar{flex:1;width:auto;min-width:40px}
+}
+@media (min-width:721px){   /* the HUD needs room in the top bar: tighter nav items so everything still fits on one row */
+  .top-inner{gap:12px}
+  nav a{padding:8px 7px;gap:6px}
+}
+@media (min-width:721px) and (max-width:1023px){.hud-bar{display:none}}
+@media (prefers-reduced-motion:no-preference){.hud-bar i{animation:dnhud .9s cubic-bezier(.2,.7,.2,1) .15s both}}
+@keyframes dnhud{from{transform:scaleX(0)}}
+.mecard,.xp,.stats{border-color:var(--frame)}
+.mecard,.xp{background:var(--sheen),var(--panel);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+main h2:not(.badges-fold h2)::before{content:'';display:inline-block;width:8px;height:8px;margin:0 10px 3px 0;background:var(--brass);transform:rotate(45deg);vertical-align:middle}
+.btn:not(.ghost){background:linear-gradient(180deg,#f2d27f,#cb9c2f);color:#2a1d05;box-shadow:0 2px 0 #8a6414,inset 0 1px 0 rgba(255,255,255,.55)}
+.btn:not(.ghost):active{box-shadow:0 0 0 #8a6414,inset 0 1px 0 rgba(255,255,255,.35)}
+
+/* the front page's Next up */
+.nextup{margin:0 0 20px}
+.nextup h2{margin:0 0 10px;font-size:20px}
+.nextup ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.nextup a{display:flex;flex-direction:column;gap:4px;height:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:inherit;text-decoration:none}
+.nextup a:hover{border-color:var(--brass)}
+.nextup b{font:700 16px var(--text)}
+.nextup small{color:var(--muted);font-size:13px;line-height:1.35}
+.nu-bar{display:block;height:6px;margin-top:auto;padding:0;border-radius:99px;background:var(--line);overflow:hidden}
+.nu-bar i{display:block;height:100%;border-radius:inherit;transform-origin:left;transform:scaleX(var(--p));background:linear-gradient(90deg,var(--brass),#f5df9b)}
+.nu-n{font-size:12px;color:var(--muted)}
+@media (max-width:720px){
+  .nextup ul{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 16px;scrollbar-width:none;margin:0 -16px;padding:0 16px 2px;gap:8px}
+  .nextup ul::-webkit-scrollbar{display:none}
+  .nextup li{flex:0 0 82%;scroll-snap-align:start}
+  .nextup a{padding:10px 12px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .nextup a{transition:transform .14s ease,border-color .15s ease}
+  .nextup a:active{transform:scale(.97)}
+  .nu-bar i{animation:dnhud .8s cubic-bezier(.2,.7,.2,1) .2s both}
+  .nextup li{animation:dnrise .35s cubic-bezier(.2,.7,.2,1) both}
+}
+
+/* reward cards: what a game or a visit just unlocked */
+.rewards{list-style:none;margin:14px 0 4px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.reward{--td:var(--td-common);position:relative;overflow:hidden;display:flex;flex-direction:column;gap:2px;padding:10px 14px;border:1px solid color-mix(in srgb, var(--td) 70%, transparent);border-radius:12px;background:color-mix(in srgb, var(--td) 12%, var(--panel))}
+.reward b{font:800 18px var(--display);letter-spacing:-.01em}
+.reward small{color:var(--muted);font-size:13px}
+.reward-kicker{font:700 11px var(--text);letter-spacing:.08em;text-transform:uppercase;color:var(--td)}
+.reward-xp{margin-top:2px;font:700 13px var(--text);color:var(--brass)}
+.reward.td-epic{box-shadow:0 0 12px color-mix(in srgb, var(--td) 35%, transparent)}
+.reward.td-legendary{box-shadow:0 0 16px color-mix(in srgb, var(--td) 50%, transparent);background:color-mix(in srgb, var(--td) 18%, var(--panel))}
+.reward-lvl{justify-content:center;--td:var(--brass);background:color-mix(in srgb, var(--brass) 14%, var(--panel))}
+.reward-lvl b{font-size:26px;color:var(--brass)}
+@media (prefers-reduced-motion:no-preference){
+  .reward{animation:dnpop .55s cubic-bezier(.3,1.5,.5,1) both;animation-delay:calc(var(--i,0) * 140ms + 250ms)}
+  .reward.td-rare::after,.reward.td-epic::after,.reward.td-legendary::after,.reward-lvl::after{content:'';position:absolute;top:-30%;bottom:-30%;left:0;width:34%;pointer-events:none;
+    background:linear-gradient(105deg,transparent,rgba(255,255,255,.4),transparent);transform:translateX(-160%) skewX(-18deg);animation:pinglint 1.2s ease-out 1 both;animation-delay:calc(var(--i,0) * 140ms + 800ms)}
+}
+
+/* secret badges: a "?" card until found, then an ember-coloured badge that reveals itself and shimmers when pinned */
+.badges li.secret.locked{border-style:dashed;opacity:.62}
+.badges li.secret.locked .badge-ico{color:var(--td-secret);font:800 22px var(--display)}
+.badges li.secret.got{border-color:var(--td-secret);box-shadow:0 0 10px color-mix(in srgb, var(--td-secret) 30%, transparent)}
+.reward.td-secret{--td:var(--td-secret);background:linear-gradient(135deg,color-mix(in srgb, var(--td-secret) 22%, var(--panel)),color-mix(in srgb, #d94fa0 18%, var(--panel)));box-shadow:0 0 18px color-mix(in srgb, var(--td-secret) 45%, transparent)}
+.pin-chip.td-secret{border-color:var(--td-secret);background:linear-gradient(135deg,color-mix(in srgb, var(--td-secret) 26%, transparent),color-mix(in srgb, #d94fa0 22%, transparent));box-shadow:0 0 12px color-mix(in srgb, var(--td-secret) 50%, transparent);position:relative;overflow:hidden}
+@media (prefers-reduced-motion:no-preference){
+  .reward.td-secret{animation:dnflip .7s cubic-bezier(.2,.8,.3,1) both;animation-delay:calc(var(--i,0) * 140ms + 250ms)}
+  .reward.td-secret::after{animation-duration:1.6s}
+  .pin-chip.td-secret::after{content:'';position:absolute;top:-30%;bottom:-30%;left:0;width:38%;pointer-events:none;background:linear-gradient(105deg,transparent 0,rgba(255,235,210,.65) 50%,transparent 100%);transform:translateX(-160%) skewX(-18deg);animation:pinglint 3s ease-in-out infinite}
+  .pin-chip.td-secret::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(closest-side,color-mix(in srgb, var(--td-secret) 55%, transparent),transparent);animation:dnember 3.2s ease-in-out infinite}
+}
+@keyframes dnflip{from{opacity:0;transform:perspective(500px) rotateY(80deg) scale(.9)}to{opacity:1;transform:none}}
+@keyframes dnember{0%,100%{opacity:.15}50%{opacity:.7}}
+
+/* the ladder's showcase badge: a small static chip (no glint or glow here, the ladder has many rows) */
+.pin-chip.lpin{display:inline-block;flex:none;max-width:200px;padding:1px 9px;font-size:12px;line-height:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-shadow:none;cursor:default}
+@media (max-width:720px){.pin-chip.lpin{display:none}}   /* the phone ladder is dense: the badge shows on the Player page instead */
+.pin-chip.lpin::before,.pin-chip.lpin::after{display:none}

@@ -12,7 +12,7 @@ const firstIndex = (results, ok) => { for (let i = 0; i < results.length; i++) i
    track as one box showing the current step and the next, with every step inside it. Ids never change, so "seen" lists keep working.
    `bonus` is the XP a badge pays on top of the standard badge XP (lib/xp.js). `target` is the number a step is reached at, when it is a count.
    `tier` is how hard it is, shown as a small coloured dot (TIERS). */
-export const GROUPS = ['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones', 'Seasons'];
+export const GROUPS = ['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones', 'Seasons', 'Secrets'];
 export const TIERS = [
   { id: 'common', label: 'Common', hint: 'Simple progression milestones' },
   { id: 'uncommon', label: 'Uncommon', hint: 'Moderate challenges' },
@@ -88,7 +88,14 @@ export const BADGES = [
   { id: 'unfortunate-one', group: 'Milestones', tier: 'common', name: 'The Unfortunate One', hint: 'Finish a game with exactly 1 VP.', bonus: 10 },
   { id: 'into-the-abyss', group: 'Milestones', tier: 'uncommon', name: 'Into the Abyss', hint: 'Finish a game with negative VP.', bonus: 20 },
   { id: 'the-immortal', group: 'Milestones', tier: 'legendary', name: 'The Immortal', hint: 'Win 100 rated games and reach 1,500 Elo.', bonus: 1000 },
+  // ===== TEST SECRET BADGE: delete this line and its rule (search "secret-test" below) to remove it. =====
+  { id: 'secret-test', group: 'Secrets', secret: true, tier: 'secret', name: 'TEST SECRET (delete me)', hint: 'Win a game at a table of six or more.', bonus: 25 },
 ];
+
+/* A SECRET badge (`secret: true`, `group: 'Secrets'`, `tier: 'secret'`) is hidden until it is earned: achievements() hands back a masked "???" entry for it
+   (no name, no rule, no progress), so no screen can leak it; once earned it is an ordinary badge that reveals itself with its own celebration. It has no
+   difficulty dot and does not count toward Dominion Legend. */
+const SECRET_HINT = 'A secret badge. Keep playing to find out what it asks.';
 
 // the 50% and 100% steps of each expansion (by the catalog's expansion name): more than half of its supply piles, then all of them
 const EXPANSION_NAMES = {
@@ -114,7 +121,7 @@ const landscapesOf = (g, catalog) => [...new Map((g.kingdom || []).filter(k => k
 /* Dominion Legend: every badge that is not legendary, earned. (The Renown track and the season title are added after this, since they come from XP and the
    league, so they are left out of the count.) Earned in the game that completed the set; null while anything is missing. */
 export function legendFrom(list, games = []) {
-  const need = list.filter(b => b.tier !== 'legendary');
+  const need = list.filter(b => b.tier !== 'legendary' && !b.secret);
   if (!need.length || !need.every(b => b.earned)) return null;
   const idx = new Map(games.map(g => [g.line, g.idx ?? 0]));
   const last = need.map(b => b.earned.line).filter(l => l != null).reduce((m, l) => (m == null || (idx.get(l) ?? 0) > (idx.get(m) ?? 0) ? l : m), null);
@@ -138,6 +145,7 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
   out.set('redemption', at(firstIndex(rs, (r, i) => i > 0 && sole(r.game, r.place) && soleLast(rs[i - 1].game, rs[i - 1].place))));
   const slayer = gap => at(firstIndex(rs, r => sole(r.game, r.place) && Object.entries(r.game.elo || {}).some(([n, e]) => n !== me && e && e.before - r.before >= gap)));
   out.set('giant-slayer', slayer(100)); out.set('god-slayer', slayer(200));
+  out.set('secret-test', at(firstIndex(rs, r => sole(r.game, r.place) && r.game.n >= 6)));   // TEST SECRET BADGE rule
   out.set('big-swing', at(firstIndex(rs, r => r.after - r.before >= 50))); out.set('bigfoot', at(firstIndex(rs, r => r.after - r.before >= 100)));
   // the lowest-rated player at a table beats everyone else there (three or more players; six for The Chosen One)
   const lowest = (r, size) => { const e = Object.entries(r.game.elo || {}); return (size ? e.length === size : e.length >= 3) && r.place === 1 && e.every(([n, x]) => n === me || (x && x.before > r.before)); };
@@ -333,7 +341,8 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
   // the Renown track comes from XP (lib/xp.js), which itself needs the other badges, so it is only added when the caller passes the XP in
   if (xp) for (const st of xp.steps) list.push({ id: 'level-' + st.level, group: 'Milestones', track: 'level', trackName: 'Renown', tier: LEVEL_TIERS[st.level] || 'uncommon', name: LEVEL_NAMES[st.level] || `Level ${st.level}`, hint: `Reach level ${st.level}.`, target: st.level, bonus: st.bonus, value: xp.level, earned: st.earned });
   if (p.titles > 0) list.push({ id: 'champion', group: 'Seasons', tier: 'epic', name: p.titles > 1 ? `Season champion ×${p.titles}` : 'Season champion', hint: 'Win a season.', earned: { date: null, line: null } });
-  return list;
+  // hide the secrets that are not found yet (after Dominion Legend and the level track have read the full list)
+  return list.map(b => (b.secret && !b.earned ? { id: b.id, group: b.group, secret: true, tier: 'secret', name: '???', hint: SECRET_HINT, earned: null } : b));
 }
 
 /* The list as the page draws it: sections in GROUPS order, each holding single badges and tracks (one entry per ladder, its steps inside).

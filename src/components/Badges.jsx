@@ -73,7 +73,7 @@ export function filterSections(secs, { q, owned, tiers }) {
   return secs.map(sec => ({ ...sec, items: sec.items.filter(keep) })).filter(sec => sec.items.length);
 }
 
-const LABEL = Object.fromEntries(TIERS.map(t => [t.id, t.label]));
+const LABEL = { ...Object.fromEntries(TIERS.map(t => [t.id, t.label])), secret: 'Secret' };
 // the small coloured dot that says how hard a badge is (the colour key is the legend at the top of the section)
 const Dot = ({ tier }) => (tier ? <i className={'tier-dot td-' + tier} title={LABEL[tier]} aria-label={LABEL[tier]} role="img"></i> : null);
 
@@ -89,7 +89,7 @@ const pickState = (b, pick) => {
 function Badge({ b, when, pick }) {
   const { key, ok, on, n, blocked } = pickState(b, pick);
   return (
-    <li className={(b.earned ? 'got' : 'locked') + (ok ? ' pickable' : '') + (blocked ? ' blocked' : '')}
+    <li className={(b.earned ? 'got' : 'locked') + (b.secret ? ' secret' : '') + (ok ? ' pickable' : '') + (blocked ? ' blocked' : '')}
       {...(ok ? { role: 'checkbox', 'aria-checked': on, tabIndex: 0, onClick: e => { if (!e.target.closest('a')) pick.toggle(key); }, onKeyDown: e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); pick.toggle(key); } } } : {})}>
       <span className="badge-ico" aria-hidden="true">{ok ? <PickMark n={n} /> : icon(b)}</span>
       <span className="badge-txt"><b><Dot tier={b.tier} />{b.name}</b><small>{b.hint}</small>{when(b)}</span>

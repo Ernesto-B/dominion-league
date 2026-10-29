@@ -10,6 +10,8 @@ import Header from './components/Header.jsx';
 import Login from './components/Login.jsx';
 import PasswordChange from './components/PasswordChange.jsx';
 import PageBoundary from './components/PageBoundary.jsx';
+import { sb } from './lib/supabase.js';
+import PlayerHud from './components/PlayerHud.jsx';
 import ScrollTopButton from './components/ScrollTopButton.jsx';
 import PopLayer from './components/PopLayer.jsx';
 import { popup } from './components/popup.js';
@@ -62,14 +64,15 @@ function Shell() {
   return (
     <>
       <a className="skip" href="#main" onClick={skip}>Skip to content</a>
-      <Header ready={ready ? { ...state, route } : null} hash={hash} />
+      <Header ready={ready ? { ...state, route } : null} hash={hash} hud={page ? <PageContext.Provider value={page}><PlayerHud /></PageContext.Provider> : null} />
       {ready && state.offlineAt && <OfflineBar at={state.offlineAt} onRetry={boot} />}
       {body}
       {ready && <PullToRefresh onRefresh={boot} />}
       {ready && <BottomNav ready={{ ...state, route }} hash={hash} />}
       {ready && (['games', 'players', 'dominion'].includes(route.route)) && <ScrollTopButton />}
       <PopLayer />
-      <footer className="foot"><span id="foot">{ready ? 'Ratings are recalculated in your browser each time the page loads.' : ''}</span></footer>
+      <footer className="foot"><span id="foot">{ready ? 'Ratings are recalculated in your browser each time the page loads.' : ''}</span>
+        {ready && <a className="logout" href="#" onClick={e => { e.preventDefault(); sb.auth.signOut(); }}>Log out</a>}</footer>
     </>
   );
 }

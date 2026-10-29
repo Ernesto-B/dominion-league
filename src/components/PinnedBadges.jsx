@@ -7,7 +7,7 @@ import { badgesFor } from '../lib/xp.js';
 import { pinnedBadges, TIERS } from '../lib/achievements.js';
 import { short } from '../lib/format.js';
 
-const LABEL = Object.fromEntries(TIERS.map(t => [t.id, t.label]));
+const LABEL = { ...Object.fromEntries(TIERS.map(t => [t.id, t.label])), secret: 'Secret' };
 
 /* The badges a player chose to show off, as chips beside their name (the tier colours the edge; epic and legendary glow). Hovering or focusing
    a chip says what it is and when it was earned. Nothing at all when they haven't pinned any. The popup is plain markup: it has no page context. */
