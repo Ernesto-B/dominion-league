@@ -90,7 +90,7 @@ export default function Players() {
           popup={<PopText text="Tables you've won outright — sole 1st place, no ties." extra={`W/L ratio ${ratioTxt}`} />} />
         <StatTile icon="icons/stats/average-points.png" big={f2(p.avgPts)} label="avg points, 0 to 1"
           popup={<PopText text="Your average share of the points on offer at your tables, from 0 (always last) to 1 (always first). 0.5 is what an evenly matched table averages." />} />
-        <StatTile icon="icons/stats/win-streak.png" big={p.streak} label={`win streak (best ${p.bestStreak})`}
+        <StatTile icon="icons/stats/win-streak.png" iconClass={p.streak >= 3 ? 'hot' : undefined} big={p.streak} label={`win streak (best ${p.bestStreak})`}
           popup={<PopText text="Wins in a row right now — resets the moment you don't finish 1st." extra={`Best ever: ${p.bestStreak}`} />} />
         <StatTile icon="icons/champion.png" big={p.titles} label={'season title' + (p.titles === 1 ? '' : 's')}
           popup={<PopText text="Seasons you've won outright. Decided by points, not Elo — see the Season page." />} />

@@ -895,6 +895,17 @@ html{overscroll-behavior-y:contain}   /* the browser's own pull-to-refresh would
   .lrow:hover img.tier,a:active>img.tier{transform:scale(1.15) rotate(-4deg)}
   .mc-top>img.tier{animation:dnpop .7s cubic-bezier(.3,1.6,.5,1) .1s both}
 }
+@media (prefers-reduced-motion:no-preference){
+  /* small touches on the badges and the player picker: all transform/opacity, once or on a tap, nothing looping except the streak flame (one icon) */
+  .staticon.hot{animation:dnflame 2.2s ease-in-out infinite;transform-origin:50% 90%}
+  .pin-wrap{animation:dnpop .5s cubic-bezier(.3,1.5,.5,1) both}
+  .pinned .pin-wrap:nth-child(2){animation-delay:.08s}.pinned .pin-wrap:nth-child(3){animation-delay:.16s}
+  .badge-pick.on{animation:dnpop .28s cubic-bezier(.3,1.7,.5,1) both}
+  .pp-menu{animation:dnmenu .14s ease-out both;transform-origin:100% 0}
+  .pp-btn,.pp-step,.badges li.pickable,.badges li.badge-track,.tier-legend button{transition:transform .12s ease,background-color .15s ease,border-color .15s ease}
+  .pp-step:active,.badges li.pickable:active,.badges li.badge-track:active,.tier-legend button:active{transform:scale(.97)}
+}
+@keyframes dnmenu{from{opacity:0;transform:translateY(-4px) scale(.97)}to{opacity:1;transform:none}}
 @keyframes dnspin{to{transform:rotate(360deg)}}
 @keyframes dnrise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes dnpop{0%{opacity:0;transform:scale(.4)}70%{opacity:1;transform:scale(1.12)}100%{transform:none}}
