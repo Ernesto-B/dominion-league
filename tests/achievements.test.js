@@ -108,3 +108,24 @@ describe('badgeRecords', () => {
     expect(badgeRecords([]).most).toBeNull();
   });
 });
+
+describe('filterSections', () => {
+  it('filters by search text, owned and difficulty, keeping whole tracks', async () => {
+    const { filterSections } = await import('../src/components/Badges.jsx');
+    const b = (id, name, hint, tier, earned) => ({ id, name, hint, tier, earned });
+    const secs = [
+      { group: 'A', got: 1, of: 3, items: [
+        { kind: 'badge', id: 'x', badge: b('x', 'First blood', 'Win a game outright.', 'common', true) },
+        { kind: 'track', id: 't', name: 'Victories', steps: [b('s1', 'Skirmisher', 'Win 5 games.', 'common', false), b('s2', 'Scourge', 'Win 25 games.', 'rare', false)] },
+      ] },
+      { group: 'B', got: 0, of: 1, items: [{ kind: 'badge', id: 'y', badge: b('y', 'Colossus', 'Win by a mile.', 'epic', false) }] },
+    ];
+    const ids = f => filterSections(secs, { q: '', owned: false, tiers: [], ...f }).flatMap(s => s.items.map(i => i.id));
+    expect(ids({})).toEqual(['x', 't', 'y']);
+    expect(ids({ q: 'OUTRIGHT' })).toEqual(['x']);        // description, any case
+    expect(ids({ q: 'scourge' })).toEqual(['t']);         // a step's name finds its track
+    expect(ids({ owned: true })).toEqual(['x']);
+    expect(ids({ tiers: ['rare', 'epic'] })).toEqual(['t', 'y']);
+    expect(filterSections(secs, { q: 'nothing', owned: false, tiers: [] })).toEqual([]);
+  });
+});

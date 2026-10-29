@@ -968,8 +968,17 @@ a.dn-cell-link:hover .dn-pct{color:var(--ink)}
 .tier-dot{display:inline-block;width:9px;height:9px;margin-right:7px;border-radius:50%;vertical-align:1px;background:var(--td)}
 .td-common{--td:var(--td-common)}.td-uncommon{--td:var(--td-uncommon)}.td-rare{--td:var(--td-rare)}.td-epic{--td:var(--td-epic)}
 .td-legendary{--td:var(--td-legendary);box-shadow:0 0 0 2px color-mix(in srgb, var(--td-legendary) 35%, transparent)}
-.tier-legend{display:flex;flex-wrap:wrap;gap:4px 16px;margin:10px 0 0;font-size:13px;color:var(--muted)}
+.badge-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 20px;margin-top:10px}
+.tier-legend{display:flex;flex-wrap:wrap;gap:4px 16px;margin:0;font-size:13px;color:var(--muted)}
 .tier-legend .tier-dot{margin-right:5px}
+.tier-legend button{font:inherit;color:inherit;background:none;border:1px solid transparent;border-radius:999px;padding:1px 9px 1px 7px;margin:0 -7px 0 -7px;cursor:pointer}
+.tier-legend button:hover{border-color:var(--line)}
+.tier-legend button.on{border-color:var(--muted);color:var(--ink)}
+.tier-legend button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.badge-tools{display:flex;flex-wrap:nowrap;align-items:center;gap:6px 14px;margin:0;font-size:13px;color:var(--muted)}
+.badge-tools input[type=search]{flex:0 1 190px;width:190px;min-width:0;padding:5px 10px;font-size:13px}
+.badge-tools label{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.badge-tools .ghost{padding:3px 10px;font-size:12px}
 .badge-sec h3{margin:0 0 8px;font-size:16px}
 .badges li.badge-track{display:flex;flex-direction:column;align-items:stretch;padding:0;cursor:pointer}
 .badge-head{display:flex;gap:10px;align-items:center;width:100%;padding:10px 12px 4px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:10px}

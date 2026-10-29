@@ -15,12 +15,28 @@ export default function Badges({ p }) {
   const list = badgesFor(D, p, catalog);
   const [open, setOpen] = useState(readOpen);
   const got = list.filter(b => b.earned).length;
+  const [q, setQ] = useState('');
+  const [owned, setOwned] = useState(false);
+  const [tiers, setTiers] = useState([]);   // empty = every difficulty
+  const flipTier = id => setTiers(t => (t.includes(id) ? t.filter(x => x !== id) : [...t, id]));
+  const secs = filterSections(grouped(list), { q, owned, tiers });
+  const filtering = q.trim() || owned || tiers.length > 0;
   const when = b => b.earned && (b.earned.line != null ? <small className="badge-when">Earned <a href={hashFor('games', gid, b.earned.line)}>{short(b.earned.date)}</a></small> : <small className="badge-when">Earned</small>);
   return (
     <details className="badges-fold" open={open} onToggle={e => { const o = e.currentTarget.open; setOpen(o); try { localStorage.setItem(KEY, o ? '1' : '0'); } catch { /* not remembered */ } }}>
       <summary><h2>Badges <span className="meta">{got} of {list.length}</span></h2></summary>
-      <p className="tier-legend" aria-label="How hard a badge is">{TIERS.map(t => <span key={t.id} title={t.hint}><i className={'tier-dot td-' + t.id}></i>{t.label}</span>)}</p>
-      {grouped(list).map(sec => (
+      <div className="badge-bar">
+      <p className="tier-legend" aria-label="Show only badges of a difficulty">{TIERS.map(t => (
+        <button type="button" key={t.id} title={t.hint} aria-pressed={tiers.includes(t.id)} className={tiers.includes(t.id) ? 'on' : ''} onClick={() => flipTier(t.id)}><i className={'tier-dot td-' + t.id}></i>{t.label}</button>
+      ))}</p>
+      <div className="badge-tools">
+        <label><input type="checkbox" checked={owned} onChange={e => setOwned(e.target.checked)} /> Only owned</label>
+        <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search badges" aria-label="Search badges by name or description" />
+        {filtering && <button type="button" className="ghost" onClick={() => { setQ(''); setOwned(false); setTiers([]); }}>Clear</button>}
+      </div>
+      </div>
+      {filtering && !secs.length && <p className="empty">No badges match.</p>}
+      {secs.map(sec => (
         <section key={sec.group} className="badge-sec">
           <h3>{sec.group} <span className="meta">{sec.got} of {sec.of}</span></h3>
           <ul className="badges">
@@ -30,6 +46,22 @@ export default function Badges({ p }) {
       ))}
     </details>
   );
+}
+
+// keeps the entries that match the search (name or description; a track by its name or any step), the owned switch and the chosen difficulties
+// (a track by any of its steps); a section with nothing left is dropped. Counts still describe the whole section.
+export function filterSections(secs, { q, owned, tiers }) {
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const text = b => `${b.name} ${b.hint}`.toLowerCase();
+  const keep = it => {
+    const bs = it.kind === 'track' ? it.steps : [it.badge];
+    if (owned && !bs.some(b => b.earned)) return false;
+    if (tiers.length && !bs.some(b => tiers.includes(b.tier))) return false;
+    if (!words.length) return true;
+    const hay = (it.kind === 'track' ? it.name.toLowerCase() + ' ' : '') + bs.map(text).join(' ');
+    return words.every(w => hay.includes(w));
+  };
+  return secs.map(sec => ({ ...sec, items: sec.items.filter(keep) })).filter(sec => sec.items.length);
 }
 
 const LABEL = Object.fromEntries(TIERS.map(t => [t.id, t.label]));
