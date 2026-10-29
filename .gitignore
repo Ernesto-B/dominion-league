@@ -5,3 +5,6 @@ supabase/.temp/
 dist/
 .DS_Store
 dist-fake/
+
+# Personal notes
+todo.md
