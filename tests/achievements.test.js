@@ -129,3 +129,18 @@ describe('filterSections', () => {
     expect(filterSections(secs, { q: 'nothing', owned: false, tiers: [] })).toEqual([]);
   });
 });
+
+describe('pinnedBadges', () => {
+  it('keeps the chosen order, only earned badges and at most three; a track pin shows the furthest step earned', async () => {
+    const { pinnedBadges, pinKey } = await import('../src/lib/achievements.js');
+    const list = [
+      ...['a', 'b', 'c', 'd', 'e'].map(id => ({ id, earned: id !== 'c' })),
+      { id: 'w1', track: 'wins', earned: true }, { id: 'w2', track: 'wins', earned: true }, { id: 'w3', track: 'wins', earned: false },
+    ];
+    expect(pinnedBadges(['d', 'a', 'c', 'zzz', 'b', 'e'], list).map(b => b.id)).toEqual(['d', 'a', 'b']);
+    expect(pinnedBadges(['track:wins', 'a'], list).map(b => b.id)).toEqual(['w2', 'a']);
+    expect(pinnedBadges(['track:nothing', 'track:wins', 'track:wins'], list).map(b => b.id)).toEqual(['w2']);
+    expect(pinKey(list[5])).toBe('track:wins'); expect(pinKey(list[0])).toBe('a');
+    expect(pinnedBadges(undefined, list)).toEqual([]);
+  });
+});

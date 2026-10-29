@@ -270,6 +270,27 @@ as $$
   update players set must_change_password = false where id = auth.uid();
 $$;
 
+-- Up to three badge ids a player has pinned to their profile, so others see them without opening the badges. The ids are the
+-- site's own badge ids (lib/achievements.js); the database only stores them, the page ignores any it doesn't know. Written only
+-- through this RPC for the caller's own row, for the same reason as mark_password_changed (no general self-update policy).
+alter table players add column if not exists pinned_badges text[] not null default '{}'::text[];
+create or replace function set_my_pinned_badges(p_ids text[])
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare ids text[];
+begin
+  select coalesce(array_agg(i order by n), '{}') into ids from (
+    select i, min(n) as n from unnest(coalesce(p_ids, '{}')) with ordinality as t(i, n) group by i
+  ) d;
+  if array_length(ids, 1) > 3 then raise exception 'You can pin at most 3 badges'; end if;
+  if exists (select 1 from unnest(ids) i where i is null or length(i) > 64) then raise exception 'Invalid badge id'; end if;
+  update players set pinned_badges = ids where id = auth.uid();
+end;
+$$;
+
 -- Changing a function's parameter list creates a new overload rather than
 -- replacing it — drop the pre-group_id signatures explicitly so re-running
 -- this file doesn't leave a stale duplicate behind.
@@ -440,3 +461,4 @@ revoke execute on function write_game_kingdom(bigint, jsonb) from public, anon, 
 revoke execute on function delete_game(bigint) from anon;
 revoke execute on function delete_group(text) from anon;
 revoke execute on function mark_password_changed() from anon;
+revoke execute on function set_my_pinned_badges(text[]) from anon;

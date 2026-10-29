@@ -21,7 +21,7 @@ export const TIERS = [
   { id: 'legendary', label: 'Legendary', hint: 'Long-term goals' },
 ];
 const wins = (n, name, tier, bonus) => ({ id: 'wins-' + n, group: 'Winning', track: 'wins', trackName: 'Victories', name, hint: `Win ${n} games.`, target: n, tier, bonus });
-const lifetime = (n, name, tier, bonus) => ({ id: 'vp-' + n, group: 'Milestones', track: 'vp', trackName: 'Estate Ledger', name, hint: `Score ${n.toLocaleString()} victory points over all your games.`, target: n, tier, bonus });
+const lifetime = (n, name, tier, bonus) => ({ id: 'vp-' + n, group: 'Milestones', track: 'vp', trackName: 'Estate Ledger', name, hint: `Score ${n.toLocaleString()} VP over all your games.`, target: n, tier, bonus });
 const typeWins = (id, name, type, article) => ({ id, group: 'Landscapes', name, hint: `Win 5 games featuring ${article} ${type}.`, target: 5, tier: 'uncommon', bonus: 40 });
 export const BADGES = [
   // Winning
@@ -377,6 +377,20 @@ export function badgeRecords(held) {
     common: all.length ? pick((a, b) => b.names.length - a.names.length || tierRank(a.badge.tier) - tierRank(b.badge.tier)) : null,
     of: players.length,
   };
+}
+
+/* A player can pin a few earned badges to their profile (players.pinned_badges, in the order they chose). A single badge is pinned by its id; a
+   badge in a track is pinned as the whole track ('track:<id>') and shows the furthest step earned, so the pin keeps up as they climb. Anything
+   not earned any more or unknown to this site is skipped. */
+export const MAX_PINS = 3;
+export const pinKey = b => (b.track ? 'track:' + b.track : b.id);
+export function pinnedBadges(ids, list) {
+  const out = [];
+  for (const id of ids || []) {
+    const b = id.startsWith('track:') ? list.filter(x => x.track === id.slice(6) && x.earned).pop() : list.find(x => x.id === id && x.earned);
+    if (b && !out.includes(b)) out.push(b);
+  }
+  return out.slice(0, MAX_PINS);
 }
 
 // badges earned that the viewer hasn't been told about. A first look (seen === null) records everything and announces nothing.

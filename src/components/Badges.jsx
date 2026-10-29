@@ -1,7 +1,8 @@
 import { useId, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import TierIcon from './TierIcon.jsx';
-import { TIERS, grouped } from '../lib/achievements.js';
+import { TIERS, MAX_PINS, pinKey, grouped } from '../lib/achievements.js';
+import { usePins } from '../usePins.js';
 import { badgesFor } from '../lib/xp.js';
 import SetIcon from './SetIcon.jsx';
 import { short } from '../lib/format.js';
@@ -15,6 +16,8 @@ export default function Badges({ p }) {
   const list = badgesFor(D, p, catalog);
   const [open, setOpen] = useState(readOpen);
   const got = list.filter(b => b.earned).length;
+  const pins = usePins(p.name);
+  const pin = pins.mine ? { ids: pins.ids, busy: pins.busy, toggle: pins.toggle } : null;
   const [q, setQ] = useState('');
   const [owned, setOwned] = useState(false);
   const [tiers, setTiers] = useState([]);   // empty = every difficulty
@@ -35,12 +38,13 @@ export default function Badges({ p }) {
         {filtering && <button type="button" className="ghost" onClick={() => { setQ(''); setOwned(false); setTiers([]); }}>Clear</button>}
       </div>
       </div>
+      {pins.error && <p className="meta badge-pinnote"><b className="down-t">{pins.error}</b></p>}
       {filtering && !secs.length && <p className="empty">No badges match.</p>}
       {secs.map(sec => (
         <section key={sec.group} className="badge-sec">
           <h3>{sec.group} <span className="meta">{sec.got} of {sec.of}</span></h3>
           <ul className="badges">
-            {sec.items.map(it => it.kind === 'track' ? <Track key={it.id} t={it} when={when} /> : <Badge key={it.id} b={it.badge} when={when} />)}
+            {sec.items.map(it => it.kind === 'track' ? <Track key={it.id} t={it} when={when} pin={pin} /> : <Badge key={it.id} b={it.badge} when={when} pin={pin} />)}
           </ul>
         </section>
       ))}
@@ -70,25 +74,33 @@ const Dot = ({ tier }) => (tier ? <i className={'tier-dot td-' + tier} title={LA
 
 const icon = b => b.set ? <SetIcon name={b.set} size={26} /> : b.tierIcon ? <TierIcon id={b.tierIcon.icon} size={26} alt="" /> : b.id === 'champion' ? <TierIcon id="champion" size={26} alt="" /> : b.earned ? '★' : '☆';
 
-function Badge({ b, when }) {
+// "Pin" / "Pinned" on an earned badge of your own page; a fourth pin waits until one is taken off
+function PinButton({ b, pin }) {
+  if (!pin || !b.earned) return null;
+  const key = pinKey(b), on = pin.ids.includes(key), full = !on && pin.ids.length >= MAX_PINS;
+  return <button type="button" className={'badge-pin' + (on ? ' on' : '')} aria-pressed={on} disabled={pin.busy || full} title={full ? `You can pin up to ${MAX_PINS}` : on ? 'Remove from your profile' : 'Show on your profile'} onClick={e => { e.stopPropagation(); pin.toggle(key); }}>{on ? 'Pinned' : 'Pin'}</button>;
+}
+
+function Badge({ b, when, pin }) {
   return (
-    <li className={b.earned ? 'got' : 'locked'}>
+    <li className={(b.earned ? 'got' : 'locked') + (pin && b.earned ? ' pinnable' : '')}>
       <span className="badge-ico" aria-hidden="true">{icon(b)}</span>
       <span className="badge-txt"><b><Dot tier={b.tier} />{b.name}</b><small>{b.hint}</small>{when(b)}</span>
+      <PinButton b={b} pin={pin} />
     </li>
   );
 }
 
 /* A ladder of badges as one box: the step you are on, a rail of every step (earned ones filled in, the next one marked) and how far to the
    next; tapping the box slides open the detail (what each step asks for and when it was earned). */
-function Track({ t, when }) {
+function Track({ t, when, pin }) {
   const [open, setOpen] = useState(false);
   const id = useId();
   const cur = t.current, nx = t.next, ref = nx || cur;
   const fill = Math.min(100, (t.got + (nx && nx.value != null ? Math.min(1, Math.max(0, nx.value / nx.target)) : 0)) / t.of * 100);
   const pct = nx && nx.value != null ? Math.max(0, Math.min(100, Math.round(nx.value / nx.target * 100))) : 100;
   return (
-    <li className={'badge-track ' + (cur ? 'got' : 'locked') + (open ? ' open' : '')} onClick={e => { if (!e.target.closest('a')) setOpen(o => !o); }}>
+    <li className={'badge-track ' + (cur ? 'got' : 'locked') + (open ? ' open' : '') + (pin && cur ? ' pinnable' : '')} onClick={e => { if (!e.target.closest('a')) setOpen(o => !o); }}>
       <button type="button" className="badge-head" aria-expanded={open} aria-controls={id}>
         <span className="badge-ico" aria-hidden="true">{icon(cur || ref)}</span>
         <span className="badge-txt">
@@ -97,6 +109,7 @@ function Track({ t, when }) {
         </span>
         <span className="badge-chev" aria-hidden="true">▾</span>
       </button>
+      {cur && <PinButton b={cur} pin={pin} />}
       <div className="badge-rail" role="img" aria-label={`${t.got} of ${t.of} steps${nx && nx.value != null ? `, ${pct}% of the way to ${nx.name}` : ''}`} style={{ '--fill': fill + '%' }}>
         {t.steps.map((b, k) => <i key={b.id} className={b.earned ? 'got' : b === nx ? 'next' : ''} title={b.name} style={{ left: ((k + 1) / t.of * 100) + '%' }}></i>)}
       </div>

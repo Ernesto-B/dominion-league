@@ -12,6 +12,7 @@ import H2HMatrix from '../components/H2HMatrix.jsx';
 import Badges from '../components/Badges.jsx';
 import XpPanel from '../components/XpPanel.jsx';
 import { rivalries } from '../lib/achievements.js';
+import PinnedBadges from '../components/PinnedBadges.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import { useState } from 'react';
 
@@ -34,6 +35,7 @@ export default function Players() {
           <div>
             <h1>{p.name}</h1>
             {p.tier && <p className="lede">{p.tier.name} tier{p.nextTier ? `, ${p.nextTier.need} Elo to ${p.nextTier.tier.name}` : ', top tier'}{p.peakTier && p.peakTier.id !== p.tier.id ? `. Best ever: ${p.peakTier.name}.` : ''}</p>}
+            <PinnedBadges p={p} />
           </div>
         </div>
         <div className="pills" aria-label="Choose a player">

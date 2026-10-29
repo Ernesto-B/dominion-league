@@ -68,6 +68,7 @@ const rpc = async (name, a) => {
   if (name === 'add_game') { const id = Math.max(0, ...tables.games.map(g => g.id)) + 1; writeGame(id, a); return { data: id, error: null }; }
   if (name === 'edit_game') { writeGame(a.p_game_id, a); return { data: null, error: null }; }
   if (name === 'delete_game') { tables.games = tables.games.filter(g => g.id !== a.p_game_id); tables.game_results = tables.game_results.filter(r => r.game_id !== a.p_game_id); tables.game_kingdom = tables.game_kingdom.filter(k => k.game_id !== a.p_game_id); return { data: null, error: null }; }
+  if (name === 'set_my_pinned_badges') { const me = tables.players.find(x => x.id === ME); if (me) me.pinned_badges = a.p_ids.slice(0, 3); return { data: null, error: null }; }
   return { data: null, error: null };
 };
 

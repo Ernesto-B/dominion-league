@@ -638,6 +638,11 @@ tr.grow.hl + tr.gdetail > td{background:color-mix(in srgb, var(--brass) 14%, tra
 }
 @media (pointer:coarse){
   button,.btn,select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea{min-height:44px}
+  /* the badge pin and the rarity filters stay slim; their touch area is an invisible halo, not height */
+  .badge-pin,.tier-legend button{min-height:0}
+  .badge-pin::after,.tier-legend button::after{content:'';position:absolute;inset:-9px -6px}
+  .tier-legend button{position:relative}
+  .badges li.pinnable.badge-track>.badge-head .badge-ico{margin-top:13px}   /* the pin is slim here */
   .pills a{padding:11px 14px}
   .dn-chip{min-height:40px}
   .dn-kchip-x{min-height:0;padding:10px 12px;margin:-10px -12px -10px -4px}
@@ -971,13 +976,25 @@ a.dn-cell-link:hover .dn-pct{color:var(--ink)}
 .badge-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 20px;margin-top:10px}
 .tier-legend{display:flex;flex-wrap:wrap;gap:4px 16px;margin:0;font-size:13px;color:var(--muted)}
 .tier-legend .tier-dot{margin-right:5px}
-.tier-legend button{font:inherit;color:inherit;background:none;border:1px solid transparent;border-radius:999px;padding:1px 9px 1px 7px;margin:0 -7px 0 -7px;cursor:pointer}
+.tier-legend button{min-height:0;font:inherit;color:inherit;background:none;border:1px solid transparent;border-radius:999px;padding:1px 9px 1px 7px;margin:0 -7px 0 -7px;cursor:pointer}
 .tier-legend button:hover{border-color:var(--line)}
 .tier-legend button.on{border-color:var(--muted);color:var(--ink)}
 .tier-legend button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .badge-tools{display:flex;flex-wrap:nowrap;align-items:center;gap:6px 14px;margin:0;font-size:13px;color:var(--muted)}
 .badge-tools input[type=search]{flex:0 1 190px;width:190px;min-width:0;padding:5px 10px;font-size:13px}
 .badge-tools label{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.badge-pinnote{margin:8px 0 0;font-size:12px}
+.badges li.pinnable{position:relative}
+.badges li.pinnable>.badge-ico{margin-top:14px}   /* leaves the top-left corner to the pin */
+.badges li.pinnable>.badge-head .badge-ico{margin-top:36px}   /* a track's head is shorter, so its star drops further to clear the pin */
+.badge-pin{position:absolute;top:4px;left:25px;transform:translateX(-50%);font:inherit;font-size:10px;font-weight:400;line-height:1;padding:2px 7px;border-radius:999px;border:1px solid var(--line);background:none;color:var(--muted);cursor:pointer}
+.badge-pin:hover:not(:disabled){border-color:var(--muted);color:var(--ink)}
+.badge-pin.on{border-color:var(--brass);color:var(--brass)}
+.badge-pin:disabled{opacity:.45;cursor:default}
+.badge-pin:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.pinned{display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px;margin:6px 0 0;font-size:13px}
+.pinned-b{white-space:nowrap}
+.pinned .tier-dot{margin-right:5px}
 .badge-tools .ghost{padding:3px 10px;font-size:12px}
 .badge-sec h3{margin:0 0 8px;font-size:16px}
 .badges li.badge-track{display:flex;flex-direction:column;align-items:stretch;padding:0;cursor:pointer}
