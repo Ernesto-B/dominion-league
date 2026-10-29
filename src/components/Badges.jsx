@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import TierIcon from './TierIcon.jsx';
-import { TIERS, MAX_PINS, pinKey, pinnedBadges, grouped } from '../lib/achievements.js';
+import { TIERS, MAX_PINS, pinKey, pinnedBadges, grouped, viewHint } from '../lib/achievements.js';
 import { usePins } from '../usePins.js';
 import { badgesFor } from '../lib/xp.js';
 import { badgeIcon } from './badgeIcon.jsx';
@@ -66,7 +66,7 @@ export default function Badges({ p, focus = null }) {
         <section key={sec.group} className="badge-sec">
           <h3>{sec.group} <span className="meta">{sec.got} of {sec.of}</span></h3>
           <ul className="badges">
-            {sec.items.map(it => it.kind === 'track' ? <Track key={it.id} t={it} when={when} pick={pick} focus={focus} /> : <Badge key={it.id} b={it.badge} when={when} pick={pick} />)}
+            {sec.items.map(it => it.kind === 'track' ? <Track key={it.id} t={it} when={when} pick={pick} focus={focus} /> : <Badge key={it.id} b={it.badge} when={when} pick={pick} mine={pins.mine} />)}
           </ul>
         </section>
       ))}
@@ -103,13 +103,13 @@ const pickState = (b, pick) => {
   return { key, ok, on, n, blocked: ok && !on && pick.sel.length >= MAX_PINS };
 };
 
-function Badge({ b, when, pick }) {
+function Badge({ b, when, pick, mine }) {
   const { key, ok, on, n, blocked } = pickState(b, pick);
   return (
     <li id={'bd-' + b.id} className={(b.earned ? 'got' : 'locked') + (b.secret ? ' secret' : '') + (ok ? ' pickable' : '') + (blocked ? ' blocked' : '')}
       {...(ok ? { role: 'checkbox', 'aria-checked': on, tabIndex: 0, onClick: e => { if (!e.target.closest('a')) pick.toggle(key); }, onKeyDown: e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); pick.toggle(key); } } } : {})}>
       <span className="badge-ico" aria-hidden="true">{ok ? <PickMark n={n} /> : icon(b)}</span>
-      <span className="badge-txt"><b><Dot tier={b.tier} />{b.name}</b><small>{b.hint}</small>{when(b)}</span>
+      <span className="badge-txt"><b><Dot tier={b.tier} />{b.name}</b>{b.secret && b.earned && mine && b.quote ? <small className="badge-quote">“{b.quote}”</small> : null}<small>{viewHint(b, mine)}</small>{when(b)}</span>
     </li>
   );
 }

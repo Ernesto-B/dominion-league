@@ -1312,3 +1312,20 @@ main h2::before{content:'';display:inline-block;width:8px;height:8px;margin:0 10
 /* on Game night the Back / Next bar is stuck to the bottom: keep the back-to-top button above it */
 .totop.lift{bottom:88px}
 @media (max-width:720px){.totop.lift{bottom:calc(74px + 66px + env(safe-area-inset-bottom))}}
+
+/* secret unlock: a full-width banner (a hidden legend), a little grander than other reward cards */
+.badge-quote{font-style:italic;color:var(--ink);opacity:.85}
+.reward.td-secret{grid-column:1/-1;padding:14px 18px}
+.reward.td-secret b{font-size:24px}
+.reward.td-secret .reward-kicker{font-size:12px;letter-spacing:.12em}
+.badge-art{display:block;width:26px;height:26px;object-fit:contain}
+@media (prefers-reduced-motion:no-preference){.reward.td-secret::after{content:'';position:absolute;top:-30%;bottom:-30%;left:0;width:34%;pointer-events:none;background:linear-gradient(105deg,transparent,rgba(255,235,210,.55),transparent);transform:translateX(-160%) skewX(-18deg);animation:pinglint 1.6s ease-out 2 both;animation-delay:calc(var(--i,0) * 140ms + 800ms)}}
+
+/* first-visit welcome card (Rankings) */
+.welcome{margin:0 0 16px;padding:16px 18px;border:1px solid var(--brass);border-radius:12px;background:linear-gradient(135deg,color-mix(in srgb, var(--brass) 16%, var(--panel)),var(--panel) 70%);box-shadow:0 0 18px color-mix(in srgb, var(--brass) 18%, transparent)}
+.welcome-kicker{margin:0;font:700 12px var(--text);letter-spacing:.1em;text-transform:uppercase;color:var(--brass)}
+.welcome-title{margin:2px 0 0;font:800 24px var(--display);letter-spacing:-.01em}
+.welcome ul{margin:10px 0 14px;padding-left:20px;display:grid;gap:4px}
+.welcome li::marker{color:var(--brass)}
+.welcome-go{display:flex;flex-wrap:wrap;gap:10px;margin:0}
+@media (prefers-reduced-motion:no-preference){.welcome{animation:dnpop .5s cubic-bezier(.3,1.4,.5,1) both}}

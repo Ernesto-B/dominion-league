@@ -4,7 +4,7 @@ import { usePins } from '../usePins.js';
 import HoverPopup from './HoverPopup.jsx';
 import { badgeIcon } from './badgeIcon.jsx';
 import { badgesFor } from '../lib/xp.js';
-import { pinnedBadges, TIERS } from '../lib/achievements.js';
+import { pinnedBadges, viewHint, TIERS } from '../lib/achievements.js';
 import { short } from '../lib/format.js';
 
 const LABEL = { ...Object.fromEntries(TIERS.map(t => [t.id, t.label])), secret: 'Secret' };
@@ -16,7 +16,7 @@ const LABEL = { ...Object.fromEntries(TIERS.map(t => [t.id, t.label])), secret: 
 const GAP = 6, MORE_W = 44;
 export default function PinnedBadges({ p, max = 3, list: given, fit = false }) {
   const { D, catalog } = usePage();
-  const { ids } = usePins(p.name);
+  const { ids, mine } = usePins(p.name);
   const own = useMemo(() => (!given && ids.length && p.rated ? badgesFor(D, p, catalog) : []), [given, ids, p, D, catalog]);   // `list`: a badge list the caller already has
   const pins = pinnedBadges(ids, given || own).slice(0, max);
   const row = useRef(null);
@@ -49,7 +49,7 @@ export default function PinnedBadges({ p, max = 3, list: given, fit = false }) {
     <div className={'pinned' + (fit ? ' fit' : '')} role="list" aria-label="Pinned badges" ref={row}>
       {pins.map((b, i) => (
         <HoverPopup key={b.id} className={'pin-wrap' + (fit && i >= k ? ' pin-off' : '')} content={
-          <div className="popdesc"><b>{b.name}</b>{LABEL[b.tier] ? ` · ${LABEL[b.tier]}` : ''}<br />{b.hint}{b.earned && b.earned.date ? <><br />Earned {short(b.earned.date)}</> : null}</div>
+          <div className="popdesc"><b>{b.name}</b>{LABEL[b.tier] ? ` · ${LABEL[b.tier]}` : ''}<br />{viewHint(b, mine)}{b.earned && b.earned.date ? <><br />Earned {short(b.earned.date)}</> : null}</div>
         }>
           <span role="listitem" className={'pin-chip td-' + b.tier}><span className="pin-ico" aria-hidden="true">{badgeIcon(b, 18)}</span>{b.name}</span>
         </HoverPopup>

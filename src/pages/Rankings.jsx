@@ -11,15 +11,16 @@ import LastNight from '../components/LastNight.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import MeCard from '../components/MeCard.jsx';
 import Hub from '../components/Hub.jsx';
+import Welcome from '../components/Welcome.jsx';
 import SinceVisit from '../components/SinceVisit.jsx';
 import { badgesFor, xpOf } from '../lib/xp.js';
-import { pinnedBadges, TIERS } from '../lib/achievements.js';
+import { pinnedBadges, viewHint, TIERS } from '../lib/achievements.js';
 import { steadyPayout } from '../lib/steadyElo.js';
 
 const TIER_LABEL = { ...Object.fromEntries(TIERS.map(t => [t.id, t.label])), secret: 'Secret' };
 
 function Ladder({ ranked: rk, highlight, setHighlight }) {
-  const { D, gid, hashFor, catalog, rawPlayers } = usePage();
+  const { D, gid, hashFor, catalog, rawPlayers, me } = usePage();
   // each player's first pinned badge, shown beside their name (badges are only worked out for players who pinned something)
   const showcase = useMemo(() => {
     const m = new Map();
@@ -51,7 +52,7 @@ function Ladder({ ranked: rk, highlight, setHighlight }) {
               <TierIcon id={p.tier.icon} size={28} alt={p.tier.name + ' tier'} />{p.name}
               {lv && lv.perGame.length > 0 ? <span className="lvl" title={`Level ${lv.level} · ${lv.total.toLocaleString()} XP`}>Lv {lv.level}</span> : null}
               {p.titles ? <span className="crown" title={`${p.titles} season title${p.titles > 1 ? 's' : ''}`}><TierIcon id="champion" size={20} alt="Season champion" />{p.titles > 1 ? '×' + p.titles : ''}</span> : null}
-              {showcase.get(p.name) ? <span className={'pin-chip lpin dn-hide-sm td-' + showcase.get(p.name).tier} title={`${TIER_LABEL[showcase.get(p.name).tier] || ''}: ${showcase.get(p.name).hint}`}>{showcase.get(p.name).name}</span> : null}
+              {showcase.get(p.name) ? <span className={'pin-chip lpin dn-hide-sm td-' + showcase.get(p.name).tier} title={`${TIER_LABEL[showcase.get(p.name).tier] || ''}: ${viewHint(showcase.get(p.name), !!me && me.name === p.name)}`}>{showcase.get(p.name).name}</span> : null}
               {p.streak >= 3 ? <span className="pill hot" title={`${p.streak}-game win streak`}>🔥 {p.streak}</span> : null}
               {p.status === 'Provisional' ? <span className="tag">provisional</span> : null}
             </a>
@@ -103,6 +104,7 @@ export default function Rankings() {
   return (
     <>
       <GroupSwitcher route="" />
+      <Welcome />
       <MeCard ranked={rk} />
       {rk.length > 0 && <Hub />}
       {rk.length > 0 && <SinceVisit ranked={rk} />}

@@ -125,7 +125,7 @@ describe('the whole list', () => {
   it('has unique ids, sorts into the documented groups, and keeps tracks together', () => {
     const ids = BADGES.map(b => b.id); expect(new Set(ids).size).toBe(ids.length);
     const secs = grouped(Object.values(run([win2()], { catalog: mkCatalog(), baseXp: new Map() })));
-    expect(secs.map(s => s.group)).toEqual(['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones']);
+    expect(secs.map(s => s.group)).toEqual(['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones', 'Secrets']);
     const slayer = secs.find(s => s.group === 'Comebacks and upsets').items.find(i => i.id === 'slayer');
     expect(slayer.steps.map(s => s.id)).toEqual(['giant-slayer', 'god-slayer']);
   });
@@ -359,5 +359,60 @@ describe('secret badges (the mechanism; there are no real ones yet)', () => {
     const all = [{ id: 'a', tier: 'common', earned: { line: 1 } }, { id: 's', tier: 'secret', secret: true, earned: null }];
     expect(legendFrom(all, [{ line: 1, date: '2026-01-01', idx: 0 }])).not.toBeNull();
   });
-  it('the real list has none yet', () => { expect(BADGES.filter(b => b.secret)).toEqual([]); });
+  it('the real list has the six secrets, each hidden from anyone who has not earned it', () => {
+    expect(BADGES.filter(b => b.secret).map(b => b.id)).toEqual(['the-unholy-trinity', 'the-chosen-one', 'the-phantom-king', 'the-forbidden-kingdom', 'the-perfect-storm', 'the-council-of-shadows']);
+    const list = run([win2()], { catalog: mkBig(), baseXp: new Map() });
+    for (const id of ['the-unholy-trinity', 'the-chosen-one', 'the-phantom-king', 'the-forbidden-kingdom', 'the-perfect-storm', 'the-council-of-shadows']) expect(list[id]).toMatchObject({ name: '???', secret: true, earned: null });
+  });
+  it('the rule is shown only to the player who earned it; everyone else gets the flavour line (or a plain one)', async () => {
+    const { viewHint } = await import('../src/lib/achievements.js');
+    const b = { secret: true, earned: { date: 'D' }, hint: 'Real rule', quote: 'Flavour' };
+    expect(viewHint(b, true)).toBe('Real rule'); expect(viewHint(b, false)).toBe('Flavour');
+    expect(viewHint({ ...b, quote: undefined }, false)).toBe('A hidden legend.');
+    expect(viewHint({ id: 'x', hint: 'Plain rule' }, false)).toBe('Plain rule');   // ordinary badges are never hidden
+  });
+});
+
+describe('the six secret badges: their rules', () => {
+  const big = () => { const c = mkBig(); ['e0p0', 'e0p1', 'e0p2', 'e0p3', 'e0p4'].forEach(id => { c.cardsById.get(id).types = ['Action', 'Attack']; }); return c; };
+  const kd = (won, ids, lands, cat) => run([withKingdom(won ? win2() : game({ Me: 2, A: 1 }), ids, lands)], { catalog: cat });
+  const tenOf = (...heads) => [...heads, 'e0p5', 'e0p6', 'e0p7', 'e0p8', 'e0p9'].slice(0, 10);
+  it('The Forbidden Kingdom: a win with at least 5 Attack cards and 2 landscapes', () => {
+    const cat = big(), five = ['e0p0', 'e0p1', 'e0p2', 'e0p3', 'e0p4', 'e1p0', 'e1p1', 'e1p2', 'e1p3', 'e1p4'];
+    expect(earned(kd(true, five, ['l0', 'l1'], cat), 'the-forbidden-kingdom')).not.toBeNull();
+    expect(earned(kd(true, five, ['l0'], cat), 'the-forbidden-kingdom')).toBeNull();                                  // only one landscape
+    expect(earned(kd(true, ['e0p0', 'e0p1', 'e0p2', 'e0p3', 'e1p0', 'e1p1', 'e1p2', 'e1p3', 'e1p4', 'e1p5'], ['l0', 'l1'], cat), 'the-forbidden-kingdom')).toBeNull();   // only four Attacks
+    expect(earned(kd(false, five, ['l0', 'l1'], cat), 'the-forbidden-kingdom')).toBeNull();                          // played, not won
+  });
+  it('The Perfect Storm: a win with at least 2 cards each from Seaside, Plunder and Menagerie', () => {
+    const cat = mkBig(), storm = ['e2p0', 'e2p1', 'e10p0', 'e10p1', 'e9p0', 'e9p1', 'e0p0', 'e0p1', 'e0p2', 'e0p3'];
+    expect(earned(kd(true, storm, [], cat), 'the-perfect-storm')).not.toBeNull();
+    expect(earned(kd(true, ['e2p0', 'e2p1', 'e10p0', 'e10p1', 'e9p0', 'e0p0', 'e0p1', 'e0p2', 'e0p3', 'e0p4'], [], cat), 'the-perfect-storm')).toBeNull();   // one Menagerie card
+    expect(earned(kd(false, storm, [], cat), 'the-perfect-storm')).toBeNull();
+  });
+  it('The Council of Shadows: a win with Dark Ages, Intrigue and Empires cards and a Landmark', () => {
+    const cat = mkBig(), council = ['e5p0', 'e1p0', 'e7p0', 'e0p0', 'e0p1', 'e0p2', 'e0p3', 'e0p4', 'e0p5', 'e0p6'];
+    expect(earned(kd(true, council, ['l1'], cat), 'the-council-of-shadows')).not.toBeNull();        // l1 is a Landmark
+    expect(earned(kd(true, council, ['l0'], cat), 'the-council-of-shadows')).toBeNull();            // l0 is an Event
+    expect(earned(kd(true, council.filter(id => id !== 'e7p0').concat('e0p7'), ['l1'], cat), 'the-council-of-shadows')).toBeNull();   // no Empires
+  });
+  it('The Unholy Trinity: a win with more than 0 VP while everyone else has 0 or less', () => {
+    const t = vp => run([rated({ Me: 1, A: 2, B: 3 }, 1000, {}, { vp })]);
+    expect(earned(t({ Me: 3, A: 0, B: -4 }), 'the-unholy-trinity')).not.toBeNull();
+    expect(earned(t({ Me: 40, A: 0, B: 0 }), 'the-unholy-trinity')).not.toBeNull();                 // any VP above zero
+    expect(earned(t({ Me: 3, A: 1, B: -4 }), 'the-unholy-trinity')).toBeNull();                     // a rival above zero
+    expect(earned(t({ Me: 0, A: -1, B: -4 }), 'the-unholy-trinity')).toBeNull();                    // the winner must be above zero
+    expect(earned(run([rated({ Me: 1, A: 2, B: 3 }, 1000, {}, { vp: { Me: 3, A: 0 } })]), 'the-unholy-trinity')).toBeNull();   // a score is missing
+  });
+  it('The Phantom King: a win with exactly 0 VP', () => {
+    expect(earned(run([rated({ Me: 1, A: 2 }, 1000, {}, { vp: { Me: 0, A: -2 } })]), 'the-phantom-king')).not.toBeNull();
+    expect(earned(run([rated({ Me: 1, A: 2 }, 1000, {}, { vp: { Me: 1, A: -2 } })]), 'the-phantom-king')).toBeNull();
+    expect(earned(run([rated({ Me: 2, A: 1 }, 1000, {}, { vp: { Me: 0, A: 5 } })]), 'the-phantom-king')).toBeNull();   // lost
+  });
+  it('The Chosen One: a 6-player win where all five opponents began at least 100 Elo above you', () => {
+    const six = others => run([rated({ Me: 1, A: 2, B: 3, C: 4, D: 5, E: 6 }, 1000, others)]);
+    expect(earned(six({ A: 1100, B: 1100, C: 1250, D: 1100, E: 1400 }), 'the-chosen-one')).not.toBeNull();
+    expect(earned(six({ A: 1100, B: 1100, C: 1250, D: 1099, E: 1400 }), 'the-chosen-one')).toBeNull();               // one only 99 above
+    expect(earned(run([rated({ Me: 1, A: 2, B: 3 }, 1000, { A: 1200, B: 1200 })]), 'the-chosen-one')).toBeNull();     // only three at the table
+  });
 });

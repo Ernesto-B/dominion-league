@@ -245,6 +245,7 @@ function GameResult({ game, before, ranked, tierFor, xp, D, catalog }) {
 
 // what this game unlocked: levels reached and badges first earned in it, as reward cards (nothing at all when there is nothing new)
 function Rewards({ game, paid, D, catalog }) {
+  const { me } = usePage();
   const badges = useMemo(() => game.names.flatMap(n => {
     const p = D.players.find(x => x.name === n);
     return p && p.rated ? badgesFor(D, p, catalog).filter(b => b.earned && b.earned.line === game.line).map(b => ({ b, who: n })) : [];
@@ -255,7 +256,7 @@ function Rewards({ game, paid, D, catalog }) {
   return (
     <ul className="rewards" aria-label="Unlocked in this game">
       {levels.map((x, i) => <LevelReward key={'l' + x.name} level={x.levelUp} who={many ? x.name : null} i={i} />)}
-      {badges.map((x, i) => <BadgeReward key={x.who + x.b.id} b={x.b} who={many ? x.who : null} i={levels.length + i} />)}
+      {badges.map((x, i) => <BadgeReward key={x.who + x.b.id} b={x.b} who={many ? x.who : null} i={levels.length + i} mine={!!me && me.name === x.who} />)}
     </ul>
   );
 }

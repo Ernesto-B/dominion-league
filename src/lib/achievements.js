@@ -40,7 +40,6 @@ export const BADGES = [
   { id: 'giant-slayer', group: 'Comebacks and upsets', track: 'slayer', trackName: 'Challenger', tier: 'uncommon', name: 'Revolutionary', hint: 'Win at a table with someone rated 100+ Elo above you.' },
   { id: 'god-slayer', group: 'Comebacks and upsets', track: 'slayer', trackName: 'Challenger', tier: 'rare', name: 'Regicide', hint: 'Win at a table with someone rated 200+ Elo above you.', bonus: 50 },
   { id: 'phoenix', group: 'Comebacks and upsets', tier: 'epic', name: 'The Phoenix', hint: 'Win a rated game of 3 or more as the lowest-rated player at the table.', bonus: 75 },
-  { id: 'the-chosen-one', group: 'Comebacks and upsets', tier: 'legendary', name: 'The Chosen One', hint: 'Win a 6-player rated game as the lowest-rated player at the table.', bonus: 500 },
   { id: 'big-swing', group: 'Comebacks and upsets', track: 'swing', trackName: 'Acclaim', tier: 'uncommon', name: 'The Rumored', hint: 'Gain 50 or more Elo in a single game.' },
   { id: 'bigfoot', group: 'Comebacks and upsets', track: 'swing', trackName: 'Acclaim', tier: 'rare', name: 'Ascendant', hint: 'Gain 100 or more Elo in a single game.', bonus: 40 },
   { id: 'bounty-hunter', group: 'Comebacks and upsets', tier: 'uncommon', name: 'Bounty Hunter', hint: 'Finish ahead of a higher-rated player in 5 different rated games.', target: 5, bonus: 40 },
@@ -88,14 +87,24 @@ export const BADGES = [
   { id: 'unfortunate-one', group: 'Milestones', tier: 'common', name: 'The Unfortunate One', hint: 'Finish a game with exactly 1 VP.', bonus: 10 },
   { id: 'into-the-abyss', group: 'Milestones', tier: 'uncommon', name: 'Into the Abyss', hint: 'Finish a game with negative VP.', bonus: 20 },
   { id: 'the-immortal', group: 'Milestones', tier: 'legendary', name: 'The Immortal', hint: 'Win 100 rated games and reach 1,500 Elo.', bonus: 1000 },
+  // ---- SECRET badges: hidden until earned (see maskSecrets). `hint` is the real rule, shown only to the player who earned it; everyone else sees `quote`. ----
+  { id: 'the-unholy-trinity', group: 'Secrets', secret: true, tier: 'secret', name: 'The Unholy Trinity', quote: 'Some kingdoms were never meant to exist.', hint: 'Win a match with more than 0 VP while every other player finishes with 0 or fewer VP.', bonus: 300 },
+  { id: 'the-chosen-one', group: 'Secrets', secret: true, tier: 'secret', name: 'The Chosen One', quote: 'Destiny does not recognize rank.', hint: 'Win a 6-player match where all five opponents began at least 100 Elo above you.', bonus: 500 },
+  { id: 'the-phantom-king', group: 'Secrets', secret: true, tier: 'secret', name: 'The Phantom King', quote: 'A crown claimed without a kingdom.', hint: 'Win a match with exactly 0 VP.', bonus: 250 },
+  { id: 'the-forbidden-kingdom', group: 'Secrets', secret: true, tier: 'secret', name: 'The Forbidden Kingdom', hint: 'Win a match featuring at least 5 Attack Kingdom cards and 2 landscape cards.', bonus: 150 },
+  { id: 'the-perfect-storm', group: 'Secrets', secret: true, tier: 'secret', name: 'The Perfect Storm', hint: 'Win a match featuring Seaside, Plunder and Menagerie cards, with at least 2 Kingdom cards from each expansion.', bonus: 200 },
+  { id: 'the-council-of-shadows', group: 'Secrets', secret: true, tier: 'secret', name: 'The Council of Shadows', hint: 'Win a match with cards from Dark Ages, Intrigue and Empires, and at least one Landmark.', bonus: 200 },
 ];
 
 /* A SECRET badge (`secret: true`, `group: 'Secrets'`, `tier: 'secret'`) is hidden until it is earned: achievements() hands back a masked "???" entry for it
    (no name, no rule, no progress), so no screen can leak it; once earned it is an ordinary badge that reveals itself with its own celebration. It has no
-   difficulty dot and does not count toward Dominion Legend. To add one: an entry in BADGES like { id, group: 'Secrets', secret: true, tier: 'secret', name, hint, bonus }
-   plus its rule (an `out.set(id, ...)` line, like any other badge). There are none yet. */
+   difficulty dot and does not count toward Dominion Legend. To add one: an entry in BADGES like { id, group: 'Secrets', secret: true, tier: 'secret', name, hint, quote?, bonus }
+   plus its rule (an `out.set(id, ...)` line, like any other badge). Once earned, its name shows on the player's profile to everyone, but the rule (`hint`) only to the
+   player who earned it: everyone else gets `quote` (a line of flavour, optional) via viewHint(). `art` (a picture path) is optional too and is not set yet. */
 const SECRET_HINT = 'A secret badge. Keep playing to find out what it asks.';
 // the list with every secret that is not found yet replaced by its "???" entry (nothing of the real badge is kept, except what XP needs once it is earned)
+// what to print as a badge's description: a secret's real rule only for the player who earned it (`mine`), its flavour line for everyone else
+export const viewHint = (b, mine) => (b.secret && b.earned && !mine ? b.quote || 'A hidden legend.' : b.hint);
 export const maskSecrets = list => list.map(b => (b.secret && !b.earned ? { id: b.id, group: b.group, secret: true, tier: 'secret', name: '???', hint: SECRET_HINT, earned: null } : b));
 
 // the 50% and 100% steps of each expansion (by the catalog's expansion name): more than half of its supply piles, then all of them
@@ -149,7 +158,9 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
   out.set('big-swing', at(firstIndex(rs, r => r.after - r.before >= 50))); out.set('bigfoot', at(firstIndex(rs, r => r.after - r.before >= 100)));
   // the lowest-rated player at a table beats everyone else there (three or more players; six for The Chosen One)
   const lowest = (r, size) => { const e = Object.entries(r.game.elo || {}); return (size ? e.length === size : e.length >= 3) && r.place === 1 && e.every(([n, x]) => n === me || (x && x.before > r.before)); };
-  out.set('phoenix', at(firstIndex(rs, r => lowest(r, 0)))); out.set('the-chosen-one', at(firstIndex(rs, r => lowest(r, 6))));
+  out.set('phoenix', at(firstIndex(rs, r => lowest(r, 0))));
+  // THE CHOSEN ONE (secret): a six-player win where all five opponents began at least 100 Elo above you
+  out.set('the-chosen-one', at(firstIndex(rs, r => { const e = Object.entries(r.game.elo || {}); return e.length === 6 && r.place === 1 && e.every(([n, x]) => n === me || (x && x.before >= r.before + 100)); })));
   // rated games only, from here: who was rated above whom going in
   const eloOf = r => Object.entries(r.game.elo || {}).filter(([n, e]) => n !== me && e);
   out.set('the-final-boss', at(firstIndex(rs, r => r.game.n === 6 && r.place === 1 && eloOf(r).length === 5 && eloOf(r).every(([, e]) => e.before < r.before))));
@@ -212,6 +223,9 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
   out.set('the-centurion', gat(G.findIndex(g => (vpOf(g, me) ?? -Infinity) >= 100)));
   out.set('unfortunate-one', gat(G.findIndex(g => vpOf(g, me) === 1)));
   out.set('into-the-abyss', gat(G.findIndex(g => (vpOf(g, me) ?? 0) < 0)));
+  // SECRET badges that read the scores: a lone winner among players on 0 or less, and a win on exactly 0
+  out.set('the-unholy-trinity', gat(G.findIndex((g, i) => won[i] && allVp(g) && vpOf(g, me) > 0 && rivalsVp(g).every(v => v <= 0))));
+  out.set('the-phantom-king', gat(G.findIndex((g, i) => won[i] && vpOf(g, me) === 0)));
   out.set('shadow', gat(runEnd(3, g => g.pts[me] >= 0.5)));
   out.set('unbeaten-blade', gat((() => { const duels = G.map((g, i) => [g, i]).filter(([g]) => g.n === 2); let r = 0; for (const [, i] of duels) { r = won[i] ? r + 1 : 0; if (r >= 3) return i; } return -1; })()));
   const [wolfAt, wolf] = countAt((g, i) => g.n === 2 && won[i], 10); out.set('lone-wolf', gat(wolfAt)); vals.set('lone-wolf', wolf);
@@ -263,6 +277,11 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
     const wonTypes = new Set(), allTypes = cat.landscapeTypes || []; let fate = -1;
     G.forEach((g, i) => { if (won[i]) types(i).forEach(t => wonTypes.add(t)); if (fate < 0 && allTypes.length && allTypes.every(t => wonTypes.has(t))) fate = i; });
     out.set('master-of-fate', gat(fate));
+    // SECRET badges that read the kingdom: wins with a lot of Attacks and landscapes, a Seaside / Plunder / Menagerie mix, and a Dark Ages / Intrigue / Empires mix with a Landmark
+    const nOf = (c, exp) => c.cards.filter(x => x.expansion === exp).length;
+    out.set('the-forbidden-kingdom', first((g, i, c) => won[i] && attacks(c) >= 5 && ls[i].length >= 2));
+    out.set('the-perfect-storm', first((g, i, c) => won[i] && ['Seaside', 'Plunder', 'Menagerie'].every(e => nOf(c, e) >= 2)));
+    out.set('the-council-of-shadows', first((g, i, c) => won[i] && ['Dark Ages', 'Intrigue', 'Empires'].every(e => nOf(c, e) >= 1) && types(i).has('Landmark')));
     const lSeen = new Set(), lCum = G.map((g, i) => { ls[i].forEach(l => lSeen.add(l.id)); return lSeen.size; });
     out.set('landscape-connoisseur', gat(reach(lCum, 25))); out.set('beyond-the-horizon', gat(reach(lCum, 50))); vals.set('landscape-connoisseur', lSeen.size); vals.set('beyond-the-horizon', lSeen.size);
 

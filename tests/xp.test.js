@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeXp, gameXp, levelAt, xpForLevel, XP } from '../src/lib/xp.js';
+import { computeXp, gameXp, levelAt, xpForLevel, XP, badgesFor } from '../src/lib/xp.js';
 
 let line = 0;
 const game = (places, o = {}) => {
@@ -95,5 +95,20 @@ describe('gameXp', () => {
   it('pays XP in a friendly game too', () => {
     const g = { ...game({ Me: 1, A: 2 }), type: 'Friendly' };
     expect(gameXp(computeXp(D([g])), g).every(r => r.xp > 0)).toBe(true);
+  });
+});
+
+describe('badgesFor is worked out once per player, league and catalog', () => {
+  const league = () => D([game({ Me: 1, A: 2 })], { tiers: [], ranked: [{ name: 'Me' }, { name: 'A' }], players: ['Me', 'A'].map(name => ({ name, results: [], titles: 0, peak: 1000 })) });
+  const cat = () => ({ cardsById: new Map(), piles: [], ownedExpansions: [], landscapesById: new Map(), landscapeTypes: [] });
+  it('hands back the same list for the same league and catalog, and recomputes for a new one', () => {
+    const d = league(), me = d.players[0], c = cat();
+    const first = badgesFor(d, me);
+    expect(badgesFor(d, me)).toBe(first);                         // the search box, the front page and the ladder all share it
+    expect(badgesFor(d, d.players[1])).not.toBe(first);           // each player has their own
+    const withCatalog = badgesFor(d, me, c);
+    expect(withCatalog).not.toBe(first);                          // the catalog arriving adds the kingdom badges
+    expect(badgesFor(d, me, c)).toBe(withCatalog);
+    expect(badgesFor(league(), league().players[0])).not.toBe(first);   // a reloaded league (a new D) starts fresh
   });
 });

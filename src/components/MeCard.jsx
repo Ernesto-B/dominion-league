@@ -100,7 +100,7 @@ export default function MeCard({ ranked }) {
         <div role="status">
           <ul className="rewards">
             {lvlUp && <LevelReward level={lvlUp} from={lvSeen} />}
-            {fresh.slice(0, 3).map((b, i) => <BadgeReward key={b.id} b={b} i={i + (lvlUp ? 1 : 0)} />)}
+            {[...fresh].sort((a, b) => !!b.secret - !!a.secret).slice(0, 3).map((b, i) => <BadgeReward key={b.id} b={b} i={i + (lvlUp ? 1 : 0)} mine />)}
           </ul>
           <p className="badge-new"><span>{fresh.length > 3 ? `and ${fresh.length - 3} more new badges` : ''}</span><button type="button" className="ghost" onClick={gotIt}>Nice</button></p>
         </div>

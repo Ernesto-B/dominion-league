@@ -179,8 +179,19 @@ export function leagueXp(D, catalog = null) {
   return map;
 }
 export const xpOf = (D, name, catalog = null) => leagueXp(D, catalog).get(name) || null;
-// a player's whole badge list as the pages show it: every rule, the catalog-based ones too, and the Renown track from their XP
-export const badgesFor = (D, p, catalog = null) => achievements(p, D.tiers, D.ranked.map(x => x.name), xpOf(D, p.name, catalog), ctxFor(D, p.name, catalog));
+// a player's whole badge list as the pages show it: every rule, the catalog-based ones too, and the Renown track from their XP.
+// Worked out once per player for each loaded league and catalog (the front page, the Player page, the ladder and the badge search all ask for it, and
+// the search used to redo every rule on each keystroke). The lists are shared, so callers must treat them as read-only.
+const badgeCache = new WeakMap();
+export function badgesFor(D, p, catalog = null) {
+  catalog = catalog || null;
+  const mine = badgeCache.get(D) || (badgeCache.set(D, new Map()), badgeCache.get(D));
+  const hit = mine.get(p.name);
+  if (hit && hit.catalog === catalog) return hit.list;
+  const list = achievements(p, D.tiers, D.ranked.map(x => x.name), xpOf(D, p.name, catalog), ctxFor(D, p.name, catalog));
+  mine.set(p.name, { catalog, list });
+  return list;
+}
 
 /* What one game paid each player (no breakdown): [{ name, place, xp, level, levelUp }] in finishing order, from leagueXp(D). levelUp is the level reached,
    when this game took the player over a line. Empty when the game isn't in the XP map (fewer than two players). */
