@@ -3,6 +3,7 @@
      kingdomTouched, vp: { name: text }, notes, editId }. */
 import { SET_NAMES, LANDSCAPES } from './sets.js';
 import { toPayload } from '../dominion/kingdom.js';
+import { playedMinutes } from './night.js';
 
 export const toggle = (arr, n) => (arr.includes(n) ? arr.filter(x => x !== n) : [...arr, n]);
 
@@ -32,13 +33,14 @@ export function buildResults(bs, playerIdByName) {
   return results;
 }
 
-// the arguments of the add_game / edit_game RPCs. The kingdom is sent only when there is something to say: an edit that never
+// the arguments of the add_game / edit_game RPCs. A new game's minutes come from the Game night clock; an edit sends back the minutes it
+// already has (edit_game overwrites the column, so leaving them out would erase them). The kingdom is sent only when there is something to say: an edit that never
 // touched it leaves it alone on the server.
-export function buildGameArgs(bs, gid, playerIdByName) {
+export function buildGameArgs(bs, gid, playerIdByName, now = Date.now()) {
   return {
     p_date: bs.date, p_type: bs.type || '', p_sets: bs.sets.length ? SET_NAMES.filter(n => bs.sets.includes(n)).join('; ') : null, p_strategy: null,
     p_landscapes: bs.landscapes.length ? LANDSCAPES.filter(n => bs.landscapes.includes(n)).join('; ') : null,
-    p_winner_vp: null, p_minutes: null, p_notes: bs.notes || null,
+    p_winner_vp: null, p_minutes: bs.editId ? bs.minutes ?? null : playedMinutes(bs.startedAt, now), p_notes: bs.notes || null,
     p_group_id: gid, p_results: buildResults(bs, playerIdByName),
     ...(bs.kingdomTouched || (!bs.editId && bs.kingdom.length) ? { p_kingdom: toPayload(bs.kingdom) } : {}),
   };

@@ -13,6 +13,22 @@ describe('re-sorting by VP', () => {
   it('treats junk as no score', () => { expect(resortByVP(bs({ picked: ['Ann', 'Bob'], vp: { Ann: 'x', Bob: '5' } })).picked).toEqual(['Bob', 'Ann']); });
 });
 
+describe('a game\'s minutes', () => {
+  const start = Date.UTC(2026, 1, 3, 19, 0);
+  it('a new game saves the whole minutes on the Game night clock', () => {
+    expect(buildGameArgs(bs({ picked: ['Ann'], startedAt: start }), 'g1', ids, start + 47.4 * 60000).p_minutes).toBe(47);
+  });
+  it('has no length without a clock, for a forgotten clock, or in under a minute', () => {
+    expect(buildGameArgs(bs({ picked: ['Ann'] }), 'g1', ids).p_minutes).toBeNull();
+    expect(buildGameArgs(bs({ picked: ['Ann'], startedAt: start }), 'g1', ids, start + 13 * 3600000).p_minutes).toBeNull();
+    expect(buildGameArgs(bs({ picked: ['Ann'], startedAt: start }), 'g1', ids, start + 10000).p_minutes).toBeNull();
+  });
+  it('an edit sends back the minutes the game already has (edit_game overwrites the column)', () => {
+    expect(buildGameArgs(bs({ editId: 5, minutes: 62, startedAt: start }), 'g1', ids, start + 5 * 60000).p_minutes).toBe(62);
+    expect(buildGameArgs(bs({ editId: 5, minutes: null }), 'g1', ids).p_minutes).toBeNull();
+  });
+});
+
 describe('results and the RPC arguments', () => {
   it('ties share the better place, and the next player skips ahead', () => {
     const r = buildResults(bs({ picked: ['Cy', 'Ann', 'Dee', 'Bob'], tie: { Dee: true }, vp: { Cy: '35', Ann: '20', Dee: '20', Bob: '' } }), ids);

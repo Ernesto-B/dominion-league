@@ -24,7 +24,7 @@ function fromGame(D, editId) {
   Object.keys(byPlace).map(Number).sort((a, b) => a - b).forEach(place => {
     byPlace[place].forEach((n, i) => { picked.push(n); if (i > 0) tie[n] = true; });
   });
-  return { date: g.date, type: g.type === 'Regular' ? '' : g.type, picked, tie, sets: g.sets.slice(), landscapes: (g.landscapes || []).slice(), kingdom: (g.kingdom || []).map(k => ({ ...k })), kingdomTouched: false, vp: Object.assign({}, g.playerVP), notes: g.notes, editId };
+  return { date: g.date, type: g.type === 'Regular' ? '' : g.type, picked, tie, sets: g.sets.slice(), landscapes: (g.landscapes || []).slice(), kingdom: (g.kingdom || []).map(k => ({ ...k })), kingdomTouched: false, vp: Object.assign({}, g.playerVP), notes: g.notes, minutes: g.minutes, editId };
 }
 
 // Add / edit a game (admin only; the server re-checks via the add_game / edit_game / delete_game RPCs).

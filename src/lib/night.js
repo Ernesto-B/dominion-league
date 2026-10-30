@@ -31,6 +31,14 @@ export function advance(st, now = Date.now()) {
 }
 export const back = st => ({ ...st, step: st.step === 'scores' && st.kingdom.length === 0 ? 'kingdom' : prevStep(st.step) });
 
+/* The minutes to save with a game: the whole minutes since the clock started. A game with no clock (the Play step was skipped) has no
+   length, and neither does a clock left running overnight (more than 12 hours is a forgotten night, not a game). */
+export function playedMinutes(startedAt, now = Date.now()) {
+  if (startedAt == null) return null;
+  const min = Math.round((now - startedAt) / 60000);
+  return min >= 1 && min <= 720 ? min : null;
+}
+
 // "1 h 05 min" / "23 min" / "just started"
 export function elapsed(startedAt, now = Date.now()) {
   if (startedAt == null) return '';
