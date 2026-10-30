@@ -12,7 +12,7 @@ const firstIndex = (results, ok) => { for (let i = 0; i < results.length; i++) i
    track as one box showing the current step and the next, with every step inside it. Ids never change, so "seen" lists keep working.
    `bonus` is the XP a badge pays on top of the standard badge XP (lib/xp.js). `target` is the number a step is reached at, when it is a count.
    `tier` is how hard it is, shown as a small coloured dot (TIERS). */
-export const GROUPS = ['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones', 'Seasons', 'Secrets'];
+export const GROUPS = ['Winning', 'Comebacks and upsets', 'The table', 'Speed', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones', 'Seasons', 'Secrets'];
 export const TIERS = [
   { id: 'common', label: 'Common', hint: 'Simple progression milestones' },
   { id: 'uncommon', label: 'Uncommon', hint: 'Moderate challenges' },
@@ -55,7 +55,18 @@ export const BADGES = [
   { id: 'the-final-boss', group: 'The table', tier: 'epic', name: 'The Final Boss', hint: 'Win a 6-player rated game while rated highest at the table.', bonus: 100 },
   { id: 'world-voyage', group: 'The table', tier: 'epic', name: 'World Voyage', hint: 'Win a game at every table size, from 2 to 6 players.', bonus: 200 },
   { id: 'the-grandmaster', group: 'The table', tier: 'legendary', name: 'The Grandmaster', hint: 'Win a rated game at every table size (2 to 6) against opponents whose average Elo is at least your own going in.', bonus: 500 },
+  { id: 'long-day', group: 'The table', tier: 'rare', name: 'A Long Day at Court', hint: 'Play 5 matches in a single calendar day.', target: 5, bonus: 50 },
   { id: 'the-unbreakable', group: 'The table', tier: 'legendary', name: 'The Unbreakable', hint: 'Play 20 rated games in a row without finishing last.', target: 20, bonus: 600 },
+  // Speed: wins against the clock. They read a game's saved length (the Game night timer), so a game saved without one counts for nothing here.
+  { id: 'swift-conquest', group: 'Speed', tier: 'uncommon', name: 'Swift Conquest', hint: 'Win a match of 4 or more players in under 30 minutes.', bonus: 30 },
+  { id: 'blitzkrieg', group: 'Speed', tier: 'rare', name: 'Blitzkrieg', hint: 'Win a match in under 15 minutes.', bonus: 50 },
+  { id: 'lightning-strike', group: 'Speed', tier: 'epic', name: 'Lightning Strike', hint: 'Win a match in under 10 minutes.', bonus: 100 },
+  { id: 'speed-demon', group: 'Speed', tier: 'epic', name: 'Speed Demon', hint: 'Win 3 matches, each completed in under 15 minutes.', target: 3, bonus: 100 },
+  { id: 'efficient-conqueror', group: 'Speed', tier: 'rare', name: 'Efficient Conqueror', hint: 'Win a match with at least 50 VP in under 20 minutes.', bonus: 50 },
+  { id: 'rapid-expansion', group: 'Speed', tier: 'epic', name: 'Rapid Expansion', hint: 'Win a match with at least 75 VP in under 30 minutes.', bonus: 100 },
+  { id: 'the-golden-hour', group: 'Speed', tier: 'rare', name: 'The Golden Hour', hint: 'Win a match with at least 100 VP in under 60 minutes.', bonus: 60 },
+  { id: 'against-the-clock', group: 'Speed', tier: 'rare', name: 'Against the Clock', hint: 'Win a match of 4 or more players by at least 20 VP in under 30 minutes.', bonus: 60 },
+  { id: 'a-crushing-deadline', group: 'Speed', tier: 'epic', name: 'A Crushing Deadline', hint: 'Win a match by 30 or more VP in under 20 minutes.', bonus: 100 },
   // The kingdom
   { id: 'gilded-hall', group: 'The kingdom', tier: 'uncommon', name: 'Gilded Hall', hint: 'Win with a kingdom whose cards cost 4.8 coins or more on average.', bonus: 25 },
   { id: 'the-great-divide', group: 'The kingdom', tier: 'rare', name: 'The Great Divide', hint: 'Win with 3 or more cards costing 2 coins or less and 3 or more costing 6 or more.', bonus: 50 },
@@ -79,7 +90,15 @@ export const BADGES = [
   { id: 'beyond-the-horizon', group: 'Landscapes', track: 'lsee', trackName: 'Pioneer', tier: 'rare', name: 'Beyond the Horizon', hint: 'See 50 different landscape cards in your games.', target: 50, bonus: 100 },
   // Milestones
   { id: 'regular', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'common', name: 'Regular', hint: 'Play 10 rated games.', target: 10 },
-  { id: 'veteran', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'uncommon', name: 'Veteran', hint: 'Play 25 rated games.', target: 25 },
+  { id: 'veteran', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'uncommon', name: 'Veteran', hint: 'Play 20 rated games.', target: 20 },
+  { id: 'games-50', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'rare', name: 'Court Fixture', hint: 'Play 50 rated games.', target: 50, bonus: 50 },
+  { id: 'games-100', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'epic', name: 'doMINION', hint: 'Play 100 rated games.', target: 100, bonus: 150 },
+  { id: 'games-200', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'legendary', name: 'Pillar of the Realm', hint: 'Play 200 rated games.', target: 200, bonus: 400 },
+  // time at the table: the minutes saved with your games (the Game night timer), in hours
+  { id: 'hours-5', group: 'Milestones', track: 'hours', trackName: 'Time at the table', tier: 'common', name: 'A Taste of Dominion', hint: 'Accumulate 5 hours of match time.', target: 5, bonus: 20 },
+  { id: 'hours-10', group: 'Milestones', track: 'hours', trackName: 'Time at the table', tier: 'uncommon', name: 'Time Well Spent', hint: 'Accumulate 10 hours of match time.', target: 10, bonus: 40 },
+  { id: 'hours-25', group: 'Milestones', track: 'hours', trackName: 'Time at the table', tier: 'rare', name: 'Seasoned Ruler', hint: 'Accumulate 25 hours of match time.', target: 25, bonus: 100 },
+  { id: 'hours-50', group: 'Milestones', track: 'hours', trackName: 'Time at the table', tier: 'epic', name: 'A Lifetime of Conquest', hint: 'Accumulate 50 hours of match time.', target: 50, bonus: 250 },
   { id: 'spoils-150', group: 'Milestones', track: 'spoils', trackName: 'Spoils', tier: 'uncommon', name: 'Full Coffers', hint: 'Earn more than 150 XP from a single game.', target: 151, bonus: 25 },
   { id: 'spoils-200', group: 'Milestones', track: 'spoils', trackName: 'Spoils', tier: 'rare', name: "Dragon's Hoard", hint: 'Earn more than 200 XP from a single game.', target: 201, bonus: 75 },
   lifetime(250, 'Landholder', 'common', 10), lifetime(500, 'Baron', 'common', 20), lifetime(750, 'Provincial Governor', 'uncommon', 35), lifetime(1000, 'Duke of Duchies', 'rare', 60), lifetime(1250, 'Lord of the Realm', 'epic', 100),
@@ -110,9 +129,9 @@ export const maskSecrets = list => list.map(b => (b.secret && !b.earned ? { id: 
 // the 50% and 100% steps of each expansion (by the catalog's expansion name): more than half of its supply piles, then all of them
 const EXPANSION_NAMES = {
   'Dominion Base Game': ['Village Elder', 'Lord of Dominion'], Intrigue: ['Court Intriguer', 'Master of Whispers'], Seaside: ['Wanted Pirate', 'Seafaring Legend'],
-  Prosperity: ['Merchant Prince', 'Grand Treasurer'], Hinterlands: ['Border Wanderer', 'Warden of the Marches'], 'Dark Ages': ['Grave Robber', 'Lord of Ruin'],
-  'Cornucopia & Guilds': ['Guild Apprentice', 'Guildmaster'], Empires: ['Imperial Envoy', 'Imperator'], Renaissance: ['Patron of the Arts', 'Renaissance Man'],
-  Menagerie: ['Horse Whisperer', 'Master of the Menagerie'], Plunder: ['Treasure Hunter', 'Dread Admiral'],
+  Prosperity: ['Vault Keeper', 'Grand Treasurer'], Hinterlands: ['Border Wanderer', 'Warden of the Marches'], 'Dark Ages': ['Grave Robber', 'Plaguebringer'],
+  'Cornucopia & Guilds': ['Guild Apprentice', 'Guildmaster'], Empires: ['Imperial Envoy', 'Grand Consul'], Renaissance: ['Patron of the Arts', 'Enlightened'],
+  Menagerie: ['Horse Whisperer', 'Master of the Menagerie'], Plunder: ['Treasure Hunter', 'Pirate King'],
 };
 const LEVEL_NAMES = { 5: 'Apprentice', 10: 'Adept', 20: 'Sage', 50: 'Grandmaster', 100: 'Paragon', 200: 'Dominion Incarnate' };
 const LEVEL_TIERS = { 5: 'common', 10: 'common', 20: 'uncommon', 50: 'rare', 100: 'epic', 200: 'legendary' };
@@ -196,8 +215,7 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
   let allMet = -1;
   if (others.length) rs.forEach((r, i) => { if (allMet >= 0) return; Object.keys(r.game.places).forEach(n => met.add(n)); if (others.every(n => met.has(n))) allMet = i; });
   out.set('know-your-enemy', at(allMet));
-  out.set('regular', at(rs.length >= 10 ? 9 : -1)); vals.set('regular', rs.length);
-  out.set('veteran', at(rs.length >= 25 ? 24 : -1)); vals.set('veteran', rs.length);
+  for (const [id, n] of [['regular', 10], ['veteran', 20], ['games-50', 50], ['games-100', 100], ['games-200', 200]]) { out.set(id, at(rs.length >= n ? n - 1 : -1)); vals.set(id, rs.length); }
 
   // everything below looks at every game the player sat at, friendly ones too (a win is a win), in order
   const G = all.filter(g => g.n >= 2 && g.places[me] != null);
@@ -235,6 +253,25 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
   const sizes = new Set(); let voyage = -1;
   G.forEach((g, i) => { if (won[i] && g.n >= 2 && g.n <= 6) sizes.add(g.n); if (voyage < 0 && sizes.size === 5) voyage = i; });
   out.set('world-voyage', gat(voyage));
+
+  // match time: only a game with a saved length has one. Hours at the table add up over every game you sat at (friendlies too); the speed badges are WINS
+  // against the clock, some of them with VP (the winner's, or the margin over the runner-up, which needs everyone's)
+  const mins = g => (g.minutes > 0 ? +g.minutes : null);
+  let played = 0; const cumMin = G.map(g => (played += mins(g) || 0));
+  for (const [id, h] of [['hours-5', 5], ['hours-10', 10], ['hours-25', 25], ['hours-50', 50]]) { out.set(id, gat(reach(cumMin, h * 60))); vals.set(id, Math.round(played / 6) / 10); }
+  const fast = (i, under) => won[i] && mins(G[i]) != null && mins(G[i]) < under;
+  out.set('blitzkrieg', gat(G.findIndex((g, i) => fast(i, 15)))); out.set('lightning-strike', gat(G.findIndex((g, i) => fast(i, 10))));
+  const [demonAt, demon] = countAt((g, i) => fast(i, 15), 3); out.set('speed-demon', gat(demonAt)); vals.set('speed-demon', demon);
+  out.set('swift-conquest', gat(G.findIndex((g, i) => g.n >= 4 && fast(i, 30))));
+  out.set('efficient-conqueror', gat(G.findIndex((g, i) => fast(i, 20) && (vpOf(g, me) ?? 0) >= 50)));
+  out.set('rapid-expansion', gat(G.findIndex((g, i) => fast(i, 30) && (vpOf(g, me) ?? 0) >= 75)));
+  out.set('the-golden-hour', gat(G.findIndex((g, i) => fast(i, 60) && (vpOf(g, me) ?? 0) >= 100)));
+  out.set('against-the-clock', gat(G.findIndex((g, i) => g.n >= 4 && fast(i, 30) && margins[i] != null && margins[i] >= 20)));
+  out.set('a-crushing-deadline', gat(G.findIndex((g, i) => fast(i, 20) && margins[i] != null && margins[i] >= 30)));
+  // five matches on one calendar day
+  const perDay = new Map(); let longDay = -1;
+  G.forEach((g, i) => { const n = (perDay.get(g.date) || 0) + 1; perDay.set(g.date, n); if (n === 5 && longDay < 0) longDay = i; });
+  out.set('long-day', gat(longDay)); vals.set('long-day', Math.max(0, ...perDay.values()));
 
   // XP in one game, before any badge payout; the biggest so far is the progress
   const base = ctx.baseXp;

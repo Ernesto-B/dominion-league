@@ -78,7 +78,7 @@ describe('grouped', () => {
     const secs = grouped(achievements(player(rs), tiers));
     const ms = secs.find(s => s.group === 'Milestones');
     const games = ms.items.find(i => i.id === 'games'), rank = ms.items.find(i => i.id === 'rank');
-    expect(games.current.id).toBe('regular'); expect(games.next.id).toBe('veteran'); expect(games.next.value).toBe(12); expect(games.next.target).toBe(25);
+    expect(games.current.id).toBe('regular'); expect(games.next.id).toBe('veteran'); expect(games.next.value).toBe(12); expect(games.next.target).toBe(20);
     expect(rank.current.id).toBe('tier-knight'); expect(rank.next.id).toBe('tier-lord'); expect(rank.next.value).toBe(1130);
     expect(secs.reduce((n, s) => n + s.of, 0)).toBe(achievements(player(rs), tiers).length);   // nothing dropped or doubled
     expect(secs.map(s => s.group)).not.toContain('Seasons');                                    // empty headings are not drawn

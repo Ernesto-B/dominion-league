@@ -6,7 +6,7 @@ let line = 0;
 const game = (places, o = {}) => {
   const names = Object.keys(places), n = names.length;
   return {
-    line: ++line, day: o.day ?? line, date: 'D' + line, n, names, places, pts: Object.fromEntries(names.map(x => [x, (n - places[x]) / (n - 1)])),
+    line: ++line, day: o.day ?? line, date: o.date ?? 'D' + line, minutes: o.minutes ?? null, n, names, places, pts: Object.fromEntries(names.map(x => [x, (n - places[x]) / (n - 1)])),
     playerVP: o.vp || {}, kingdom: (o.cards || []).map(id => ({ kind: 'card', id })), landscapes: [],
     elo: o.elo ? Object.fromEntries(names.map(x => [x, { before: o.elo[x] ?? 1000, after: o.elo[x] ?? 1000 }])) : undefined,
   };
@@ -125,7 +125,7 @@ describe('the whole list', () => {
   it('has unique ids, sorts into the documented groups, and keeps tracks together', () => {
     const ids = BADGES.map(b => b.id); expect(new Set(ids).size).toBe(ids.length);
     const secs = grouped(Object.values(run([win2()], { catalog: mkCatalog(), baseXp: new Map() })));
-    expect(secs.map(s => s.group)).toEqual(['Winning', 'Comebacks and upsets', 'The table', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones', 'Secrets']);
+    expect(secs.map(s => s.group)).toEqual(['Winning', 'Comebacks and upsets', 'The table', 'Speed', 'The kingdom', 'Landscapes', 'Expansions', 'Milestones', 'Secrets']);
     const slayer = secs.find(s => s.group === 'Comebacks and upsets').items.find(i => i.id === 'slayer');
     expect(slayer.steps.map(s => s.id)).toEqual(['giant-slayer', 'god-slayer']);
   });
@@ -414,5 +414,58 @@ describe('the six secret badges: their rules', () => {
     expect(earned(six({ A: 1100, B: 1100, C: 1250, D: 1100, E: 1400 }), 'the-chosen-one')).not.toBeNull();
     expect(earned(six({ A: 1100, B: 1100, C: 1250, D: 1099, E: 1400 }), 'the-chosen-one')).toBeNull();               // one only 99 above
     expect(earned(run([rated({ Me: 1, A: 2, B: 3 }, 1000, { A: 1200, B: 1200 })]), 'the-chosen-one')).toBeNull();     // only three at the table
+  });
+});
+
+
+describe('games played, time at the table and speed', () => {
+  const rated = (n, o = {}) => Array.from({ length: n }, () => win2({ elo: { Me: 1000, A: 1000 }, ...o }));
+  it('the games ladder runs 10, 20, 50, 100 and 200 rated games', () => {
+    const b = run(rated(100));
+    for (const id of ['regular', 'veteran', 'games-50', 'games-100']) expect(earned(b, id)).toBeTruthy();
+    expect(earned(b, 'games-200')).toBeNull(); expect(b['games-200'].value).toBe(100);
+    expect(b['games-100'].name).toBe('doMINION'); expect(earned(run(rated(19)), 'veteran')).toBeNull(); expect(earned(run(rated(20)), 'veteran')).toBeTruthy();
+  });
+  it('hours add up the saved minutes of every game, and a game with none adds nothing', () => {
+    const g = (m, o = {}) => win2({ minutes: m, ...o });
+    const b = run([g(120), g(120), g(59), g(null), g(1, { elo: { Me: 1000, A: 1000 } })]);   // 300 minutes: exactly 5 hours, by the last game
+    expect(earned(b, 'hours-5')).toBeTruthy(); expect(earned(b, 'hours-10')).toBeNull(); expect(b['hours-10'].value).toBe(5);
+    expect(earned(run([g(120), g(120), g(59), g(null)]), 'hours-5')).toBeNull();   // 299 minutes
+    expect(b['hours-5'].name).toBe('A Taste of Dominion'); expect(b['hours-50'].name).toBe('A Lifetime of Conquest');
+  });
+  it('wins in under 15 and 10 minutes, three times for Speed Demon; a loss or no saved time earns nothing', () => {
+    const fastWin = m => win2({ minutes: m });
+    let b = run([fastWin(14)]); expect(earned(b, 'blitzkrieg')).toBeTruthy(); expect(earned(b, 'lightning-strike')).toBeNull();
+    b = run([fastWin(9)]); expect(earned(b, 'lightning-strike')).toBeTruthy();
+    b = run([fastWin(15)]); expect(earned(b, 'blitzkrieg')).toBeNull();                                 // under, not at
+    b = run([game({ Me: 2, A: 1 }, { minutes: 5 }), fastWin(null)]); expect(earned(b, 'blitzkrieg')).toBeNull();
+    b = run([fastWin(10), fastWin(14), fastWin(16)]); expect(earned(b, 'speed-demon')).toBeNull(); expect(b['speed-demon'].value).toBe(2);
+    b = run([fastWin(10), fastWin(14), fastWin(12)]); expect(earned(b, 'speed-demon')).toBeTruthy();
+  });
+  it('Swift Conquest needs 4 or more players', () => {
+    expect(earned(run([game({ Me: 1, A: 2, B: 3 }, { minutes: 20 })]), 'swift-conquest')).toBeNull();
+    expect(earned(run([game({ Me: 1, A: 2, B: 3, C: 4 }, { minutes: 29 })]), 'swift-conquest')).toBeTruthy();
+    expect(earned(run([game({ Me: 1, A: 2, B: 3, C: 4 }, { minutes: 30 })]), 'swift-conquest')).toBeNull();
+  });
+  it('the VP and time badges read the winner\'s VP and the margin over the runner-up', () => {
+    const w = (vp, m, o = {}) => game({ Me: 1, A: 2, ...(o.table || {}) }, { vp: { Me: vp, A: vp - (o.by ?? 10), ...(o.rest || {}) }, minutes: m });
+    let b = run([w(50, 19)]); expect(earned(b, 'efficient-conqueror')).toBeTruthy(); expect(earned(run([w(49, 19)]), 'efficient-conqueror')).toBeNull(); expect(earned(run([w(50, 20)]), 'efficient-conqueror')).toBeNull();
+    b = run([w(75, 29)]); expect(earned(b, 'rapid-expansion')).toBeTruthy(); expect(earned(run([w(74, 29)]), 'rapid-expansion')).toBeNull();
+    b = run([w(100, 59)]); expect(earned(b, 'the-golden-hour')).toBeTruthy(); expect(earned(run([w(100, 60)]), 'the-golden-hour')).toBeNull();
+    b = run([w(40, 19, { by: 30 })]); expect(earned(b, 'a-crushing-deadline')).toBeTruthy(); expect(earned(run([w(40, 19, { by: 29 })]), 'a-crushing-deadline')).toBeNull(); expect(earned(run([w(40, 20, { by: 30 })]), 'a-crushing-deadline')).toBeNull();
+    const four = (by, m) => game({ Me: 1, A: 2, B: 3, C: 4 }, { vp: { Me: 40, A: 40 - by, B: 5, C: 4 }, minutes: m });
+    expect(earned(run([four(20, 29)]), 'against-the-clock')).toBeTruthy(); expect(earned(run([four(19, 29)]), 'against-the-clock')).toBeNull(); expect(earned(run([four(20, 30)]), 'against-the-clock')).toBeNull();
+    expect(earned(run([game({ Me: 1, A: 2 }, { vp: { Me: 60, A: 10 }, minutes: 25 })]), 'against-the-clock')).toBeNull();   // 4 or more players
+    expect(earned(run([game({ Me: 1, A: 2 }, { vp: { Me: 60 }, minutes: 19 })]), 'a-crushing-deadline')).toBeNull();       // a margin needs everyone's VP
+  });
+  it('A Long Day at Court is five matches on one calendar day, friendlies included', () => {
+    const day = (d, n) => Array.from({ length: n }, () => win2({ date: d }));
+    expect(earned(run([...day('2026-10-01', 4), ...day('2026-10-02', 4)]), 'long-day')).toBeNull();
+    const b = run([...day('2026-10-01', 2), ...day('2026-10-02', 5)]); expect(earned(b, 'long-day')).toBeTruthy(); expect(b['long-day'].value).toBe(5);
+  });
+  it('the renamed expansion badges', () => {
+    const names = Object.values(achievements({ name: 'Me', results: [], titles: 0, peak: 1000 }, [], [], null, { games: [], catalog: mkBig() })).map(b => b.name);
+    expect(names).toEqual(expect.arrayContaining(['Plaguebringer', 'Vault Keeper', 'Grand Consul', 'Enlightened', 'Pirate King']));
+    expect(names).not.toEqual(expect.arrayContaining(['Lord of Ruin']));
   });
 });

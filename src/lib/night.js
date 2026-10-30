@@ -14,7 +14,7 @@ export const todayISO = (d = new Date()) => `${d.getFullYear()}-${String(d.getMo
 
 export const blankNight = (today = todayISO()) => ({
   step: 'players', picked: [], tie: {}, vp: {}, kingdomMode: null, randomDone: false, randomOriginal: null, handEdited: false, handBane: null, rollOpts: null, kept: null, handOpen: false, draftSave: null, kingdom: [], kingdomTouched: false, rolled: null, rolledQ: null, sets: [], landscapes: [],
-  date: today, type: '', notes: '', startedAt: null, editId: null,
+  date: today, type: '', notes: '', startedAt: null, endedAt: null, editId: null,
 });
 
 // Can the viewer leave this step? Only the first has a rule: a game needs at least two players.
@@ -23,14 +23,18 @@ export const nextStep = step => ids[Math.min(ids.length - 1, ids.indexOf(step) +
 export const prevStep = step => ids[Math.max(0, ids.indexOf(step) - 1)];
 export const stepNumber = step => ids.indexOf(step) + 1;
 
-/* Leaving the Kingdom step for Play starts the clock the first time. With no kingdom there is nothing to keep on screen at the
-   table, so the Play step is skipped (and skipped again going back), straight to the scores. */
+/* Leaving the Kingdom step for Play starts the clock the first time, and leaving Play for the scores stops it (`endedAt`), so the minutes saved are the
+   game's own and not the time spent typing in scores afterwards. Coming back to Play puts the clock back on. With no kingdom there is nothing to keep
+   on screen at the table, so the Play step is skipped (and skipped again going back), straight to the scores (and the game has no length). */
 export function advance(st, now = Date.now()) {
   if (!canAdvance(st.step, st)) return st;
   const step = st.step === 'kingdom' && st.kingdom.length === 0 ? 'scores' : nextStep(st.step);
-  return { ...st, step, startedAt: st.startedAt ?? (step === 'play' ? now : null) };
+  return { ...st, step, startedAt: st.startedAt ?? (step === 'play' ? now : null), endedAt: st.step === 'play' ? st.endedAt ?? now : st.endedAt ?? null };
 }
-export const back = st => ({ ...st, step: st.step === 'scores' && st.kingdom.length === 0 ? 'kingdom' : prevStep(st.step) });
+export function back(st) {
+  const step = st.step === 'scores' && st.kingdom.length === 0 ? 'kingdom' : prevStep(st.step);
+  return { ...st, step, endedAt: step === 'play' ? null : st.endedAt ?? null };
+}
 
 /* The minutes to save with a game: the whole minutes since the clock started. A game with no clock (the Play step was skipped) has no
    length, and neither does a clock left running overnight (more than 12 hours is a forgotten night, not a game). */

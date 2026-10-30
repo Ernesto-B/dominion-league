@@ -50,6 +50,21 @@ describe('keeping a Game night between page loads', () => {
   });
 });
 
+describe('the game clock', () => {
+  const kingdom = [{ kind: 'card', id: 'a' }];
+  it('starts on Play, stops when leaving Play for the scores, and runs again if you go back', () => {
+    let st = { ...blankNight(), step: 'kingdom', picked: ['Ann', 'Bob'], kingdom };
+    st = advance(st, 1000); expect(st).toMatchObject({ step: 'play', startedAt: 1000, endedAt: null });
+    st = advance(st, 1000 + 47 * 60000); expect(st).toMatchObject({ step: 'scores', startedAt: 1000, endedAt: 1000 + 47 * 60000 });
+    st = advance(st, 9e9); expect(st.endedAt).toBe(1000 + 47 * 60000);   // typing the scores and reviewing don't move it
+    st = back(back(st)); expect(st).toMatchObject({ step: 'play', endedAt: null, startedAt: 1000 });
+  });
+  it('a game with no kingdom has no clock', () => {
+    const st = advance({ ...blankNight(), step: 'kingdom', picked: ['Ann', 'Bob'] }, 5);
+    expect(st).toMatchObject({ step: 'scores', startedAt: null });
+  });
+});
+
 describe('how long a saved night is kept', () => {
   it('forgets a night older than the limit, keeps a recent one', () => {
     const st = memory(), at = Date.UTC(2026, 9, 30, 20, 0);
