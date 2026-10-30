@@ -985,9 +985,11 @@ html{overscroll-behavior-y:contain}   /* the browser's own pull-to-refresh would
 .dn-draft-tile.taken .dn-rz-cost,.dn-draft-tile.taken .dn-rz-main,.dn-draft-tile.taken>.dn-rz-text,.dn-draft-tile.taken>p{opacity:.55}
 .dn-draft-by{margin-left:auto;font-size:13px;font-weight:700;color:var(--seat,var(--brass));white-space:nowrap}
 .dn-draft-tile>.dn-rz-text,.dn-draft-tile>p{padding:0 14px 12px}
-.dn-draft-more{display:none;align-self:center;min-height:0;width:48px;height:26px;padding:0;margin:-4px 0 4px;background:none;border:0;border-radius:8px;color:var(--muted);font-size:20px;line-height:1;cursor:pointer}
-@media (max-width:720px){.dn-draft-more{display:block}.dn-draft-textbtn,.dn-draft-tile>.dn-rz-text{display:none}}   /* on a phone the text is the pop-out; on a wide screen it is this switch */   /* the card text pop-out is a phone feature */
-.dn-draft-more:hover,.dn-draft-more:focus-visible{color:var(--ink);background:color-mix(in srgb, var(--ink) 10%, transparent)}
+.dn-draft-more{display:none;align-self:stretch;width:100%;height:42px;min-height:0;padding:0;margin:0;background:none;border:0;border-top:1px solid var(--line);border-radius:0 0 10px 10px;color:var(--muted);font-size:22px;line-height:1;cursor:pointer}
+.dn-rztile-more{display:none;width:100%;height:40px;min-height:0;padding:0;margin:-2px 0 0;background:none;border:0;border-top:1px solid var(--line);border-radius:0 0 8px 8px;color:var(--muted);font-size:22px;line-height:1;cursor:pointer}
+.dn-kchip-more{display:none;align-items:center;justify-content:center;min-width:30px;min-height:30px;padding:0;margin:-4px 0 -4px 2px;background:none;border:0;color:var(--muted);font-size:18px;line-height:1;cursor:pointer}
+@media (max-width:720px){.dn-draft-more,.dn-rztile-more{display:block}.dn-kchip-more{display:inline-flex}.dn-draft-textbtn,.dn-draft-tile>.dn-rz-text{display:none}}   /* on a phone the text is the pop-out; on a wide screen it is this switch */   /* the card text pop-out is a phone feature */
+.dn-draft-more:hover,.dn-draft-more:focus-visible,.dn-rztile-more:focus-visible,.dn-kchip-more:focus-visible{color:var(--ink);background:color-mix(in srgb, var(--ink) 10%, transparent)}
 .dn-draft-tile.banned .dn-rz-name{text-decoration:line-through}
 .dn-draft-tile.banned{border-left-color:var(--down,#d96a5b)}
 .dn-draft-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 4px}

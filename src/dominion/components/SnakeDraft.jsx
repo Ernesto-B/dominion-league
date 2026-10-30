@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { POOL_SIZES, bansNeeded, finishDraft, handSwaps, poolSizeFor, rollPool, shuffled, snakeOrder } from '../draft.js';
 import { toGameItems } from '../randomizer.js';
-import { cardHref, landscapeHref } from '../links.js';
 import { CardText, ExpansionBadge, LandscapePill, ShowTextButton, TypePills } from './bits.jsx';
 import CostIcons from './Cost.jsx';
 import RandomizerOptions from './RandomizerOptions.jsx';
 import { displayName, primaryType } from '../kingdom.js';
 import { Setup } from './RandomizerPanel.jsx';
+import Peek from './CardPeek.jsx';
 
 /* Pick the kingdom in turns. One device is enough: pass it round, or let one person tap each player's choice.
    The draft is CONTROLLED: its whole state (`value`, see draftState in draft.js) lives in the saved Game night, so leaving the page, or the
@@ -196,29 +195,3 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
 }
 
 const swap = (list, a, b) => { const x = list.slice(); [x[a], x[b]] = [x[b], x[a]]; return x; };
-
-/* One card's (or landscape's) text in a small dialog over the page, so it never changes the size of the cards around it: the phone can be
-   passed round for everyone to read it (the ⌄ button is shown on a phone only). Escape, a tap outside it or Close shuts it. */
-function Peek({ catalog, peek, onClose }) {
-  useEffect(() => {
-    const onKey = e => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey); return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-  const has = catalog.meta.textRecordCount > 0;
-  const body = peek.kind === 'card'
-    ? { title: peek.s.name, cards: peek.s.cards, head: <><div className="dn-rz-cost"><CostIcons coins={peek.s.cards[0].coins} debt={peek.s.cards[0].debt} overpay={peek.s.cards[0].overpay} size={30} /></div><TypePills types={[...new Set(peek.s.cards.flatMap(c => c.types))]} /><ExpansionBadge name={peek.s.expansion} size={14} /></> }
-    : { title: peek.l.landscape.name, cards: [peek.l.landscape], head: <><LandscapePill type={peek.l.landscape.type} /><ExpansionBadge name={peek.l.landscape.expansion} size={14} /></> };
-  // in a portal on <body>: inside the page's frosted panels a fixed overlay would only cover the panel, and a tap outside it would miss
-  return createPortal(
-    <div className="dn-peek" role="presentation" onClick={onClose}>
-      <div className="dn-peek-box" role="dialog" aria-modal="true" aria-label={`${body.title}, card text`} onClick={e => e.stopPropagation()}>
-        <h3>{body.title}</h3>
-        <div className="dn-peek-head">{body.head}</div>
-        {body.cards.map(c => <div key={c.id} className="dn-rz-text">{body.cards.length > 1 && <p className="meta dn-rz-textname">{c.name}</p>}<CardText text={c.text} hasAnyText={has} /></div>)}
-        <p className="meta" style={{ margin: '10px 0 0' }}><a href={peek.kind === 'card' ? cardHref(peek.s.cards[0].id) : landscapeHref(peek.l.landscape.id)}>{peek.kind === 'card' ? 'Card page' : 'Landscape page'}</a></p>
-        <button type="button" onClick={onClose} autoFocus>Close</button>
-      </div>
-    </div>,
-    document.body,
-  );
-}
