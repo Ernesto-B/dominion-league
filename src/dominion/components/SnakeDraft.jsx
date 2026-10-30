@@ -25,7 +25,7 @@ import { Setup } from './RandomizerPanel.jsx';
 const seatColor = i => `hsl(${(i * 67 + 24) % 360} 68% 62%)`;
 
 export default function SnakeDraft({ catalog, players, opts, setOpts, plays = null, value, onChange, onDone, onRestart, onReset, items = [], setup = null, hand = false, setHand = () => {}, handPanel = null }) {
-  const { seats, picks, banned } = value;
+  const { seats } = value;
   const set = patch => onChange({ ...value, ...patch });
   const [peek, setPeek] = useState(null);          // the card or landscape whose text is open
   const top = useRef(null);
@@ -33,6 +33,10 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
 
   const rolled = useMemo(() => (value.draft ? rollPool(catalog, value.draft.options, value.draft.seed, { plays, n: value.draft.n, size: value.draft.size }) : null), [catalog, value.draft, plays]);
   const draft = rolled && rolled.ok ? rolled : null;
+  // what was saved may not fit the pool rolled now (a draft kept from an older version, or a changed catalog): only picks and bans that are really in it count
+  const inPool = draft ? new Set(draft.pool.map(s => s.key)) : null;
+  const picks = draft ? [...new Set(value.picks)].filter(k => inPool.has(k)).slice(0, draft.n) : value.picks;
+  const banned = draft ? value.banned.map(k => (k && inPool.has(k) && !picks.includes(k) ? k : null)) : value.banned;
   // a draft that can no longer be rebuilt (the catalog changed under it) goes back to the options page
   useEffect(() => { if (value.draft && rolled && !rolled.ok) set({ draft: null, picks: [], banned: [], finished: false, error: rolled.message }); }, [rolled]);   // eslint-disable-line react-hooks/exhaustive-deps
   // the first cards (and whose turn it is) come into view when the draft starts

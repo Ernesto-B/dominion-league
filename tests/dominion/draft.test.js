@@ -52,10 +52,10 @@ describe('the Game night draft', () => {
     expect(a.ok).toBe(true); expect(a.pool).toHaveLength(17); expect(a.n).toBe(10); expect(a.size).toBe(17);
     expect(rollPool(catalog, DEFAULT_OPTIONS, 5, { n: 10, size: 17 }).pool.map(s => s.key)).toEqual(a.pool.map(s => s.key));
   });
-  it('starts with bans on, one each, and ignores a draft saved for other players', () => {
+  it('starts with no bans (one each when turned on), and ignores a draft saved for other players', () => {
     const st = draftState(null, ['A', 'B', 'C']);
-    expect(st).toMatchObject({ bans: true, draft: null, picks: [], banned: [], finished: false }); expect(bansNeeded(st)).toBe(3);
-    expect(bansNeeded({ ...st, bans: false })).toBe(0);
+    expect(st).toMatchObject({ bans: false, draft: null, picks: [], banned: [], finished: false }); expect(bansNeeded(st)).toBe(0);
+    expect(bansNeeded({ ...st, bans: true })).toBe(3);
     const saved = { ...st, seats: ['C', 'A', 'B'], picks: ['x'] };
     expect(draftState(saved, ['A', 'B', 'C']).seats).toEqual(['C', 'A', 'B']);
     expect(draftState(saved, ['A', 'B', 'D']).picks).toEqual([]);
@@ -64,7 +64,7 @@ describe('the Game night draft', () => {
 
 describe('optional bans', () => {
   it("a skipped ban is a null that still uses up the seat's turn", () => {
-    const st = draftState(null, ['A', 'B', 'C']);
+    const st = { ...draftState(null, ['A', 'B', 'C']), bans: true };
     const banned = ['k1', null, 'k3'];   // B skipped
     expect(banned.length).toBe(bansNeeded(st));
     expect(banned.filter(Boolean)).toEqual(['k1', 'k3']);

@@ -69,7 +69,7 @@ export default function Night() {
   // ---- the kingdom
   const applyKingdom = (kingdom, rolled = null) => {
     const implied = catalog ? impliedSets(resolveKingdom(catalog, kingdom)) : { sets: [], landscapes: [] };
-    setSt(s => ({ ...s, kingdom, randomDone: false, handEdited: false, handBane: null, kingdomTouched: true, rolled, rolledQ: rolled ? kingdomToParams(rolled).toString() : null, sets: [...new Set([...(rolled ? [] : s.sets), ...implied.sets])], landscapes: [...new Set([...(rolled ? [] : s.landscapes), ...implied.landscapes])] }));
+    setSt(s => ({ ...s, kingdom, randomDone: false, randomOriginal: null, handEdited: false, handBane: null, kingdomTouched: true, rolled, rolledQ: rolled ? kingdomToParams(rolled).toString() : null, sets: [...new Set([...(rolled ? [] : s.sets), ...implied.sets])], landscapes: [...new Set([...(rolled ? [] : s.landscapes), ...implied.landscapes])] }));
   };
 
   // a change by hand re-works the setup notes from the cards now in the kingdom (the Bane a roll had is remembered while it still applies)
@@ -102,7 +102,7 @@ export default function Night() {
   // on the first step Back leaves the flow: to the page the viewer came from, or the rankings when there is none (a fresh tab)
   const goBack = () => {
     if (st.step === 'kingdom' && st.kingdomMode === 'draft' && st.draftSave?.draft) { restartDraft(); return; }   // a draft under way: back to its options page
-    if (st.step === 'kingdom' && st.kingdomMode === 'random' && st.randomDone) { setSt(s => ({ ...s, randomDone: false })); return; }   // the summary: back to the roll
+    if (st.step === 'kingdom' && st.kingdomMode === 'random' && st.randomDone) { setSt(s => ({ ...s, randomDone: false, randomOriginal: null })); return; }   // the summary: back to the roll
     if (st.step === 'kingdom' && st.kingdomMode) { setMode(null); return; }   // inside a way of choosing, Back returns to the question
     if (st.step !== 'players') { setSt(s => back(s)); return; }
     if (window.history.length > 1) window.history.back(); else window.location.hash = hashFor('', gid);
@@ -137,9 +137,10 @@ export default function Night() {
 
   const step = STEPS.find(s => s.id === st.step);
   const drafting = st.kingdomMode === 'draft' && !!st.draftSave?.draft && !st.draftSave.finished;   // a draft under way: no starting the game until it is done
+  const atRandomRoll = st.step === 'kingdom' && !!catalog && st.kingdomMode === 'random' && !st.randomDone;   // the Random screen: its button turns the roll into the summary
   // why the main button is greyed out (nothing when it can be pressed): fewer than 2 players, or no kingdom yet (skip it with its link) or a draft still on
   const holdOn = st.step === 'players' && st.picked.length < 2 ? 'Pick at least 2 players first'
-    : st.step === 'kingdom' && drafting ? 'Finish the draft first' : st.step === 'kingdom' && !items.length ? 'Set up a kingdom first, or skip it' : '';
+    : atRandomRoll && !items.length ? 'Roll a kingdom first' : st.step === 'kingdom' && drafting ? 'Finish the draft first' : st.step === 'kingdom' && !items.length ? 'Set up a kingdom first, or skip it' : '';
   const atDraftOptions = st.step === 'kingdom' && !!catalog && st.kingdomMode === 'draft' && !st.draftSave?.draft;   // the draft's options page: its button replaces Start Game & Timer
   const kingdomCards = resolved.filter(r => r.kind === 'card'), kingdomLands = resolved.filter(r => r.kind === 'landscape');
 
@@ -169,7 +170,7 @@ export default function Night() {
           !catalog ? (cat.status === 'error' ? <p className="meta">The card list isn’t available right now. You can skip the kingdom and still save the game. <button type="button" className="ghost" onClick={cat.retry}>Try again</button> <button type="button" className="linkish" onClick={() => setSt(s => advance({ ...s, kingdom: [] }))}>Skip the kingdom</button></p> : <p className="meta">Loading the card list…</p>) : (
             <KingdomStep catalog={catalog} mode={st.kingdomMode} setMode={setMode} players={st.picked} roll={roll} setRollOpts={setRollOpts} resetRoll={() => setSt(s => ({ ...s, rollOpts: null, kept: null }))} kept={st.kept} onKeep={kept => setSt(s => ({ ...s, kept }))}
               hand={st.handOpen} setHand={handOpen => setSt(s => ({ ...s, handOpen }))} draftSave={st.draftSave} onDraft={draftSave => setSt(s => ({ ...s, draftSave }))} onRestartDraft={redoDraft}
-              plays={plays} items={items} rolled={rolled} setupNow={setupNow} handEdited={st.handEdited} resolved={resolved} randomDone={st.randomDone} setRandomDone={randomDone => setSt(s => ({ ...s, randomDone }))} applyKingdom={applyKingdom} onPick={pickByHand} onSkip={() => setSt(s => advance({ ...s, kingdom: [], kingdomMode: null }))}
+              plays={plays} items={items} rolled={rolled} setupNow={setupNow} handEdited={st.handEdited} resolved={resolved} randomDone={st.randomDone} randomOriginal={st.randomOriginal} setRandomDone={randomDone => setSt(s => ({ ...s, randomDone, randomOriginal: randomDone ? s.kingdom.filter(i => i.kind === 'card').map(i => i.id) : null }))} applyKingdom={applyKingdom} onPick={pickByHand} onSkip={() => setSt(s => advance({ ...s, kingdom: [], kingdomMode: null }))}
               text={<KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />} />
           )
         )}
@@ -220,6 +221,7 @@ export default function Night() {
         {st.step === 'review'
           ? <button type="button" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save game'}</button>
           : atDraftOptions ? <button type="button" onClick={startDraft}>Start the draft →</button>
+          : atRandomRoll ? <button type="button" onClick={() => setSt(s => ({ ...s, randomDone: true, randomOriginal: s.kingdom.filter(i => i.kind === 'card').map(i => i.id) }))} disabled={!!holdOn} title={holdOn || undefined}>Use this kingdom →</button>
           : <button type="button" onClick={next} disabled={!!holdOn} title={holdOn || undefined}>{st.step === 'kingdom' ? 'Start Game & Timer →' : st.step === 'play' ? 'Game over — scores →' : 'Next →'}</button>}
       </div>
       <p className="night-reset"><button type="button" className="ghost" onClick={startOver}>Restart Game Night</button></p>

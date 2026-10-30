@@ -30,9 +30,9 @@ export const poolSizeFor = players => (players >= 5 ? 20 : players === 4 ? 17 : 
    `showText` is the desktop's "show card text on every card" switch. `draft` is null on the options page, else { seed, options, n, size }, from which the pool is rolled again (a roll is repeatable).
    `picks` and `banned` are pile keys in the order taken (a skipped ban is a null in `banned`: the seat's turn passes with nothing banned). A saved draft for different players is ignored. */
 export function draftState(saved, players) {
-  const base = { seats: players, bans: true, showText: false, poolSize: null, draft: null, picks: [], banned: [], finished: false, error: '' };
+  const base = { seats: players, bans: false, showText: false, poolSize: null, draft: null, picks: [], banned: [], finished: false, error: '' };
   if (!saved || saved.seats?.length !== players.length || !players.every(p => saved.seats.includes(p))) return base;
-  return { ...base, ...saved };
+  return { ...base, ...saved, bans: saved.bans ?? false };   // a draft saved before bans existed has none
 }
 // one ban each, in seating order, before the picks (when bans are on)
 export const bansNeeded = st => (st.bans ? st.seats.length : 0);
