@@ -7,6 +7,9 @@ import { badgesFor } from '../lib/xp.js';
 import { pinnedBadges, viewHint, TIERS } from '../lib/achievements.js';
 import { short } from '../lib/format.js';
 
+// the tiers that carry an effect (the two empty layers a chip draws it with, see the .pin-chip rules in style.css): a glint, a glowing glitter, a ring of light
+const FX = new Set(['rare', 'epic', 'legendary']);
+
 const LABEL = { ...Object.fromEntries(TIERS.map(t => [t.id, t.label])), secret: 'Secret' };
 
 /* The badges a player chose to show off (`max` of them), as chips beside their name (the tier colours the edge; epic and legendary glow). Hovering or focusing
@@ -51,7 +54,10 @@ export default function PinnedBadges({ p, max = 3, list: given, fit = false }) {
         <HoverPopup key={b.id} className={'pin-wrap' + (fit && i >= k ? ' pin-off' : '')} content={
           <div className="popdesc"><b>{b.name}</b>{LABEL[b.tier] ? ` · ${LABEL[b.tier]}` : ''}<br />{viewHint(b, mine)}{b.earned && b.earned.date ? <><br />Earned {short(b.earned.date)}</> : null}</div>
         }>
-          <span role="listitem" className={'pin-chip td-' + b.tier}><span className="pin-ico" aria-hidden="true">{badgeIcon(b, 18)}</span>{b.name}</span>
+          <span role="listitem" className={'pin-chip td-' + b.tier}>
+            {FX.has(b.tier) && <><i className="fx fx-a" aria-hidden="true" /><i className="fx fx-b" aria-hidden="true" /></>}
+            <span className="pin-ico" aria-hidden="true">{badgeIcon(b, 18)}</span><span className="pin-name">{b.name}</span>
+          </span>
         </HoverPopup>
       ))}
       {hidden.length > 0 && <span role="listitem" className="pin-more" title={`Also pinned: ${hidden.map(b => b.name).join(', ')}`} aria-label={`${hidden.length} more pinned: ${hidden.map(b => b.name).join(', ')}`}>+{hidden.length}</span>}

@@ -2,9 +2,9 @@ import KingdomPicker from './KingdomPicker.jsx';
 import RandomizerPanel from '../dominion/components/RandomizerPanel.jsx';
 import SnakeDraft from '../dominion/components/SnakeDraft.jsx';
 import { draftState, handSwaps } from '../dominion/draft.js';
-import { resolveKingdom } from '../dominion/kingdom.js';
+import { resolveKingdom, shelfOrder } from '../dominion/kingdom.js';
 import { Setup } from '../dominion/components/RandomizerPanel.jsx';
-import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
+import { KingdomChip, ShelfGroups } from '../dominion/components/KingdomChips.jsx';
 import { formatSeed } from '../dominion/randomizer.js';
 import { toGameItems } from '../dominion/randomizer.js';
 
@@ -57,19 +57,25 @@ export default function KingdomStep({ catalog, mode, setMode, players, roll, set
 function RandomRoll({ catalog, roll, setRollOpts, resetRoll, kept, onKeep, hand, setHand, setupNow, handEdited, randomDone, randomOriginal, setRandomDone, plays, items, resolved, rolled, applyKingdom, onPick, text }) {
   // "Use this kingdom" (the bottom bar's button on this screen) closes the roll into a summary of what was chosen, like a finished draft: the cards, the landscapes, the setup, and a way back
   if (randomDone && items.length) {
-    const cards = resolved.filter(r => r.kind === 'card'), lands = resolved.filter(r => r.kind === 'landscape');
+    // on the summary the cards are laid out like the boxes (a row per expansion, A to Z in it) with each one's expansion icon: the table finds them that way
+    const cards = resolved.filter(r => r.kind === 'card' && !r.missing).sort(shelfOrder), lands = resolved.filter(r => r.kind === 'landscape' && !r.missing).sort(shelfOrder);
     // cards taken out by hand stay where they were rolled, struck through, with the card typed in beside them (as on a finished draft)
     const swaps = randomOriginal ? handSwaps(randomOriginal, cards.map(r => r.id)) : null;
-    const chip = id => { const r = resolveKingdom(catalog, [{ kind: 'card', id }])[0]; return <KingdomChip key={id} r={r} plain />; };
-    const shown = swaps ? randomOriginal.map(id => (swaps.removed.includes(id)
-      ? <span key={id} className="dn-swapped"><span className="gone">{chip(id)}</span>{swaps.replacedBy.has(id) ? <><b className="dn-swap-in">→</b>{chip(swaps.replacedBy.get(id))}</> : <em className="meta">removed</em>}</span>
-      : chip(id))) : cards.map(r => <KingdomChip key={r.id} r={r} plain />);
+    const chip = id => { const r = resolveKingdom(catalog, [{ kind: 'card', id }])[0]; return <KingdomChip key={id} r={r} plain expansion />; };
+    const found = ids => resolveKingdom(catalog, ids.map(id => ({ kind: 'card', id }))).filter(r => !r.missing);
+    // one entry per card, filed under its own expansion: a swapped-out card sits in ITS expansion's row with its replacement beside it; a card only added by hand is filed under its own
+    const entries = swaps
+      ? [...found(randomOriginal).map(r => ({ r, node: swaps.removed.includes(r.id)
+          ? <span key={r.id} className="dn-swapped"><span className="gone">{chip(r.id)}</span>{swaps.replacedBy.has(r.id) ? <><b className="dn-swap-in">→</b>{chip(swaps.replacedBy.get(r.id))}</> : <em className="meta">removed</em>}</span>
+          : chip(r.id) })),
+         ...found(swaps.extra).map(r => ({ r, node: <span key={'+' + r.id} className="dn-swapped"><b className="dn-swap-in">+</b>{chip(r.id)}</span> }))]
+      : cards.map(r => ({ r, node: <KingdomChip key={r.id} r={r} plain expansion /> }));
     return (
       <section className="builder dn-draft" aria-label="Kingdom chosen">
         <p className="dn-draft-done"><b>Kingdom Chosen</b>{rolled && rolled.seed != null && <span className="meta"> · Seed {formatSeed(rolled.seed)}</span>}</p>
         <p className="meta" style={{ margin: '0 0 6px' }}>{cards.length} Kingdom card{cards.length === 1 ? '' : 's'}</p>
-        <div className="dn-kchips">{shown}{swaps && swaps.extra.map(id => <span key={id} className="dn-swapped"><b className="dn-swap-in">+</b>{chip(id)}</span>)}</div>
-        {lands.length > 0 && <><p className="meta" style={{ margin: '12px 0 6px' }}>Landscapes</p><div className="dn-kchips">{lands.map(r => <KingdomChip key={r.id} r={r} plain />)}</div></>}
+        <ShelfGroups entries={entries} />
+        {lands.length > 0 && <><p className="meta" style={{ margin: '12px 0 6px' }}>Landscapes</p><ShelfGroups entries={lands.map(r => ({ r, node: <KingdomChip key={r.id} r={r} plain expansion /> }))} /></>}
         {setupNow && <Setup catalog={catalog} setup={setupNow} />}
         <div className="controls dn-rz-go">
           <button type="button" className="ghost" onClick={() => setRandomDone(false)}>Back to the roll</button>

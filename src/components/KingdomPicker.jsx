@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useCatalogLoad } from '../dominion/CatalogContext.jsx';
-import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
+import { KingdomChip, ShelfGroups } from '../dominion/components/KingdomChips.jsx';
 import ItemSearch from '../dominion/components/ItemSearch.jsx';
 import Peek from '../dominion/components/CardPeek.jsx';
 import { MAX_CARDS, MAX_LANDSCAPES, displayName, impliedSets, resolveKingdom } from '../dominion/kingdom.js';
@@ -30,12 +30,15 @@ export default function KingdomPicker({ items, onChange }) {
   const setOn = (id, on) => onChange(items.map(i => (i.kind === 'landscape' && i.id === id ? { kind: i.kind, id: i.id, ...(on ? { on } : {}) } : i)), nothing);
   const cardItems = resolved.filter(r => r.kind === 'card' && !r.missing);
 
+  const chipFor = (r, i) => (<KingdomChip key={`${r.kind}:${r.id}`} r={r} expansion onRemove={() => remove(i)} onPeek={r.missing ? undefined : () => setPeek(r.kind === 'card' ? { kind: 'card', s: { name: displayName(r.obj), cards: [r.obj], expansion: r.obj.expansion } } : { kind: 'landscape', l: { landscape: r.obj } })} />);
+
   return (
     <div className="dn-kpicker">
       {items.length > 0 && (
         <>
           <p className="meta dn-kpicker-count" role="status">{nCards} {nCards === 1 ? 'card' : 'cards'}{nLands ? `, ${nLands} ${nLands === 1 ? 'landscape' : 'landscapes'}` : ''}</p>
-          <div className="dn-kchips">{resolved.map((r, i) => <KingdomChip key={`${r.kind}:${r.id}`} r={r} onRemove={() => remove(i)} onPeek={r.missing ? undefined : () => setPeek(r.kind === 'card' ? { kind: 'card', s: { name: displayName(r.obj), cards: [r.obj], expansion: r.obj.expansion } } : { kind: 'landscape', l: { landscape: r.obj } })} />)}</div>
+          <ShelfGroups entries={resolved.flatMap((r, i) => (r.kind === 'card' || r.missing ? [{ r, node: chipFor(r, i) }] : []))} />
+          {nLands > 0 && <><p className="meta dn-shelf-sub">Landscapes</p><ShelfGroups entries={resolved.flatMap((r, i) => (r.kind === 'landscape' && !r.missing ? [{ r, node: chipFor(r, i) }] : []))} /></>}
         </>
       )}
       {traits.map(t => (

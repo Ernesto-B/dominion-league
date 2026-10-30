@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { displayName, searchKingdom } from '../kingdom.js';
 import CostIcons from './Cost.jsx';
-import { LandscapePill } from './bits.jsx';
+import { ExpansionBadge, LandscapePill } from './bits.jsx';
 
 /* A name search over the catalog's cards and/or landscapes, with the matches listed under it as buttons. Used wherever the
-   viewer builds a list by name: a game's kingdom in the Add Game dialog, and the Randomizer's "always / never include".
+   viewer builds a list by name: a game's kingdom in the Add Game dialog, Game night's hand-picking, and the Randomizer's "always / never include". Each match leads with its expansion's icon (the box it lives in).
    `onAdd(match)` may return a string to say why it wasn't added (it is shown, and the search kept). Enter adds the top
    match; Escape clears the search first (and stops there, so it doesn't also close a dialog around it). */
 export default function ItemSearch({ catalog, taken = [], kind = null, label, placeholder = 'Start typing a name…', onAdd }) {
@@ -25,6 +25,7 @@ export default function ItemSearch({ catalog, taken = [], kind = null, label, pl
       {q.trim() && (results.length ? (
         <ul className="dn-kresults" aria-label="Matches">{results.map(x => (
           <li key={`${x.kind}:${x.obj.id}`}><button type="button" onClick={() => add(x)}>
+            <ExpansionBadge name={x.obj.expansion} size={20} iconOnly />
             {x.kind === 'card' ? <CostIcons coins={x.obj.coins} debt={x.obj.debt} overpay={x.obj.overpay} size={22} /> : <LandscapePill type={x.obj.type} />}
             <span className="dn-kresults-name">{x.kind === 'card' ? displayName(x.obj) : x.obj.name}</span>
             <span className="meta">{x.kind === 'card' ? x.obj.types.join(' · ') : x.obj.expansion}</span>

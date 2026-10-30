@@ -1000,6 +1000,13 @@ html{overscroll-behavior-y:contain}   /* the browser's own pull-to-refresh would
 .dn-draft-done{margin:0 0 10px}
 .dn-draft-mine li.replaced{flex-wrap:wrap;border-left-color:var(--down,#d96a5b)}
 .dn-draft-mine li.replaced s{text-decoration-color:var(--muted);opacity:.7}
+.dn-shelf{display:grid;gap:10px}
+.dn-shelf-row{display:flex;align-items:flex-start;gap:12px}
+.dn-shelf-h{display:flex;align-items:center;gap:8px;flex:none;width:170px;min-height:32px;font:700 13px var(--text);color:var(--muted)}
+.dn-shelf-sub{margin:12px 0 6px}
+@media (max-width:720px){.dn-shelf-row{flex-direction:column;gap:4px}.dn-shelf-h{width:auto;min-height:0}}
+.dn-exp-icon{display:inline-flex;align-items:center;flex:none}
+.dn-draft-mine li .dn-exp-icon,.dn-draft-ban .dn-exp-icon{margin-right:2px}
 .dn-swapped{display:inline-flex;align-items:center;gap:6px}
 .dn-swapped .gone,.dn-swapped .gone *{text-decoration:line-through;text-decoration-color:var(--muted)}
 .dn-swapped .gone{opacity:.65}
@@ -1075,16 +1082,45 @@ a.dn-cell-link:hover .dn-pct{color:var(--ink)}
 .pin-wrap{display:inline-flex;outline-offset:3px;border-radius:999px}
 .pin-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 8px;border:1px solid color-mix(in srgb, var(--td) 70%, transparent);border-radius:999px;background:color-mix(in srgb, var(--td) 12%, transparent);font-size:13px;font-weight:600;white-space:nowrap;cursor:default}
 .pin-ico{display:inline-grid;place-items:center;min-width:18px;color:var(--td);font-size:15px;line-height:1}
-.pin-chip.td-epic,.pin-chip.td-legendary{position:relative;overflow:hidden}
+.pin-chip.td-rare,.pin-chip.td-epic,.pin-chip.td-legendary{position:relative;overflow:hidden}
+:root{
+  --spark-a:radial-gradient(circle at 14% 32%,#fff 0 1.1px,transparent 2.3px),radial-gradient(circle at 46% 78%,#fff 0 1.1px,transparent 2.3px),radial-gradient(circle at 74% 24%,#fff 0 1.1px,transparent 2.3px),radial-gradient(circle at 92% 66%,#fff 0 1.1px,transparent 2.3px);
+  --spark-b:radial-gradient(circle at 28% 70%,#fff 0 1.1px,transparent 2.3px),radial-gradient(circle at 58% 22%,#fff 0 1.1px,transparent 2.3px),radial-gradient(circle at 82% 78%,#fff 0 1.1px,transparent 2.3px),radial-gradient(circle at 6% 58%,#fff 0 1.1px,transparent 2.3px);
+}
+.pinned .pin-chip{isolation:isolate}
+.pinned .pin-chip .pin-ico,.pinned .pin-chip .pin-name{position:relative;z-index:3}
+.fx{position:absolute;display:none;pointer-events:none}
+/* The three tiers of shine, all drawn INSIDE the chip (it clips them), so nothing around it moves, and only transform and opacity ever change:
+     rare       a slow glint, a soft diagonal band that crosses now and then (each chip a little out of step)
+     epic       no glint: a breathing glow, with a pulse that spreads from the badge icon through the chip as the icon beats
+     legendary  a ring of golden light that circles the chip, glitter, a fast bright glint and a glowing name */
 @media (prefers-reduced-motion:no-preference){
-  /* a slow glint across epic and legendary chips: a soft diagonal band that crosses now and then, each chip a little out of step */
-  .pin-chip.td-epic::after,.pin-chip.td-legendary::after{content:'';position:absolute;top:-30%;bottom:-30%;left:0;width:38%;pointer-events:none;
+  .pin-chip.td-rare::after,.pin-chip.td-legendary::after{content:'';position:absolute;z-index:4;top:-30%;bottom:-30%;left:0;width:38%;pointer-events:none;
     background:linear-gradient(105deg,transparent 0,rgba(255,255,255,.38) 50%,transparent 100%);transform:translateX(-160%) skewX(-18deg);animation:pinglint 5.5s ease-in-out infinite}
-  .pin-chip.td-legendary::after{animation-duration:4s;background:linear-gradient(105deg,transparent 0,rgba(255,244,205,.6) 50%,transparent 100%)}
   .pinned .pin-wrap:nth-child(2) .pin-chip::after{animation-delay:1.3s}
   .pinned .pin-wrap:nth-child(3) .pin-chip::after{animation-delay:2.6s}
+
+  .pinned .td-epic .fx-a{display:block;inset:-25%;z-index:0;background:radial-gradient(closest-side,color-mix(in srgb,var(--td) 75%,transparent),transparent);animation:fxbreathe 2.8s ease-in-out infinite}
+  /* a pulse that starts at the badge icon and spreads out through the chip, twice per beat, the icon beating with it */
+  .pinned .td-epic .fx-b,.pinned .pin-chip.td-epic::before{content:'';display:block;position:absolute;left:8px;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:50%;z-index:1;pointer-events:none;
+    border:2px solid var(--td);animation:fxripple 2.6s ease-out infinite}
+  .pinned .pin-chip.td-epic::before{animation-delay:.35s;opacity:0}
+  .pinned .td-epic .pin-ico{animation:fxbeat 2.6s ease-in-out infinite}
+
+  .pin-chip.td-legendary::after{animation-duration:2.6s;background:linear-gradient(105deg,transparent 0,rgba(255,244,205,.8) 50%,transparent 100%)}
+  .pinned .td-legendary .fx-a{display:block;left:50%;top:50%;width:420px;height:420px;margin:-210px 0 0 -210px;z-index:0;
+    background:conic-gradient(#ffe9a0,#e8bf5a,#fff7d6,#b8860b,#ffe9a0,#e8bf5a,#fff7d6,#b8860b,#ffe9a0);animation:fxspin 3s linear infinite}
+  .pinned .td-legendary .fx-b{display:block;inset:2px;border-radius:999px;z-index:1;background:color-mix(in srgb,var(--td) 20%,var(--bg))}
+  .pinned .pin-chip.td-legendary::before{content:'';position:absolute;inset:2px;z-index:2;pointer-events:none;background:var(--spark-a),var(--spark-b);animation:fxtwinkle 1.5s ease-in-out infinite}
+  .pinned .td-legendary .pin-name{text-shadow:0 0 8px color-mix(in srgb,var(--td) 75%,transparent)}
 }
 @keyframes pinglint{0%{transform:translateX(-160%) skewX(-18deg)}28%,100%{transform:translateX(420%) skewX(-18deg)}}
+@keyframes fxbreathe{0%,100%{opacity:.2;transform:scale(.9)}50%{opacity:.8;transform:scale(1.06)}}
+@keyframes fxtwinkle{0%,100%{opacity:0;transform:scale(.85)}50%{opacity:1;transform:scale(1.12)}}
+@keyframes fxripple{0%{opacity:.9;transform:scale(1)}70%,100%{opacity:0;transform:scale(9)}}
+@keyframes fxbeat{0%,22%,100%{transform:scale(1)}8%{transform:scale(1.28)}}
+@keyframes fxspin{to{transform:rotate(360deg)}}
+@keyframes fxping{0%{opacity:.9;transform:scale(.6)}100%{opacity:0;transform:scale(1.08)}}
 .pin-chip.td-epic{box-shadow:0 0 9px color-mix(in srgb, var(--td) 40%, transparent)}
 .pin-chip.td-legendary{box-shadow:0 0 12px color-mix(in srgb, var(--td) 55%, transparent);background:color-mix(in srgb, var(--td) 18%, transparent)}
 .badge-tools .ghost{min-height:0;padding:3px 10px;font-size:12px}
@@ -1278,7 +1314,12 @@ main h2::before{content:'';display:inline-block;width:8px;height:8px;margin:0 10
 .reward-lvl b{font-size:26px;color:var(--brass)}
 @media (prefers-reduced-motion:no-preference){
   .reward{animation:dnpop .55s cubic-bezier(.3,1.5,.5,1) both;animation-delay:calc(var(--i,0) * 140ms + 250ms)}
-  .reward.td-rare::after,.reward.td-epic::after,.reward.td-legendary::after,.reward-lvl::after{content:'';position:absolute;top:-30%;bottom:-30%;left:0;width:34%;pointer-events:none;
+  /* epics glow up three times as they land, legendaries send out three rings of gold and glint twice (all inside the card, all over in a few seconds) */
+  .reward.td-epic::before,.reward.td-legendary::before{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit}
+  .reward.td-epic::before{background:radial-gradient(closest-side,color-mix(in srgb,var(--td) 60%,transparent),transparent);animation:fxbreathe 1.6s ease-in-out 3 both;animation-delay:calc(var(--i,0) * 140ms + 800ms)}
+  .reward.td-legendary::before{border:2px solid var(--td);animation:fxping 1.3s ease-out 3 both;animation-delay:calc(var(--i,0) * 140ms + 800ms)}
+  .reward.td-legendary::after{animation-iteration-count:2 !important}
+  .reward.td-rare::after,.reward.td-legendary::after,.reward-lvl::after{content:'';position:absolute;top:-30%;bottom:-30%;left:0;width:34%;pointer-events:none;
     background:linear-gradient(105deg,transparent,rgba(255,255,255,.4),transparent);transform:translateX(-160%) skewX(-18deg);animation:pinglint 1.2s ease-out 1 both;animation-delay:calc(var(--i,0) * 140ms + 800ms)}
 }
 

@@ -102,12 +102,12 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
       return (
         <li key={n} className={'dn-draft-seat' + (!value.finished && n === turn ? ' now' : '')} style={{ '--seat': seatColor(si) }}>
           <p className="dn-draft-seat-head"><b>{n}</b><span className="meta">{!value.finished && n === turn ? `${phase === 'ban' ? 'banning' : 'picking'} now · ` : ''}{mine.length} picked{value.finished ? '' : left ? `, ${left} to go` : ', done'}</span></p>
-          {bans.map(b => (b.skipped ? <p key={b.key} className="dn-draft-ban skipped"><span className="n">Ban</span><em>skipped</em></p> : <p key={b.key} className="dn-draft-ban"><span className="n">Ban</span>{b.name}</p>))}
+          {bans.map(b => (b.skipped ? <p key={b.key} className="dn-draft-ban skipped"><span className="n">Ban</span><em>skipped</em></p> : <p key={b.key} className="dn-draft-ban"><span className="n">Ban</span><ExpansionBadge name={b.expansion} size={16} iconOnly />{b.name}</p>))}
           {mine.length ? (
             <ol className="dn-draft-mine">{mine.map(m => (
               swaps && swaps.removed.includes(m.slot.cards[0].id)
-                ? <li key={m.key} className="replaced"><span className="n">#{m.n}</span><s>{m.slot.name}</s>{swaps.replacedBy.has(m.slot.cards[0].id) ? <b className="dn-swap-in" title="Picked by hand instead">→ {nameOf(swaps.replacedBy.get(m.slot.cards[0].id))}</b> : <em className="meta"> removed</em>}</li>
-                : <li key={m.key} className={'t-' + primaryType(m.slot.cards.find(c => primaryType(c) === 'Attack') || m.slot.cards[0]).toLowerCase()}><span className="n">#{m.n}</span>{m.slot.name}</li>
+                ? <li key={m.key} className="replaced"><span className="n">#{m.n}</span><ExpansionBadge name={m.slot.expansion} size={16} iconOnly /><s>{m.slot.name}</s>{swaps.replacedBy.has(m.slot.cards[0].id) ? <b className="dn-swap-in" title="Picked by hand instead">→ {nameOf(swaps.replacedBy.get(m.slot.cards[0].id))}</b> : <em className="meta"> removed</em>}</li>
+                : <li key={m.key} className={'t-' + primaryType(m.slot.cards.find(c => primaryType(c) === 'Attack') || m.slot.cards[0]).toLowerCase()}><span className="n">#{m.n}</span><ExpansionBadge name={m.slot.expansion} size={16} iconOnly />{m.slot.name}</li>
             ))}</ol>
           ) : <p className="meta" style={{ margin: 0 }}>Nothing yet</p>}
         </li>

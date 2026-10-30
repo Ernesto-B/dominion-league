@@ -4,6 +4,10 @@
 import { expansionMeta, PLURAL, LANDSCAPE_TYPES } from './constants.js';
 import { norm } from './filters.js';
 
+/* The order cards sit on a shelf: by expansion (the collection's order), then A to Z. For a table that has to find the cards in its boxes. `a` and `b` are
+   resolveKingdom() entries that were found (not `missing`). */
+export const shelfOrder = (a, b) => expansionMeta(a.obj.expansion).order - expansionMeta(b.obj.expansion).order || displayName(a.obj).localeCompare(displayName(b.obj));
+
 export const MAX_CARDS = 12, MAX_LANDSCAPES = 6;   // the same caps write_game_kingdom enforces
 
 // the shape add_game/edit_game take as p_kingdom

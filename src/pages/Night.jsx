@@ -18,7 +18,7 @@ import { CardText, ShowTextButton } from '../dominion/components/bits.jsx';
 import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, newSeed, setupForHand } from '../dominion/randomizer.js';
 import CountUp from '../components/CountUp.jsx';
 import { pilesPlayed, playStats } from '../dominion/playStats.js';
-import { impliedSets, primaryType, resolveKingdom } from '../dominion/kingdom.js';
+import { impliedSets, primaryType, resolveKingdom, shelfOrder } from '../dominion/kingdom.js';
 
 // the options a Game night roll starts from, and Reset goes back to: Attacks allowed, at most two
 const NIGHT_ROLL = { ...DEFAULT_OPTIONS, maxAttacks: 2 };
@@ -155,7 +155,9 @@ function NightFlow() {
     : st.step === 'scores' && st.picked.some(n => !/^\s*-?\d+\s*$/.test(st.vp[n] ?? '')) ? 'Enter every player’s VP first'
     : atRandomRoll && !items.length ? 'Roll a kingdom first' : st.step === 'kingdom' && drafting ? 'Finish the draft first' : st.step === 'kingdom' && !items.length ? 'Set up a kingdom first, or skip it' : '';
   const atDraftOptions = st.step === 'kingdom' && !!catalog && st.kingdomMode === 'draft' && !st.draftSave?.draft;   // the draft's options page: its button replaces Start Game & Timer
-  const kingdomCards = resolved.filter(r => r.kind === 'card'), kingdomLands = resolved.filter(r => r.kind === 'landscape');
+  // shown at the table and on the last check in shelf order (expansion, then A to Z) with each expansion's icon, so a card is found in its box at a glance
+  const shelved = list => list.slice().sort((a, b) => (a.missing ? 1 : 0) - (b.missing ? 1 : 0) || (a.missing || b.missing ? 0 : shelfOrder(a, b)));
+  const kingdomCards = shelved(resolved.filter(r => r.kind === 'card')), kingdomLands = shelved(resolved.filter(r => r.kind === 'landscape'));
 
   return (
     <>
@@ -183,7 +185,7 @@ function NightFlow() {
           !catalog ? (cat.status === 'error' ? <p className="meta">The card list isn’t available right now. You can skip the kingdom and still save the game. <button type="button" className="ghost" onClick={cat.retry}>Try again</button> <button type="button" className="linkish" onClick={() => setSt(s => advance({ ...s, kingdom: [] }))}>Skip the kingdom</button></p> : <p className="meta">Loading the card list…</p>) : (
             <KingdomStep catalog={catalog} mode={st.kingdomMode} setMode={setMode} players={st.picked} roll={roll} setRollOpts={setRollOpts} resetRoll={() => setSt(s => ({ ...s, rollOpts: null, kept: null }))} kept={st.kept} onKeep={kept => setSt(s => ({ ...s, kept }))}
               hand={st.handOpen} setHand={handOpen => setSt(s => ({ ...s, handOpen }))} draftSave={st.draftSave} onDraft={draftSave => setSt(s => ({ ...s, draftSave }))} onRestartDraft={redoDraft}
-              plays={plays} items={items} rolled={rolled} setupNow={setupNow} handEdited={st.handEdited} resolved={resolved} randomDone={st.randomDone} randomOriginal={st.randomOriginal} setRandomDone={randomDone => setSt(s => ({ ...s, randomDone, randomOriginal: randomDone ? s.kingdom.filter(i => i.kind === 'card').map(i => i.id) : null }))} applyKingdom={applyKingdom} onPick={pickByHand} onSkip={() => setSt(s => advance({ ...s, kingdom: [], kingdomMode: null }))}
+              plays={plays} items={items} rolled={rolled} setupNow={setupNow} handEdited={st.handEdited} resolved={resolved} randomDone={st.randomDone} randomOriginal={st.randomOriginal} setRandomDone={randomDone => setSt(s => ({ ...s, randomDone, handOpen: randomDone ? false : s.handOpen, randomOriginal: randomDone ? s.kingdom.filter(i => i.kind === 'card').map(i => i.id) : null }))} applyKingdom={applyKingdom} onPick={pickByHand} onSkip={() => setSt(s => advance({ ...s, kingdom: [], kingdomMode: null }))}
               text={<KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />} />
           )
         )}
@@ -194,8 +196,8 @@ function NightFlow() {
             {items.length ? (
               <>
                 <p className="meta" style={{ margin: '0 0 6px' }}>Tonight’s kingdom</p>
-                <div className="dn-kchips">{kingdomCards.map(r => <KingdomChip key={r.id} r={r} plain />)}</div>
-                {kingdomLands.length > 0 && <div className="dn-kchips">{kingdomLands.map(r => <KingdomChip key={r.id} r={r} plain />)}</div>}
+                <div className="dn-kchips">{kingdomCards.map(r => <KingdomChip key={r.id} r={r} plain expansion />)}</div>
+                {kingdomLands.length > 0 && <div className="dn-kchips">{kingdomLands.map(r => <KingdomChip key={r.id} r={r} plain expansion />)}</div>}
                 {setupNow && <RolledNotes setup={setupNow} />}
                 <KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />
               </>
@@ -222,7 +224,7 @@ function NightFlow() {
             <div className="pills" id="bsets">{SET_NAMES.filter(n => enabledSets.has(n) || st.sets.includes(n)).map(n => <a key={n} href="#" aria-current={st.sets.includes(n) ? 'true' : undefined} onClick={e => { e.preventDefault(); patch({ sets: toggle(st.sets, n) }); }}><SetIcon name={n} size={18} />{n}</a>)}</div>
             <p className="meta" style={{ margin: '12px 0 4px' }}>Landscape cards in play</p>
             <div className="pills" id="bland">{LANDSCAPES.map(n => <a key={n} href="#" aria-current={st.landscapes.includes(n) ? 'true' : undefined} onClick={e => { e.preventDefault(); patch({ landscapes: toggle(st.landscapes, n) }); }}>{n}</a>)}</div>
-            {items.length > 0 && <><p className="meta" style={{ margin: '12px 0 4px' }}>Kingdom ({kingdomCards.length} card{kingdomCards.length === 1 ? '' : 's'}{kingdomLands.length ? `, ${kingdomLands.length} landscape${kingdomLands.length === 1 ? '' : 's'}` : ''})</p><div className="dn-kchips">{resolved.map(r => <KingdomChip key={`${r.kind}:${r.id}`} r={r} plain />)}</div></>}
+            {items.length > 0 && <><p className="meta" style={{ margin: '12px 0 4px' }}>Kingdom ({kingdomCards.length} card{kingdomCards.length === 1 ? '' : 's'}{kingdomLands.length ? `, ${kingdomLands.length} landscape${kingdomLands.length === 1 ? '' : 's'}` : ''})</p><div className="dn-kchips">{[...kingdomCards, ...kingdomLands].map(r => <KingdomChip key={`${r.kind}:${r.id}`} r={r} plain expansion />)}</div></>}
             <label className="f" style={{ marginTop: 12 }}>Notes <input type="text" size={40} value={st.notes} onChange={e => patch({ notes: e.target.value })} /></label>
             {msg && <p className="dn-rz-msg" role="alert">{msg}</p>}
           </>
@@ -234,7 +236,7 @@ function NightFlow() {
         {st.step === 'review'
           ? <button type="button" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save game'}</button>
           : atDraftOptions ? <button type="button" onClick={startDraft}>Start the draft →</button>
-          : atRandomRoll ? <button type="button" onClick={() => setSt(s => ({ ...s, randomDone: true, randomOriginal: s.kingdom.filter(i => i.kind === 'card').map(i => i.id) }))} disabled={!!holdOn} title={holdOn || undefined}>Use this kingdom →</button>
+          : atRandomRoll ? <button type="button" onClick={() => setSt(s => ({ ...s, randomDone: true, handOpen: false, randomOriginal: s.kingdom.filter(i => i.kind === 'card').map(i => i.id) }))} disabled={!!holdOn} title={holdOn || undefined}>Use this kingdom →</button>
           : <button type="button" onClick={next} disabled={!!holdOn} title={holdOn || undefined}>{st.step === 'kingdom' ? 'Start Game & Timer →' : st.step === 'play' ? 'Game over — scores →' : 'Next →'}</button>}
       </div>
       <p className="night-reset"><button type="button" className="ghost" onClick={startOver}>Restart Game Night</button></p>

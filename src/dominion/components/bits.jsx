@@ -3,8 +3,9 @@ import SetIcon from '../../components/SetIcon.jsx';
 import { expansionMeta, humanize } from '../constants.js';
 import { coinIconSrc } from './Cost.jsx';
 
-export function ExpansionBadge({ name, size = 18 }) {
+export function ExpansionBadge({ name, size = 18, iconOnly = false }) {
   const m = expansionMeta(name);
+  if (iconOnly && m.icon) return <span className="dn-exp dn-exp-icon" title={m.label} role="img" aria-label={m.label}><SetIcon name={m.icon} size={size} /></span>;
   // the label is its own span so a phone can show just the set's icon in a crowded table (.dn-browse in style.css)
   return <span className="dn-exp">{m.icon && <SetIcon name={m.icon} size={size} />}<span className="dn-exp-label">{m.label}</span></span>;
 }
