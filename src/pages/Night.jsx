@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Component, useEffect, useMemo, useRef, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { sb } from '../lib/supabase.js';
 import { SET_NAMES, LANDSCAPES } from '../lib/sets.js';
@@ -32,7 +32,27 @@ const storage = () => { try { return window.localStorage; } catch { return null;
 // with the browser's back button starts that group's own night instead of carrying the other group's players and progress over.
 export default function Night() {
   const { gid } = usePage();
-  return <NightFlow key={gid ?? 'none'} />;
+  return <NightBoundary key={gid ?? 'none'} onReset={() => { if (storage()) clearNight(storage(), gid); }}><NightFlow /></NightBoundary>;
+}
+
+// If Game night ever fails to draw (whatever the cause, a saved night from an older version included), the way out is one button: forget the saved night and start a new one.
+// Without it a bad save would be read back on every visit and the page would stay broken.
+class NightBoundary extends Component {
+  state = { error: null };
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error) { console.error('Game night failed to render:', error); }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <>
+        <h1>Game night</h1>
+        <section className="night-card">
+          <p style={{ marginTop: 0 }}>Game night ran into a problem, possibly with the progress it had saved. Starting a fresh one clears that saved progress.</p>
+          <button type="button" onClick={() => { this.props.onReset(); this.setState({ error: null }); }}>Start a fresh Game night</button>
+        </section>
+      </>
+    );
+  }
 }
 
 function NightFlow() {

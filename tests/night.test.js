@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { STEPS, blankNight, canAdvance, advance, back, nextStep, prevStep, stepNumber, elapsed, loadNight, saveNight, clearNight, todayISO, NIGHT_TTL } from '../src/lib/night.js';
+import { STEPS, blankNight, canAdvance, advance, back, nextStep, prevStep, stepNumber, elapsed, loadNight, saveNight, clearNight, todayISO, NIGHT_TTL, NIGHT_VERSION, cleanNight } from '../src/lib/night.js';
 
 const memory = (init = {}) => { const m = { ...init }; return { getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = v; }, removeItem: k => { delete m[k]; }, m }; };
 
@@ -65,6 +65,39 @@ describe('the game clock', () => {
   });
 });
 
+describe('an old or odd saved night never breaks the page', () => {
+  const store = raw => ({ getItem: () => raw, setItem() {}, removeItem() {} });
+  const good = { ...blankNight('2026-10-30'), step: 'kingdom', picked: ['Ann', 'Bob'], v: NIGHT_VERSION, savedAt: 1 };
+  const load = o => loadNight(store(JSON.stringify(o)), 'g1', '2026-10-30', 2);
+  it('starts fresh when the save has another version, or none', () => {
+    expect(load({ ...good, v: NIGHT_VERSION - 1 })).toEqual(blankNight('2026-10-30'));
+    const { v, ...noVersion } = good; expect(load(noVersion)).toEqual(blankNight('2026-10-30'));
+    expect(load(null)).toEqual(blankNight('2026-10-30')); expect(load('nonsense')).toEqual(blankNight('2026-10-30'));
+    expect(loadNight(store('{not json'), 'g1', '2026-10-30')).toEqual(blankNight('2026-10-30'));
+  });
+  it('keeps what it understands and resets only the odd fields', () => {
+    const st = load({ ...good, kingdom: 'oops', vp: [], kingdomMode: 'teleport', startedAt: 'yesterday', notes: 'keep me', rollOpts: { cards: 8 }, unknownField: 1 });
+    expect(st).toMatchObject({ step: 'kingdom', picked: ['Ann', 'Bob'], notes: 'keep me', rollOpts: { cards: 8 }, kingdom: [], vp: {}, kingdomMode: null, startedAt: null });
+    expect('unknownField' in st).toBe(false);
+  });
+  it('drops a draft that does not hold together, and one for players who are not at the table', () => {
+    expect(load({ ...good, draftSave: { seats: 'Ann', picks: [], draft: null } }).draftSave).toBeNull();
+    expect(load({ ...good, draftSave: { seats: ['Ann', 'Bob'], picks: [], banned: [], draft: { seed: 'x', options: {} } } }).draftSave).toBeNull();
+    expect(load({ ...good, draftSave: { seats: ['Ann', 'Zed'], picks: [], banned: [], draft: null } }).draftSave).toBeNull();
+    const ok = { seats: ['Bob', 'Ann'], picks: ['p'], banned: [null, 'q'], draft: { seed: 3, options: { cards: 10 }, n: 10, size: 17 }, bans: true, finished: false };
+    expect(load({ ...good, draftSave: ok }).draftSave).toEqual(ok);
+  });
+  it('a kingdom of anything but { kind, id } items is dropped', () => {
+    expect(load({ ...good, kingdom: [{ kind: 'card' }] }).kingdom).toEqual([]);
+    const items = [{ kind: 'card', id: 'a' }, { kind: 'landscape', id: 'l', on: 'a' }];
+    expect(load({ ...good, kingdom: items }).kingdom).toEqual(items);
+  });
+  it('a save that was just written reads back whole', () => {
+    const mem = memory(), st = { ...blankNight(), step: 'scores', picked: ['Ann', 'Bob'], vp: { Ann: '20' }, kingdom: [{ kind: 'card', id: 'a' }], startedAt: 5, endedAt: 9 };
+    saveNight(mem, 'g1', st); expect(loadNight(mem, 'g1')).toMatchObject({ step: 'scores', vp: { Ann: '20' }, kingdom: st.kingdom, startedAt: 5, endedAt: 9 });
+  });
+});
+
 describe('how long a saved night is kept', () => {
   it('forgets a night older than the limit, keeps a recent one', () => {
     const st = memory(), at = Date.UTC(2026, 9, 30, 20, 0);
@@ -76,9 +109,9 @@ describe('how long a saved night is kept', () => {
 
 describe('the kingdom method', () => {
   it('keeps the randomizer options and locked cards in the saved night', () => {
-    const st = memory(), opts = { cards: 8, require: ['draw'] }, locks = { cards: ['k1'], lands: [] };
-    saveNight(st, 'g1', { ...blankNight(), step: 'kingdom', picked: ['Ann', 'Bob'], rollOpts: opts, locks });
-    const back = loadNight(st, 'g1'); expect(back.rollOpts).toEqual(opts); expect(back.locks).toEqual(locks);
+    const st = memory(), opts = { cards: 8, require: ['draw'] }, kept = { cards: ['k1'], lands: [], seed: '' };
+    saveNight(st, 'g1', { ...blankNight(), step: 'kingdom', picked: ['Ann', 'Bob'], rollOpts: opts, kept });
+    const back = loadNight(st, 'g1'); expect(back.rollOpts).toEqual(opts); expect(back.kept).toEqual(kept);
     expect(blankNight().rollOpts).toBeNull();
     const more = { handOpen: true, kept: { cards: [], lands: [], seed: '123456' }, draftSave: { seats: ['Ann', 'Bob'], picks: ['p1'], draft: { seed: 7, options: { cards: 10 } } } };
     saveNight(st, 'g2', { ...blankNight(), step: 'kingdom', picked: ['Ann', 'Bob'], ...more });

@@ -57,15 +57,45 @@ const key = gid => `dl.night.${gid ?? 'none'}`;
 // (kingdomToParams), which the Kingdom step rebuilds the tiles and setup notes from on return
 const slim = st => ({ ...st, rolled: null });
 export const NIGHT_TTL = 12 * 3600 * 1000;   // a night left alone for half a day is over: yesterday's players and date are not worth resuming
+
+/* The saved night is read back by code that may be newer than the code that wrote it. Two guards, so what was saved can never crash the page:
+   - NIGHT_VERSION: stamped on every save. Bump it whenever the SHAPE of a night changes in a way an old save could not survive; a save with another
+     version (or none) is not resumed, the night starts fresh.
+   - cleanNight: even a save of the right version is taken field by field. A field whose type is not what the page expects goes back to its blank value
+     (and a draft that doesn't hold together is dropped), so one odd value costs that field, not the night. A field the page does not know is ignored. */
+export const NIGHT_VERSION = 3;
+const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+const isStrs = v => Array.isArray(v) && v.every(x => typeof x === 'string');
+const isNum = v => typeof v === 'number' && Number.isFinite(v);
+const isItems = v => Array.isArray(v) && v.every(i => isObj(i) && typeof i.id === 'string' && (i.kind === 'card' || i.kind === 'landscape') && (i.on == null || typeof i.on === 'string'));
+const orNull = ok => v => v === null || ok(v);
+const isDraft = v => isObj(v) && isStrs(v.seats) && isStrs(v.picks) && (v.banned === undefined || (Array.isArray(v.banned) && v.banned.every(k => k === null || typeof k === 'string')))
+  && (v.draft === null || (isObj(v.draft) && isNum(v.draft.seed) && isObj(v.draft.options) && (v.draft.n == null || isNum(v.draft.n)) && (v.draft.size == null || isNum(v.draft.size))));
+const FIELDS = {
+  step: v => ids.includes(v), picked: isStrs, tie: isObj, vp: isObj, kingdomMode: orNull(v => ['random', 'manual', 'draft'].includes(v)), randomDone: v => typeof v === 'boolean',
+  randomOriginal: orNull(isStrs), handEdited: v => typeof v === 'boolean', handBane: orNull(v => typeof v === 'string'), rollOpts: orNull(isObj), kept: orNull(isObj),
+  handOpen: v => typeof v === 'boolean', draftSave: orNull(isDraft), kingdom: isItems, kingdomTouched: v => typeof v === 'boolean', rolledQ: orNull(v => typeof v === 'string'),
+  sets: isStrs, landscapes: isStrs, date: v => typeof v === 'string', type: v => typeof v === 'string', notes: v => typeof v === 'string',
+  startedAt: orNull(isNum), endedAt: orNull(isNum), editId: orNull(isNum),
+};
+export function cleanNight(saved, today = todayISO()) {
+  const blank = blankNight(today), out = { ...blank };
+  for (const k of Object.keys(blank)) if (k in FIELDS && saved[k] !== undefined && FIELDS[k](saved[k])) out[k] = saved[k];
+  // everyone in a saved draft must still be at the table
+  if (out.draftSave && !out.draftSave.seats.every(n => out.picked.includes(n))) out.draftSave = null;
+  return out;
+}
 export function loadNight(storage, gid, today = todayISO(), now = Date.now()) {
   try {
     const saved = JSON.parse(storage.getItem(key(gid)));
-    if (saved && saved.savedAt && now - saved.savedAt > NIGHT_TTL) return blankNight(today);
-    if (saved && typeof saved === 'object' && ids.includes(saved.step) && Array.isArray(saved.picked)) return { ...blankNight(today), ...saved, rolled: null };
-  } catch { /* nothing saved, blocked, or corrupt: start fresh */ }
+    if (!isObj(saved) || saved.v !== NIGHT_VERSION) return blankNight(today);        // nothing saved, or from another shape of night: start fresh
+    if (saved.savedAt && now - saved.savedAt > NIGHT_TTL) return blankNight(today);
+    if (!ids.includes(saved.step) || !isStrs(saved.picked)) return blankNight(today);
+    return { ...cleanNight(saved, today), rolled: null };
+  } catch { /* blocked or corrupt: start fresh */ }
   return blankNight(today);
 }
-export function saveNight(storage, gid, st, now = Date.now()) { try { storage.setItem(key(gid), JSON.stringify({ ...slim(st), savedAt: now })); return true; } catch { return false; } }
+export function saveNight(storage, gid, st, now = Date.now()) { try { storage.setItem(key(gid), JSON.stringify({ ...slim(st), v: NIGHT_VERSION, savedAt: now })); return true; } catch { return false; } }
 export function clearNight(storage, gid) { try { storage.removeItem(key(gid)); } catch { /* ignore */ } }
 
 /* What a saved game did, for the "Game saved" screen. `before` is { ranks: {name: rank}, tiers: {name: tierId} } taken from the ladder just
