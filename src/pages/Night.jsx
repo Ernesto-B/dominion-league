@@ -23,12 +23,19 @@ import { impliedSets, primaryType, resolveKingdom } from '../dominion/kingdom.js
 // the options a Game night roll starts from, and Reset goes back to: Attacks allowed, at most two
 const NIGHT_ROLL = { ...DEFAULT_OPTIONS, maxAttacks: 2 };
 
-const storage = () => { try { return window.sessionStorage; } catch { return null; } };
+const storage = () => { try { return window.localStorage; } catch { return null; } };
 
 /* EXPERIMENT (ux flag "flow"): logging a game as a guided evening instead of one long dialog — who's playing, the kingdom (roll
    one, pick by hand, or skip), a Play screen to keep open at the table, the final scores, then one last check before saving.
-   Admin only (the server re-checks). Progress is kept in sessionStorage, so a reload, or a look at a card, loses nothing. */
+   Admin only (the server re-checks). Progress is kept in localStorage (per group, for up to half a day), so a reload, a look at a card, or another tab for a while loses nothing. */
+// Keyed by the group: a Game night belongs to ONE group (its players, its saved progress, where the game is saved), so changing the group in the address bar or
+// with the browser's back button starts that group's own night instead of carrying the other group's players and progress over.
 export default function Night() {
+  const { gid } = usePage();
+  return <NightFlow key={gid ?? 'none'} />;
+}
+
+function NightFlow() {
   const { me, gid, D, allGroups, enabledSets, playerIdByName, hashFor, reload } = usePage();
   const cat = useCatalogLoad();
   const [st, setSt] = useState(() => (storage() ? loadNight(storage(), gid) : blankNight()));
@@ -53,7 +60,12 @@ export default function Night() {
   const before = useRef({ ranks: {}, tiers: {} });          // the ladder just before saving, to say what the game changed
 
   useEffect(() => { if (storage() && !done) saveNight(storage(), gid, st); }, [st, gid, done]);
-  useEffect(() => { if (st.step !== 'play') return undefined; const t = setInterval(() => setNow(Date.now()), 20000); return () => clearInterval(t); }, [st.step]);
+  useEffect(() => {
+    if (st.step !== 'play') return undefined;
+    const tick = () => setNow(Date.now()), t = setInterval(tick, 20000);
+    document.addEventListener('visibilitychange', tick);   // a tab left in the background catches the clock up the moment it is back
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick); };
+  }, [st.step]);
   useEffect(() => { window.scrollTo(0, 0); }, [st.step, done]);
 
   const groupName = (allGroups.find(g => g.id === gid) || {}).name;
@@ -140,6 +152,7 @@ export default function Night() {
   const atRandomRoll = st.step === 'kingdom' && !!catalog && st.kingdomMode === 'random' && !st.randomDone;   // the Random screen: its button turns the roll into the summary
   // why the main button is greyed out (nothing when it can be pressed): fewer than 2 players, or no kingdom yet (skip it with its link) or a draft still on
   const holdOn = st.step === 'players' && st.picked.length < 2 ? 'Pick at least 2 players first'
+    : st.step === 'scores' && st.picked.some(n => !/^\s*-?\d+\s*$/.test(st.vp[n] ?? '')) ? 'Enter every player’s VP first'
     : atRandomRoll && !items.length ? 'Roll a kingdom first' : st.step === 'kingdom' && drafting ? 'Finish the draft first' : st.step === 'kingdom' && !items.length ? 'Set up a kingdom first, or skip it' : '';
   const atDraftOptions = st.step === 'kingdom' && !!catalog && st.kingdomMode === 'draft' && !st.draftSave?.draft;   // the draft's options page: its button replaces Start Game & Timer
   const kingdomCards = resolved.filter(r => r.kind === 'card'), kingdomLands = resolved.filter(r => r.kind === 'landscape');
@@ -193,8 +206,8 @@ export default function Night() {
 
         {st.step === 'scores' && (
           <>
-            <p className="meta">Enter each player’s VP and the order sorts itself, ties included. No VP tracked? Use the arrows and the “tied” box.</p>
-            <FinishOrder bs={st} setBs={setSt} resort={resortByVP} />
+            <p className="meta">Enter each player’s VP and the order sorts itself, ties included.</p>
+            <FinishOrder bs={st} setBs={setSt} resort={resortByVP} vpOnly />
           </>
         )}
 

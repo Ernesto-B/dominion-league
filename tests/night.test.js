@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { STEPS, blankNight, canAdvance, advance, back, nextStep, prevStep, stepNumber, elapsed, loadNight, saveNight, clearNight, todayISO } from '../src/lib/night.js';
+import { STEPS, blankNight, canAdvance, advance, back, nextStep, prevStep, stepNumber, elapsed, loadNight, saveNight, clearNight, todayISO, NIGHT_TTL } from '../src/lib/night.js';
 
 const memory = (init = {}) => { const m = { ...init }; return { getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = v; }, removeItem: k => { delete m[k]; }, m }; };
 
@@ -47,6 +47,15 @@ describe('keeping a Game night between page loads', () => {
     expect(loadNight(memory({ 'dl.night.g1': JSON.stringify({ step: 'nonsense', picked: [] }) }), 'g1', 'T')).toEqual(blankNight('T'));
     const bad = { getItem: () => { throw new Error('x'); }, setItem: () => { throw new Error('x'); }, removeItem: () => { throw new Error('x'); } };
     expect(loadNight(bad, 'g1', 'T')).toEqual(blankNight('T')); expect(saveNight(bad, 'g1', blankNight())).toBe(false); expect(() => clearNight(bad, 'g1')).not.toThrow();
+  });
+});
+
+describe('how long a saved night is kept', () => {
+  it('forgets a night older than the limit, keeps a recent one', () => {
+    const st = memory(), at = Date.UTC(2026, 9, 30, 20, 0);
+    saveNight(st, 'g1', { ...blankNight(), step: 'scores', picked: ['Ann', 'Bob'] }, at);
+    expect(loadNight(st, 'g1', '2026-10-30', at + NIGHT_TTL - 1000).step).toBe('scores');
+    expect(loadNight(st, 'g1', '2026-10-31', at + NIGHT_TTL + 1000)).toEqual(blankNight('2026-10-31'));
   });
 });
 

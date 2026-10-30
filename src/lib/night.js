@@ -1,4 +1,5 @@
-/* The state of a Game night (the guided way to log a game, see pages/Night.jsx), kept per group in sessionStorage so a reload, or
+/* The state of a Game night (the guided way to log a game, see pages/Night.jsx), kept per group in localStorage (so a phone that puts the tab to sleep, or a browser that restarts it, still finds the night; one older than
+   NIGHT_TTL is forgotten) so a reload, or
    a look at a card's page in the middle of the game, doesn't lose it. Pure apart from the storage it is handed, so it is tested. */
 export const STEPS = [
   { id: 'players', label: 'Players', title: 'Who’s playing?' },
@@ -51,14 +52,16 @@ const key = gid => `dl.night.${gid ?? 'none'}`;
 // what is worth keeping: everything except `rolled`'s heavy catalog rows. `rolledQ` is the roll in the Randomizer's compact link form
 // (kingdomToParams), which the Kingdom step rebuilds the tiles and setup notes from on return
 const slim = st => ({ ...st, rolled: null });
-export function loadNight(storage, gid, today = todayISO()) {
+export const NIGHT_TTL = 12 * 3600 * 1000;   // a night left alone for half a day is over: yesterday's players and date are not worth resuming
+export function loadNight(storage, gid, today = todayISO(), now = Date.now()) {
   try {
     const saved = JSON.parse(storage.getItem(key(gid)));
+    if (saved && saved.savedAt && now - saved.savedAt > NIGHT_TTL) return blankNight(today);
     if (saved && typeof saved === 'object' && ids.includes(saved.step) && Array.isArray(saved.picked)) return { ...blankNight(today), ...saved, rolled: null };
   } catch { /* nothing saved, blocked, or corrupt: start fresh */ }
   return blankNight(today);
 }
-export function saveNight(storage, gid, st) { try { storage.setItem(key(gid), JSON.stringify(slim(st))); return true; } catch { return false; } }
+export function saveNight(storage, gid, st, now = Date.now()) { try { storage.setItem(key(gid), JSON.stringify({ ...slim(st), savedAt: now })); return true; } catch { return false; } }
 export function clearNight(storage, gid) { try { storage.removeItem(key(gid)); } catch { /* ignore */ } }
 
 /* What a saved game did, for the "Game saved" screen. `before` is { ranks: {name: rank}, tiers: {name: tierId} } taken from the ladder just
