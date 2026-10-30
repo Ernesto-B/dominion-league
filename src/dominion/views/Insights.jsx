@@ -66,22 +66,20 @@ function Loaded({ head, lg }) {
       </Section>
 
       <Section title="Not played yet" id="in-never">
-        <div className="builder">
-          <div className="tablewrap"><table className="plain dn-table dn-pcttable">
-            <caption className="dn-sr">Kingdom supply piles played and not played yet, by expansion</caption>
-            <thead><tr><th className="l" scope="col">Expansion</th><th className="dn-hide-sm" scope="col">Piles</th><th scope="col">Played</th><th scope="col">Not played</th></tr></thead>
-            <tbody>{ins.neverByExpansion.map(x => (
-              <tr key={x.expansion}>
-                <td className="l"><a href={cardsFilterHref({ expansions: [x.expansion] })}><ExpansionBadge name={x.expansion} /></a></td>
-                <Counts total={x.total} played={x.total - x.never} patch={{ expansions: [x.expansion] }} />
-              </tr>
-            ))}</tbody>
-            <tfoot><tr>
-              <th className="l" scope="row">Total</th>
-              <Counts total={catalog.piles.length} played={catalog.piles.length - ins.neverTotal} patch={{}} />
-            </tr></tfoot>
-          </table></div>
-        </div>
+        <div className="tablewrap"><table className="plain dn-table dn-pcttable">
+          <caption className="dn-sr">Kingdom supply piles played and not played yet, by expansion</caption>
+          <thead><tr><th className="l" scope="col">Expansion</th><th className="dn-hide-sm" scope="col">Piles</th><th scope="col">Played</th><th scope="col">Not played</th></tr></thead>
+          <tbody>{ins.neverByExpansion.map(x => (
+            <tr key={x.expansion}>
+              <td className="l"><a href={cardsFilterHref({ expansions: [x.expansion] })}><ExpansionBadge name={x.expansion} /></a></td>
+              <Counts total={x.total} played={x.total - x.never} patch={{ expansions: [x.expansion] }} />
+            </tr>
+          ))}</tbody>
+          <tfoot><tr>
+            <th className="l" scope="row">Total</th>
+            <Counts total={catalog.piles.length} played={catalog.piles.length - ins.neverTotal} patch={{}} />
+          </tr></tfoot>
+        </table></div>
       </Section>
 
       <Section title="Your record with cards" id="in-mine">
