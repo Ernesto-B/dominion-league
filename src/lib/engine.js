@@ -147,6 +147,7 @@ function compute(config, csvRows, today) {
       landscapes: (r.landscapes || '').split(/[;|]/).map(x => x.trim()).filter(Boolean),
       vp, playerVP, minutes: r.minutes ? +r.minutes : null,
       notes: r.notes || '', season: seasonOf(day),
+      savedAt: r.savedAt || null, startedAt: r.startedAt || null, endedAt: r.endedAt || null,   // when it was logged / the match began and ended (display only, never read by the maths)
       kingdom: r.kingdom || [],   // [{kind: 'card'|'landscape', id, on?}] — catalog ids, display only (the Elo maths never reads it)
     });
   });

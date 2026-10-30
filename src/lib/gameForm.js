@@ -43,5 +43,19 @@ export function buildGameArgs(bs, gid, playerIdByName, now = Date.now()) {
     p_winner_vp: null, p_minutes: bs.editId ? bs.minutes ?? null : playedMinutes(bs.startedAt, bs.endedAt ?? now), p_notes: bs.notes || null,
     p_group_id: gid, p_results: buildResults(bs, playerIdByName),
     ...(bs.kingdomTouched || (!bs.editId && bs.kingdom.length) ? { p_kingdom: toPayload(bs.kingdom) } : {}),
+    // the match's own clock, only for a NEW game that ran on Game night's timer (an edit leaves the saved times as they are)
+    ...(!bs.editId && bs.startedAt != null && bs.endedAt != null ? { p_started_at: new Date(bs.startedAt).toISOString(), p_ended_at: new Date(bs.endedAt).toISOString() } : {}),
   };
+}
+
+/* add_game / edit_game, tolerating a database that predates the timing columns: if it does not know p_started_at / p_ended_at (PostgREST cannot find a function
+   with those arguments), the same call is made without them, so logging a game never fails for want of a migration. */
+export async function callGameRpc(sb, name, args) {
+  const res = await sb.rpc(name, args);
+  const timed = 'p_started_at' in args || 'p_ended_at' in args;
+  if (res.error && timed && /PGRST202|could not find the function/i.test(`${res.error.code || ''} ${res.error.message || ''}`)) {
+    const { p_started_at, p_ended_at, ...rest } = args;
+    return sb.rpc(name, rest);
+  }
+  return res;
 }

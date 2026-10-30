@@ -13,7 +13,7 @@ import { usePage } from '../PageContext.js';
 // Sortable list of games, each row expandable into its per-player breakdown. `onEdit(line)` adds the
 // admin Edit column. Re-key it (e.g. on filter changes) to reset the sort and collapse every row.
 // `highlight` (a game id) opens that row, tints it and scrolls it into view — used by links to a game.
-export default function GamesTable({ games, onEdit, highlight, view = 'cards', link = false, mark }) {   // a wide screen shows cards unless the Games page's switch says table
+export default function GamesTable({ games, onEdit, highlight, view = 'cards', mark }) {   // a wide screen shows cards unless the Games page's switch says table
   const [open, setOpen] = useState(() => new Set(highlight != null ? [highlight] : []));
   const wrap = useRef(null);
   const wide = useWide();
@@ -48,5 +48,5 @@ export default function GamesTable({ games, onEdit, highlight, view = 'cards', l
     };
   });
   // the cards are the phone layout; a wide screen shows them too (view 'cards') or keeps the sortable table (view 'table')
-  return <div ref={wrap} className={'gview-' + view}>{showTable && <div className="gtable"><SortableTable head={head} rows={rows} /></div>}{showCards && <GameCards games={games} open={open} toggle={toggle} onEdit={onEdit} showDate highlight={highlight} link={link} me={marked || undefined} />}</div>;
+  return <div ref={wrap} className={'gview-' + view}>{showTable && <div className="gtable"><SortableTable head={head} rows={rows} /></div>}{showCards && <GameCards games={games} open={open} toggle={toggle} onEdit={onEdit} showDate highlight={highlight} me={marked || undefined} />}</div>;
 }

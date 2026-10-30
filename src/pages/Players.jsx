@@ -133,5 +133,5 @@ function Results({ p }) {
   const [open, setOpen] = useState(() => new Set());
   const toggle = line => setOpen(o => { const n = new Set(o); n.has(line) ? n.delete(line) : n.add(line); return n; });
   // the same games as on the Games page: cards on a phone and a wide screen; the line marked is the player whose page this is, not the signed-in viewer
-  return <div className="gview-cards"><GameCards games={p.results.slice().reverse().map(r => r.game)} open={open} toggle={toggle} showDate link me={p.name} /></div>;
+  return <div className="gview-cards"><GameCards games={p.results.slice().reverse().map(r => r.game)} open={open} toggle={toggle} showDate me={p.name} /></div>;
 }

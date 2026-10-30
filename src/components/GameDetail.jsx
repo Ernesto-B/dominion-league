@@ -1,3 +1,4 @@
+import { usePage } from '../PageContext.js';
 import { f0, ord, sgn } from '../lib/format.js';
 import PlayerLink from './PlayerLink.jsx';
 import LandscapePills from './LandscapePills.jsx';
@@ -11,6 +12,7 @@ const GameKingdom = lazy(() => import('../dominion/components/GameKingdom.jsx'))
 
 // The expanded per-player breakdown under a game row.
 export default function GameDetail({ game: g, onEdit, me = null }) {
+  const { gid, hashFor } = usePage();
   // Season score is a 0-1 ratio internally, but displayed x1000 so it reads as a whole-number
   // points total instead of a 3-decimal fraction.
   const sc = x => f0(x * 1000);
@@ -40,7 +42,10 @@ export default function GameDetail({ game: g, onEdit, me = null }) {
       {g.sets.length > 0 && <p className="note dn-only-sm">Sets: {g.sets.map((s, i) => <Fragment key={s}>{i > 0 && ' '}{setIconPath(s) ? <><SetIcon name={s} size={20} /> {s}</> : s}</Fragment>)}</p>}
       {(g.landscapes || []).length > 0 && <p className="note">Landscapes in play: <LandscapePills game={g} /></p>}
       {g.notes && <p className="note">{g.notes}</p>}
-      {onEdit && <p className="dn-only-sm" style={{ margin: '12px 0 0' }}><button type="button" className="ghost" onClick={e => { e.stopPropagation(); onEdit(g.line); }}>Edit this game</button></p>}
+      <p className="gr-actions">
+        <a className="btn" href={hashFor('games', gid, g.line)} onClick={e => e.stopPropagation()}>Full game report →</a>
+        {onEdit && <button type="button" className="ghost dn-only-sm" onClick={e => { e.stopPropagation(); onEdit(g.line); }}>Edit game</button>}
+      </p>
     </>
   );
 }

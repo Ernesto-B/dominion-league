@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resortByVP, buildResults, buildGameArgs, toggle } from '../src/lib/gameForm.js';
+import { resortByVP, buildResults, buildGameArgs, callGameRpc, toggle } from '../src/lib/gameForm.js';
 
 const ids = new Map([['Ann', 'u-ann'], ['Bob', 'u-bob'], ['Cy', 'u-cy'], ['Dee', 'u-dee']]);
 const bs = (over = {}) => ({ date: '2026-02-03', type: '', picked: [], tie: {}, sets: [], landscapes: [], kingdom: [], kingdomTouched: false, vp: {}, notes: '', editId: null, ...over });
@@ -51,4 +51,25 @@ describe('results and the RPC arguments', () => {
     expect(buildGameArgs(bs({ editId: 5, kingdom: [], kingdomTouched: true }), 'g1', ids).p_kingdom).toEqual([]);   // ...and one that cleared it
   });
   it('toggles membership', () => { expect(toggle(['a'], 'b')).toEqual(['a', 'b']); expect(toggle(['a', 'b'], 'a')).toEqual(['b']); });
+});
+
+describe('the match clock sent with a new game', () => {
+  const t0 = Date.UTC(2026, 9, 29, 19, 4), t1 = Date.UTC(2026, 9, 29, 19, 51);
+  it('sends when the match began and ended, only for a new game that ran on the timer', () => {
+    const a = buildGameArgs(bs({ picked: ['Ann'], startedAt: t0, endedAt: t1 }), 'g1', ids);
+    expect(a.p_started_at).toBe('2026-10-29T19:04:00.000Z'); expect(a.p_ended_at).toBe('2026-10-29T19:51:00.000Z');
+    expect('p_started_at' in buildGameArgs(bs({ picked: ['Ann'], startedAt: t0 }), 'g1', ids)).toBe(false);          // the clock never stopped
+    expect('p_started_at' in buildGameArgs(bs({ picked: ['Ann'] }), 'g1', ids)).toBe(false);                          // no clock
+    expect('p_started_at' in buildGameArgs(bs({ editId: 3, startedAt: t0, endedAt: t1 }), 'g1', ids)).toBe(false);    // an edit keeps what is saved
+  });
+  it('retries without the times when the database does not know them yet, and not for any other error', async () => {
+    const calls = []; const sb = errs => ({ rpc: async (name, args) => { calls.push(args); const e = errs.shift(); return e ? { data: null, error: e } : { data: 7, error: null }; } });
+    const args = { p_date: 'x', p_started_at: 'a', p_ended_at: 'b' };
+    expect(await callGameRpc(sb([{ code: 'PGRST202', message: 'Could not find the function public.add_game(...)' }]), 'add_game', args)).toEqual({ data: 7, error: null });
+    expect(calls).toHaveLength(2); expect('p_started_at' in calls[1]).toBe(false); expect(calls[1].p_date).toBe('x');
+    calls.length = 0;
+    const other = await callGameRpc(sb([{ code: '42501', message: 'only the admin can add games' }]), 'add_game', args);
+    expect(other.error.code).toBe('42501'); expect(calls).toHaveLength(1);
+    calls.length = 0; await callGameRpc(sb([]), 'add_game', args); expect(calls).toHaveLength(1);
+  });
 });

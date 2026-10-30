@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { usePage } from '../PageContext.js';
 import { f0, ord, sgn, short } from '../lib/format.js';
+import { startLabel } from '../lib/gameTime.js';
 import { ordered } from './GameFinish.jsx';
 import { setIconPath } from '../lib/sets.js';
 import PlayerLink from './PlayerLink.jsx';
@@ -15,21 +16,20 @@ const tone = (d, eps) => (d > eps ? 'up-t' : d < -eps ? 'down-t' : '');
 /* ux experiment "lists": a game as a small card on a phone instead of a row of a wide table. The card is the finish order, one line
    per player (place, name, Elo change) with the sets underneath; tapping it opens each player's Elo, season points and VP stacked
    under their line, then the kingdom and notes. Used by Last night and by the Games page; the table stays for desktop.
-   `me` marks one player's line (the Players page); `link` adds a small ↗ to the game's own place in the Games page (wide screens only). `open` is a Set of game ids and `toggle(id)` flips one, owned by the table next to it, so the two views agree. */
-export default function GameCards({ games, open, toggle, onEdit, showDate = false, highlight, me = null, link = false }) {
+   `me` marks one player's line (the Players page). `open` is a Set of game ids and `toggle(id)` flips one, owned by the table next to it, so the two views agree. */
+export default function GameCards({ games, open, toggle, onEdit, showDate = false, highlight, me = null }) {
   const { D, gid, hashFor } = usePage();
   return (
     <ul className="gcards" aria-label="Games">
       {games.map(g => {
-        const isOpen = open.has(g.line);
+        const isOpen = open.has(g.line), time = startLabel(g);   // the time of day the match began, when it is known
         return (
           <li key={g.line} className={'gcard' + (isOpen ? ' open' : '') + (g.line === highlight ? ' hl' : '')} data-g={g.line} onClick={() => toggle(g.line)}>
             <div className="gcard-head">
-              <button type="button" className="gcard-toggle" aria-expanded={isOpen} aria-label={`${short(g.date)}, ${isOpen ? 'hide' : 'show'} details`}>
-                <span className="chev">▸</span>{showDate && <b>{short(g.date)}</b>}
+              <button type="button" className="gcard-toggle" aria-expanded={isOpen} aria-label={`${short(g.date)}${time ? `, ${time}` : ''}, ${isOpen ? 'hide' : 'show'} details`}>
+                <span className="chev">▸</span>{showDate && <b>{short(g.date)}</b>}{time && <span className="gcard-time">{time}</span>}
               </button>
               <TypePill type={g.type} />
-              {link && <a className="gcard-open" href={hashFor('games', gid, g.line)} title="Open this game in the Games page" aria-label={`Open the ${short(g.date)} game in the Games page`} onClick={e => e.stopPropagation()}>↗</a>}
               <span className="gcard-sets">{g.sets.map(s => (setIconPath(s) ? <SetIcon key={s} name={s} size={20} /> : <span key={s} className="meta">{s}</span>))}</span>
             </div>
             <ol className={'gcard-rows' + (g.names.length > 3 ? ' cols2' : '')} style={{ '--rows': Math.ceil(g.names.length / 2) }}>
@@ -58,7 +58,10 @@ export default function GameCards({ games, open, toggle, onEdit, showDate = fals
                 {(g.kingdom || []).length > 0 && <Suspense fallback={<p className="meta dn-kingdom">Loading the kingdom…</p>}><GameKingdom items={g.kingdom} /></Suspense>}
                 {(g.landscapes || []).length > 0 && <p className="note">Landscapes in play: <LandscapePills game={g} /></p>}
                 {g.notes && <p className="note">{g.notes}</p>}
-                {onEdit && <p style={{ margin: '12px 0 0' }}><button type="button" className="ghost" onClick={() => onEdit(g.line)}>Edit this game</button></p>}
+                <p className="gr-actions">
+                  <a className="btn" href={hashFor('games', gid, g.line)}>Full game report →</a>
+                  {onEdit && <button type="button" className="ghost" onClick={() => onEdit(g.line)}>Edit game</button>}
+                </p>
               </div>
             )}
           </li>

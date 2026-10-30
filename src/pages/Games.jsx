@@ -1,5 +1,5 @@
 
-import { Suspense, lazy, useLayoutEffect, useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { SET_NAMES } from '../lib/sets.js';
 import GroupSwitcher from '../components/GroupSwitcher.jsx';
@@ -11,6 +11,8 @@ import { takeKingdomDraft } from '../dominion/kingdomDraft.js';
 
 // the Add/Edit dialog (with the kingdom picker and its catalog code) is only needed once someone opens it
 const GameModal = lazy(() => import('../components/GameModal.jsx'));
+// the report on one game (a link to #/games/<group>/<id>): deeper than anything the list can show, so it loads on its own
+const GameReport = lazy(() => import('../components/GameReport.jsx'));
 
 const readView = () => { try { return localStorage.getItem('dl.gamesview') === 'table' ? 'table' : 'cards'; } catch { return 'cards'; } };
 
@@ -31,15 +33,12 @@ export default function Games() {
 
   const matches = (g, f) => (f.season === 'all' || String(g.season) === f.season) && (f.type === 'all' || g.type === f.type)
     && (f.player === 'all' || g.places[f.player] != null) && (f.set === 'all' || g.sets.includes(f.set));
-  // #/games/<group>/<id> — a link to one game. Arriving on it clears any filters that would hide it
-  // (only on arrival, so changing a filter afterwards still works); the table then opens, tints and
-  // scrolls to the row. An id that isn't in this group is ignored.
+  // #/games/<group>/<id> — a link to one game opens that game's report (components/GameReport.jsx), the deepest view there is. An id that isn't in this group
+  // is ignored and the list shows as usual.
   const target = /^\d+$/.test(arg || '') ? D.games.find(g => g.line === +arg) : null;
-  useLayoutEffect(() => {
-    if (target && !matches(target, saved)) { saved = { season: 'all', type: 'all', player: 'all', set: 'all' }; setGf(saved); }
-  }, [arg]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const list = D.games.filter(g => matches(g, gf)).slice().reverse();
+  if (target) return <><GroupSwitcher route="games" /><Suspense fallback={<p className="loading">Loading the game…</p>}><GameReport key={target.line} game={target} /></Suspense></>;
 
   const selects = (
     <>
@@ -77,7 +76,7 @@ export default function Games() {
         </div>
       </div>
       {modal && <Suspense fallback={null}><GameModal key={String(modal.editId)} editId={modal.editId} draft={modal.draft} onClose={() => setModal(null)} /></Suspense>}
-      {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${target ? target.line : ''}`} games={list} mark={gf.player !== 'all' ? gf.player : null} highlight={target ? target.line : undefined} view={view} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
+      {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}`} games={list} mark={gf.player !== 'all' ? gf.player : null} view={view} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
     </>
   );
 }

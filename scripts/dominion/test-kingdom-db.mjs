@@ -100,6 +100,15 @@ try {
   check('edit_game with [] clears it', edit('[]').ok && count(`select count(*) from game_kingdom where game_id = ${gid}`) === 0);
   edit(k(card(ids[0]), land(L[1])));
 
+  // ---- the match's own clock (p_started_at / p_ended_at, optional)
+  const timed = psql('db', addGame(undefined, `, p_started_at => '2026-01-02T19:00:00Z', p_ended_at => '2026-01-02T19:40:00Z'`), admin);
+  const tid = Number(timed.out);
+  check('add_game stores when the match started and ended', timed.ok && must('db', `select (extract(epoch from ended_at - started_at) / 60)::int from games where id = ${tid}`) === '40', timed.err);
+  check('a game added without them has neither', must('db', `select (started_at is null and ended_at is null)::text from games where id = ${gid}`) === 'true');
+  const editTimed = over => psql('db', `select edit_game(p_game_id => ${tid}, p_date => '2026-01-02', p_type => '', p_sets => 'Base', p_landscapes => null, p_strategy => null, p_winner_vp => null, p_minutes => null, p_notes => 'x', p_group_id => 'g1', p_results => '[{"player_id":"${P1}","place":1},{"player_id":"${P2}","place":2}]'${over})`, admin);
+  check('edit_game without them leaves them alone', editTimed('').ok && must('db', `select (started_at is not null and ended_at is not null)::text from games where id = ${tid}`) === 'true');
+  check('edit_game with new ones replaces them', editTimed(`, p_started_at => '2026-01-02T20:00:00Z', p_ended_at => '2026-01-02T20:10:00Z'`).ok && must('db', `select (extract(epoch from ended_at - started_at) / 60)::int from games where id = ${tid}`) === '10');
+
   // ---- who may write
   const asPlayer = psql('db', addGame(k(card(ids[0]))), { role: 'authenticated', uid: P1 });
   check('a non-admin cannot add a game', !asPlayer.ok && /only the admin/.test(asPlayer.err), asPlayer.err);

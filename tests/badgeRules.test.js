@@ -469,3 +469,16 @@ describe('games played, time at the table and speed', () => {
     expect(names).not.toEqual(expect.arrayContaining(['Lord of Ruin']));
   });
 });
+
+describe('the Leaps track (levels gained in one game)', () => {
+  const xp = (jumps, best) => ({ steps: [], jumps, bestJump: best });
+  const J = (id, levels, tier, name, earned = null) => ({ id, levels, bonus: 10, name, tier, earned });
+  it('is listed under Milestones once the XP is passed in, with its progress and the game that earned each step', () => {
+    const list = achievements({ name: 'Me', results: [], titles: 0, peak: 1000 }, [], [], xp([J('jump-3', 3, 'rare', 'Leap Forward', { date: 'D1', line: 4 }), J('jump-5', 5, 'epic', 'Meteoric Rise')], 3), { games: [], catalog: null, baseXp: null });
+    const leap = list.filter(b => b.track === 'leap');
+    expect(leap.map(b => [b.id, b.group, b.tier, b.target, b.value])).toEqual([['jump-3', 'Milestones', 'rare', 3, 3], ['jump-5', 'Milestones', 'epic', 5, 3]]);
+    expect(leap[0].earned).toEqual({ date: 'D1', line: 4 }); expect(leap[1].earned).toBeNull();
+    expect(leap[0].hint).toBe('Gain 3 levels in a single match.');
+    expect(achievements({ name: 'Me', results: [], titles: 0, peak: 1000 }, [], [], null, {}).some(b => b.track === 'leap')).toBe(false);   // like Renown, only with the XP
+  });
+});
