@@ -30,6 +30,13 @@ export const XP = {
 // the Renown track's badges: the level, and the XP a step pays on top of the standard badge XP
 export const LEVEL_STEPS = [{ level: 5, bonus: 10 }, { level: 10, bonus: 20 }, { level: 20, bonus: 40 }, { level: 50, bonus: 100 }, { level: 100, bonus: 250 }, { level: 200, bonus: 600 }];
 
+/* Leaps: badges for gaining several LEVELS in a single game (after every payout of that game, the badge's own included). They are paid here, inside the loop below, like
+   the Renown steps: a level jump depends on the XP that badges pay, so it cannot be worked out from a badge list that is itself an input to this function. */
+export const JUMP_STEPS = [
+  { id: 'jump-3', levels: 3, bonus: 60, name: 'Leap Forward', tier: 'rare' },
+  { id: 'jump-5', levels: 5, bonus: 150, name: 'Meteoric Rise', tier: 'epic' },
+];
+
 /* What one level costs: 90 XP up to level 9, then a jump at every tenth level (150 from level 10, 175 from 20, 200 from 30, ... +25 a decade), flat inside
    each decade and capped at 350 (from level 90 on). Total XP: level 10 is 870, 20 is 2,395, 50 is 8,470, 100 is 23,570, 200 is 58,570
    (at about 200 XP a week: level 100 in ~2.3 years, 200 in ~5.6). Never skips a level and never goes down. */
@@ -89,7 +96,7 @@ function gameParts(g, a, st, rating, scale) {
    `badges` is a Map name → the player's badge list from achievements() (without the Level track, which pays out here). */
 export function computeXp(D, badges = new Map()) {
   const scale = D.E.scale, out = new Map(), st = new Map(), rate = new Map();
-  const state = n => st.get(n) || st.set(n, { prevWon: false, recent: [], night: -1, run: 0, seen: new Set(), total: 0, perGame: [], totals: {}, steps: LEVEL_STEPS.map(st => ({ level: st.level, bonus: st.bonus, earned: null })) }).get(n);
+  const state = n => st.get(n) || st.set(n, { prevWon: false, recent: [], night: -1, run: 0, seen: new Set(), total: 0, perGame: [], totals: {}, steps: LEVEL_STEPS.map(st => ({ level: st.level, bonus: st.bonus, earned: null })), jumps: JUMP_STEPS.map(j => ({ ...j, earned: null })), bestJump: 0 }).get(n);
 
   // badge XP lands on the game that earned it; a badge with no game (the season title) lands with the title
   const badgeXp = new Map();   // name → Map(line → xp)
@@ -131,12 +138,15 @@ export function computeXp(D, badges = new Map()) {
       const seasons = title.get(a) && title.get(a).get(g.line);
       if (seasons) { parts.season = XP.season * seasons; badgeN += XP.badge * seasons; }   // the champion badge
       let xp = Object.values(parts).reduce((x, y) => x + y, 0) + badgeN;
-      // level badges pay out too: a level reached in this game, and any a payout then reaches
+      // level badges pay out too: a level reached in this game, and any a payout then reaches; and the leap badges, for the levels this game gained in all
+      const lvl0 = levelAt(s.total);
       for (let again = true; again;) {
         again = false;
         const lvl = levelAt(s.total + xp);
         for (const step of s.steps) if (!step.earned && lvl >= step.level) { step.earned = { date: g.date, line: g.line }; badgeN += XP.badge + step.bonus; xp += XP.badge + step.bonus; again = true; }
+        for (const j of s.jumps) if (!j.earned && lvl - lvl0 >= j.levels) { j.earned = { date: g.date, line: g.line }; badgeN += XP.badge + j.bonus; xp += XP.badge + j.bonus; again = true; }
       }
+      s.bestJump = Math.max(s.bestJump, levelAt(s.total + xp) - lvl0);
       if (badgeN) parts.badges = badgeN;
       s.total += xp;
       s.perGame.push({ line: g.line, date: g.date, xp, parts });
@@ -151,7 +161,7 @@ export function computeXp(D, badges = new Map()) {
     const s = state(p.name), level = levelAt(s.total), lo = xpForLevel(level), hi = xpForLevel(level + 1);
     out.set(p.name, {
       total: s.total, level, into: s.total - lo, span: hi - lo, need: hi - s.total, pct: (s.total - lo) / (hi - lo),
-      perGame: s.perGame, last: s.perGame[s.perGame.length - 1] || null, totals: s.totals, steps: s.steps,
+      perGame: s.perGame, last: s.perGame[s.perGame.length - 1] || null, totals: s.totals, steps: s.steps, jumps: s.jumps, bestJump: s.bestJump,
     });
   }
   return out;

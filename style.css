@@ -160,7 +160,7 @@ tr.gdetail .tablewrap{max-width:100%}
 label.f{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
 select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea{max-width:100%;min-width:0;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-height:38px}
 button,.btn{font:600 15px var(--text);background:var(--ink);color:var(--bg);border:0;border-radius:6px;padding:9px 14px;min-height:38px;cursor:pointer;text-decoration:none;display:inline-block}
-button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.ghost,.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 button:hover,.btn:hover{opacity:.88}
 button.iconbtn{background:none;border:0;padding:0;min-height:0;border-radius:10px;overflow:hidden;line-height:0;box-shadow:0 2px 10px rgba(0,0,0,.25);transition:transform .15s}
 button.iconbtn:hover{opacity:1;transform:translateY(-2px)}
@@ -212,9 +212,6 @@ button.iconbtn img{display:block;height:72px;width:auto}
 .grid2>section>.builder>.dn-bars,.grid2>section>.builder>.dn-lol{align-content:space-between}
 .grid2>section>.builder>.dn-donut{align-content:space-between}
 .grid2>section>.tablewrap table{height:100%}
-@media (max-width:720px){.gcard-open{display:none}}
-.gcard-open{color:var(--muted);text-decoration:none;font-size:15px;line-height:1;padding:4px 6px;border-radius:6px}
-.gcard-open:hover{color:var(--ink);background:var(--line)}
 .builder{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
 .order{list-style:none;margin:10px 0;padding:0}
 
@@ -592,10 +589,12 @@ a.dn-kchip:hover{border-color:var(--muted)}
    and e.g. the Player page alone renders 10+ .stat tiles, so one blurred
    surface per card instead of a dozen-plus keeps this cheap to render. */
 @media (prefers-color-scheme:dark){
-  .top,.ladder,.tablewrap,.stats,.chip,.builder,.story,.tierpopup,.popbox,.tierkey{
+  .top,.ladder,.tablewrap,.stats,.builder,.tierpopup,.popbox,.tierkey{
     background:rgba(23,32,42,.55);
     backdrop-filter:blur(14px);
   }
+  /* small cards and chips: one blur pass EACH for a few square centimetres of glass was the dearest part of scrolling the Rankings page on a desktop, so they are plain and a little denser */
+  .chip,.story{background:rgba(20,28,38,.82)}
   .stat{background:transparent}
   th{background:transparent}   /* inside .tablewrap, which is already the glass panel; blurring every heading cell cost a lot while scrolling */
   /* a phone repaints these on every scroll frame, so there the panels are plain translucent (the background is already dimmed) instead of blurred */
@@ -1109,7 +1108,7 @@ a.dn-cell-link:hover .dn-pct{color:var(--ink)}
   .pinned .td-epic .pin-ico{animation:fxbeat 2.6s ease-in-out infinite}
 
   .pin-chip.td-legendary::after{animation-duration:2.6s;background:linear-gradient(105deg,transparent 0,rgba(255,244,205,.8) 50%,transparent 100%)}
-  .pinned .td-legendary .fx-a{display:block;left:50%;top:50%;width:420px;height:420px;margin:-210px 0 0 -210px;z-index:0;
+  .pinned .td-legendary .fx-a{display:block;left:50%;top:50%;width:300px;height:300px;margin:-150px 0 0 -150px;z-index:0;will-change:transform;
     background:conic-gradient(#ffe9a0,#e8bf5a,#fff7d6,#b8860b,#ffe9a0,#e8bf5a,#fff7d6,#b8860b,#ffe9a0);animation:fxspin 3s linear infinite}
   .pinned .td-legendary .fx-b{display:block;inset:2px;border-radius:999px;z-index:1;background:color-mix(in srgb,var(--td) 20%,var(--bg))}
   .pinned .pin-chip.td-legendary::before{content:'';position:absolute;inset:2px;z-index:2;pointer-events:none;background:var(--spark-a),var(--spark-b);animation:fxtwinkle 1.5s ease-in-out infinite}
@@ -1419,3 +1418,122 @@ main h2::before{content:'';display:inline-block;width:8px;height:8px;margin:0 10
 .welcome li::marker{color:var(--brass)}
 .welcome-go{display:flex;flex-wrap:wrap;gap:10px;margin:0}
 @media (prefers-reduced-motion:no-preference){.welcome{animation:dnpop .5s cubic-bezier(.3,1.4,.5,1) both}}
+
+/* ---- the game report (components/GameReport.jsx): one game in depth ---- */
+.gr{max-width:860px;margin:0 auto}
+.gr-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 10px;font-size:14px}
+.gr-nav{display:flex;gap:14px}.gr-nav .off{color:var(--muted);opacity:.5}
+.gr h1{margin:4px 0 2px}
+.gr-chips{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px;padding:0}
+.gr-chips li{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border:1px solid var(--line);border-radius:999px;font-size:13px;background:var(--panel)}
+.gr-chips .gr-sets{padding:3px 8px}
+.gr-hl{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0 0 18px;padding:0}
+.gr-hl li{display:grid;gap:2px;padding:10px 14px;border:1px solid var(--line);border-left:5px solid var(--hl,var(--brass));border-radius:10px;background:var(--panel)}
+.gr-hl b{font-size:15px;color:var(--hl,var(--brass))}.gr-hl span{font-size:13.5px;color:var(--muted);line-height:1.4}
+.gr-hl-gold{--hl:var(--brass)}.gr-hl-green{--hl:#5fc79a}.gr-hl-blue{--hl:#5b9bf0}
+.gr-tabs{display:flex;gap:6px;margin:0 0 14px;padding:4px;border:1px solid var(--line);border-radius:12px;background:var(--panel);position:sticky;top:8px;z-index:20}
+@media (min-width:721px){.gr-tabs{top:84px}}
+.gr-tabs button{flex:1;min-height:40px;padding:6px 8px;background:transparent;color:var(--muted);border:0;border-radius:8px;font:600 14px var(--text);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.gr-tabs button[aria-selected=true]{background:var(--ink);color:var(--bg)}
+.gr-count{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--brass);color:#2a1d05;font-size:11px;font-weight:800}
+.gr-panel{min-height:120px}
+.gr-h{margin:16px 0 6px;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.gr-players{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.gr-player{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.gr-player.won{border-color:color-mix(in srgb,var(--brass) 55%,var(--line))}
+.gr-player.me{box-shadow:inset 3px 0 0 var(--brass)}
+.gr-player summary{display:grid;grid-template-columns:auto 1fr repeat(3,minmax(44px,auto)) auto;align-items:center;gap:6px 14px;padding:10px 14px;cursor:pointer;list-style:none;min-height:56px}
+.gr-player summary::-webkit-details-marker{display:none}
+.gr-place{font:700 13px var(--text);color:var(--muted);min-width:30px}.gr-player.won .gr-place{color:var(--brass)}
+.gr-name{font-weight:700;min-width:0}
+.gr-stat{display:grid;justify-items:end;line-height:1.1}.gr-stat b{font-size:17px}.gr-stat small{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.gr-chev{color:var(--muted);transition:transform .15s}.gr-player details[open] .gr-chev{transform:rotate(180deg)}
+.gr-body{padding:2px 14px 14px;border-top:1px solid var(--line)}
+.gr-facts{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:4px;font-size:14px;color:var(--muted)}.gr-facts b{color:var(--ink)}
+.gr-cmps{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.gr-cmp{display:grid;grid-template-columns:110px 1fr auto auto;align-items:center;gap:10px;font-size:14px}
+.gr-cmp-bar{position:relative;display:block;height:8px;border-radius:4px;background:var(--line)}
+.gr-cmp-bar i{position:absolute;top:0;bottom:0;left:calc(var(--l,0) * 100%);width:calc(var(--w,0) * 100%);border-radius:4px;background:var(--muted)}
+.gr-cmp-bar.signed::before{content:'';position:absolute;top:-3px;bottom:-3px;left:50%;width:1px;background:var(--muted);opacity:.7}
+.gr-cmp-bar.good i{background:#5fc79a}.gr-cmp-bar.bad i{background:#e0705f}
+.gr-cmp-bar em{position:absolute;top:-3px;bottom:-3px;left:calc(var(--u,0) * 100%);width:2px;margin-left:-1px;border-radius:1px;background:var(--ink)}
+.gr-cmp-n small{color:var(--muted);margin-left:4px}.gr-cmp-d{font-weight:700;min-width:44px;text-align:right}
+.gr-fit{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
+.gr-fit li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:baseline}.gr-fit small{color:var(--muted);margin-left:4px}
+.gr-tiles{list-style:none;margin:0 0 6px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.gr-tiles li{display:grid;gap:2px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.gr-tiles b{font:800 28px var(--display)}.gr-tiles span{font-size:13px;color:var(--muted)}.gr-tiles small{font-size:12px;color:var(--muted);line-height:1.35}
+.gr-hist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;align-items:end}
+.gr-hist li{display:block}
+.gr-hist button{display:grid;justify-items:center;align-content:end;gap:4px;width:100%;min-height:0;padding:6px 0 4px;background:transparent;color:var(--muted);border:0;border-radius:10px;font:12px var(--text);cursor:pointer}
+.gr-hist button:hover:not(:disabled),.gr-hist button:focus-visible{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.gr-hist button[aria-pressed=true]{background:color-mix(in srgb,var(--brass) 14%,transparent);box-shadow:inset 0 0 0 2px var(--brass)}
+.gr-hist button:disabled{cursor:default;opacity:.6}
+.gr-hist i{display:block;width:100%;max-width:56px;height:64px;border-radius:6px 6px 2px 2px;background:var(--brass);opacity:.85;transform-origin:bottom;transform:scaleY(var(--h,0))}
+.gr-hist b{color:var(--ink);font-size:15px}
+.gr-big{display:flex;align-items:baseline;gap:8px;margin:4px 0 2px}.gr-big b{font:800 54px var(--display);line-height:1}.gr-big span{color:var(--muted);font-size:16px}
+.gr-at{margin:0 0 10px}
+.gr-times{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.gr-times li{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:baseline;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:14px}
+.gr-times small{color:var(--muted)}
+.gr-xps{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.gr-xp{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.gr-xp-h{display:flex;align-items:baseline;gap:12px;margin:0 0 8px}.gr-xp-h span{font-weight:800;color:var(--brass)}.gr-xp-h small{margin-left:auto;color:var(--muted)}
+.gr-xp ul{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13.5px}
+.gr-new{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+@media (max-width:720px){
+  /* the highlights become one swipeable row, so they don't push the report a screen down */
+  .gr-hl{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;margin:0 -14px 14px;padding:0 14px 4px;scrollbar-width:none}
+  .gr-hl::-webkit-scrollbar{display:none}
+  .gr-hl li{flex:0 0 82%;scroll-snap-align:start}
+  .gr-player summary{grid-template-columns:auto 1fr auto auto auto;gap:4px 10px;padding:10px 12px}
+  .gr-player .gr-chev{display:none}
+  .gr-stat b{font-size:15px}
+  .gr-cmp{grid-template-columns:1fr auto auto;gap:4px 10px}.gr-cmp-bar{grid-column:1/-1;order:4}.gr-cmp-d{order:3;min-width:40px}
+  .gr-times li{grid-template-columns:1fr auto;gap:2px 10px}.gr-times li small{grid-column:1/2}
+}
+/* the reward cards on a report arrive together (a report can hold a dozen of them, and nobody waits for the last) */
+.gr .reward{animation-delay:calc(var(--i,0) * 30ms + 100ms) !important}
+.gr .reward::after,.gr .reward::before{animation-delay:calc(var(--i,0) * 30ms + 500ms) !important}
+
+/* ---- smoother scrolling ---- */
+/* the looping shine of pinned badges and the streak flame hold still while the page scrolls (see useScrollCalm.js); they pick up where they stopped */
+html.is-scrolling .pin-chip,html.is-scrolling .pin-chip *,html.is-scrolling .pin-chip::before,html.is-scrolling .pin-chip::after,
+html.is-scrolling .pill.hot,html.is-scrolling .staticon.hot{animation-play-state:paused !important}
+
+/* reward cards: a tier's tint wins over .reward's default (it was declared later, so every tier used to read as common) */
+.reward.td-uncommon{--td:var(--td-uncommon)}.reward.td-rare{--td:var(--td-rare)}.reward.td-epic{--td:var(--td-epic)}.reward.td-legendary{--td:var(--td-legendary)}
+.reward-kicker .reward-rarity{font-style:normal}
+
+/* the report: kingdom facts, and the XP rows that open */
+.gr-facts2{margin:0;display:grid;gap:8px}
+.gr-facts2>div{display:grid;grid-template-columns:130px 1fr;gap:4px 14px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:14px;line-height:1.5}
+.gr-facts2 dt{color:var(--muted);font-weight:600}.gr-facts2 dd{margin:0}
+.gr-pills{display:flex;flex-wrap:wrap;gap:6px}
+.gr-fine{display:block;margin-top:4px;color:var(--muted);font-size:12px}
+.gr-parts{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.gr-xp .gr-parts>li{display:block;font-size:13.5px}
+.gr-xp-row{display:grid;grid-template-columns:150px 1fr 40px 16px;gap:10px;align-items:center;width:100%;min-height:34px;padding:2px 6px;margin:0 -6px;box-sizing:content-box;background:transparent;color:var(--ink);border:0;border-radius:8px;font:inherit;text-align:left;cursor:pointer}
+.gr-xp-row:hover:not(:disabled),.gr-xp-row:focus-visible{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.gr-xp-row:disabled{cursor:default}
+.gr-xp-row b{text-align:right}.gr-xp-row em{font-style:normal;color:var(--muted);transition:transform .15s}
+.gr-parts li.open .gr-xp-row em{transform:rotate(180deg)}.gr-parts li.open .gr-xp-row{background:color-mix(in srgb,var(--brass) 10%,transparent)}
+.gr-xp-row i{display:block;height:6px;border-radius:3px;background:var(--brass);opacity:.8;transform-origin:left;transform:scaleX(var(--w,0))}
+.gr-xp-more{margin:4px 0 8px;padding:10px 14px;border-left:3px solid var(--brass);border-radius:0 8px 8px 0;background:color-mix(in srgb,var(--brass) 6%,var(--panel))}
+.gr-ledger{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.gr-ledger li{display:flex;justify-content:space-between;gap:16px;align-items:baseline;line-height:1.4}
+.gr-ledger li b{color:var(--brass);white-space:nowrap}
+.gr-ledger li.item{justify-content:flex-start;padding-left:14px;color:var(--muted);font-size:13px}.gr-ledger li.item::before{content:'·';margin-right:8px}
+.gr-ledger-total{display:flex;justify-content:space-between;margin:8px 0 0;padding-top:6px;border-top:1px solid var(--line);font-weight:700}.gr-ledger-total b{color:var(--brass)}
+@media (max-width:720px){.gr-facts2>div{grid-template-columns:1fr}.gr-xp-row{grid-template-columns:120px 1fr 36px 14px}}
+.gr-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:12px 0 0}
+.gr-actions>button,.gr-actions>.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;box-sizing:border-box;line-height:1.2}
+/* a chip a filter has not picked: still there, just out of the way */
+.dn-kchip.dim{opacity:.28;filter:grayscale(1)}
+.gcard-time{margin-left:8px;color:var(--muted);font-size:13px;font-weight:600;white-space:nowrap}
+.gr-ledger .gr-rar{margin-left:10px;font:700 11px var(--text);font-style:normal;letter-spacing:.08em;text-transform:uppercase}
+/* a game's two actions: the report is THE thing to do (the solid light button, like the selected Cards / Games toggles), Edit game is there when needed (quieter text and a fainter edge) */
+.gr-actions>.btn{background:var(--ink);color:var(--bg);border:0;box-shadow:none;font-weight:700}
+.gr-actions>.btn:active{transform:translateY(1px)}
+.gr-actions>button.ghost{color:var(--muted);border-color:color-mix(in srgb,var(--line) 70%,transparent);font-weight:500}
+.gr-actions>button.ghost:hover{color:var(--ink);opacity:1}

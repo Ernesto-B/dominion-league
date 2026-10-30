@@ -6,12 +6,12 @@ import { ExpansionBadge } from './bits.jsx';
 
 /* One card or landscape of a kingdom as a chip: the card's cost icon and name (edged in the colour of its main printed
    type), or a landscape's name (edged in its landscape colour). A link to its Collection page, unless `onRemove` is given
-   (the Add Game dialog), where it is plain text with a remove button (and, on a phone, a ⌄ that opens the card's text when `onPeek` is given). `expansion` puts the expansion's icon first, for a table finding the card in its boxes. `r` is a resolveKingdom() entry. */
-export function KingdomChip({ r, onRemove, onPeek, plain = false, expansion = false }) {
+   (the Add Game dialog), where it is plain text with a remove button (and, on a phone, a ⌄ that opens the card's text when `onPeek` is given). `expansion` puts the expansion's icon first, for a table finding the card in its boxes. `dim` greys it out (a filter that does not pick it). `r` is a resolveKingdom() entry. */
+export function KingdomChip({ r, onRemove, onPeek, plain = false, expansion = false, dim = false }) {
   if (r.missing) return <span className="dn-kchip dn-kchip-missing" title="No longer in the collection">{r.id}</span>;
   const { obj } = r;
   const tone = r.kind === 'card' ? primaryType(obj) : obj.type;
-  const cls = 'dn-kchip' + (tone ? ' t-' + tone.toLowerCase() : '');
+  const cls = 'dn-kchip' + (tone ? ' t-' + tone.toLowerCase() : '') + (dim ? ' dim' : '');
   const inner = (
     <>
       {expansion && obj.expansion && <ExpansionBadge name={obj.expansion} size={18} iconOnly />}

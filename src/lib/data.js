@@ -66,6 +66,7 @@ export async function loadData() {
       sets: g.sets || '', landscapes: g.landscapes || '', playerVP, group_id: g.group_id || null,
       kingdom: kingdomByGame.get(g.id) || [],
       winner_vp: g.winner_vp ?? '', minutes: g.minutes ?? '', notes: g.notes || '',
+      savedAt: g.created_at || null, startedAt: g.started_at || null, endedAt: g.ended_at || null,   // the games table's own timestamps (started_at / ended_at exist once the timing columns are installed)
     };
   });
   const seasonRows = sr.data.slice().sort((a, b) => a.id - b.id).map(s => ({

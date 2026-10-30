@@ -396,6 +396,8 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
 
   // the Renown track comes from XP (lib/xp.js), which itself needs the other badges, so it is only added when the caller passes the XP in
   if (xp) for (const st of xp.steps) list.push({ id: 'level-' + st.level, group: 'Milestones', track: 'level', trackName: 'Renown', tier: LEVEL_TIERS[st.level] || 'uncommon', name: LEVEL_NAMES[st.level] || `Level ${st.level}`, hint: `Reach level ${st.level}.`, target: st.level, bonus: st.bonus, value: xp.level, earned: st.earned });
+  // the Leaps track (levels gained in a single game) is paid by the XP engine too, so it also needs the XP; like Renown it is not counted toward Dominion Legend
+  if (xp && xp.jumps) for (const j of xp.jumps) list.push({ id: j.id, group: 'Milestones', track: 'leap', trackName: 'Leaps', tier: j.tier, name: j.name, hint: `Gain ${j.levels} levels in a single match.`, target: j.levels, bonus: j.bonus, value: xp.bestJump, earned: j.earned });
   if (p.titles > 0) list.push({ id: 'champion', group: 'Seasons', tier: 'epic', name: p.titles > 1 ? `Season champion ×${p.titles}` : 'Season champion', hint: 'Win a season.', earned: { date: null, line: null } });
   // hide the secrets that are not found yet (after Dominion Legend and the level track have read the full list)
   return maskSecrets(list);

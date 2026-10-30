@@ -2,7 +2,7 @@ import { Component, useEffect, useMemo, useRef, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { sb } from '../lib/supabase.js';
 import { SET_NAMES, LANDSCAPES } from '../lib/sets.js';
-import { buildGameArgs, resortByVP, toggle } from '../lib/gameForm.js';
+import { buildGameArgs, callGameRpc, resortByVP, toggle } from '../lib/gameForm.js';
 import { badgesFor, gameXp, leagueXp } from '../lib/xp.js';
 import { BadgeReward, LevelReward } from '../components/RewardCard.jsx';
 import { STEPS, advance, back, blankNight, clearNight, elapsed, gameSummary, loadNight, saveNight, stepNumber } from '../lib/night.js';
@@ -124,7 +124,7 @@ function NightFlow() {
     savedSt.current = st;
     before.current = { ranks: Object.fromEntries(D.ranked.map(p => [p.name, p.rank])), tiers: Object.fromEntries(D.ranked.map(p => [p.name, p.tier.id])) };
     setSaving(true); setMsg('Saving…');
-    const { data, error } = await sb.rpc('add_game', buildGameArgs({ ...st, editId: null }, gid, playerIdByName));
+    const { data, error } = await callGameRpc(sb, 'add_game', buildGameArgs({ ...st, editId: null }, gid, playerIdByName));
     setSaving(false);
     if (error) { setMsg(error.message); return; }
     if (storage()) clearNight(storage(), gid);

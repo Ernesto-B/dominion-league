@@ -42,6 +42,10 @@ create table if not exists games (
 -- a group's games invisible to anyone not in it. Null means "no group" —
 -- the whole-site-is-one-league case when no groups are configured at all.
 alter table games add column if not exists group_id text;
+-- When the match itself began and ended (the Game night timer), as opposed to created_at, which is when it was logged. Both are optional: games logged
+-- before the timer, or from the Add Game dialog, have neither. The Games page's report shows them as times of day.
+alter table games add column if not exists started_at timestamptz;
+alter table games add column if not exists ended_at timestamptz;
 -- Landscape card types in play (Events/Projects/Traits/Landmarks), '; '-separated like sets.
 alter table games add column if not exists landscapes text;
 create index if not exists games_group_id_idx on games(group_id);
@@ -302,6 +306,9 @@ drop function if exists edit_game(bigint, date, text, text, text, int, int, text
 -- doesn't send it keeps working)
 drop function if exists add_game(date, text, text, text, text, int, int, text, text, jsonb);
 drop function if exists edit_game(bigint, date, text, text, text, text, int, int, text, text, jsonb);
+-- the versions before started_at / ended_at were added (the new ones below take them as optional trailing arguments)
+drop function if exists add_game(date, text, text, text, text, int, int, text, text, jsonb, jsonb);
+drop function if exists edit_game(bigint, date, text, text, text, text, int, int, text, text, jsonb, jsonb);
 
 -- Replaces a game's Kingdom. Internal: only add_game/edit_game call it, never a client. Validates against the catalog,
 -- which is why a bad id fails the whole game save instead of leaving a half-written game.
@@ -343,7 +350,8 @@ create or replace function add_game(
   p_winner_vp int, p_minutes int, p_notes text,
   p_group_id text, -- null only valid when no groups are configured at all
   p_results jsonb, -- [{"player_id": "...", "place": 1}, ...]
-  p_kingdom jsonb default null -- [{"kind": "card"|"landscape", "id": "<catalog id>", "on": "<card id, for a Trait>"}, ...]; null = none given
+  p_kingdom jsonb default null, -- [{"kind": "card"|"landscape", "id": "<catalog id>", "on": "<card id, for a Trait>"}, ...]; null = none given
+  p_started_at timestamptz default null, p_ended_at timestamptz default null -- the match's own clock (Game night's timer); null = not recorded
 ) returns bigint
 language plpgsql
 security definer
@@ -366,8 +374,8 @@ begin
     end if;
   end if;
 
-  insert into games (date, type, sets, landscapes, strategy, winner_vp, minutes, notes, group_id, created_by)
-  values (p_date, coalesce(p_type, ''), p_sets, p_landscapes, p_strategy, p_winner_vp, p_minutes, p_notes, p_group_id, auth.uid())
+  insert into games (date, type, sets, landscapes, strategy, winner_vp, minutes, notes, group_id, created_by, started_at, ended_at)
+  values (p_date, coalesce(p_type, ''), p_sets, p_landscapes, p_strategy, p_winner_vp, p_minutes, p_notes, p_group_id, auth.uid(), p_started_at, p_ended_at)
   returning id into v_game_id;
 
   insert into game_results (game_id, player_id, place, vp)
@@ -383,7 +391,8 @@ $$;
 create or replace function edit_game(
   p_game_id bigint, p_date date, p_type text, p_sets text, p_landscapes text, p_strategy text,
   p_winner_vp int, p_minutes int, p_notes text, p_group_id text, p_results jsonb,
-  p_kingdom jsonb default null -- null = leave the kingdom as it is; [] = clear it
+  p_kingdom jsonb default null, -- null = leave the kingdom as it is; [] = clear it
+  p_started_at timestamptz default null, p_ended_at timestamptz default null -- null = leave them as they are
 ) returns void
 language plpgsql
 security definer
@@ -407,7 +416,8 @@ begin
 
   update games set
     date = p_date, type = coalesce(p_type, ''), sets = p_sets, landscapes = p_landscapes, strategy = p_strategy,
-    winner_vp = p_winner_vp, minutes = p_minutes, notes = p_notes, group_id = p_group_id
+    winner_vp = p_winner_vp, minutes = p_minutes, notes = p_notes, group_id = p_group_id,
+    started_at = coalesce(p_started_at, started_at), ended_at = coalesce(p_ended_at, ended_at)
   where id = p_game_id;
 
   delete from game_results where game_id = p_game_id;
@@ -455,8 +465,8 @@ begin
 end;
 $$;
 
-revoke execute on function add_game(date, text, text, text, text, int, int, text, text, jsonb, jsonb) from anon;
-revoke execute on function edit_game(bigint, date, text, text, text, text, int, int, text, text, jsonb, jsonb) from anon;
+revoke execute on function add_game(date, text, text, text, text, int, int, text, text, jsonb, jsonb, timestamptz, timestamptz) from anon;
+revoke execute on function edit_game(bigint, date, text, text, text, text, int, int, text, text, jsonb, jsonb, timestamptz, timestamptz) from anon;
 revoke execute on function write_game_kingdom(bigint, jsonb) from public, anon, authenticated;
 revoke execute on function delete_game(bigint) from anon;
 revoke execute on function delete_group(text) from anon;

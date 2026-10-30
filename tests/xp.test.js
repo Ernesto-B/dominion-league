@@ -59,8 +59,8 @@ describe('computeXp', () => {
     expect(t.perGame[0].parts.season).toBe(XP.season);      // game 2 is after the season ended
     const big = computeXp(D([game({ Me: 1, A: 2 }, { vp: { Me: 1000, A: 5 } })])).get('Me');
     expect(big.steps.filter(s => s.earned).map(s => s.level)).toEqual([5, 10]);
-    expect(big.total).toBe(33 + 15 + 20 + 1010 + (30 + 10) + (30 + 20));   // 1,078, then the Apprentice (+10) and Adept (+20) badges on top of their 30 each
-    expect(big.level).toBe(11);
+    expect(big.total).toBe(33 + 15 + 20 + 1010 + (30 + 10) + (30 + 20) + (30 + 60) + (30 + 150));   // 1,078, then the Apprentice (+10) and Adept (+20) badges on top of their 30 each, then the two leap badges
+    expect(big.level).toBe(13);
   });
   it('is only ever added to', () => {
     const x = computeXp(D([game({ Me: 4, A: 1, B: 2, C: 3 }), game({ Me: 4, A: 1, B: 2, C: 3 })])).get('Me');
@@ -83,13 +83,25 @@ describe('showing up and improving on yourself', () => {
   });
 });
 
+describe('leaps: levels gained in a single game', () => {
+  it('pays the Leap Forward badge for 3 levels in one game and Meteoric Rise for 5, once each, counting the levels the payouts add', () => {
+    const small = computeXp(D([game({ Me: 1, A: 2, B: 3, C: 4 }, { vp: { Me: 40, A: 30 } })])).get('Me');
+    expect(small.bestJump).toBeLessThan(3); expect(small.jumps.every(j => !j.earned)).toBe(true);
+    const mid = computeXp(D([game({ Me: 1, A: 2, B: 3, C: 4 }, { vp: { Me: 200, A: 30 } })])).get('Me');   // 1 -> 4 on play alone
+    expect(mid.jumps.find(j => j.id === 'jump-3').earned).toBeTruthy(); expect(mid.jumps.find(j => j.id === 'jump-5').earned).toBeNull();
+    expect(mid.perGame[0].parts.badges).toBeGreaterThanOrEqual(30 + 60);
+    const huge = computeXp(D([game({ Me: 1, A: 2 }, { vp: { Me: 1000, A: 5 } }), game({ Me: 1, A: 2 }, { vp: { Me: 1000, A: 5 } })])).get('Me');
+    expect(huge.jumps.map(j => j.earned && j.earned.line)).toEqual([huge.perGame[0].line, huge.perGame[0].line]);   // earned in the first game, not paid again
+  });
+});
+
 describe('gameXp', () => {
   it('lists what one game paid each player in finishing order, and flags a level reached in it', () => {
     const g = game({ Me: 2, A: 1 }, { vp: { Me: 1000, A: 5 } });   // the loser's 1,000 VP is a level-up by itself
     const rows = gameXp(computeXp(D([g])), g);
     expect(rows.map(r => r.name)).toEqual(['A', 'Me']);
     expect(rows[0].levelUp).toBeNull();
-    expect(rows[1].levelUp).toBe(11);   // 25 + 1,010 and two level badges expect(rows[1].xp).toBeGreaterThan(1000);
+    expect(rows[1].levelUp).toBe(13);   // 25 + 1,010, two level badges and two leap badges
     expect(gameXp(null, g)).toEqual([]); expect(gameXp(computeXp(D([g])), null)).toEqual([]);
   });
   it('pays XP in a friendly game too', () => {

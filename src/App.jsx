@@ -13,6 +13,7 @@ import PageBoundary from './components/PageBoundary.jsx';
 import PlayerHud from './components/PlayerHud.jsx';
 import ScrollTopButton from './components/ScrollTopButton.jsx';
 import PopLayer from './components/PopLayer.jsx';
+import { useScrollCalm } from './useScrollCalm.js';
 import PeekLayer from './dominion/components/CardPeek.jsx';
 import { popup } from './components/popup.js';
 import BottomNav from './components/BottomNav.jsx';
@@ -20,6 +21,7 @@ import OfflineBar from './components/OfflineBar.jsx';
 import PullToRefresh from './components/PullToRefresh.jsx';
 
 function Shell() {
+  useScrollCalm();
   const { state, boot } = useLeague();
   const hash = useHash();
   const catalog = useLeagueCatalog();
