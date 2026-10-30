@@ -18,16 +18,28 @@ import { LANDSCAPE_TYPES } from './constants.js';
 /* `tags` rules need a recorded mechanic (positive-only, see above); `coins` rules need a card whose PRINTED cost is that many coins
    (no Debt), which is complete data, so those can't miss a card. */
 export const REQUIRE_RULES = {
-  village: { label: 'a +Actions card (a Village)', tags: ['village'] },
-  draw: { label: 'card drawing', tags: ['draw', 'terminal_draw'] },
-  trash: { label: 'trashing', tags: ['trashing_from_hand', 'trashing_from_deck', 'trashing_from_play', 'trashing_from_discard'] },
-  buy: { label: 'a +Buy card', tags: ['plus_buy'] },
-  cost2: { label: 'a card costing $2', coins: 2 },
-  cost3: { label: 'a card costing $3', coins: 3 },
-  cost4: { label: 'a card costing $4', coins: 4 },
-  cost5: { label: 'a card costing $5', coins: 5 },
+  village: { label: 'a +Actions card (a Village)', box: 'Require +2 Actions', chip: '+2 Actions', tags: ['village'] },
+  draw: { label: 'card drawing', box: 'Require a Drawer', chip: 'Drawer', tags: ['draw', 'terminal_draw'] },
+  trash: { label: 'trashing', box: 'Require Trashing', chip: 'Trashing', tags: ['trashing_from_hand', 'trashing_from_deck', 'trashing_from_play', 'trashing_from_discard'] },
+  buy: { label: 'a +Buy card', box: 'Require +Buy', chip: '+Buy', tags: ['plus_buy'] },
+  scoring: { label: 'a card with variable scoring, an alternate victory or VP tokens', box: 'Require variable scoring, alternate victory or VP tokens', chip: 'Variable / Alt. Victory / VP', tags: ['variable_scoring', 'alternate_victory', 'vp_token_generation'] },
+  cost2: { label: 'a card costing $2', chip: '$2', coins: 2 },
+  cost3: { label: 'a card costing $3', chip: '$3', coins: 3 },
+  cost4: { label: 'a card costing $4', chip: '$4', coins: 4 },
+  cost5: { label: 'a card costing $5', chip: '$5', coins: 5 },
+  cost6: { label: 'a card costing $6 or more', chip: '$6+', atLeast: 6 },
 };
-export const ruleIsExact = rule => REQUIRE_RULES[rule].coins != null;   // by printed cost, not by a recorded mechanic
+export const ruleIsExact = rule => REQUIRE_RULES[rule].coins != null || REQUIRE_RULES[rule].atLeast != null;   // by printed cost, not by a recorded mechanic
+
+/* "Distribute cost": how the draw spreads the kingdom over the cost levels. Each mode is the share of the cards wanted at $2 or less, $3, $4,
+   $5 and $6 or more; a pile's chance is its level's share, divided by 1 + how many of that level are already in, so the kingdom spreads
+   out instead of piling up on one level. 'standard' is an even spread, 'high' leans to $5 and up, 'low' to $3 and under. */
+export const COST_SPREADS = {
+  standard: { label: 'Standard', share: [0.20, 0.25, 0.25, 0.20, 0.10] },
+  high: { label: 'High average', share: [0.10, 0.15, 0.25, 0.30, 0.20] },
+  low: { label: 'Low average', share: [0.30, 0.35, 0.20, 0.10, 0.05] },
+};
+const costLevel = info => Math.min(6, Math.max(2, (info.cards[0].coins || 0) + (info.cards[0].debt || 0))) - 2;   // 0 ($2 or less) .. 4 ($6 or more)
 
 export const MAX_ATTACK_CHOICES = [0, 1, 2, 3];   // "no Attacks", "at most 1"... ; null = any number
 export const DEFAULT_OPTIONS = Object.freeze({
@@ -41,6 +53,9 @@ export const DEFAULT_OPTIONS = Object.freeze({
   include: [],             // card ids that must be in (their pile is)
   exclude: [],             // card ids that must not be (their pile isn't)
   favor: false,            // weight the draw towards piles that have been played less (needs the `plays` option)
+  favorPlayed: false,      // ...or towards piles that have been played more (the same `plays` option)
+  junkTrash: false,        // if an Attack that gives opponents junk is in, make sure there is a trashing card too
+  costSpread: null,        // null = off, else a key of COST_SPREADS
 });
 export const CARD_COUNTS = [10, 9, 8, 7, 6, 5, 11, 12];
 
@@ -78,7 +93,7 @@ function pileInfos(catalog) {
       key: pile.key, pile, cards, tags,
       name: pile.names > 1 ? pile.id : (cards[0]?.name ?? pile.id),
       expansion: pile.expansion, ids: cards.map(c => c.id),
-      attack: cards.some(c => c.types.includes('Attack')), reaction: cards.some(c => c.types.includes('Reaction')),
+      junking: tags.has('opponent_junking'), attack: cards.some(c => c.types.includes('Attack')), reaction: cards.some(c => c.types.includes('Reaction')),
     };
   }).filter(i => i.cards.length);
   const out = { list: infos, byKey: new Map(infos.map(i => [i.key, i])), byCardId: new Map(infos.flatMap(i => i.ids.map(id => [id, i]))) };
@@ -88,6 +103,7 @@ function pileInfos(catalog) {
 export const pileKeyOf = (catalog, cardId) => pileInfos(catalog).byCardId.get(cardId)?.key ?? null;
 export const satisfiesRule = (info, rule) => {
   const r = REQUIRE_RULES[rule];
+  if (r.atLeast != null) return info.cards.some(c => c.coins >= r.atLeast && c.debt === 0);
   return r.coins != null ? info.cards.some(c => c.coins === r.coins && c.debt === 0) : r.tags.some(t => info.tags.has(t));
 };
 const satisfies = satisfiesRule;
@@ -118,6 +134,7 @@ const attackCount = infos => infos.filter(i => i.attack).length;
 function breaks(chosen, o, wanted) {
   if (o.maxAttacks != null && attackCount(chosen) > o.maxAttacks) return o.maxAttacks === 0 ? 'No Attacks was asked for' : `At most ${o.maxAttacks} Attack${o.maxAttacks === 1 ? '' : 's'} was asked for`;
   if (o.reaction && attackCount(chosen) > 0 && !chosen.some(i => i.reaction)) return 'A Reaction is required when there is an Attack';
+  if (o.junkTrash && chosen.some(i => i.junking) && !chosen.some(i => satisfies(i, 'trash'))) return 'A trashing card is required when an Attack gives opponents junk';
   for (const r of o.require) if (!chosen.some(i => satisfies(i, r))) return `The kingdom needs ${REQUIRE_RULES[r].label}`;
   for (const w of wanted) if (!chosen.includes(w)) return 'A card you asked to include is missing';
   return null;
@@ -130,10 +147,23 @@ function poolFor(catalog, o) {
   return list.filter(i => (!o.expansions.length || o.expansions.includes(i.expansion)) && !banned.has(i.key) && !(o.maxAttacks === 0 && i.attack));
 }
 
-const weightOf = (info, o, plays) => (o.favor && plays ? 1 / (1 + (plays.get(info.key) || 0)) : 1);   // plays: Map(pile key -> games)
-function pick(candidates, o, plays, rng) {
-  if (!o.favor || !plays) return candidates[Math.min(candidates.length - 1, Math.floor(rng() * candidates.length))];
-  const ws = candidates.map(c => weightOf(c, o, plays)); let r = rng() * ws.reduce((a, b) => a + b, 0);
+// the played-count weighting: plays is Map(pile key -> games). Piles played less get more chance ('favor'), or those played more ('favorPlayed').
+const usesPlays = o => !!(o.favor || o.favorPlayed);
+export const playsFor = (o, plays) => (plays && usesPlays(o) ? plays : null);
+const weightOf = (info, o, plays, chosen) => {
+  let w = 1;
+  if (plays && o.favor) w /= 1 + (plays.get(info.key) || 0);
+  else if (plays && o.favorPlayed) w *= 1 + (plays.get(info.key) || 0);
+  if (o.costSpread && COST_SPREADS[o.costSpread]) {
+    const lv = costLevel(info);
+    w *= COST_SPREADS[o.costSpread].share[lv] / (1 + chosen.filter(c => costLevel(c) === lv).length);
+  }
+  return w;
+};
+// `chosen` is what is already in the kingdom (the cost spread looks at it); without any weighting this is a plain random pick
+function pick(candidates, o, plays, rng, chosen = []) {
+  if (!(plays && usesPlays(o)) && !o.costSpread) return candidates[Math.min(candidates.length - 1, Math.floor(rng() * candidates.length))];
+  const ws = candidates.map(c => weightOf(c, o, plays, chosen)); let r = rng() * ws.reduce((a, b) => a + b, 0);
   for (let i = 0; i < candidates.length; i++) { r -= ws[i]; if (r < 0) return candidates[i]; }
   return candidates[candidates.length - 1];
 }
@@ -167,18 +197,23 @@ export function generate(catalog, options = {}, { rng = Math.random, keep = [], 
       const cands = eligible(chosen).filter(i => satisfies(i, r));
       if (!cands.length) { failed = `None of the chosen expansions has ${REQUIRE_RULES[r].label} left to add.`; break; }
       if (chosen.length >= o.cards) { failed = `There isn’t room for ${REQUIRE_RULES[r].label} — the kingdom is already full of locked or included cards.`; break; }
-      const p = pick(cands, o, plays, rng); chosen.push(p); locked.push(p);
+      const p = pick(cands, o, plays, rng, chosen); chosen.push(p); locked.push(p);
     }
     if (failed) return { ok: false, message: failed };
     while (chosen.length < o.cards) {
       const cands = eligible(chosen);
       if (!cands.length) return { ok: false, message: `The chosen expansions only have ${pool.length} cards that fit your rules, not ${o.cards}. Add an expansion or relax a rule.` };
-      chosen.push(pick(cands, o, plays, rng));
+      chosen.push(pick(cands, o, plays, rng, chosen));
     }
     // "a Reaction if there is an Attack": swap one free slot for a Reaction rather than rolling the whole kingdom again
     if (o.reaction && attackCount(chosen) > 0 && !chosen.some(i => i.reaction)) {
       const swappable = chosen.filter(i => !locked.includes(i)), rx = eligible(chosen).filter(i => i.reaction);
-      if (swappable.length && rx.length) chosen[chosen.indexOf(swappable[Math.floor(rng() * swappable.length)])] = pick(rx, o, plays, rng);
+      if (swappable.length && rx.length) chosen[chosen.indexOf(swappable[Math.floor(rng() * swappable.length)])] = pick(rx, o, plays, rng, chosen);
+    }
+    // the same for "a trashing card if an Attack gives opponents junk"
+    if (o.junkTrash && chosen.some(i => i.junking) && !chosen.some(i => satisfies(i, 'trash'))) {
+      const swappable = chosen.filter(i => !locked.includes(i) && !i.junking), tr = eligible(chosen).filter(i => satisfies(i, 'trash'));
+      if (swappable.length && tr.length) chosen[chosen.indexOf(swappable[Math.floor(rng() * swappable.length)])] = pick(tr, o, plays, rng, chosen);
     }
     const why = breaks(chosen, o, wanted);
     if (!why) return finish(catalog, o, chosen, keepLandscapes, plays, rng, null, { lockedAt, lockedLandscapeAt });
@@ -262,6 +297,25 @@ function setupFor(catalog, o, slots, rng, prior = null) {
   return setup;
 }
 
+/* The setup notes for a kingdom that was changed by hand (or typed in), worked out from the cards in it now, so they always match what is on the
+   table. A roll decides Platinum / Colony and Shelters by chance in proportion to the cards (and keeps the answer); a kingdom the players chose
+   uses them when half or more of its cards are from Prosperity (Platinum and Colony) or Dark Ages (Shelters), so adding or removing cards moves the answer.
+   `baneId` is the Bane the kingdom already had: kept while Young Witch and that card are still in it, else `needsBane` says one must be added. */
+export function setupForHand(catalog, cardIds, baneId = null) {
+  const { byCardId } = pileInfos(catalog);
+  const seen = new Set(), infos = [];
+  for (const id of cardIds) { const i = byCardId.get(id); if (i && !seen.has(i.key)) { seen.add(i.key); infos.push(i); } }
+  const hasYoungWitch = infos.some(i => i.cards.some(c => c.name === 'Young Witch'));
+  const baneInfo = hasYoungWitch && baneId ? byCardId.get(baneId) : null, bane = baneInfo && seen.has(baneInfo.key) ? baneInfo : null;
+  const real = infos.filter(i => i !== bane), total = real.length, from = exp => real.filter(i => i.expansion === exp).length;
+  const prosperity = from('Prosperity'), darkAges = from('Dark Ages');
+  return {
+    bane: bane ? toSlot(bane) : null, needsBane: hasYoungWitch && !bane,
+    platinumColony: prosperity > 0 && prosperity * 2 >= total, shelters: darkAges > 0 && darkAges * 2 >= total,
+    ruins: infos.some(i => i.cards.some(c => c.types.includes('Looter'))), hand: { total, prosperity, darkAges },
+  };
+}
+
 // ---------------------------------------------------------------- re-rolling one thing
 /* Swap one slot for another card that keeps every rule true. */
 export function rerollSlot(catalog, options, state, index, { rng = Math.random, plays = null } = {}) {
@@ -269,7 +323,8 @@ export function rerollSlot(catalog, options, state, index, { rng = Math.random, 
   const current = state.slots.map(s => infoOfSlot(catalog, s)), wanted = o.include.map(id => pileInfos(catalog).byCardId.get(id)).filter(Boolean);
   const pool = poolFor(catalog, o).filter(i => !current.includes(i));
   const order = []; const left = pool.slice();
-  while (left.length) { const p = pick(left, o, plays, rng); order.push(p); left.splice(left.indexOf(p), 1); }   // a weighted shuffle
+  const others = current.filter((_, k) => k !== index);
+  while (left.length) { const p = pick(left, o, plays, rng, others); order.push(p); left.splice(left.indexOf(p), 1); }   // a weighted shuffle
   for (const cand of order) {
     const next = current.slice(); next[index] = cand;
     if (!breaks(next, o, wanted)) {
@@ -310,6 +365,9 @@ export function optionsToParams(opts, p = new URLSearchParams()) {
   o.include.forEach(v => p.append('inc', v));
   o.exclude.forEach(v => p.append('exc', v));
   if (o.favor) p.set('fav', '1');
+  if (o.favorPlayed) p.set('fp', '1');
+  if (o.junkTrash) p.set('jt', '1');
+  if (o.costSpread) p.set('cs', o.costSpread);
   return p;
 }
 const many = (p, k) => p.getAll(k).filter(Boolean);
@@ -321,6 +379,7 @@ export function optionsFromParams(p) {
     landscapeTypes: many(p, 'lt').filter(t => LANDSCAPE_TYPES.includes(t)),
     maxAttacks: intIn(p.get('atk'), 0, 12, null), reaction: p.get('rx') === '1',
     require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: many(p, 'inc'), exclude: many(p, 'exc'), favor: p.get('fav') === '1',
+    favorPlayed: p.get('fp') === '1', junkTrash: p.get('jt') === '1', costSpread: COST_SPREADS[p.get('cs')] ? p.get('cs') : null,
   };
 }
 

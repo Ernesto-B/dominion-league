@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { displayName, primaryType } from '../kingdom.js';
-import { DEFAULT_OPTIONS, formatSeed, newSeed, parseSeed, rerollLandscape, rerollSlot, rollSeeded } from '../randomizer.js';
+import { DEFAULT_OPTIONS, formatSeed, newSeed, parseSeed, playsFor, rerollLandscape, rerollSlot, rollSeeded } from '../randomizer.js';
 import { cardHref, landscapeHref } from '../links.js';
-import { CardText, ExpansionBadge, LandscapePill, TypePills } from './bits.jsx';
+import { CardText, ExpansionBadge, LandscapePill, ShowTextButton, TypePills } from './bits.jsx';
 import CostIcons from './Cost.jsx';
 import RandomizerOptions from './RandomizerOptions.jsx';
 import { KingdomChip } from './KingdomChips.jsx';
@@ -15,12 +15,14 @@ import { KingdomChip } from './KingdomChips.jsx';
    state / onState(next)   the rolled kingdom ({ slots, landscapes, setup }, or null) and what to do with a new one
    onReset()               put the options back to their defaults
    actions                 extra buttons for the bar above the tiles (Copy link, Use for a game, ...)
+   kept / onKeep           the locked cards and the typed seed ({ cards, lands, seed }) to start from, and a callback for every change (the page keeps them in its own state)
+   extraControls / below   a button for the Roll / Reset row, and what that button opens (kept outside the form, so typing in it never rolls)
    plays                   Map(pile key -> games played), for "favor cards we've played less"; null when there are no logged games */
-export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, state, onState, onReset, plays = null, actions = null, emptyHint = true, rulesOpen = false, foldExpansions = false }) {
-  const [locked, setLocked] = useState(() => new Set());        // pile keys kept on a re-roll
-  const [lockedL, setLockedL] = useState(() => new Set());      // landscape ids kept on a re-roll
+export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, state, onState, onReset, plays = null, actions = null, emptyHint = true, foldExpansions = false, extraControls = null, below = null, kept = null, onKeep = null }) {
+  const [locked, setLocked] = useState(() => new Set(kept?.cards));        // pile keys kept on a re-roll
+  const [lockedL, setLockedL] = useState(() => new Set(kept?.lands));      // landscape ids kept on a re-roll
   const [message, setMessage] = useState('');
-  const [seedText, setSeedText] = useState('');                // a seed typed in to repeat a roll; empty = a new random one
+  const [seedText, setSeedText] = useState(kept?.seed || '');                // a seed typed in to repeat a roll; empty = a new random one
   const [showText, setShowText] = useState(false);
   const [fresh, setFresh] = useState(null);                     // the tile that just changed, briefly highlighted
   const resultRef = useRef(null);
@@ -32,7 +34,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
     const at = (list, keyOf, held) => new Map(list.flatMap((x, i) => (held.has(keyOf(x)) ? [[keyOf(x), i]] : [])));
     if (seedText.trim() && parseSeed(seedText) == null) { setMessage('A seed is a number, like 182736.'); return; }
     const res = rollSeeded(catalog, opts, parseSeed(seedText) ?? newSeed(), {
-      plays: opts.favor ? plays : null, keep: [...locked], keepLandscapes: [...lockedL],
+      plays: playsFor(opts, plays), keep: [...locked], keepLandscapes: [...lockedL],
       lockedAt: state ? at(state.slots, s => s.key, locked) : null, lockedLandscapeAt: state ? at(state.landscapes, l => l.landscape.id, lockedL) : null,
     });
     if (!res.ok) { setMessage(res.message); return; }
@@ -40,7 +42,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
     requestAnimationFrame(() => resultRef.current?.scrollIntoView?.({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
   };
   const swapSlot = i => {
-    const res = rerollSlot(catalog, opts, state, i, { plays: opts.favor ? plays : null });
+    const res = rerollSlot(catalog, opts, state, i, { plays: playsFor(opts, plays) });
     if (!res.ok) { setMessage(res.message); return; }
     const was = new Set(state.slots.map(s => s.key));
     setMessage(''); setFresh(res.slots.find(s => !was.has(s.key))?.key ?? null); onState(res);
@@ -51,6 +53,8 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
     const was = new Set(state.landscapes.map(l => l.landscape.id));
     setMessage(''); setFresh(res.landscapes.find(l => !was.has(l.landscape.id))?.landscape.id ?? null); onState(res);
   };
+  // a caller that keeps these (Game night) hears every change, so a look at a card's page doesn't lose the locks or the typed seed
+  useEffect(() => { if (onKeep) onKeep({ cards: [...locked], lands: [...lockedL], seed: seedText }); }, [locked, lockedL, seedText]);   // eslint-disable-line react-hooks/exhaustive-deps
   const reset = () => { setMessage(''); setLocked(new Set()); setLockedL(new Set()); onReset(); };
 
   useEffect(() => { if (fresh == null) return; const t = setTimeout(() => setFresh(null), 1800); return () => clearTimeout(t); }, [fresh]);
@@ -60,22 +64,24 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
   return (
     <>
       <form className="builder dn-filters dn-rz-opts" aria-label="Randomizer options" onSubmit={e => { e.preventDefault(); roll(); }}>
-        <RandomizerOptions catalog={catalog} opts={opts} setOpts={setOpts} canFavor={canFavor} rulesOpen={rulesOpen} foldExpansions={foldExpansions} />
+        <RandomizerOptions catalog={catalog} opts={opts} setOpts={setOpts} canFavor={canFavor} foldExpansions={foldExpansions} />
 
         <div className="controls dn-rz-go">
           <button type="submit">{state ? 'Roll a new kingdom' : 'Roll a kingdom'}</button>
           <label className="f dn-seed-in">Seed <input type="text" inputMode="numeric" size={8} placeholder="random" value={seedText} onChange={e => setSeedText(e.target.value.replace(/[^\d]/g, '').slice(0, 9))} /></label>
           <button type="button" className="ghost" onClick={reset} disabled={!changed}>Reset options</button>
+          {extraControls}
           {(locked.size > 0 || lockedL.size > 0) && state && <span className="meta">Locked cards stay when you roll again.</span>}
         </div>
         {message && <p className="dn-rz-msg" role="alert">{message}</p>}
       </form>
+      {below}
 
       {state ? (
         <section aria-label="Your kingdom" ref={resultRef} className="dn-rz-result">
           <div className="dn-rz-bar">
             <div className="dn-rz-actions">
-              <label className="dn-check"><input type="checkbox" checked={showText} onChange={e => setShowText(e.target.checked)} /> Show card text</label>
+              <ShowTextButton on={showText} onClick={() => setShowText(t => !t)} />
               {state.seed != null && <span className="dn-seed" title="Roll again with this seed and the same options to get this exact kingdom">Seed <b>{formatSeed(state.seed)}</b></span>}
             </div>
             {actions && <div className="dn-rz-actions">{actions}</div>}
@@ -138,13 +144,15 @@ function Tile({ children, tone, fresh, locked, onLock, onReroll, what }) {
   );
 }
 
-// what to put on the table besides the Kingdom cards
-function Setup({ catalog, setup }) {
+// what to put on the table besides the Kingdom cards (also shown when a snake draft is done)
+export function Setup({ catalog, setup }) {
   const notes = [];
+  if (setup.needsBane) notes.push(<li key="bane"><b>Young Witch</b> needs a Bane card: add a Kingdom card that costs $2 or $3 to the kingdom.</li>);
   if (setup.bane) notes.push(<li key="bane"><b>Young Witch</b> needs a Bane card: <KingdomChip r={{ kind: 'card', id: setup.bane.cards[0].id, obj: setup.bane.cards[0] }} />. It’s an extra Kingdom pile.</li>);
-  if (setup.platinumColony != null) notes.push(<li key="pc"><b>{setup.platinumColony ? 'Use' : 'Don’t use'} Platinum and Colony.</b> <span className="meta">Decided by chance in proportion to how many Prosperity cards are in the kingdom.</span></li>);
-  if (setup.shelters != null) notes.push(<li key="sh"><b>{setup.shelters ? 'Use Shelters' : 'Use Estates'}</b> {setup.shelters ? 'instead of the three starting Estates.' : '(no Shelters).'} <span className="meta">Decided by chance in proportion to how many Dark Ages cards are in the kingdom.</span></li>);
+  const why = (exp, n, chance) => (setup.hand ? `${n} of the ${setup.hand.total} kingdom cards are from ${exp}; half or more uses it.` : chance);
+  if (setup.platinumColony != null) notes.push(<li key="pc"><b>{setup.platinumColony ? 'Use' : 'Don’t use'} Platinum and Colony.</b> <span className="meta">{why('Prosperity', setup.hand?.prosperity, 'Decided by chance in proportion to how many Prosperity cards are in the kingdom.')}</span></li>);
+  if (setup.shelters != null) notes.push(<li key="sh"><b>{setup.shelters ? 'Use Shelters' : 'Use Estates'}</b> {setup.shelters ? 'instead of the three starting Estates.' : '(no Shelters).'} <span className="meta">{why('Dark Ages', setup.hand?.darkAges, 'Decided by chance in proportion to how many Dark Ages cards are in the kingdom.')}</span></li>);
   if (setup.ruins) notes.push(<li key="ruins">A <b>Looter</b> is in the kingdom, so add the <b>Ruins</b> pile.</li>);
   if (!notes.length) return null;
-  return <section aria-labelledby="rz-setup" className="dn-rz-setup"><h3 id="rz-setup" className="dn-rz-sub">Setup</h3><ul className="dn-plain-list">{notes}</ul></section>;
+  return <section aria-labelledby="rz-setup" className="dn-rz-setup"><h3 id="rz-setup" className="dn-rz-sub">Don’t forget the setup</h3><ul className="dn-plain-list">{notes}</ul></section>;
 }

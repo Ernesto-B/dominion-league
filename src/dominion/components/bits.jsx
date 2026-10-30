@@ -20,6 +20,15 @@ export const LandscapePill = ({ type }) => <span className={`pill t-${type.toLow
 export const TypePills = ({ types }) => <span className="dn-types">{types.map(t => <span className={`pill t-${t.toLowerCase()}`} key={t}>{t}</span>)}</span>;
 
 // a toggle button for a filter value (aria-pressed so assistive tech announces on/off)
+/* "Show card text" / "Hide card text": one button, one width. Both labels sit in one grid cell and only one shows, so the buttons beside it never move. */
+export function ShowTextButton({ on, onClick, className = '' }) {
+  return (
+    <button type="button" className={('ghost dn-textbtn ' + className).trim()} aria-pressed={on} onClick={onClick}>
+      <span className="dn-swap"><span className={on ? 'off' : ''}>Show card text</span><span className={on ? '' : 'off'}>Hide card text</span></span>
+    </button>
+  );
+}
+
 export function Chip({ pressed, onClick, children, count, label, tone }) {
   return (
     <button type="button" className={(tone ? `dn-chip t-${tone}` : 'dn-chip') + (count === 0 && !pressed ? ' dn-zero' : '')} aria-pressed={pressed} onClick={onClick} aria-label={label} title={label}>

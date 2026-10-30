@@ -12,7 +12,7 @@ const ids = STEPS.map(s => s.id);
 export const todayISO = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export const blankNight = (today = todayISO()) => ({
-  step: 'players', picked: [], tie: {}, vp: {}, kingdom: [], kingdomTouched: false, rolled: null, rolledQ: null, sets: [], landscapes: [],
+  step: 'players', picked: [], tie: {}, vp: {}, kingdomMode: null, randomDone: false, handEdited: false, handBane: null, rollOpts: null, kept: null, handOpen: false, draftSave: null, kingdom: [], kingdomTouched: false, rolled: null, rolledQ: null, sets: [], landscapes: [],
   date: today, type: '', notes: '', startedAt: null, editId: null,
 });
 

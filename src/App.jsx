@@ -10,7 +10,6 @@ import Header from './components/Header.jsx';
 import Login from './components/Login.jsx';
 import PasswordChange from './components/PasswordChange.jsx';
 import PageBoundary from './components/PageBoundary.jsx';
-import { sb } from './lib/supabase.js';
 import PlayerHud from './components/PlayerHud.jsx';
 import ScrollTopButton from './components/ScrollTopButton.jsx';
 import PopLayer from './components/PopLayer.jsx';
@@ -71,8 +70,6 @@ function Shell() {
       {ready && <BottomNav ready={{ ...state, route }} hash={hash} />}
       {ready && (['home', 'season', 'games', 'players', 'records', 'night', 'dominion'].includes(route.route)) && <ScrollTopButton lift={route.route === 'night'} />}
       <PopLayer />
-      <footer className="foot"><span id="foot">{ready ? 'Ratings are recalculated in your browser each time the page loads.' : ''}</span>
-        {ready && <a className="logout" href="#" onClick={e => { e.preventDefault(); sb.auth.signOut(); }}>Log out</a>}</footer>
     </>
   );
 }

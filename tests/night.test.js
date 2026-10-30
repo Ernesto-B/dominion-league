@@ -49,3 +49,20 @@ describe('keeping a Game night between page loads', () => {
     expect(loadNight(bad, 'g1', 'T')).toEqual(blankNight('T')); expect(saveNight(bad, 'g1', blankNight())).toBe(false); expect(() => clearNight(bad, 'g1')).not.toThrow();
   });
 });
+
+describe('the kingdom method', () => {
+  it('keeps the randomizer options and locked cards in the saved night', () => {
+    const st = memory(), opts = { cards: 8, require: ['draw'] }, locks = { cards: ['k1'], lands: [] };
+    saveNight(st, 'g1', { ...blankNight(), step: 'kingdom', picked: ['Ann', 'Bob'], rollOpts: opts, locks });
+    const back = loadNight(st, 'g1'); expect(back.rollOpts).toEqual(opts); expect(back.locks).toEqual(locks);
+    expect(blankNight().rollOpts).toBeNull();
+    const more = { handOpen: true, kept: { cards: [], lands: [], seed: '123456' }, draftSave: { seats: ['Ann', 'Bob'], picks: ['p1'], draft: { seed: 7, options: { cards: 10 } } } };
+    saveNight(st, 'g2', { ...blankNight(), step: 'kingdom', picked: ['Ann', 'Bob'], ...more });
+    expect(loadNight(st, 'g2')).toMatchObject(more);
+  });
+  it('starts with none chosen, and a reload keeps the method picked', () => {
+    expect(blankNight().kingdomMode).toBeNull();
+    const st = memory(); saveNight(st, 'g1', { ...blankNight(), step: 'kingdom', picked: ['Ann', 'Bob'], kingdomMode: 'draft' });
+    expect(loadNight(st, 'g1').kingdomMode).toBe('draft');
+  });
+});

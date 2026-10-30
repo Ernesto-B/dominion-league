@@ -5,21 +5,23 @@ import { SET_NAMES, LANDSCAPES } from '../lib/sets.js';
 import { buildGameArgs, resortByVP, toggle } from '../lib/gameForm.js';
 import { badgesFor, gameXp, leagueXp } from '../lib/xp.js';
 import { BadgeReward, LevelReward } from '../components/RewardCard.jsx';
-import { STEPS, advance, back, blankNight, canAdvance, clearNight, elapsed, gameSummary, loadNight, saveNight, stepNumber } from '../lib/night.js';
+import { STEPS, advance, back, blankNight, clearNight, elapsed, gameSummary, loadNight, saveNight, stepNumber } from '../lib/night.js';
 import NameIcon from '../components/NameIcon.jsx';
 import SetIcon from '../components/SetIcon.jsx';
 import EloPreview from '../components/EloPreview.jsx';
 import FinishOrder from '../components/FinishOrder.jsx';
-import KingdomPicker from '../components/KingdomPicker.jsx';
+import KingdomStep from '../components/KingdomStep.jsx';
+import { DRAFT_PICKS, draftState, poolSizeFor, rollPool } from '../dominion/draft.js';
 import { useCatalogLoad } from '../dominion/CatalogContext.jsx';
 import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
-import { CardText } from '../dominion/components/bits.jsx';
-import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, toGameItems } from '../dominion/randomizer.js';
-import SnakeDraft from '../dominion/components/SnakeDraft.jsx';
+import { CardText, ShowTextButton } from '../dominion/components/bits.jsx';
+import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, newSeed, setupForHand } from '../dominion/randomizer.js';
 import CountUp from '../components/CountUp.jsx';
-import RandomizerPanel from '../dominion/components/RandomizerPanel.jsx';
 import { pilesPlayed, playStats } from '../dominion/playStats.js';
 import { impliedSets, primaryType, resolveKingdom } from '../dominion/kingdom.js';
+
+// the options a Game night roll starts from, and Reset goes back to: Attacks allowed, at most two
+const NIGHT_ROLL = { ...DEFAULT_OPTIONS, maxAttacks: 2 };
 
 const storage = () => { try { return window.sessionStorage; } catch { return null; } };
 
@@ -35,8 +37,9 @@ export default function Night() {
   const savedSt = useRef(null);                          // the form as it was when saved, for Undo
   const [undoing, setUndoing] = useState(false);
   const [done, setDone] = useState(null);                 // { id } after a successful save
-  const [roll, setRoll] = useState(DEFAULT_OPTIONS);          // every option of the Randomizer, here too
-  const setRollOpts = patch => setRoll(r => ({ ...r, ...patch }));
+  // every option of the Randomizer, the locked cards, the typed seed, the hand-pick panel and a snake draft in progress live in the saved night: a look at a card's page in the middle of setting up loses nothing
+  const roll = st.rollOpts || NIGHT_ROLL;
+  const setRollOpts = patch => setSt(s => ({ ...s, rollOpts: { ...(s.rollOpts || NIGHT_ROLL), ...patch } }));
   // how often each pile has been played, for the "favor cards we've played less" rule (null until the catalog is in, or with no kingdoms logged)
   const plays = useMemo(() => {
     if (cat.status !== 'ready') return null;
@@ -46,7 +49,6 @@ export default function Night() {
   // the rolled kingdom: held in memory after a roll, rebuilt from its saved compact form after a reload
   const rolled = useMemo(() => st.rolled || (cat.status === 'ready' && st.rolledQ ? kingdomFromParams(cat.catalog, new URLSearchParams(st.rolledQ)) : null), [st.rolled, st.rolledQ, cat.status, cat.catalog]);
   const [showText, setShowText] = useState(false);
-  const [drafting, setDrafting] = useState(false);            // the Kingdom step's snake draft (in memory only)
   const [now, setNow] = useState(Date.now());
   const before = useRef({ ranks: {}, tiers: {} });          // the ladder just before saving, to say what the game changed
 
@@ -61,12 +63,27 @@ export default function Night() {
   const catalog = cat.status === 'ready' ? cat.catalog : null;
   const items = st.kingdom;
   const resolved = catalog ? resolveKingdom(catalog, items) : [];
+  // the setup notes now: worked out from the cards once they were changed by hand, else the roll's own
+  const setupNow = catalog && st.handEdited ? setupForHand(catalog, items.filter(i => i.kind === 'card').map(i => i.id), st.handBane) : rolled ? rolled.setup : null;
 
   // ---- the kingdom
   const applyKingdom = (kingdom, rolled = null) => {
     const implied = catalog ? impliedSets(resolveKingdom(catalog, kingdom)) : { sets: [], landscapes: [] };
-    setSt(s => ({ ...s, kingdom, kingdomTouched: true, rolled, rolledQ: rolled ? kingdomToParams(rolled).toString() : null, sets: [...new Set([...(rolled ? [] : s.sets), ...implied.sets])], landscapes: [...new Set([...(rolled ? [] : s.landscapes), ...implied.landscapes])] }));
+    setSt(s => ({ ...s, kingdom, randomDone: false, handEdited: false, handBane: null, kingdomTouched: true, rolled, rolledQ: rolled ? kingdomToParams(rolled).toString() : null, sets: [...new Set([...(rolled ? [] : s.sets), ...implied.sets])], landscapes: [...new Set([...(rolled ? [] : s.landscapes), ...implied.landscapes])] }));
   };
+
+  // a change by hand re-works the setup notes from the cards now in the kingdom (the Bane a roll had is remembered while it still applies)
+  const pickByHand = (kingdom, implied) => setSt(s => ({ ...s, kingdom, handEdited: true, handBane: s.handEdited ? s.handBane : rolled?.setup?.bane?.cards[0]?.id ?? null, rolled: null, rolledQ: null, kingdomTouched: true, sets: [...new Set([...s.sets, ...implied.sets])], landscapes: [...new Set([...s.landscapes, ...implied.landscapes])] }));
+  // the snake draft: Start rolls the pool (the options page's button is the bar at the bottom), Restart goes back to the options page and drops the kingdom
+  const startDraft = () => {
+    const v = draftState(st.draftSave, st.picked), res = rollPool(catalog, roll, newSeed(), { plays, n: DRAFT_PICKS, size: v.poolSize ?? poolSizeFor(v.seats.length) });
+    setSt(s => ({ ...s, ...(res.ok ? { kingdom: [], rolled: null, rolledQ: null, handOpen: false, handEdited: false, handBane: null } : {}), draftSave: res.ok ? { ...v, draft: { seed: res.seed, options: res.options, n: res.n, size: res.size }, picks: [], banned: [], finished: false, error: '' } : { ...v, error: res.message } }));
+  };
+  const restartDraft = () => setSt(s => ({ ...s, kingdom: [], rolled: null, rolledQ: null, handOpen: false, handEdited: false, handBane: null, draftSave: { ...draftState(s.draftSave, s.picked), draft: null, picks: [], banned: [], finished: false, error: '' } }));
+  // "Restart Drafting": the same pool, every pick and ban taken back, the first seat to go again (and no kingdom, if the draft had finished)
+  const redoDraft = () => setSt(s => ({ ...s, kingdom: [], rolled: null, rolledQ: null, handOpen: false, handEdited: false, handBane: null, draftSave: { ...draftState(s.draftSave, s.picked), picks: [], banned: [], finished: false, error: '' } }));
+  const setMode = kingdomMode => setSt(s => ({ ...s, kingdomMode }));
+  const next = () => { setMsg(''); setSt(s => advance(s)); };
 
   // ---- saving
   const save = async () => {
@@ -84,6 +101,9 @@ export default function Night() {
   };
   // on the first step Back leaves the flow: to the page the viewer came from, or the rankings when there is none (a fresh tab)
   const goBack = () => {
+    if (st.step === 'kingdom' && st.kingdomMode === 'draft' && st.draftSave?.draft) { restartDraft(); return; }   // a draft under way: back to its options page
+    if (st.step === 'kingdom' && st.kingdomMode === 'random' && st.randomDone) { setSt(s => ({ ...s, randomDone: false })); return; }   // the summary: back to the roll
+    if (st.step === 'kingdom' && st.kingdomMode) { setMode(null); return; }   // inside a way of choosing, Back returns to the question
     if (st.step !== 'players') { setSt(s => back(s)); return; }
     if (window.history.length > 1) window.history.back(); else window.location.hash = hashFor('', gid);
   };
@@ -116,7 +136,11 @@ export default function Night() {
   );
 
   const step = STEPS.find(s => s.id === st.step);
-  const ok = canAdvance(st.step, st);
+  const drafting = st.kingdomMode === 'draft' && !!st.draftSave?.draft && !st.draftSave.finished;   // a draft under way: no starting the game until it is done
+  // why the main button is greyed out (nothing when it can be pressed): fewer than 2 players, or no kingdom yet (skip it with its link) or a draft still on
+  const holdOn = st.step === 'players' && st.picked.length < 2 ? 'Pick at least 2 players first'
+    : st.step === 'kingdom' && drafting ? 'Finish the draft first' : st.step === 'kingdom' && !items.length ? 'Set up a kingdom first, or skip it' : '';
+  const atDraftOptions = st.step === 'kingdom' && !!catalog && st.kingdomMode === 'draft' && !st.draftSave?.draft;   // the draft's options page: its button replaces Start Game & Timer
   const kingdomCards = resolved.filter(r => r.kind === 'card'), kingdomLands = resolved.filter(r => r.kind === 'landscape');
 
   return (
@@ -142,25 +166,12 @@ export default function Night() {
         )}
 
         {st.step === 'kingdom' && (
-          <>
-            {!catalog ? (cat.status === 'error' ? <p className="meta">The card list isn’t available right now. You can skip the kingdom and still save the game. <button type="button" className="ghost" onClick={cat.retry}>Try again</button></p> : <p className="meta">Loading the card list…</p>) : (
-              <>
-                <p className="meta">Roll a kingdom exactly as in the Randomizer, pick the cards yourself, or skip this step.</p>
-                {drafting
-                  ? <SnakeDraft catalog={catalog} players={st.picked} opts={roll} setOpts={setRollOpts} plays={plays}
-                      onDone={res => { applyKingdom(toGameItems(res), res); setDrafting(false); }} onCancel={() => setDrafting(false)} />
-                  : <>
-                <p className="meta" style={{ marginBottom: 6 }}>Or take turns choosing it: <button type="button" className="linkish" onClick={() => setDrafting(true)}>Snake draft</button></p>
-                <RandomizerPanel catalog={catalog} opts={roll} setOpts={setRollOpts} state={rolled} plays={plays} emptyHint={false}
-                  onState={res => applyKingdom(toGameItems(res), res)} onReset={() => setRoll(DEFAULT_OPTIONS)} />
-                  </>}
-                <details className="dn-mech night-hand" open={!!items.length && !rolled}><summary>{items.length && !rolled ? 'Your kingdom — change it if you like' : 'Or pick the cards by hand'}</summary>
-                  <KingdomPicker items={items} onChange={(kingdom, implied) => setSt(s => ({ ...s, kingdom, rolled: null, rolledQ: null, kingdomTouched: true, sets: [...new Set([...s.sets, ...implied.sets])], landscapes: [...new Set([...s.landscapes, ...implied.landscapes])] }))} />
-                </details>
-                {items.length > 0 && !rolled && <KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />}
-              </>
-            )}
-          </>
+          !catalog ? (cat.status === 'error' ? <p className="meta">The card list isn’t available right now. You can skip the kingdom and still save the game. <button type="button" className="ghost" onClick={cat.retry}>Try again</button> <button type="button" className="linkish" onClick={() => setSt(s => advance({ ...s, kingdom: [] }))}>Skip the kingdom</button></p> : <p className="meta">Loading the card list…</p>) : (
+            <KingdomStep catalog={catalog} mode={st.kingdomMode} setMode={setMode} players={st.picked} roll={roll} setRollOpts={setRollOpts} resetRoll={() => setSt(s => ({ ...s, rollOpts: null, kept: null }))} kept={st.kept} onKeep={kept => setSt(s => ({ ...s, kept }))}
+              hand={st.handOpen} setHand={handOpen => setSt(s => ({ ...s, handOpen }))} draftSave={st.draftSave} onDraft={draftSave => setSt(s => ({ ...s, draftSave }))} onRestartDraft={redoDraft}
+              plays={plays} items={items} rolled={rolled} setupNow={setupNow} handEdited={st.handEdited} resolved={resolved} randomDone={st.randomDone} setRandomDone={randomDone => setSt(s => ({ ...s, randomDone }))} applyKingdom={applyKingdom} onPick={pickByHand} onSkip={() => setSt(s => advance({ ...s, kingdom: [], kingdomMode: null }))}
+              text={<KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />} />
+          )
         )}
 
         {st.step === 'play' && (
@@ -171,7 +182,7 @@ export default function Night() {
                 <p className="meta" style={{ margin: '0 0 6px' }}>Tonight’s kingdom</p>
                 <div className="dn-kchips">{kingdomCards.map(r => <KingdomChip key={r.id} r={r} plain />)}</div>
                 {kingdomLands.length > 0 && <div className="dn-kchips">{kingdomLands.map(r => <KingdomChip key={r.id} r={r} plain />)}</div>}
-                {rolled && rolled.setup && <RolledNotes setup={rolled.setup} />}
+                {setupNow && <RolledNotes setup={setupNow} />}
                 <KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />
               </>
             ) : <p className="meta">No kingdom was picked. Have a great game — come back here when it ends.</p>}
@@ -208,9 +219,10 @@ export default function Night() {
         <button type="button" className="ghost" onClick={goBack}>← Back</button>
         {st.step === 'review'
           ? <button type="button" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save game'}</button>
-          : <button type="button" onClick={() => { setMsg(''); setSt(s => advance(s)); }} disabled={!ok}>{st.step === 'kingdom' ? (items.length ? 'Next →' : 'Skip →') : st.step === 'play' ? 'Game over — scores →' : 'Next →'}</button>}
+          : atDraftOptions ? <button type="button" onClick={startDraft}>Start the draft →</button>
+          : <button type="button" onClick={next} disabled={!!holdOn} title={holdOn || undefined}>{st.step === 'kingdom' ? 'Start Game & Timer →' : st.step === 'play' ? 'Game over — scores →' : 'Next →'}</button>}
       </div>
-      <p className="meta night-reset"><button type="button" className="linkish" onClick={startOver}>Start over</button></p>
+      <p className="night-reset"><button type="button" className="ghost" onClick={startOver}>Restart Game Night</button></p>
     </>
   );
 }
@@ -265,7 +277,7 @@ function Rewards({ game, paid, D, catalog }) {
 function KingdomText({ resolved, catalog, show, setShow }) {
   return (
     <>
-      <label className="dn-check" style={{ margin: '10px 0' }}><input type="checkbox" checked={show} onChange={e => setShow(e.target.checked)} /> Show card text</label>
+      <p style={{ margin: '10px 0' }}><ShowTextButton on={show} onClick={() => setShow(!show)} /></p>
       {show && <ul className="dn-plain-list night-text">{resolved.filter(r => !r.missing).map(r => <li key={`${r.kind}:${r.id}`} className={'t-' + (r.kind === 'landscape' ? r.obj.type : primaryType(r.obj) || 'action').toLowerCase()}><b>{r.obj.name}</b>{catalog && <CardText text={r.obj.text} hasAnyText={catalog.meta.textRecordCount > 0} />}</li>)}</ul>}
     </>
   );
@@ -274,6 +286,7 @@ function KingdomText({ resolved, catalog, show, setShow }) {
 // the setup lines of a rolled kingdom (the same facts as the Randomizer's Setup section, in one short list)
 function RolledNotes({ setup }) {
   const lines = [];
+  if (setup.needsBane) lines.push('Young Witch needs a Bane: add a card that costs $2 or $3 to the kingdom.');
   if (setup.bane) lines.push(`Young Witch needs a Bane: ${setup.bane.name}.`);
   if (setup.platinumColony != null) lines.push(setup.platinumColony ? 'Use Platinum and Colony.' : 'No Platinum or Colony.');
   if (setup.shelters != null) lines.push(setup.shelters ? 'Use Shelters instead of Estates.' : 'Use Estates (no Shelters).');

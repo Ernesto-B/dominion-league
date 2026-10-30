@@ -229,9 +229,6 @@ button.iconbtn img{display:block;height:72px;width:auto}
 .steps{padding-left:20px;max-width:70ch} .steps li{margin:6px 0}
 code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;background:var(--line);padding:1px 5px;border-radius:4px}
 
-.foot{max-width:1080px;margin:0 auto;padding:0 16px 40px;color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:4px 16px;justify-content:space-between}
-.foot .logout{color:var(--muted)}
-@media (max-width:720px){.foot .logout{display:none}}   /* on a phone Log out is in the More sheet */
 
 @media (max-width:720px){
   .lhead{display:none}
@@ -434,7 +431,7 @@ a.dn-kchip:hover{border-color:var(--muted)}
 .dn-rz-bar h2{margin:0}
 .dn-rz-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
 .dn-rz-sub{margin:22px 0 8px}
-.dn-rzgrid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;align-items:stretch;grid-auto-rows:1fr}
+.dn-rzgrid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;align-items:stretch}   /* tiles in one row share a height; each row is only as tall as its tallest tile (a split pile lists all its names) */
 .dn-rztile{display:flex;flex-direction:column;gap:10px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:10px}
 .dn-rztile.locked{box-shadow:inset 0 0 0 1px var(--muted)}
 .dn-rztile-body{display:flex;gap:12px;align-items:flex-start;min-width:0}
@@ -451,7 +448,10 @@ a.dn-kchip:hover{border-color:var(--muted)}
 .dn-rz-exp{margin-top:6px}
 .dn-rz-text{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:14px}
 .dn-rz-textname{margin:0 0 2px;font-weight:600}
-.dn-rz-setup .dn-plain-list{gap:8px}
+.dn-rz-setup .dn-plain-list{gap:10px}
+.dn-rz-setup{margin-top:22px;padding:14px 18px 16px;border:1px solid var(--brass,var(--line));border-left-width:6px;border-radius:12px;background:color-mix(in srgb, var(--brass,#d4a93a) 11%, var(--panel))}
+.dn-rz-setup .dn-rz-sub{margin:0 0 10px;font-size:19px;color:var(--brass,var(--ink))}
+.dn-rz-setup li{font-size:16px;line-height:1.45}
 .dn-rztile.t-action{border-left-color:rgb(var(--t-action))}
 .dn-rztile.t-treasure{border-left-color:rgb(var(--t-treasure))}
 .dn-rztile.t-duration{border-left-color:rgb(var(--t-duration))}
@@ -874,6 +874,24 @@ details.how>h2:first-of-type{margin-top:8px}
 
 .night-steps li em{font-style:normal}
 .night-exp{margin:12px 0 4px}
+.night-q{font-size:18px;font-weight:700;margin:4px 0 12px}
+.night-choices{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:10px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.night-choice{display:grid;gap:4px;align-content:start;width:100%;height:100%;text-align:left;padding:14px 16px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;cursor:pointer;min-height:96px}
+.night-choice b{font-size:17px}
+.night-choice span{font-size:13px;font-weight:400;color:var(--muted);line-height:1.4}
+.night-choice:hover,.night-choice:focus-visible{border-color:var(--brass,var(--line))}
+.night-skip{margin:8px 0 0}
+.night-reset button{min-height:0;padding:6px 16px;font-size:13px}
+.dn-rz-grid{display:grid;grid-template-columns:max-content 1fr;gap:10px 14px;align-items:center;margin:14px 0 4px}
+.dn-rz-lab{margin:0;font-size:13px;font-weight:600;color:var(--muted)}
+.dn-rz-lab .meta{margin-left:4px;font-weight:400}
+.dn-atk{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+.dn-chip:disabled{opacity:.45;cursor:not-allowed}
+.dn-use{background:linear-gradient(180deg,#f2d27f,#cb9c2f);color:#2a1d05;box-shadow:0 2px 0 #8a6414,inset 0 1px 0 rgba(255,255,255,.55);min-height:40px;padding:8px 18px}
+.night-hand{margin:12px 0 0;padding:12px;border:1px solid var(--line);border-radius:12px}
+@media (max-width:720px){.dn-rz-grid{grid-template-columns:1fr;gap:6px}.dn-rz-lab{margin-top:6px}}
+.dn-num{width:4.5em}
+@media (max-width:720px){.night-choices{grid-template-columns:1fr}.night-choice{min-height:0}}
 .night-card .order li{grid-template-areas:"nm up dn" "vp tie tie"}
 .night-card .order label.tie{justify-self:start}
 @media (max-width:520px){.night-steps li:not(.now) em{display:none}.night-steps li:not(.now){padding:7px 10px;flex:0 0 auto}.night-steps li.now{flex:1 1 auto}}
@@ -944,8 +962,14 @@ html{overscroll-behavior-y:contain}   /* the browser's own pull-to-refresh would
 .dn-draft-turn-who{display:flex;flex-direction:column;line-height:1.1}
 .dn-draft-turn-who b{font:800 30px var(--display);color:var(--seat)}
 .dn-draft-turn-n{text-align:right;font-size:13px}
+/* both labels sit in one grid cell and only one shows, so the button keeps the width of the longer and the buttons beside it never move */
+.dn-swap{display:inline-grid}
+.dn-swap>span{grid-area:1/1;text-align:center}
+.dn-swap>span.off{visibility:hidden}
+.dn-draft-turn-right{display:flex;align-items:center;gap:14px}
+.dn-draft-act{background:var(--seat);color:#1a1209;border:0;min-height:44px;padding:8px 20px;font-size:16px;font-weight:700;border-radius:8px}
 @media (prefers-reduced-motion:no-preference){.dn-draft-turn{animation:dnpop .45s cubic-bezier(.3,1.5,.5,1) both}}
-.dn-draft-pool{align-items:stretch;grid-auto-rows:1fr}
+.dn-draft-pool{align-items:stretch}
 .dn-draft-tile{cursor:pointer;display:flex;flex-direction:column;min-height:92px}
 .dn-draft-tile.taken{cursor:default}
 .dn-draft-sub{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:4px}
@@ -962,6 +986,25 @@ html{overscroll-behavior-y:contain}   /* the browser's own pull-to-refresh would
 .dn-draft-tile.taken .dn-rz-cost,.dn-draft-tile.taken .dn-rz-main,.dn-draft-tile.taken>.dn-rz-text,.dn-draft-tile.taken>p{opacity:.55}
 .dn-draft-by{margin-left:auto;font-size:13px;font-weight:700;color:var(--seat,var(--brass));white-space:nowrap}
 .dn-draft-tile>.dn-rz-text,.dn-draft-tile>p{padding:0 14px 12px}
+.dn-draft-more{display:none;align-self:center;min-height:0;width:48px;height:26px;padding:0;margin:-4px 0 4px;background:none;border:0;border-radius:8px;color:var(--muted);font-size:20px;line-height:1;cursor:pointer}
+@media (max-width:720px){.dn-draft-more{display:block}.dn-draft-textbtn,.dn-draft-tile>.dn-rz-text{display:none}}   /* on a phone the text is the pop-out; on a wide screen it is this switch */   /* the card text pop-out is a phone feature */
+.dn-draft-more:hover,.dn-draft-more:focus-visible{color:var(--ink);background:color-mix(in srgb, var(--ink) 10%, transparent)}
+.dn-draft-tile.banned .dn-rz-name{text-decoration:line-through}
+.dn-draft-tile.banned{border-left-color:var(--down,#d96a5b)}
+.dn-draft-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 4px}
+.dn-bans{min-height:38px;padding:6px 14px}
+.dn-draft-ban{display:flex;gap:8px;align-items:baseline;margin:0 0 4px;padding:4px 8px;border-left:4px solid var(--down,#d96a5b);border-radius:4px;background:color-mix(in srgb, var(--ink) 6%, transparent);text-decoration:line-through;text-decoration-color:var(--muted)}
+.dn-draft-ban.skipped{text-decoration:none;border-left-color:var(--line);color:var(--muted)}
+.dn-draft-ban .n{font-size:12px;color:var(--muted);min-width:22px;text-decoration:none;display:inline-block}
+.dn-draft-done{margin:0 0 10px}
+.dn-draft-mine li.replaced{flex-wrap:wrap;border-left-color:var(--down,#d96a5b)}
+.dn-draft-mine li.replaced s{text-decoration-color:var(--muted);opacity:.7}
+.dn-swap-in{color:var(--brass);font-weight:700}
+.dn-peek{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.6)}
+.dn-peek-box{width:min(420px,100%);max-height:80vh;overflow:auto;padding:16px 18px;background:var(--panel);border:1px solid var(--frame,var(--line));border-radius:14px}
+.dn-peek-box h3{margin:0 0 8px;font-size:20px}
+.dn-peek-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 8px}
+.dn-peek-box>button{margin-top:12px;width:100%;min-height:44px}
 .dn-draft-seats{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px;max-width:320px}
 .dn-draft-seats li{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:8px}
 .dn-draft-seats li span{flex:1;font-weight:600}
@@ -1270,6 +1313,7 @@ main h2::before{content:'';display:inline-block;width:8px;height:8px;margin:0 10
 .pills a[aria-current=true],.dn-chip[aria-pressed=true]{background:linear-gradient(180deg,#f2d27f,#cb9c2f);color:#2a1d05;border-color:#cb9c2f;box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
 .night-actions button:not(.ghost):not(:disabled),.dn-rz-go button[type=submit],.night-go .btn:not(.ghost){background:linear-gradient(180deg,#f2d27f,#cb9c2f);color:#2a1d05;box-shadow:0 2px 0 #8a6414,inset 0 1px 0 rgba(255,255,255,.55)}
 .night-actions button:not(.ghost):not(:disabled):active,.dn-rz-go button[type=submit]:active{box-shadow:0 0 0 #8a6414,inset 0 1px 0 rgba(255,255,255,.35)}
+.night-actions button:disabled{background:transparent;color:var(--muted);border:1px dashed var(--line);box-shadow:none;opacity:.45;cursor:not-allowed}   /* a step that can't go on yet: plainly off, never a button you could press */
 .night-steps li.now{border-color:var(--brass)}
 .night-steps li.now span{background:var(--brass);color:#2a1d05}
 .night-steps li.done{border-color:color-mix(in srgb, var(--brass) 45%, var(--line))}

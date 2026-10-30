@@ -1,94 +1,163 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { newSeed } from '../randomizer.js';
-import { finishDraft, rollPool, shuffled, snakeOrder } from '../draft.js';
+import { createPortal } from 'react-dom';
+import { POOL_SIZES, bansNeeded, finishDraft, handSwaps, poolSizeFor, rollPool, shuffled, snakeOrder } from '../draft.js';
+import { toGameItems } from '../randomizer.js';
 import { cardHref, landscapeHref } from '../links.js';
-import { CardText, ExpansionBadge, LandscapePill, TypePills } from './bits.jsx';
+import { CardText, ExpansionBadge, LandscapePill, ShowTextButton, TypePills } from './bits.jsx';
 import CostIcons from './Cost.jsx';
 import RandomizerOptions from './RandomizerOptions.jsx';
-import { primaryType } from '../kingdom.js';
+import { displayName, primaryType } from '../kingdom.js';
+import { Setup } from './RandomizerPanel.jsx';
 
 /* Pick the kingdom in turns. One device is enough: pass it round, or let one person tap each player's choice.
-   players        the names at the table, in seating order
-   opts / setOpts the randomizer options (the same ones the roll uses): they shape the pool
-   onDone(result) the finished kingdom, shaped like a roll; onCancel() leaves the draft. */
+   The draft is CONTROLLED: its whole state (`value`, see draftState in draft.js) lives in the saved Game night, so leaving the page, or the
+   Back button, loses nothing. The Start button of the options page is Game night's own (the bar at the bottom of the screen).
+   players          the names at the table
+   opts / setOpts   the randomizer options (the same ones the roll uses): they shape the pool
+   value / onChange the draft state and a setter for the whole of it
+   onDone(result)   the finished kingdom, shaped like a roll
+   onRestart()      take every pick and ban back and start the same pool again (the caller also clears the kingdom)
+   onReset()        put the options back to their defaults
+   items            the kingdom as it is now (a hand-pick after the draft shows what it changed)
+   setup            the setup notes for the kingdom as it is now (they follow hand-picks)
+   hand / setHand / handPanel   the emergency "Pick cards by hand" button of the finished screen and the panel it opens */
 // each seat gets its own colour, used on the seat's box, its picks and the cards it took, so who has what reads at a glance
 const seatColor = i => `hsl(${(i * 67 + 24) % 360} 68% 62%)`;
 
-export default function SnakeDraft({ catalog, players, opts, setOpts, plays = null, onDone, onCancel }) {
-  const [seats, setSeats] = useState(players);
-  const [draft, setDraft] = useState(null);       // { pool, landscapes, n, seed, options } once started
-  const [picks, setPicks] = useState([]);         // pile keys, in the order picked
-  const [message, setMessage] = useState('');
-  const [showText, setShowText] = useState(false);
-  const canFavor = !!plays && plays.size > 0;
+export default function SnakeDraft({ catalog, players, opts, setOpts, plays = null, value, onChange, onDone, onRestart, onReset, items = [], setup = null, hand = false, setHand = () => {}, handPanel = null }) {
+  const { seats, picks, banned } = value;
+  const set = patch => onChange({ ...value, ...patch });
+  const [peek, setPeek] = useState(null);          // the card or landscape whose text is open
   const top = useRef(null);
-  // starting the draft happens at the bottom of a long options form: bring the first cards (and whose turn it is) into view
+  const canFavor = !!plays && plays.size > 0;
+
+  const rolled = useMemo(() => (value.draft ? rollPool(catalog, value.draft.options, value.draft.seed, { plays, n: value.draft.n, size: value.draft.size }) : null), [catalog, value.draft, plays]);
+  const draft = rolled && rolled.ok ? rolled : null;
+  // a draft that can no longer be rebuilt (the catalog changed under it) goes back to the options page
+  useEffect(() => { if (value.draft && rolled && !rolled.ok) set({ draft: null, picks: [], banned: [], finished: false, error: rolled.message }); }, [rolled]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // the first cards (and whose turn it is) come into view when the draft starts
   useEffect(() => {
-    if (draft && top.current) top.current.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-  }, [draft]);
+    if (draft && !value.finished && top.current) top.current.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }, [!!draft]);   // eslint-disable-line react-hooks/exhaustive-deps
 
-  const order = useMemo(() => (draft ? snakeOrder(seats, draft.n) : []), [seats, draft]);
-  const start = () => {
-    const res = rollPool(catalog, opts, newSeed(), { plays });
-    if (!res.ok) { setMessage(res.message); return; }
-    setMessage(''); setPicks([]); setDraft(res);
-  };
-  const take = key => {
-    const next = [...picks, key];
-    if (next.length < draft.n) { setPicks(next); return; }
-    const res = finishDraft(catalog, draft, next);
-    if (!res.ok) { setMessage(res.message); return; }
-    onDone(res);
-  };
+  const size = value.poolSize ?? poolSizeFor(seats.length);
+  const needed = bansNeeded(value);
 
+  // ---- the options page
   if (!draft) return (
     <div className="builder dn-draft-setup">
-      <p className="meta" style={{ marginTop: 0 }}>Everyone takes turns choosing the kingdom from a pool of cards, in snake order (1-2-3-3-2-1…), so the last seat picks twice in a row. The options below shape the pool.</p>
+      <p className="meta" style={{ marginTop: 0 }}>Everyone takes turns choosing the kingdom from a pool of cards, in snake order (1-2-3-3-2-1…).</p>
       <h3 className="dn-rz-sub">Seating order</h3>
       <ol className="dn-draft-seats">{seats.map((n, i) => (
         <li key={n}><span>{n}</span>
-          <button type="button" className="ghost" disabled={i === 0} onClick={() => setSeats(s => { const a = s.slice(); [a[i - 1], a[i]] = [a[i], a[i - 1]]; return a; })} aria-label={`Move ${n} up`}>↑</button>
-          <button type="button" className="ghost" disabled={i === seats.length - 1} onClick={() => setSeats(s => { const a = s.slice(); [a[i + 1], a[i]] = [a[i], a[i + 1]]; return a; })} aria-label={`Move ${n} down`}>↓</button>
+          <button type="button" className="ghost" disabled={i === 0} onClick={() => set({ seats: swap(seats, i, i - 1) })} aria-label={`Move ${n} up`}>↑</button>
+          <button type="button" className="ghost" disabled={i === seats.length - 1} onClick={() => set({ seats: swap(seats, i, i + 1) })} aria-label={`Move ${n} down`}>↓</button>
         </li>))}</ol>
-      <p><button type="button" className="ghost" onClick={() => setSeats(s => shuffled(s))}>Shuffle the order</button></p>
-      <form className="dn-filters dn-rz-opts" aria-label="Draft options" onSubmit={e => { e.preventDefault(); start(); }}>
-        <RandomizerOptions catalog={catalog} opts={opts} setOpts={p => { setMessage(''); setOpts(p); }} canFavor={canFavor} />
-        <div className="controls dn-rz-go"><button type="submit">Start the draft</button><button type="button" className="ghost" onClick={onCancel}>Back to rolling</button></div>
-      </form>
-      {message && <p className="dn-rz-msg" role="alert">{message}</p>}
+      <div className="dn-draft-row">
+        <button type="button" className="ghost" onClick={() => set({ seats: shuffled(seats) })}>Shuffle the order</button>
+        <button type="button" className={'dn-chip dn-bans'} aria-pressed={value.bans} onClick={() => set({ bans: !value.bans })} title="Before the picks, each player bans one card from the pool">Bans: {value.bans ? 'On' : 'Off'}</button>
+        <span className="meta">{value.bans ? 'Each player bans one card before the picks.' : 'No bans.'}</span>
+      </div>
+      <div className="dn-filters dn-rz-opts" aria-label="Draft options">
+        <RandomizerOptions catalog={catalog} opts={opts} setOpts={p => { set({ error: '' }); setOpts(p); }} canFavor={canFavor}
+          cardCount={<label className="f">Cards to draft from <select value={size} onChange={e => set({ poolSize: Number(e.target.value) })}>{POOL_SIZES.map(n => <option key={n} value={n}>{n}{n === poolSizeFor(seats.length) ? ' (suggested)' : ''}</option>)}</select></label>} />
+        <div className="controls dn-rz-go"><button type="button" className="ghost" onClick={() => { set({ poolSize: null, error: '' }); onReset(); }}>Reset options</button></div>
+      </div>
+      {value.error && <p className="dn-rz-msg" role="alert">{value.error}</p>}
     </div>
   );
 
+  // ---- the draft itself, and the finished screen
+  const order = snakeOrder(seats, draft.n);
+  const phase = banned.length < needed ? 'ban' : 'pick';
   const seatOf = n => seats.indexOf(n);
-  const taken = new Map(picks.map((k, i) => [k, { by: order[i], n: i + 1 }]));
-  const turn = order[picks.length];
+  const taken = new Map([...banned.flatMap((k, i) => (k ? [[k, { by: seats[i], n: i + 1, ban: true }]] : [])), ...picks.map((k, i) => [k, { by: order[i], n: i + 1 }])]);
+  const turn = phase === 'ban' ? seats[banned.length] : order[picks.length];
   const round = Math.floor(picks.length / seats.length) + 1;
+  const take = key => {
+    if (value.finished || taken.has(key)) return;
+    if (phase === 'ban') { set({ banned: [...banned, key] }); return; }
+    const next = [...picks, key];
+    if (next.length < draft.n) { set({ picks: next }); return; }
+    const res = finishDraft(catalog, draft, next);
+    if (!res.ok) { set({ error: res.message }); return; }
+    onChange({ ...value, picks: next, finished: true, error: '', original: toGameItems(res).filter(i => i.kind === 'card').map(i => i.id) });
+    onDone(res);
+  };
+  // a random card for whoever is up (a pick, not a ban: a ban can always be skipped)
+  const pickRandom = () => { const free = draft.pool.filter(s => !taken.has(s.key)); if (free.length) take(free[Math.floor(Math.random() * free.length)].key); };
+  const undo = () => (picks.length ? set({ picks: picks.slice(0, -1) }) : set({ banned: banned.slice(0, -1) }));
+
+  // after a finished draft, cards taken out by hand are struck through where they were drafted, with the card typed in beside them
+  const swaps = value.finished && value.original ? handSwaps(value.original, items.filter(i => i.kind === 'card').map(i => i.id)) : null;
+  const nameOf = id => { const c = catalog.cardsById.get(id); return c ? displayName(c) : id; };
+  const seatsSummary = (
+    <ul className="dn-draft-picks">{seats.map((n, si) => {
+      const mine = picks.map((k, i) => (order[i] === n ? { key: k, n: i + 1, slot: draft.pool.find(x => x.key === k) } : null)).filter(Boolean);
+      const bans = banned.map((k, i) => (seats[i] === n ? (k ? draft.pool.find(x => x.key === k) : { key: 'skip' + i, skipped: true }) : null)).filter(Boolean);
+      const left = order.filter((o, i) => i >= picks.length && o === n).length;
+      return (
+        <li key={n} className={'dn-draft-seat' + (!value.finished && n === turn ? ' now' : '')} style={{ '--seat': seatColor(si) }}>
+          <p className="dn-draft-seat-head"><b>{n}</b><span className="meta">{!value.finished && n === turn ? `${phase === 'ban' ? 'banning' : 'picking'} now · ` : ''}{mine.length} picked{value.finished ? '' : left ? `, ${left} to go` : ', done'}</span></p>
+          {bans.map(b => (b.skipped ? <p key={b.key} className="dn-draft-ban skipped"><span className="n">Ban</span><em>skipped</em></p> : <p key={b.key} className="dn-draft-ban"><span className="n">Ban</span>{b.name}</p>))}
+          {mine.length ? (
+            <ol className="dn-draft-mine">{mine.map(m => (
+              swaps && swaps.removed.includes(m.slot.cards[0].id)
+                ? <li key={m.key} className="replaced"><span className="n">#{m.n}</span><s>{m.slot.name}</s>{swaps.replacedBy.has(m.slot.cards[0].id) ? <b className="dn-swap-in" title="Picked by hand instead">→ {nameOf(swaps.replacedBy.get(m.slot.cards[0].id))}</b> : <em className="meta"> removed</em>}</li>
+                : <li key={m.key} className={'t-' + primaryType(m.slot.cards.find(c => primaryType(c) === 'Attack') || m.slot.cards[0]).toLowerCase()}><span className="n">#{m.n}</span>{m.slot.name}</li>
+            ))}</ol>
+          ) : <p className="meta" style={{ margin: 0 }}>Nothing yet</p>}
+        </li>
+      );
+    })}</ul>
+  );
+
+  if (value.finished) return (
+    <section className="builder dn-draft" aria-label="Draft finished" ref={top}>
+      <p className="dn-draft-done"><b>Draft Completed</b></p>
+      {seatsSummary}
+      {swaps && swaps.extra.length > 0 && <p className="meta">Also added by hand: {swaps.extra.map(nameOf).join(', ')}.</p>}
+      {setup && <Setup catalog={catalog} setup={setup} />}
+      {draft.landscapes.length > 0 && <p className="meta">Landscapes in this game: {draft.landscapes.map(l => l.landscape.name).join(', ')}.</p>}
+      <div className="controls dn-rz-go">
+        <button type="button" className="ghost" onClick={onRestart}>Restart draft</button>
+        <button type="button" className="ghost" aria-expanded={hand} onClick={() => setHand(!hand)}>{hand ? 'Hide hand-picking' : 'Pick cards by hand'}</button>
+      </div>
+      {hand && handPanel}
+    </section>
+  );
+
   return (
     <section className="builder dn-draft" aria-label="Snake draft" ref={top}>
-      <div className="dn-draft-turn" key={picks.length} role="status" aria-live="polite" style={{ '--seat': seatColor(seatOf(turn)) }}>
-        <span className="dn-draft-turn-who"><span className="meta">{picks.length ? 'Pass it to' : 'First pick'}</span><b>{turn}</b></span>
-        <span className="meta dn-draft-turn-n">Pick {picks.length + 1} of {draft.n}<br />round {round}</span>
+      <div className="dn-draft-turn" key={banned.length + ':' + picks.length} style={{ '--seat': seatColor(seatOf(turn)) }}>
+        <span className="dn-draft-turn-who" role="status" aria-live="polite"><span className="meta">{phase === 'ban' ? 'Ban a card' : picks.length ? 'Pass it to' : 'First pick'}</span><b>{turn}</b></span>
+        <span className="dn-draft-turn-right">
+          <span className="meta dn-draft-turn-n">{phase === 'ban' ? <>Ban {banned.length + 1} of {needed}</> : <>Pick {picks.length + 1} of {draft.n}<br />round {round}</>}</span>
+          {phase === 'ban'
+            ? <button type="button" className="dn-draft-act" onClick={() => set({ banned: [...banned, null] })} title="Bans are optional: pass without banning a card">Skip ban</button>
+            : <button type="button" className="dn-draft-act" onClick={pickRandom} title="Take a random card from the pool for this player">Pick random</button>}
+        </span>
       </div>
       <div className="dn-draft-bar">
-        <label className="dn-check"><input type="checkbox" checked={showText} onChange={e => setShowText(e.target.checked)} /> Show card text</label>
-        <button type="button" className="ghost" disabled={!picks.length} onClick={() => setPicks(p => p.slice(0, -1))}>Undo last pick</button>
-        <button type="button" className="ghost" onClick={() => { setDraft(null); setPicks([]); }}>Start over</button>
+        <ShowTextButton className="dn-draft-textbtn" on={value.showText} onClick={() => set({ showText: !value.showText })} />
+        <button type="button" className="ghost" disabled={!picks.length && !banned.length} onClick={undo}>{picks.length || !banned.length ? 'Undo last pick' : 'Undo last ban'}</button>
+        <button type="button" className="ghost" onClick={onRestart}>Restart Drafting</button>
       </div>
       <ul className="dn-rzgrid dn-draft-pool" aria-label="Cards to choose from">
         {draft.pool.map(s => {
           const t = taken.get(s.key);
           return (
-            <li key={s.key} onClick={t ? undefined : () => take(s.key)} className={'dn-rztile dn-draft-tile t-' + primaryType(s.cards.find(c => primaryType(c) === 'Attack') || s.cards[0]).toLowerCase() + (t ? ' taken' : '')} style={t ? { '--seat': seatColor(seatOf(t.by)) } : undefined}>
-              <button type="button" className="dn-draft-take" disabled={!!t} onClick={() => take(s.key)} aria-label={t ? `${s.name}, taken by ${t.by}` : `${turn} takes ${s.name}`}>
+            <li key={s.key} onClick={t ? undefined : () => take(s.key)} className={'dn-rztile dn-draft-tile t-' + primaryType(s.cards.find(c => primaryType(c) === 'Attack') || s.cards[0]).toLowerCase() + (t ? ' taken' : '') + (t && t.ban ? ' banned' : '')} style={t ? { '--seat': seatColor(seatOf(t.by)) } : undefined}>
+              <button type="button" className="dn-draft-take" disabled={!!t} aria-label={t ? `${s.name}, ${t.ban ? 'banned' : 'taken'} by ${t.by}` : `${turn} ${phase === 'ban' ? 'bans' : 'takes'} ${s.name}`}>
                 <span className="dn-rz-cost"><CostIcons coins={s.cards[0].coins} debt={s.cards[0].debt} overpay={s.cards[0].overpay} size={28} /></span>
                 <span className="dn-rz-main">
                   <span className="dn-rz-name">{s.name}</span>
                   <span className="dn-draft-sub"><TypePills types={[...new Set(s.cards.flatMap(c => c.types))]} /><span className="meta dn-rz-exp"><ExpansionBadge name={s.expansion} size={14} /></span></span>
                 </span>
-                {t && <span className="dn-draft-by">{t.by} · #{t.n}</span>}
+                {t && <span className="dn-draft-by">{t.ban ? 'Banned' : '#' + t.n} · {t.by}</span>}
               </button>
-              {showText && s.cards.map(c => <div key={c.id} className="dn-rz-text">{s.cards.length > 1 && <p className="meta dn-rz-textname">{c.name}</p>}<CardText text={c.text} hasAnyText={catalog.meta.textRecordCount > 0} /></div>)}
-              {showText && <p className="meta" style={{ margin: 0 }}><a href={cardHref(s.cards[0].id)} onClick={e => e.stopPropagation()}>Card page</a></p>}
+              {value.showText && s.cards.map(c => <div key={c.id} className="dn-rz-text">{s.cards.length > 1 && <p className="meta dn-rz-textname">{c.name}</p>}<CardText text={c.text} hasAnyText={catalog.meta.textRecordCount > 0} /></div>)}
+              <button type="button" className="dn-draft-more" aria-label={`Show the text of ${s.name}`} onClick={e => { e.stopPropagation(); setPeek({ kind: 'card', s }); }}>⌄</button>
             </li>
           );
         })}
@@ -107,29 +176,45 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
                     {l.landscape.type === 'Trait' && <span className="meta">Goes on one of the Kingdom cards once they are chosen.</span>}
                   </span>
                 </div>
-                {showText && <div className="dn-rz-text"><CardText text={l.landscape.text} hasAnyText={catalog.meta.textRecordCount > 0} /></div>}
-                {showText && <p className="meta" style={{ margin: 0 }}><a href={landscapeHref(l.landscape.id)} onClick={e => e.stopPropagation()}>Landscape page</a></p>}
+                {value.showText && <div className="dn-rz-text"><CardText text={l.landscape.text} hasAnyText={catalog.meta.textRecordCount > 0} /></div>}
+                <button type="button" className="dn-draft-more" aria-label={`Show the text of ${l.landscape.name}`} onClick={() => setPeek({ kind: 'landscape', l })}>⌄</button>
               </li>
             ))}
           </ul>
         </>
       )}
-      <h3 className="dn-rz-sub">Picked so far</h3>
-      <ul className="dn-draft-picks">{seats.map((n, si) => {
-        const mine = picks.map((k, i) => (order[i] === n ? { key: k, n: i + 1, slot: draft.pool.find(x => x.key === k) } : null)).filter(Boolean);
-        const left = order.filter((o, i) => i >= picks.length && o === n).length;
-        return (
-          <li key={n} className={'dn-draft-seat' + (n === turn ? ' now' : '')} style={{ '--seat': seatColor(si) }}>
-            <p className="dn-draft-seat-head"><b>{n}</b><span className="meta">{n === turn ? 'picking now · ' : ''}{mine.length} picked{left ? `, ${left} to go` : ', done'}</span></p>
-            {mine.length ? (
-              <ol className="dn-draft-mine">{mine.map(m => (
-                <li key={m.key} className={'t-' + primaryType(m.slot.cards.find(c => primaryType(c) === 'Attack') || m.slot.cards[0]).toLowerCase()}><span className="n">#{m.n}</span>{m.slot.name}</li>
-              ))}</ol>
-            ) : <p className="meta" style={{ margin: 0 }}>Nothing yet</p>}
-          </li>
-        );
-      })}</ul>
-      {message && <p className="dn-rz-msg" role="alert">{message}</p>}
+      <h3 className="dn-rz-sub">{needed ? 'Bans and picks so far' : 'Picked so far'}</h3>
+      {seatsSummary}
+      {value.error && <p className="dn-rz-msg" role="alert">{value.error}</p>}
+      {peek && <Peek catalog={catalog} peek={peek} onClose={() => setPeek(null)} />}
     </section>
+  );
+}
+
+const swap = (list, a, b) => { const x = list.slice(); [x[a], x[b]] = [x[b], x[a]]; return x; };
+
+/* One card's (or landscape's) text in a small dialog over the page, so it never changes the size of the cards around it: the phone can be
+   passed round for everyone to read it (the ⌄ button is shown on a phone only). Escape, a tap outside it or Close shuts it. */
+function Peek({ catalog, peek, onClose }) {
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey); return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  const has = catalog.meta.textRecordCount > 0;
+  const body = peek.kind === 'card'
+    ? { title: peek.s.name, cards: peek.s.cards, head: <><div className="dn-rz-cost"><CostIcons coins={peek.s.cards[0].coins} debt={peek.s.cards[0].debt} overpay={peek.s.cards[0].overpay} size={30} /></div><TypePills types={[...new Set(peek.s.cards.flatMap(c => c.types))]} /><ExpansionBadge name={peek.s.expansion} size={14} /></> }
+    : { title: peek.l.landscape.name, cards: [peek.l.landscape], head: <><LandscapePill type={peek.l.landscape.type} /><ExpansionBadge name={peek.l.landscape.expansion} size={14} /></> };
+  // in a portal on <body>: inside the page's frosted panels a fixed overlay would only cover the panel, and a tap outside it would miss
+  return createPortal(
+    <div className="dn-peek" role="presentation" onClick={onClose}>
+      <div className="dn-peek-box" role="dialog" aria-modal="true" aria-label={`${body.title}, card text`} onClick={e => e.stopPropagation()}>
+        <h3>{body.title}</h3>
+        <div className="dn-peek-head">{body.head}</div>
+        {body.cards.map(c => <div key={c.id} className="dn-rz-text">{body.cards.length > 1 && <p className="meta dn-rz-textname">{c.name}</p>}<CardText text={c.text} hasAnyText={has} /></div>)}
+        <p className="meta" style={{ margin: '10px 0 0' }}><a href={peek.kind === 'card' ? cardHref(peek.s.cards[0].id) : landscapeHref(peek.l.landscape.id)}>{peek.kind === 'card' ? 'Card page' : 'Landscape page'}</a></p>
+        <button type="button" onClick={onClose} autoFocus>Close</button>
+      </div>
+    </div>,
+    document.body,
   );
 }

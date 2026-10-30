@@ -1,0 +1,87 @@
+import KingdomPicker from './KingdomPicker.jsx';
+import RandomizerPanel from '../dominion/components/RandomizerPanel.jsx';
+import SnakeDraft from '../dominion/components/SnakeDraft.jsx';
+import { draftState } from '../dominion/draft.js';
+import { Setup } from '../dominion/components/RandomizerPanel.jsx';
+import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
+import { formatSeed } from '../dominion/randomizer.js';
+import { toGameItems } from '../dominion/randomizer.js';
+
+const CHOICES = [
+  { id: 'random', title: 'Random', text: 'Roll a kingdom with your own rules. Lock the cards you like and re-roll the rest.' },
+  { id: 'manual', title: 'Manual', text: 'Type in and pick every card yourself.' },
+  { id: 'draft', title: 'Snake draft', text: 'Take turns choosing from a pool of cards, the last seat picking twice.' },
+];
+
+/* Game night step 2. It opens on one question, "How do you want to decide your kingdom?", and each answer is its own screen and Night's Back button returns
+   to the question. The Random screen is the Randomizer's own panel; the Snake draft is the same draft as the Collection's, shaped by the same
+   options. Whatever is chosen ends up as `items` (the game's kingdom), which Night's "Start Game & Timer" button takes to the Play step.
+   mode / setMode        null (the question) or 'random' | 'manual' | 'draft'
+   roll / setRollOpts / resetRoll   the randomizer options; kept / onKeep the locked cards and typed seed; hand / setHand whether the hand-pick panel is open; draftSave / onDraft / onRestartDraft a snake draft
+   (in progress or finished): all kept in the saved night, so they survive going back to the question or a look at a card
+   applyKingdom(items, rolled)      stores a roll, a draft or a hand-picked list as the game's kingdom
+   onSkip()              leave the kingdom out and go on to the scores (a game can be saved without one) */
+export default function KingdomStep({ catalog, mode, setMode, players, roll, setRollOpts, resetRoll, kept, onKeep, hand, setHand, draftSave, onDraft, onRestartDraft, plays, items, resolved, rolled, setupNow, handEdited, randomDone, setRandomDone, applyKingdom, onPick, onSkip, text }) {
+  if (!mode) return (
+    <>
+      <p className="night-q">How do you want to decide your kingdom?</p>
+      <ul className="night-choices">
+        {CHOICES.map(c => (
+          <li key={c.id}><button type="button" className="night-choice" onClick={() => setMode(c.id)}><b>{c.title}</b><span>{c.text}</span></button></li>
+        ))}
+      </ul>
+      {items.length > 0 && <p className="meta">A kingdom is already chosen for this game. Pick a way above to change it, or press <b>Start Game &amp; Timer</b> to keep it.</p>}
+      <p className="meta night-skip">Not tracking cards tonight? <button type="button" className="linkish" onClick={onSkip}>Skip the kingdom</button></p>
+    </>
+  );
+  if (mode === 'draft') return (
+    <>
+      <SnakeDraft catalog={catalog} players={players} opts={roll} setOpts={setRollOpts} plays={plays} value={draftState(draftSave, players)} onChange={onDraft}
+        onDone={res => applyKingdom(toGameItems(res), res)} onRestart={onRestartDraft} onReset={resetRoll} items={items} setup={setupNow}
+        hand={hand} setHand={setHand} handPanel={<div className="night-hand"><KingdomPicker items={items} onChange={onPick} /></div>} />
+    </>
+  );
+  if (mode === 'manual') return (
+    <>
+      <p className="meta">Add the cards and landscapes in play. Remove any with its ✕.</p>
+      <KingdomPicker items={items} onChange={onPick} />
+      {handEdited && items.length > 0 && setupNow && <Setup catalog={catalog} setup={setupNow} />}
+      {items.length > 0 && text}
+    </>
+  );
+  return <RandomRoll {...{ catalog, roll, setRollOpts, resetRoll, kept, onKeep, hand, setHand, setupNow, handEdited, randomDone, setRandomDone, plays, items, resolved, rolled, applyKingdom, onPick, text }} />;
+}
+
+// the Random screen: the options and Roll row, with "Pick cards by hand" beside Reset (it opens the hand-picker under the options)
+function RandomRoll({ catalog, roll, setRollOpts, resetRoll, kept, onKeep, hand, setHand, setupNow, handEdited, randomDone, setRandomDone, plays, items, resolved, rolled, applyKingdom, onPick, text }) {
+  // "Use this kingdom" closes the roll into a summary of what was chosen, like a finished draft: the cards, the landscapes, the setup, and a way back
+  if (randomDone && items.length) {
+    const cards = resolved.filter(r => r.kind === 'card'), lands = resolved.filter(r => r.kind === 'landscape');
+    return (
+      <section className="builder dn-draft" aria-label="Kingdom chosen">
+        <p className="dn-draft-done"><b>Kingdom Chosen</b>{rolled && rolled.seed != null && <span className="meta"> · Seed {formatSeed(rolled.seed)}</span>}</p>
+        <p className="meta" style={{ margin: '0 0 6px' }}>{cards.length} Kingdom card{cards.length === 1 ? '' : 's'}</p>
+        <div className="dn-kchips">{cards.map(r => <KingdomChip key={r.id} r={r} plain />)}</div>
+        {lands.length > 0 && <><p className="meta" style={{ margin: '12px 0 6px' }}>Landscapes</p><div className="dn-kchips">{lands.map(r => <KingdomChip key={r.id} r={r} plain />)}</div></>}
+        {setupNow && <Setup catalog={catalog} setup={setupNow} />}
+        <div className="controls dn-rz-go">
+          <button type="button" className="ghost" onClick={() => setRandomDone(false)}>Back to the roll</button>
+          <button type="button" className="ghost" aria-expanded={hand} onClick={() => setHand(!hand)}>{hand ? 'Hide hand-picking' : 'Pick cards by hand'}</button>
+        </div>
+        {hand && <div className="night-hand"><KingdomPicker items={items} onChange={onPick} /></div>}
+        {text}
+      </section>
+    );
+  }
+  return (
+    <>
+      <RandomizerPanel catalog={catalog} opts={roll} setOpts={setRollOpts} state={rolled} plays={plays} emptyHint={false}
+        onState={res => applyKingdom(toGameItems(res), res)} onReset={resetRoll} kept={kept} onKeep={onKeep}
+        actions={rolled ? <button type="button" className="dn-use" onClick={() => setRandomDone(true)}>Use this kingdom →</button> : null}
+        extraControls={<button type="button" className="ghost" aria-expanded={hand} onClick={() => setHand(!hand)}>{hand ? 'Hide hand-picking' : 'Pick cards by hand'}</button>}
+        below={hand ? <div className="night-hand"><KingdomPicker items={items} onChange={onPick} /></div> : null} />
+      {hand && handEdited && items.length > 0 && setupNow && <Setup catalog={catalog} setup={setupNow} />}
+      {items.length > 0 && !rolled && text}
+    </>
+  );
+}

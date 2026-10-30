@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { realCatalog } from './fixtures.js';
 import {
   generate, rerollSlot, rerollLandscape, seededRng, sortSlots, slotCardId, pileKeyOf, REQUIRE_RULES,
-  optionsToParams, optionsFromParams, kingdomToParams, kingdomFromParams, toGameItems, DEFAULT_OPTIONS, rollSeeded, newSeed, parseSeed, formatSeed,
+  optionsToParams, optionsFromParams, kingdomToParams, kingdomFromParams, toGameItems, DEFAULT_OPTIONS, rollSeeded, newSeed, parseSeed, formatSeed, setupForHand,
 } from '../../src/dominion/randomizer.js';
 
 const catalog = realCatalog();
@@ -10,7 +10,9 @@ const card = name => catalog.cards.find(c => c.name === name);
 const roll = (opts, seed = 1, extra = {}) => generate(catalog, opts, { rng: seededRng(seed), ...extra });
 const rolls = (opts, n = 150, extra = {}) => Array.from({ length: n }, (_, i) => roll(opts, i + 1, extra));
 const attacks = r => r.slots.filter(s => s.cards.some(c => c.types.includes('Attack'))).length;
-const has = (r, rule) => r.slots.some(s => s.cards.some(c => (REQUIRE_RULES[rule].coins != null
+const has = (r, rule) => r.slots.some(s => s.cards.some(c => (REQUIRE_RULES[rule].atLeast != null
+  ? c.coins >= REQUIRE_RULES[rule].atLeast && c.debt === 0
+  : REQUIRE_RULES[rule].coins != null
   ? c.coins === REQUIRE_RULES[rule].coins && c.debt === 0
   : c.mechanicIds.some(t => REQUIRE_RULES[rule].tags.includes(t)))));
 
@@ -147,6 +149,74 @@ describe('favour the less played', () => {
   });
 });
 
+describe('favour the more played', () => {
+  it('draws the heavily played card more often', () => {
+    const base = catalog.cards.filter(c => c.expansion === 'Dominion Base Game'), heavy = base[0].id;
+    const plays = new Map([[pileKeyOf(catalog, heavy), 30]]);
+    const count = (favorPlayed, id) => rolls({ expansions: ['Dominion Base Game'], cards: 5, favorPlayed }, 400, { plays }).filter(r => r.slots.some(s => s.cards.some(c => c.id === id))).length;
+    expect(count(true, heavy)).toBeGreaterThan(count(false, heavy) * 1.5);
+  });
+});
+
+describe('the setup of a kingdom changed by hand', () => {
+  const ids = (exp, n) => catalog.cards.filter(c => c.expansion === exp && c.types.includes('Action')).slice(0, n).map(c => c.id);
+  it('uses Platinum and Colony once half or more of the cards are Prosperity, and Shelters for Dark Ages', () => {
+    const base = ids('Dominion Base Game', 6), pro = ids('Prosperity', 4);
+    expect(setupForHand(catalog, [...base, ...pro.slice(0, 2)]).platinumColony).toBe(false);   // 2 of 8
+    const half = setupForHand(catalog, [...base.slice(0, 4), ...pro]);                         // 4 of 8
+    expect(half.platinumColony).toBe(true); expect(half.hand).toEqual({ total: 8, prosperity: 4, darkAges: 0 });
+    expect(setupForHand(catalog, [...base.slice(0, 5), ...ids('Dark Ages', 5)]).shelters).toBe(true);
+    expect(setupForHand(catalog, base).shelters).toBe(false);
+  });
+  it('wants a Bane when Young Witch is in, keeps the one it had, and drops it with the Young Witch', () => {
+    const base = ids('Dominion Base Game', 4), witch = card('Young Witch').id, bane = catalog.cards.find(c => c.coins === 2 && c.debt === 0 && c.expansion === 'Dominion Base Game').id;
+    expect(setupForHand(catalog, [...base, witch]).needsBane).toBe(true);
+    const kept = setupForHand(catalog, [...base, witch, bane], bane);
+    expect(kept.needsBane).toBe(false); expect(kept.bane.cards[0].id).toBe(bane);
+    expect(setupForHand(catalog, [...base, bane], bane)).toMatchObject({ needsBane: false, bane: null });
+  });
+  it('asks for the Ruins pile when a Looter is in', () => {
+    expect(setupForHand(catalog, [card('Marauder').id]).ruins).toBe(true);
+    expect(setupForHand(catalog, ids('Dominion Base Game', 3)).ruins).toBe(false);
+  });
+});
+
+describe('a card costing $6 or more', () => {
+  it('is in every roll that asks for one', () => {
+    for (const r of rolls({ require: ['cost6'] }, 60)) expect(has(r, 'cost6')).toBe(true);
+  });
+});
+
+describe('a variable-scoring or alternate-victory card', () => {
+  it('is in every roll that asks for one', () => {
+    for (const r of rolls({ require: ['scoring'] }, 60)) expect(has(r, 'scoring')).toBe(true);
+  });
+});
+
+describe('a trasher when an Attack gives junk', () => {
+  const junking = r => r.slots.some(s => s.cards.some(c => c.mechanicIds.includes('opponent_junking')));
+  it('always has a trashing card whenever a junking Attack is in', () => {
+    const rs = rolls({ junkTrash: true }, 200), withJunk = rs.filter(junking);
+    expect(withJunk.length).toBeGreaterThan(10);   // the test would mean nothing if no kingdom had a junking Attack
+    for (const r of withJunk) expect(has(r, 'trash')).toBe(true);
+  });
+  it('does nothing when the rule is off', () => {
+    expect(rolls({}, 200).filter(junking).some(r => !has(r, 'trash'))).toBe(true);
+  });
+});
+
+describe('distributing cost', () => {
+  const avgCost = r => r.slots.reduce((a, s) => a + s.cards[0].coins + s.cards[0].debt, 0) / r.slots.length;
+  const mean = o => { const rs = rolls(o, 200); return rs.reduce((a, r) => a + avgCost(r), 0) / rs.length; };
+  it('high leans to expensive cards and low to cheap ones, with standard between', () => {
+    const hi = mean({ costSpread: 'high' }), lo = mean({ costSpread: 'low' }), st = mean({ costSpread: 'standard' });
+    expect(hi).toBeGreaterThan(st); expect(st).toBeGreaterThan(lo);
+  });
+  it('stays repeatable for one seed', () => {
+    expect(roll({ costSpread: 'high' }, 9).slots.map(s => s.key)).toEqual(roll({ costSpread: 'high' }, 9).slots.map(s => s.key));
+  });
+});
+
 describe('re-rolling one slot or one landscape', () => {
   it('swaps just that slot, and the rules still hold', () => {
     const opts = { maxAttacks: 0, require: ['village'] };
@@ -175,7 +245,7 @@ describe('re-rolling one slot or one landscape', () => {
 
 describe('the link', () => {
   it('round-trips the options', () => {
-    const o = { expansions: ['Seaside', 'Dark Ages'], cards: 8, landscapes: 2, landscapeTypes: ['Way'], maxAttacks: 1, reaction: true, require: ['village', 'buy'], include: ['a:b'], exclude: ['c:d'], favor: true };
+    const o = { expansions: ['Seaside', 'Dark Ages'], cards: 8, landscapes: 2, landscapeTypes: ['Way'], maxAttacks: 1, reaction: true, require: ['village', 'buy'], include: ['a:b'], exclude: ['c:d'], favor: true, favorPlayed: false, junkTrash: true, costSpread: 'high' };
     expect(optionsFromParams(new URLSearchParams(optionsToParams(o).toString()))).toEqual(o);
     expect(optionsToParams(DEFAULT_OPTIONS).toString()).toBe('');
     expect(optionsFromParams(new URLSearchParams(''))).toEqual(DEFAULT_OPTIONS);
