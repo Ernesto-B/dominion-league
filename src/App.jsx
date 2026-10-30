@@ -13,6 +13,7 @@ import PageBoundary from './components/PageBoundary.jsx';
 import PlayerHud from './components/PlayerHud.jsx';
 import ScrollTopButton from './components/ScrollTopButton.jsx';
 import PopLayer from './components/PopLayer.jsx';
+import PeekLayer from './dominion/components/CardPeek.jsx';
 import { popup } from './components/popup.js';
 import BottomNav from './components/BottomNav.jsx';
 import OfflineBar from './components/OfflineBar.jsx';
@@ -70,6 +71,7 @@ function Shell() {
       {ready && <BottomNav ready={{ ...state, route }} hash={hash} />}
       {ready && (['home', 'season', 'games', 'players', 'records', 'night', 'dominion'].includes(route.route)) && <ScrollTopButton lift={route.route === 'night'} />}
       <PopLayer />
+      <PeekLayer />
     </>
   );
 }

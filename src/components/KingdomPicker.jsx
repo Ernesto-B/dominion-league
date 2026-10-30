@@ -1,15 +1,13 @@
-import { useState } from 'react';
 import { useCatalogLoad } from '../dominion/CatalogContext.jsx';
 import { KingdomChip, ShelfGroups } from '../dominion/components/KingdomChips.jsx';
 import ItemSearch from '../dominion/components/ItemSearch.jsx';
-import Peek from '../dominion/components/CardPeek.jsx';
+import { openPeek } from '../dominion/components/CardPeek.jsx';
 import { MAX_CARDS, MAX_LANDSCAPES, displayName, impliedSets, resolveKingdom } from '../dominion/kingdom.js';
 
 /* The Kingdom section of the Add/Edit Game dialog. `items` is the kingdom so far; `onChange(items, implied)` reports every
    change, `implied` being the Sets / landscape groups the newly added item belongs to (so the dialog can tick them for you). */
 export default function KingdomPicker({ items, onChange }) {
   const cat = useCatalogLoad();
-  const [peek, setPeek] = useState(null);   // the card or landscape whose text is open (the ⌄ on a chip, on a phone)
 
   if (cat.status === 'loading') return <p className="meta">Loading the card list…</p>;
   if (cat.status === 'error') return (
@@ -30,7 +28,7 @@ export default function KingdomPicker({ items, onChange }) {
   const setOn = (id, on) => onChange(items.map(i => (i.kind === 'landscape' && i.id === id ? { kind: i.kind, id: i.id, ...(on ? { on } : {}) } : i)), nothing);
   const cardItems = resolved.filter(r => r.kind === 'card' && !r.missing);
 
-  const chipFor = (r, i) => (<KingdomChip key={`${r.kind}:${r.id}`} r={r} expansion onRemove={() => remove(i)} onPeek={r.missing ? undefined : () => setPeek(r.kind === 'card' ? { kind: 'card', s: { name: displayName(r.obj), cards: [r.obj], expansion: r.obj.expansion } } : { kind: 'landscape', l: { landscape: r.obj } })} />);
+  const chipFor = (r, i) => (<KingdomChip key={`${r.kind}:${r.id}`} r={r} expansion onRemove={() => remove(i)} onPeek={r.missing ? undefined : () => openPeek(catalog, r.kind === 'card' ? { kind: 'card', s: { name: displayName(r.obj), cards: [r.obj], expansion: r.obj.expansion } } : { kind: 'landscape', l: { landscape: r.obj } })} />);
 
   return (
     <div className="dn-kpicker">
@@ -50,7 +48,6 @@ export default function KingdomPicker({ items, onChange }) {
         </label>
       ))}
       <ItemSearch catalog={catalog} taken={items} label="Add a card or landscape" onAdd={add} />
-      {peek && <Peek catalog={catalog} peek={peek} onClose={() => setPeek(null)} />}
     </div>
   );
 }

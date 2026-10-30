@@ -43,6 +43,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--text
   }
 }
 a{color:inherit}
+html{touch-action:manipulation}   /* a tap is only ever a tap: no double-tap-to-zoom to wait out, so a second tap right after the first is never swallowed (pinching still zooms) */
 a,button,select,summary,label,input{touch-action:manipulation}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:3px}
 .skip{position:absolute;left:-999px;top:0;background:var(--ink);color:var(--bg);padding:8px 12px;z-index:10}
@@ -1011,7 +1012,7 @@ html{overscroll-behavior-y:contain}   /* the browser's own pull-to-refresh would
 .dn-swapped .gone,.dn-swapped .gone *{text-decoration:line-through;text-decoration-color:var(--muted)}
 .dn-swapped .gone{opacity:.65}
 .dn-swap-in{color:var(--brass);font-weight:700}
-.dn-peek{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.6)}
+.dn-peek{overscroll-behavior:contain;position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.6)}
 .dn-peek-box{width:min(420px,100%);max-height:80vh;overflow:auto;padding:16px 18px;background:var(--panel);border:1px solid var(--frame,var(--line));border-radius:14px}
 .dn-peek-box h3{margin:0 0 8px;font-size:20px}
 .dn-peek-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 8px}

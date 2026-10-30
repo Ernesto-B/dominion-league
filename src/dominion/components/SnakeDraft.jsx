@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { POOL_SIZES, bansNeeded, finishDraft, handSwaps, poolSizeFor, rollPool, shuffled, snakeOrder } from '../draft.js';
 import { toGameItems } from '../randomizer.js';
 import { CardText, ExpansionBadge, LandscapePill, ShowTextButton, TypePills } from './bits.jsx';
@@ -6,7 +6,7 @@ import CostIcons from './Cost.jsx';
 import RandomizerOptions from './RandomizerOptions.jsx';
 import { displayName, primaryType } from '../kingdom.js';
 import { Setup } from './RandomizerPanel.jsx';
-import Peek from './CardPeek.jsx';
+import { openPeek } from './CardPeek.jsx';
 
 /* Pick the kingdom in turns. One device is enough: pass it round, or let one person tap each player's choice.
    The draft is CONTROLLED: its whole state (`value`, see draftState in draft.js) lives in the saved Game night, so leaving the page, or the
@@ -26,7 +26,6 @@ const seatColor = i => `hsl(${(i * 67 + 24) % 360} 68% 62%)`;
 export default function SnakeDraft({ catalog, players, opts, setOpts, plays = null, value, onChange, onDone, onRestart, onReset, items = [], setup = null, hand = false, setHand = () => {}, handPanel = null }) {
   const { seats } = value;
   const set = patch => onChange({ ...value, ...patch });
-  const [peek, setPeek] = useState(null);          // the card or landscape whose text is open
   const top = useRef(null);
   const canFavor = !!plays && plays.size > 0;
 
@@ -160,7 +159,7 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
                 {t && <span className="dn-draft-by">{t.ban ? 'Banned' : '#' + t.n} · {t.by}</span>}
               </button>
               {value.showText && s.cards.map(c => <div key={c.id} className="dn-rz-text">{s.cards.length > 1 && <p className="meta dn-rz-textname">{c.name}</p>}<CardText text={c.text} hasAnyText={catalog.meta.textRecordCount > 0} /></div>)}
-              <button type="button" className="dn-draft-more" aria-label={`Show the text of ${s.name}`} onClick={e => { e.stopPropagation(); setPeek({ kind: 'card', s }); }}>⌄</button>
+              <button type="button" className="dn-draft-more" aria-label={`Show the text of ${s.name}`} onClick={e => { e.stopPropagation(); openPeek(catalog, { kind: 'card', s }); }}>⌄</button>
             </li>
           );
         })}
@@ -180,7 +179,7 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
                   </span>
                 </div>
                 {value.showText && <div className="dn-rz-text"><CardText text={l.landscape.text} hasAnyText={catalog.meta.textRecordCount > 0} /></div>}
-                <button type="button" className="dn-draft-more" aria-label={`Show the text of ${l.landscape.name}`} onClick={() => setPeek({ kind: 'landscape', l })}>⌄</button>
+                <button type="button" className="dn-draft-more" aria-label={`Show the text of ${l.landscape.name}`} onClick={() => openPeek(catalog, { kind: 'landscape', l })}>⌄</button>
               </li>
             ))}
           </ul>
@@ -189,7 +188,6 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
       <h3 className="dn-rz-sub">{needed ? 'Bans and picks so far' : 'Picked so far'}</h3>
       {seatsSummary}
       {value.error && <p className="dn-rz-msg" role="alert">{value.error}</p>}
-      {peek && <Peek catalog={catalog} peek={peek} onClose={() => setPeek(null)} />}
     </section>
   );
 }
