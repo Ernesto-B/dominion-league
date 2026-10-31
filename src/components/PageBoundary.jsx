@@ -9,6 +9,7 @@ export default class PageBoundary extends Component {
   componentDidCatch(error) { console.error('Page failed to render:', error); }
   render() {
     if (!this.state.error) return this.props.children;
-    return <><h1>Something went wrong</h1><p className="lede">This page failed to render. Try another page, or reload.</p></>;
+    return <><h1>Something went wrong</h1><p className="lede">This page failed to render. Try another page, or reload.</p>
+      <p className="meta">{String((this.state.error && this.state.error.message) || this.state.error).slice(0, 200)}</p></>;
   }
 }

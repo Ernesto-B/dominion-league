@@ -163,3 +163,20 @@ describe('the game report page', () => {
     });
   });
 });
+
+describe('the report with grace states', () => {
+  it('renders every tab when players are held, dropped or saved', () => {
+    line = 0;
+    const order = ['Ann > Bob > Cy > Dee', 'Ann > Bob > Cy > Dee', 'Ann > Bob > Cy > Dee', 'Ann > Bob > Cy > Dee', 'Dee > Cy > Bob > Ann', 'Dee > Cy > Bob > Ann', 'Dee > Cy > Bob > Ann', 'Bob > Ann > Cy > Dee', 'Dee > Cy > Bob > Ann', 'Ann > Bob > Cy > Dee', 'Dee > Cy > Bob > Ann', 'Dee > Cy > Bob > Ann'];
+    const D = run(order.map((f, i) => row(f, { date: `2026-10-${String(i + 1).padStart(2, '0')}`, minutes: 30, cards: K1 })));
+    const page = { D, gid: 'a', hashFor: (r, g, x) => `#/${r}/${g}${x != null ? '/' + x : ''}`, me: null, catalog, allGroups: [{ id: 'a' }] };
+    const draw = el => renderToString(createElement(PageContext.Provider, { value: page }, el));
+    let kinds = new Set();
+    D.games.forEach(game => {
+      const rep = gameReport(D, game, { catalog });
+      rep.players.forEach(p => { if (p.elo && p.elo.grace) kinds.add(p.elo.grace.kind); });
+      draw(createElement(Players, { rep, game, me: null }));
+    });
+    expect(kinds.size).toBeGreaterThan(0);
+  });
+});
