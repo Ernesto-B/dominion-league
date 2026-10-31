@@ -5,7 +5,7 @@ import { SET_NAMES, LANDSCAPES } from '../lib/sets.js';
 import { buildGameArgs, callGameRpc, resortByVP, toggle } from '../lib/gameForm.js';
 import { badgesFor, gameXp, leagueXp } from '../lib/xp.js';
 import { BadgeReward, LevelReward } from '../components/RewardCard.jsx';
-import { STEPS, advance, back, blankNight, clearNight, elapsed, gameSummary, loadNight, saveNight, stepNumber } from '../lib/night.js';
+import { MAX_TABLES, STEPS, advance, back, blankNight, clearNight, elapsed, gameSummary, hasNight, loadNight, saveNight, stepNumber, tableLabel } from '../lib/night.js';
 import NameIcon from '../components/NameIcon.jsx';
 import SetIcon from '../components/SetIcon.jsx';
 import EloPreview from '../components/EloPreview.jsx';
@@ -15,7 +15,7 @@ import { DRAFT_PICKS, draftState, poolSizeFor, rollPool } from '../dominion/draf
 import { useCatalogLoad } from '../dominion/CatalogContext.jsx';
 import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
 import { CardText, ShowTextButton } from '../dominion/components/bits.jsx';
-import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, newSeed, setupForHand } from '../dominion/randomizer.js';
+import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, newSeed, setupForHand, withAvoid } from '../dominion/randomizer.js';
 import CountUp from '../components/CountUp.jsx';
 import { pilesPlayed, playStats } from '../dominion/playStats.js';
 import { impliedSets, primaryType, resolveKingdom, shelfOrder } from '../dominion/kingdom.js';
@@ -32,7 +32,51 @@ const storage = () => { try { return window.localStorage; } catch { return null;
 // with the browser's back button starts that group's own night instead of carrying the other group's players and progress over.
 export default function Night() {
   const { gid } = usePage();
-  return <NightBoundary key={gid ?? 'none'} onReset={() => { if (storage()) clearNight(storage(), gid); }}><NightFlow /></NightBoundary>;
+  return <NightBoundary key={gid ?? 'none'} onReset={() => { if (storage()) for (let i = 0; i < MAX_TABLES; i++) clearNight(storage(), gid, i); }}><Tables /></NightBoundary>;
+}
+
+/* One or two tables playing at once (one shared device). Each table is a whole Game night of its own (NightFlow, saved in its own slot) and both stay mounted, the
+   other one just hidden, so a game's clock, kingdom and unsaved scores are exactly as they were when switching back. The only thing the tables share is who is
+   sitting where: a player can't be at both, so whoever is at one table is greyed out at the other. */
+function Tables() {
+  const { gid, me } = usePage();
+  const [open, setOpen] = useState(() => (storage() && hasNight(storage(), gid, 1) ? 2 : 1));   // how many tables are running
+  const [active, setActive] = useState(0);
+  const [info, setInfo] = useState({});                          // slot -> { picked, step, startedAt, done }, reported by each table
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 20000); return () => clearInterval(t); }, []);
+  const report = useMemo(() => [0, 1].map(i => v => setInfo(s => ({ ...s, [i]: v }))), []);
+  const avoidAt = i => (info[1 - i] && !info[1 - i].done ? info[1 - i].kingdom || [] : []);   // the cards and landscapes in play at the other table: there is one copy of each
+  const busyAt = i => (info[1 - i] && !info[1 - i].done ? info[1 - i].picked : []);
+  const addTable = () => { setOpen(2); setActive(1); };
+  const closeTable = () => {
+    const w = info[1];
+    if (w && !w.done && (w.picked.length || w.step !== 'players') && !window.confirm('Close table 2? Anything not saved there is lost.')) return;
+    if (storage()) clearNight(storage(), gid, 1);
+    setInfo(s => ({ ...s, 1: undefined })); setOpen(1); setActive(0);
+  };
+  const admin = !!(me && me.is_admin);
+  return (
+    <>
+      {admin && (
+        <div className="night-tables" role="group" aria-label="Tables">
+          {open === 1 ? <button type="button" className="ghost" onClick={addTable}>+ A second table</button> : (
+            <>
+              {[0, 1].map(i => (
+                <button key={i} type="button" aria-pressed={active === i} className={'night-tab' + (active === i ? ' on' : '')} onClick={() => setActive(i)}>
+                  <b>Table {i + 1}</b><span>{tableLabel(info[i], now)}</span>
+                </button>
+              ))}
+              <button type="button" className="ghost night-tab-x" onClick={closeTable} aria-label="Close table 2">✕</button>
+            </>
+          )}
+        </div>
+      )}
+      {Array.from({ length: open }, (_, i) => (
+        <div key={i} hidden={active !== i}><NightFlow slot={i} busy={busyAt(i)} avoid={avoidAt(i)} onReport={report[i]} /></div>
+      ))}
+    </>
+  );
 }
 
 // If Game night ever fails to draw (whatever the cause, a saved night from an older version included), the way out is one button: forget the saved night and start a new one.
@@ -55,10 +99,10 @@ class NightBoundary extends Component {
   }
 }
 
-function NightFlow() {
+function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
   const { me, gid, D, allGroups, enabledSets, playerIdByName, hashFor, reload } = usePage();
   const cat = useCatalogLoad();
-  const [st, setSt] = useState(() => (storage() ? loadNight(storage(), gid) : blankNight()));
+  const [st, setSt] = useState(() => (storage() ? loadNight(storage(), gid, undefined, undefined, slot) : blankNight()));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const savedSt = useRef(null);                          // the form as it was when saved, for Undo
@@ -79,7 +123,9 @@ function NightFlow() {
   const [now, setNow] = useState(Date.now());
   const before = useRef({ ranks: {}, tiers: {} });          // the ladder just before saving, to say what the game changed
 
-  useEffect(() => { if (storage() && !done) saveNight(storage(), gid, st); }, [st, gid, done]);
+  useEffect(() => { if (storage() && !done) saveNight(storage(), gid, st, undefined, slot); }, [st, gid, done, slot]);
+  // tell the tab strip who is seated here and how far along the table is
+  useEffect(() => { if (onReport) onReport({ picked: st.picked, step: st.step, startedAt: st.startedAt, kingdom: st.kingdom, done: !!done }); }, [st.picked, st.step, st.startedAt, st.kingdom, done, onReport]);
   useEffect(() => {
     if (st.step !== 'play') return undefined;
     const tick = () => setNow(Date.now()), t = setInterval(tick, 20000);
@@ -108,7 +154,7 @@ function NightFlow() {
   const pickByHand = (kingdom, implied) => setSt(s => ({ ...s, kingdom, handEdited: true, handBane: s.handEdited ? s.handBane : rolled?.setup?.bane?.cards[0]?.id ?? null, rolled: null, rolledQ: null, kingdomTouched: true, sets: [...new Set([...s.sets, ...implied.sets])], landscapes: [...new Set([...s.landscapes, ...implied.landscapes])] }));
   // the snake draft: Start rolls the pool (the options page's button is the bar at the bottom), Restart goes back to the options page and drops the kingdom
   const startDraft = () => {
-    const v = draftState(st.draftSave, st.picked), res = rollPool(catalog, roll, newSeed(), { plays, n: DRAFT_PICKS, size: v.poolSize ?? poolSizeFor(v.seats.length) });
+    const v = draftState(st.draftSave, st.picked), res = rollPool(catalog, withAvoid(roll, avoid), newSeed(), { plays, n: DRAFT_PICKS, size: v.poolSize ?? poolSizeFor(v.seats.length) });
     setSt(s => ({ ...s, ...(res.ok ? { kingdom: [], rolled: null, rolledQ: null, handOpen: false, handEdited: false, handBane: null } : {}), draftSave: res.ok ? { ...v, draft: { seed: res.seed, options: res.options, n: res.n, size: res.size }, picks: [], banned: [], finished: false, error: '' } : { ...v, error: res.message } }));
   };
   const restartDraft = () => setSt(s => ({ ...s, kingdom: [], rolled: null, rolledQ: null, handOpen: false, handEdited: false, handBane: null, draftSave: { ...draftState(s.draftSave, s.picked), draft: null, picks: [], banned: [], finished: false, error: '' } }));
@@ -127,7 +173,7 @@ function NightFlow() {
     const { data, error } = await callGameRpc(sb, 'add_game', buildGameArgs({ ...st, editId: null }, gid, playerIdByName));
     setSaving(false);
     if (error) { setMsg(error.message); return; }
-    if (storage()) clearNight(storage(), gid);
+    if (storage()) clearNight(storage(), gid, slot);
     setMsg(''); setDone({ id: data });
     await reload();
   };
@@ -149,7 +195,7 @@ function NightFlow() {
     setSt(savedSt.current || blankNight()); setDone(null);
     await reload();
   };
-  const startOver = () => { if (storage()) clearNight(storage(), gid); setSt(blankNight()); setDone(null); setMsg(''); };
+  const startOver = () => { if (storage()) clearNight(storage(), gid, slot); setSt(blankNight()); setDone(null); setMsg(''); };
 
   if (done) return (
     <>
@@ -191,10 +237,13 @@ function NightFlow() {
 
         {st.step === 'players' && (
           <>
-            <p className="meta">Tap everyone at the table.</p>
+            <p className="meta">Tap everyone at the table.{busy.length ? ' Anyone already at the other table is greyed out.' : ''}</p>
             <div className="pills" id="bpick">
-              {roster.map(n => <a key={n} href="#" aria-current={st.picked.includes(n) ? 'true' : undefined}
-                onClick={e => { e.preventDefault(); setSt(s => ({ ...s, picked: toggle(s.picked, n), tie: {}, vp: s.vp })); }}><NameIcon name={n} size={18} />{n}</a>)}
+              {roster.map(n => {
+                const elsewhere = busy.includes(n) && !st.picked.includes(n);   // already sitting at the other table
+                return <a key={n} href="#" aria-current={st.picked.includes(n) ? 'true' : undefined} aria-disabled={elsewhere ? 'true' : undefined} title={elsewhere ? 'At the other table' : undefined}
+                  onClick={e => { e.preventDefault(); if (elsewhere) return; setSt(s => ({ ...s, picked: toggle(s.picked, n), tie: {}, vp: s.vp })); }}><NameIcon name={n} size={18} />{n}</a>;
+              })}
             </div>
             <p className="meta" role="status">{st.picked.length ? `${st.picked.length} player${st.picked.length === 1 ? '' : 's'}${st.picked.length < 2 ? ' — pick at least 2' : ''}` : 'No one picked yet.'}</p>
             <EloPreview picked={st.picked} />
@@ -203,7 +252,7 @@ function NightFlow() {
 
         {st.step === 'kingdom' && (
           !catalog ? (cat.status === 'error' ? <p className="meta">The card list isn’t available right now. You can skip the kingdom and still save the game. <button type="button" className="ghost" onClick={cat.retry}>Try again</button> <button type="button" className="linkish" onClick={() => setSt(s => advance({ ...s, kingdom: [] }))}>Skip the kingdom</button></p> : <p className="meta">Loading the card list…</p>) : (
-            <KingdomStep catalog={catalog} mode={st.kingdomMode} setMode={setMode} players={st.picked} roll={roll} setRollOpts={setRollOpts} resetRoll={() => setSt(s => ({ ...s, rollOpts: null, kept: null }))} kept={st.kept} onKeep={kept => setSt(s => ({ ...s, kept }))}
+            <KingdomStep avoid={avoid} catalog={catalog} mode={st.kingdomMode} setMode={setMode} players={st.picked} roll={roll} setRollOpts={setRollOpts} resetRoll={() => setSt(s => ({ ...s, rollOpts: null, kept: null }))} kept={st.kept} onKeep={kept => setSt(s => ({ ...s, kept }))}
               hand={st.handOpen} setHand={handOpen => setSt(s => ({ ...s, handOpen }))} draftSave={st.draftSave} onDraft={draftSave => setSt(s => ({ ...s, draftSave }))} onRestartDraft={redoDraft}
               plays={plays} items={items} rolled={rolled} setupNow={setupNow} handEdited={st.handEdited} resolved={resolved} randomDone={st.randomDone} randomOriginal={st.randomOriginal} setRandomDone={randomDone => setSt(s => ({ ...s, randomDone, handOpen: randomDone ? false : s.handOpen, randomOriginal: randomDone ? s.kingdom.filter(i => i.kind === 'card').map(i => i.id) : null }))} applyKingdom={applyKingdom} onPick={pickByHand} onSkip={() => setSt(s => advance({ ...s, kingdom: [], kingdomMode: null }))}
               text={<KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />} />

@@ -245,7 +245,7 @@ describe('re-rolling one slot or one landscape', () => {
 
 describe('the link', () => {
   it('round-trips the options', () => {
-    const o = { expansions: ['Seaside', 'Dark Ages'], cards: 8, landscapes: 2, landscapeTypes: ['Way'], maxAttacks: 1, reaction: true, require: ['village', 'buy'], include: ['a:b'], exclude: ['c:d'], favor: true, favorPlayed: false, junkTrash: true, costSpread: 'high' };
+    const o = { expansions: ['Seaside', 'Dark Ages'], cards: 8, landscapes: 2, landscapeTypes: ['Way'], maxAttacks: 1, reaction: true, require: ['village', 'buy'], include: ['a:b'], exclude: ['c:d'], excludeLandscapes: [], favor: true, favorPlayed: false, junkTrash: true, costSpread: 'high' };
     expect(optionsFromParams(new URLSearchParams(optionsToParams(o).toString()))).toEqual(o);
     expect(optionsToParams(DEFAULT_OPTIONS).toString()).toBe('');
     expect(optionsFromParams(new URLSearchParams(''))).toEqual(DEFAULT_OPTIONS);
@@ -350,5 +350,34 @@ describe('rolling from a seed', () => {
     const r = roll({}, 4); delete r.seed;
     expect(kingdomFromParams(catalog, new URLSearchParams(kingdomToParams(r).toString())).seed).toBeNull();
     const p = new URLSearchParams(kingdomToParams(r).toString()); p.set('seed', 'nope'); expect(kingdomFromParams(catalog, p).seed).toBeNull();
+  });
+});
+
+import { withAvoid } from '../../src/dominion/randomizer.js';
+import { rollPool } from '../../src/dominion/draft.js';
+
+describe('keeping another table\'s kingdom out (one copy of each pile)', () => {
+  // the first table's kingdom: ten cards and three landscapes
+  const first = roll({ ...DEFAULT_OPTIONS, landscapes: 3 }, 7);
+  const items = toGameItems(first);
+  const cardIds = new Set(items.filter(i => i.kind === 'card').map(i => i.id)), landIds = new Set(items.filter(i => i.kind === 'landscape').map(i => i.id));
+  it('never draws a card or landscape the other table has, in 150 rolls', () => {
+    const o = withAvoid({ ...DEFAULT_OPTIONS, landscapes: 3 }, items);
+    rolls(o, 150).forEach(r => {
+      expect(r.ok).toBe(true);
+      r.slots.forEach(s => s.cards.forEach(c => expect(cardIds.has(c.id)).toBe(false)));
+      r.landscapes.forEach(l => expect(landIds.has(l.landscape.id)).toBe(false));
+    });
+  });
+  it('keeps them out of a single re-roll and of a draft pool, and drops them from "always include"', () => {
+    const o = withAvoid({ ...DEFAULT_OPTIONS, landscapes: 3 }, items), r = roll(o, 3);
+    for (let i = 0; i < 10; i++) { const s = rerollSlot(catalog, o, r, i, { rng: seededRng(i + 1) }); expect(s.slots.every(x => x.cards.every(c => !cardIds.has(c.id)))).toBe(true); }
+    for (let i = 0; i < 3; i++) { const s = rerollLandscape(catalog, o, r, i, { rng: seededRng(i + 1) }); expect(s.landscapes.every(l => !landIds.has(l.landscape.id))).toBe(true); }
+    const pool = rollPool(catalog, o, 5, { n: 10, size: 20 }); expect(pool.ok).toBe(true);
+    pool.pool.forEach(s => s.cards.forEach(c => expect(cardIds.has(c.id)).toBe(false)));
+    expect(withAvoid({ ...DEFAULT_OPTIONS, include: [[...cardIds][0], 'other'] }, items).include).toEqual(['other']);
+  });
+  it('changes nothing when there is nothing to avoid', () => {
+    expect(withAvoid(DEFAULT_OPTIONS, [])).toBe(DEFAULT_OPTIONS); expect(withAvoid(DEFAULT_OPTIONS, null)).toBe(DEFAULT_OPTIONS);
   });
 });

@@ -52,6 +52,7 @@ export const DEFAULT_OPTIONS = Object.freeze({
   require: [],             // keys of REQUIRE_RULES
   include: [],             // card ids that must be in (their pile is)
   exclude: [],             // card ids that must not be (their pile isn't)
+  excludeLandscapes: [],   // landscape ids that must not be (kept out of the link: it is only ever set by withAvoid, for a second table)
   favor: false,            // weight the draw towards piles that have been played less (needs the `plays` option)
   favorPlayed: false,      // ...or towards piles that have been played more (the same `plays` option)
   junkTrash: false,        // if an Attack that gives opponents junk is in, make sure there is a trashing card too
@@ -122,6 +123,14 @@ export function sortSlots(slots) {
 }
 
 // ---------------------------------------------------------------- rules
+/* The options with a kingdom's cards and landscapes kept out of the draw: for a second table playing at the same time, when the group owns only one copy of
+   each pile. A card that was to be included is dropped from `include`. `items` are kingdom items ({ kind, id }). */
+export function withAvoid(options, items) {
+  if (!items || !items.length) return options;
+  const cards = items.filter(i => i.kind === 'card').map(i => i.id), lands = items.filter(i => i.kind === 'landscape').map(i => i.id);
+  const o = { ...DEFAULT_OPTIONS, ...options };
+  return { ...o, exclude: [...new Set([...o.exclude, ...cards])], include: o.include.filter(id => !cards.includes(id)), excludeLandscapes: [...new Set([...(o.excludeLandscapes || []), ...lands])] };
+}
 const normalize = opts => {
   const o = { ...DEFAULT_OPTIONS, ...opts };
   o.cards = Math.max(1, Math.min(12, Number(o.cards) || 10));
@@ -246,7 +255,7 @@ function pickLandscapes(catalog, o, slots, keepLandscapes, rng, prior, layout = 
   const types = o.landscapeTypes.length ? o.landscapeTypes : LANDSCAPE_TYPES;
   // Landscapes come from every expansion that has them, whatever expansions the Kingdom cards are drawn from: the expansion
   // choice is about the Kingdom, and a landscape can be added to any game. Only the landscape TYPES chosen narrow them.
-  const pool = catalog.landscapes.filter(l => types.includes(l.type));
+  const pool = catalog.landscapes.filter(l => types.includes(l.type) && !o.excludeLandscapes.includes(l.id));
   const kept = keepLandscapes.map(id => catalog.landscapesById.get(id)).filter(Boolean);
   const chosen = kept.slice();
   while (chosen.length < o.landscapes) {
@@ -342,7 +351,7 @@ export function rerollLandscape(catalog, options, state, index, { rng = Math.ran
   const o = normalize(options);
   const types = o.landscapeTypes.length ? o.landscapeTypes : LANDSCAPE_TYPES;
   const have = new Set(state.landscapes.map(l => l.landscape.id));
-  const cands = catalog.landscapes.filter(l => types.includes(l.type) && !have.has(l.id));
+  const cands = catalog.landscapes.filter(l => types.includes(l.type) && !have.has(l.id) && !o.excludeLandscapes.includes(l.id));
   if (!cands.length) return { ok: false, message: 'There is no other landscape to swap in.' };
   const swap = cands[Math.floor(rng() * cands.length)];
   const ids = state.landscapes.map((l, i) => (i === index ? swap.id : l.landscape.id));
@@ -378,7 +387,7 @@ export function optionsFromParams(p) {
     expansions: many(p, 'exp'), cards: intIn(p.get('n'), 1, 12, d.cards), landscapes: intIn(p.get('nl'), 0, 6, d.landscapes),
     landscapeTypes: many(p, 'lt').filter(t => LANDSCAPE_TYPES.includes(t)),
     maxAttacks: intIn(p.get('atk'), 0, 12, null), reaction: p.get('rx') === '1',
-    require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: many(p, 'inc'), exclude: many(p, 'exc'), favor: p.get('fav') === '1',
+    require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: many(p, 'inc'), exclude: many(p, 'exc'), excludeLandscapes: [], favor: p.get('fav') === '1',
     favorPlayed: p.get('fp') === '1', junkTrash: p.get('jt') === '1', costSpread: COST_SPREADS[p.get('cs')] ? p.get('cs') : null,
   };
 }

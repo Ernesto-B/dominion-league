@@ -6,7 +6,7 @@ import { MAX_CARDS, MAX_LANDSCAPES, displayName, impliedSets, resolveKingdom } f
 
 /* The Kingdom section of the Add/Edit Game dialog. `items` is the kingdom so far; `onChange(items, implied)` reports every
    change, `implied` being the Sets / landscape groups the newly added item belongs to (so the dialog can tick them for you). */
-export default function KingdomPicker({ items, onChange }) {
+export default function KingdomPicker({ items, onChange, avoid = [] }) {
   const cat = useCatalogLoad();
 
   if (cat.status === 'loading') return <p className="meta">Loading the card list…</p>;
@@ -47,7 +47,8 @@ export default function KingdomPicker({ items, onChange }) {
           </select>
         </label>
       ))}
-      <ItemSearch catalog={catalog} taken={items} label="Add a card or landscape" onAdd={add} />
+      <ItemSearch catalog={catalog} taken={[...items, ...avoid]} label="Add a card or landscape" onAdd={add} />
+      {avoid.length > 0 && <p className="meta">Cards and landscapes in play at the other table aren’t offered.</p>}
     </div>
   );
 }

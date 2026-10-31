@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { displayName, primaryType } from '../kingdom.js';
-import { DEFAULT_OPTIONS, formatSeed, newSeed, parseSeed, playsFor, rerollLandscape, rerollSlot, rollSeeded } from '../randomizer.js';
+import { DEFAULT_OPTIONS, formatSeed, newSeed, parseSeed, playsFor, rerollLandscape, rerollSlot, rollSeeded, withAvoid } from '../randomizer.js';
 import { cardHref, landscapeHref } from '../links.js';
 import { CardText, ExpansionBadge, LandscapePill, ShowTextButton, TypePills } from './bits.jsx';
 import CostIcons from './Cost.jsx';
@@ -19,7 +19,7 @@ import { openPeek } from './CardPeek.jsx';
    kept / onKeep           the locked cards and the typed seed ({ cards, lands, seed }) to start from, and a callback for every change (the page keeps them in its own state)
    extraControls / below   a button for the Roll / Reset row, and what that button opens (kept outside the form, so typing in it never rolls)
    plays                   Map(pile key -> games played), for "favor cards we've played less"; null when there are no logged games */
-export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, state, onState, onReset, plays = null, actions = null, emptyHint = true, foldExpansions = false, extraControls = null, below = null, kept = null, onKeep = null }) {
+export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, state, onState, onReset, plays = null, actions = null, emptyHint = true, foldExpansions = false, extraControls = null, below = null, kept = null, onKeep = null, avoid = null }) {
   const [locked, setLocked] = useState(() => new Set(kept?.cards));        // pile keys kept on a re-roll
   const [lockedL, setLockedL] = useState(() => new Set(kept?.lands));      // landscape ids kept on a re-roll
   const [message, setMessage] = useState('');
@@ -30,11 +30,12 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
   const canFavor = !!plays && plays.size > 0;
   const setOpts = patch => { setMessage(''); setOptsProp(patch); };
 
+  const drawOpts = withAvoid(opts, avoid);   // what the draw uses: the options, with another table's cards and landscapes kept out (the options on screen are left as they are)
   const roll = () => {
     // a locked card keeps its place on the table as well as its seat in the kingdom
     const at = (list, keyOf, held) => new Map(list.flatMap((x, i) => (held.has(keyOf(x)) ? [[keyOf(x), i]] : [])));
     if (seedText.trim() && parseSeed(seedText) == null) { setMessage('A seed is a number, like 182736.'); return; }
-    const res = rollSeeded(catalog, opts, parseSeed(seedText) ?? newSeed(), {
+    const res = rollSeeded(catalog, drawOpts, parseSeed(seedText) ?? newSeed(), {
       plays: playsFor(opts, plays), keep: [...locked], keepLandscapes: [...lockedL],
       lockedAt: state ? at(state.slots, s => s.key, locked) : null, lockedLandscapeAt: state ? at(state.landscapes, l => l.landscape.id, lockedL) : null,
     });
@@ -43,13 +44,13 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
     requestAnimationFrame(() => resultRef.current?.scrollIntoView?.({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
   };
   const swapSlot = i => {
-    const res = rerollSlot(catalog, opts, state, i, { plays: playsFor(opts, plays) });
+    const res = rerollSlot(catalog, drawOpts, state, i, { plays: playsFor(opts, plays) });
     if (!res.ok) { setMessage(res.message); return; }
     const was = new Set(state.slots.map(s => s.key));
     setMessage(''); setFresh(res.slots.find(s => !was.has(s.key))?.key ?? null); onState(res);
   };
   const swapLandscape = i => {
-    const res = rerollLandscape(catalog, opts, state, i);
+    const res = rerollLandscape(catalog, drawOpts, state, i);
     if (!res.ok) { setMessage(res.message); return; }
     const was = new Set(state.landscapes.map(l => l.landscape.id));
     setMessage(''); setFresh(res.landscapes.find(l => !was.has(l.landscape.id))?.landscape.id ?? null); onState(res);

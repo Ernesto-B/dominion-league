@@ -123,3 +123,23 @@ describe('the kingdom method', () => {
     expect(loadNight(st, 'g1').kingdomMode).toBe('draft');
   });
 });
+
+import { hasNight, tableLabel, MAX_TABLES } from '../src/lib/night.js';
+describe('a second table', () => {
+  const mem = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k), keys: () => [...m.keys()] }; };
+  it('has its own slot, and slot 0 keeps the key it always had', () => {
+    const s = mem(); saveNight(s, 'g1', { ...blankNight('T'), picked: ['Ann', 'Bob'] }); saveNight(s, 'g1', { ...blankNight('T'), picked: ['Cy', 'Dee'] }, undefined, 1);
+    expect(s.keys().sort()).toEqual(['dl.night.g1', 'dl.night.g1.t2']);
+    expect(loadNight(s, 'g1', 'T').picked).toEqual(['Ann', 'Bob']); expect(loadNight(s, 'g1', 'T', undefined, 1).picked).toEqual(['Cy', 'Dee']);
+    clearNight(s, 'g1', 1); expect(hasNight(s, 'g1', 1)).toBe(false); expect(hasNight(s, 'g1', 0)).toBe(true);
+    expect(MAX_TABLES).toBe(2);
+  });
+  it('is found again only while its save is fresh', () => {
+    const s = mem(); saveNight(s, 'g1', blankNight('T'), 1000, 1);
+    expect(hasNight(s, 'g1', 1, 2000)).toBe(true); expect(hasNight(s, 'g1', 1, 1000 + NIGHT_TTL + 1)).toBe(false);
+  });
+  it('labels a table by where it is', () => {
+    expect(tableLabel({ picked: [], step: 'players' })).toBe('new'); expect(tableLabel({ picked: ['A', 'B'], step: 'kingdom' })).toBe('Kingdom');
+    expect(tableLabel({ picked: ['A'], step: 'play', startedAt: 0 }, 23 * 60000)).toBe('Play · 23 min'); expect(tableLabel({ picked: [], step: 'play', done: true })).toBe('saved');
+  });
+});

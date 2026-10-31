@@ -52,7 +52,10 @@ export function elapsed(startedAt, now = Date.now()) {
   return min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min` : `${min} min`;
 }
 
-const key = gid => `dl.night.${gid ?? 'none'}`;
+// A second table running at the same time is its own saved night in its own slot. Slot 0 keeps the key it always had (so a night in progress survives the
+// update); slot 1 is `.t2`. Both are read, saved and cleared separately.
+export const MAX_TABLES = 2;
+const key = (gid, slot = 0) => `dl.night.${gid ?? 'none'}${slot ? '.t' + (slot + 1) : ''}`;
 // what is worth keeping: everything except `rolled`'s heavy catalog rows. `rolledQ` is the roll in the Randomizer's compact link form
 // (kingdomToParams), which the Kingdom step rebuilds the tiles and setup notes from on return
 const slim = st => ({ ...st, rolled: null });
@@ -85,9 +88,9 @@ export function cleanNight(saved, today = todayISO()) {
   if (out.draftSave && !out.draftSave.seats.every(n => out.picked.includes(n))) out.draftSave = null;
   return out;
 }
-export function loadNight(storage, gid, today = todayISO(), now = Date.now()) {
+export function loadNight(storage, gid, today = todayISO(), now = Date.now(), slot = 0) {
   try {
-    const saved = JSON.parse(storage.getItem(key(gid)));
+    const saved = JSON.parse(storage.getItem(key(gid, slot)));
     if (!isObj(saved) || saved.v !== NIGHT_VERSION) return blankNight(today);        // nothing saved, or from another shape of night: start fresh
     if (saved.savedAt && now - saved.savedAt > NIGHT_TTL) return blankNight(today);
     if (!ids.includes(saved.step) || !isStrs(saved.picked)) return blankNight(today);
@@ -95,8 +98,8 @@ export function loadNight(storage, gid, today = todayISO(), now = Date.now()) {
   } catch { /* blocked or corrupt: start fresh */ }
   return blankNight(today);
 }
-export function saveNight(storage, gid, st, now = Date.now()) { try { storage.setItem(key(gid), JSON.stringify({ ...slim(st), v: NIGHT_VERSION, savedAt: now })); return true; } catch { return false; } }
-export function clearNight(storage, gid) { try { storage.removeItem(key(gid)); } catch { /* ignore */ } }
+export function saveNight(storage, gid, st, now = Date.now(), slot = 0) { try { storage.setItem(key(gid, slot), JSON.stringify({ ...slim(st), v: NIGHT_VERSION, savedAt: now })); return true; } catch { return false; } }
+export function clearNight(storage, gid, slot = 0) { try { storage.removeItem(key(gid, slot)); } catch { /* ignore */ } }
 
 /* What a saved game did, for the "Game saved" screen. `before` is { ranks: {name: rank}, tiers: {name: tierId} } taken from the ladder just
    before saving; `g` is the game as the engine now has it (g.elo, g.places, g.snapshot); `ranked` is the ladder now. Players come in finish
@@ -115,4 +118,21 @@ export function gameSummary(g, before, ranked, tierFor) {
       tierDown: tierAfter.id !== tierBefore.id && e.after < e.before ? tierAfter : null,
     };
   });
+}
+
+/* Is there a fresh, saved night in this slot? That is how a second table is found again after a reload (it exists while it has a save). */
+export function hasNight(storage, gid, slot, now = Date.now()) {
+  try {
+    const saved = JSON.parse(storage.getItem(key(gid, slot)));
+    return isObj(saved) && saved.v === NIGHT_VERSION && !!saved.savedAt && now - saved.savedAt <= NIGHT_TTL;
+  } catch { return false; }
+}
+
+/* What a table's tab says: "Table 2", and where it is: players picked, or the step it is on (the clock while it is being played). */
+export function tableLabel(info, now = Date.now()) {
+  if (!info) return '';
+  if (info.done) return 'saved';
+  if (info.step === 'play' && info.startedAt != null) return `Play · ${elapsed(info.startedAt, now)}`;
+  const s = STEPS.find(x => x.id === info.step);
+  return info.step === 'players' && !info.picked.length ? 'new' : s ? s.label : '';
 }
