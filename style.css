@@ -342,6 +342,9 @@ a.pl{vertical-align:middle}
 .dn-cost{display:inline-flex;align-items:center;gap:4px;vertical-align:middle}
 .dn-cost-icon{display:block;flex:none}
 .dn-cost-text{font-weight:600}
+.dn-coin-num{position:relative;display:inline-grid;place-items:center;flex:none}
+.dn-coin-num img{position:absolute;inset:0;display:block}
+.dn-coin-num b{position:relative;color:#140d02;font-family:Georgia,'Times New Roman',Times,serif;font-weight:900;line-height:1;letter-spacing:-.05em;text-shadow:0 1px 0 rgba(255,225,140,.55);transform:translateY(-.15em) scale(.9,1.5)}   /* the coins' own numerals: a heavy dark serif, lightly embossed */
 td.dn-cost-cell{white-space:nowrap}
 .dn-costrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0 0 8px}
 .dn-costrow:last-child{margin-bottom:0}
@@ -1543,3 +1546,4 @@ html.is-scrolling .pill.hot,html.is-scrolling .staticon.hot{animation-play-state
 .gr-actions>.btn:active{transform:translateY(1px)}
 .gr-actions>button.ghost{color:var(--muted);border-color:color-mix(in srgb,var(--line) 70%,transparent);font-weight:500}
 .gr-actions>button.ghost:hover{color:var(--ink);opacity:1}
+.dn-nocost{display:inline-block;width:30px;height:2px;border-radius:2px;background:var(--muted);opacity:.5;vertical-align:middle}

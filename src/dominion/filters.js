@@ -12,7 +12,7 @@ export const DEFAULT_CARD_FILTERS = Object.freeze({
   costs: [], costMode: 'any', debt: 'any', played: 'any', sort: 'name', dir: 'asc',
 });
 export const DEFAULT_LANDSCAPE_FILTERS = Object.freeze({
-  q: '', text: false, types: [], typeMode: 'any', expansions: [], expMode: 'any', mechanics: [], mechanicMode: 'any', played: 'any', sort: 'name', dir: 'asc',
+  q: '', text: false, types: [], typeMode: 'any', expansions: [], expMode: 'any', mechanics: [], mechanicMode: 'any', costs: [], costMode: 'any', debt: 'any', played: 'any', sort: 'name', dir: 'asc',
 });
 
 export const norm = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -83,6 +83,11 @@ export function sortCards(cards, { sort = 'name', dir = 'asc' } = {}, ctx = {}) 
 }
 export const browseCards = (cards, f, ctx = {}) => sortCards(filterCards(cards, f, ctx), f, ctx);
 
+/* What a landscape's cost chip is: its coin cost, or 'none' for one with no printed cost (Landmarks, Ways, Traits). A Debt-only cost has no coin cost, so it is
+   neither (null) and only the Debt chips find it, as with the Kingdom cards. */
+export const NO_COST = 'none';
+export const landscapeCostKey = l => (l.coins == null ? NO_COST : hasCoin(l) ? l.coins : null);
+
 /* `ctx.plays` (optional) is the league's landscape play counts, playStats().landscapes: a Map(landscape id -> { games }). */
 export function filterLandscapes(items, f, ctx = {}) {
   return items.filter(l =>
@@ -90,9 +95,11 @@ export function filterLandscapes(items, f, ctx = {}) {
     && hitsOne(l.type, f.types, f.typeMode)
     && hitsOne(l.expansion, f.expansions, f.expMode)
     && hits(l.mechanicIds, f.mechanics, f.mechanicMode)
+    && (!f.costs.length || f.costs.includes(landscapeCostKey(l)) === (f.costMode !== 'none'))
+    && debtMatches(l.debt, f.debt)
     && (f.played === 'any' || !ctx.plays || (f.played === 'yes') === ctx.plays.has(l.id)));
 }
-export const LANDSCAPE_SORTS = ['name', 'type', 'expansion', 'trigger'];
+export const LANDSCAPE_SORTS = ['name', 'type', 'expansion', 'trigger', 'cost'];
 export function sortLandscapes(items, { sort = 'name', dir = 'asc' } = {}) {
   const sign = dir === 'desc' ? -1 : 1;
   if (sort === 'trigger') {
@@ -101,6 +108,14 @@ export function sortLandscapes(items, { sort = 'name', dir = 'asc' } = {}) {
     return items.slice().sort((a, b) => {
       if (!a.trigger !== !b.trigger) return a.trigger ? -1 : 1;
       return sign * label(a).localeCompare(label(b)) || byName(a, b);
+    });
+  }
+  if (sort === 'cost') {
+    // coins, then Debt; the landscapes with no cost (Landmarks, Ways, Traits) go last in BOTH directions
+    return items.slice().sort((a, b) => {
+      if ((a.coins == null) !== (b.coins == null)) return a.coins != null ? -1 : 1;
+      if (a.coins == null) return byName(a, b);
+      return sign * (a.coins - b.coins || a.debt - b.debt) || byName(a, b);
     });
   }
   const cmp = {
@@ -131,14 +146,14 @@ export function facetCount(items, f, filterFn, ctx, facet, value, mode) {
 export const cardMatchOf = f => f.typeMode;                                          // 'all' | 'any' | 'none' (| 'exact', from a link)
 export const cardMatchPatch = m => ({ typeMode: m, expMode: m === 'none' ? 'none' : 'any', costMode: m === 'none' ? 'none' : 'any', mechanicMode: m === 'none' ? 'any' : m });
 export const landscapeMatchOf = f => (f.typeMode === 'none' ? 'none' : f.mechanicMode);
-export const landscapeMatchPatch = m => ({ typeMode: m === 'none' ? 'none' : 'any', expMode: m === 'none' ? 'none' : 'any', mechanicMode: m === 'none' ? 'any' : m });
+export const landscapeMatchPatch = m => ({ typeMode: m === 'none' ? 'none' : 'any', expMode: m === 'none' ? 'none' : 'any', costMode: m === 'none' ? 'none' : 'any', mechanicMode: m === 'none' ? 'any' : m });
 
 // how many filters are narrowing the list (sorting doesn't count)
 export function activeCardFilters(f) {
   return (f.q.trim() ? 1 : 0) + (f.expansions.length ? 1 : 0) + (f.types.length ? 1 : 0) + (f.mechanics.length ? 1 : 0)
     + (f.costs.length ? 1 : 0) + (f.debt !== 'any' ? 1 : 0) + (f.played !== 'any' ? 1 : 0);
 }
-export const activeLandscapeFilters = f => (f.q.trim() ? 1 : 0) + (f.types.length ? 1 : 0) + (f.expansions.length ? 1 : 0) + (f.mechanics.length ? 1 : 0) + (f.played !== 'any' ? 1 : 0);
+export const activeLandscapeFilters = f => (f.q.trim() ? 1 : 0) + (f.types.length ? 1 : 0) + (f.expansions.length ? 1 : 0) + (f.mechanics.length ? 1 : 0) + (f.costs.length ? 1 : 0) + (f.debt !== 'any' ? 1 : 0) + (f.played !== 'any' ? 1 : 0);
 
 export const toggle = (arr, x) => (arr.includes(x) ? arr.filter(y => y !== x) : [...arr, x]);
 
@@ -190,17 +205,22 @@ export function landscapeFiltersToQuery(f) {
   if (f.expMode !== d.expMode) p.set('emode', f.expMode);
   f.mechanics.forEach(v => p.append('tag', v));
   if (f.mechanicMode !== d.mechanicMode) p.set('tmode', f.mechanicMode);
+  f.costs.forEach(v => p.append('cost', String(v)));
+  if (f.costMode !== d.costMode) p.set('cmode', f.costMode);
+  if (f.debt !== d.debt) p.set('debt', f.debt);
   if (f.played !== d.played) p.set('played', f.played);
   if (f.sort !== d.sort) p.set('sort', f.sort);
   if (f.dir !== d.dir) p.set('dir', f.dir);
   return wrap(p);
 }
 export function landscapeFiltersFromQuery(qs) {
-  const p = params(qs), d = DEFAULT_LANDSCAPE_FILTERS;
+  const p = params(qs), d = DEFAULT_LANDSCAPE_FILTERS, debt = p.get('debt');
   return {
     q: p.get('q') || '', text: p.get('text') === '1',
     types: many(p, 'type'), typeMode: oneOf(p.get('ltmode'), ['any', 'none'], d.typeMode), expansions: many(p, 'exp'), expMode: oneOf(p.get('emode'), ['any', 'none'], d.expMode), mechanics: many(p, 'tag'),
-    mechanicMode: oneOf(p.get('tmode'), ['all', 'any'], d.mechanicMode), played: oneOf(p.get('played'), ['yes', 'no'], d.played),
+    mechanicMode: oneOf(p.get('tmode'), ['all', 'any'], d.mechanicMode),
+    costs: many(p, 'cost').filter(v => v === NO_COST || /^\d{1,2}$/.test(v)).map(v => (v === NO_COST ? v : Number(v))), costMode: oneOf(p.get('cmode'), ['any', 'none'], d.costMode),
+    debt: debt && (['any', 'none', 'has'].includes(debt) || /^\d{1,2}$/.test(debt)) ? debt : d.debt, played: oneOf(p.get('played'), ['yes', 'no'], d.played),
     sort: oneOf(p.get('sort'), LANDSCAPE_SORTS, d.sort), dir: oneOf(p.get('dir'), ['asc', 'desc'], d.dir),
   };
 }

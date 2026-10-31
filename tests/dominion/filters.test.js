@@ -286,3 +286,27 @@ describe('the single Match row drives every group', () => {
     expect(filterLandscapes(landscapes, { ...f, types: ['Event'] }).some(l => l.type === 'Event')).toBe(false);
   });
 });
+
+describe('the landscape cost filter', () => {
+  const cat = realCatalog(), all = cat.landscapes, run = patch => filterLandscapes(all, { ...L0, ...patch });
+  it('finds the landscapes of a coin cost, of several, and of none', () => {
+    expect(run({ costs: [4] })).toHaveLength(all.filter(l => l.coins === 4).length);
+    expect(run({ costs: [4] }).length).toBeGreaterThan(0);
+    expect(run({ costs: [0, 4] })).toHaveLength(all.filter(l => l.coins === 0 || l.coins === 4).length);
+    expect(run({ costs: ['none'] })).toHaveLength(all.filter(l => l.coins == null).length);
+    expect(run({ costs: ['none'] }).every(l => ['Landmark', 'Way', 'Trait'].includes(l.type))).toBe(true);
+  });
+  it('"none of" takes them out, and a Debt cost is found on its own', () => {
+    expect(run({ costs: ['none'], costMode: 'none' })).toHaveLength(all.filter(l => l.coins != null).length);
+    expect(run({ debt: 'has' }).map(l => l.name)).toEqual(['Wedding']);
+    expect(run({ debt: '3' })).toHaveLength(1);
+  });
+  it('counts as a filter, follows the Match row, and lives in the link', () => {
+    const f = { ...L0, costs: [4, 'none'], debt: '3' };
+    expect(activeLandscapeFilters(f)).toBe(2);
+    expect(landscapeMatchPatch('none').costMode).toBe('none'); expect(landscapeMatchPatch('any').costMode).toBe('any');
+    expect(landscapeFiltersFromQuery(landscapeFiltersToQuery(f))).toMatchObject({ costs: [4, 'none'], debt: '3' });
+    expect(landscapeFiltersFromQuery('?cost=banana&cost=99&debt=x').costs).toEqual([99]);
+    expect(landscapeFiltersFromQuery('?debt=x').debt).toBe('any');
+  });
+});

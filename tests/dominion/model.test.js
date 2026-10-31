@@ -170,3 +170,19 @@ describe('card types by expansion (the matrix)', () => {
     expect(m.rows).toHaveLength(11); expect(lab(m.rows)[0]).toBe('Base Game');                    // the input was not mutated
   });
 });
+
+describe('landscape costs', () => {
+  const cat = realCatalog();
+  it('gives every Event and Project a printed cost (0 is a real one) and nothing else', () => {
+    cat.landscapes.forEach(l => {
+      if (l.type === 'Event' || l.type === 'Project') { expect(l.coins, l.id).not.toBeNull(); expect(Number.isInteger(l.coins) && l.coins >= 0, l.id).toBe(true); }
+      else { expect(l.coins, l.id).toBeNull(); expect(l.debt).toBe(0); }
+    });
+    expect(cat.landscapes.filter(l => l.coins != null)).toHaveLength(68);
+  });
+  it('reads a Debt cost alongside the coins (Wedding is $4 and 3 Debt) and keeps $0 Events', () => {
+    const wedding = cat.landscapes.find(l => l.name === 'Wedding');
+    expect([wedding.coins, wedding.debt]).toEqual([4, 3]);
+    expect(cat.landscapes.some(l => l.type === 'Event' && l.coins === 0)).toBe(true);
+  });
+});

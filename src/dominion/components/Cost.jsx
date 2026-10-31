@@ -13,7 +13,14 @@ const Img = ({ src, size }) => <img className="dn-cost-icon" src={src} width={si
 
 export function CoinIcon({ coins, overpay = false, size = 24 }) {
   const src = coinIconSrc(coins, overpay);
-  return src ? <Img src={src} size={size} /> : <span className="dn-cost-text">${coins}{overpay ? '+' : ''}</span>;
+  if (src) return <Img src={src} size={size} />;
+  // a cost the artwork has no coin for (the $14 Dominate): the blank coin with the number written on it
+  const digits = String(coins).length + (overpay ? 1 : 0);
+  return (
+    <span className="dn-coin-num" style={{ width: size, height: size, fontSize: Math.round(size * (digits > 2 ? 0.54 : digits > 1 ? 0.72 : 0.82)) }}>
+      <img src="icons/costs/coin.png" width={size} height={size} loading="lazy" decoding="async" alt="" /><b>{coins}{overpay ? '+' : ''}</b>
+    </span>
+  );
 }
 export function DebtIcon({ debt, size = 24 }) {
   const src = debtIconSrc(debt);

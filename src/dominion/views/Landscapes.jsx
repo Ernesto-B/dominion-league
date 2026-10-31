@@ -1,17 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useCatalog } from '../CatalogContext.jsx';
-import { browseLandscapes, filterLandscapes, facetCount, landscapeMatchOf, landscapeMatchPatch, activeLandscapeFilters, DEFAULT_LANDSCAPE_FILTERS, landscapeFiltersFromQuery, landscapeFiltersToQuery, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
+import { browseLandscapes, filterLandscapes, facetCount, landscapeMatchOf, landscapeMatchPatch, activeLandscapeFilters, DEFAULT_LANDSCAPE_FILTERS, landscapeFiltersFromQuery, landscapeFiltersToQuery, landscapeCostKey, NO_COST, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
 import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
 import { useLeagueGames } from '../useLeagueGames.js';
 import { artifactHref, landscapeHref } from '../links.js';
 import { PLURAL, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
+import CostIcons, { CoinIcon, DebtIcon, PlainDebtIcon } from '../components/Cost.jsx';
 import { Chip, ExpansionBadge, FilterFold, ModeRow, Section, ExternalLink, LandscapePill, statusLabel, rowLink } from '../components/bits.jsx';
 
-const SORTS = [['name', 'Name'], ['type', 'Type'], ['expansion', 'Expansion'], ['trigger', 'When it applies']];
+const SORTS = [['name', 'Name'], ['type', 'Type'], ['expansion', 'Expansion'], ['cost', 'Cost'], ['trigger', 'When it applies']];
 // table columns that sort: [sort key, heading, th class]
-const COLUMNS = [['expansion', 'Expansion', 'l', 'Set'], ['name', 'Landscape', 'l'], ['type', 'Type', 'l'], ['trigger', 'When it applies', 'l dn-hide-sm']];
+const COLUMNS = [['expansion', 'Expansion', 'l', 'Set'], ['name', 'Landscape', 'l'], ['type', 'Type', 'l'], ['cost', 'Cost', ''], ['trigger', 'When it applies', 'l dn-hide-sm']];
 
 export default function Landscapes({ query = '' }) {
   const { catalog } = useCatalog();
@@ -30,6 +31,9 @@ export default function Landscapes({ query = '' }) {
   const active = activeLandscapeFilters(f);
   const expansions = catalog.ownedExpansions.filter(e => catalog.landscapes.some(l => l.expansion === e.name));
   // tags are the landscapes' OWN vocabulary (most are not Kingdom taxonomy ids), so they get no Kingdom definitions
+  // the costs the landscapes actually have (Events and Projects; the rest have none), and the Debt amounts
+  const coinCosts = useMemo(() => [...new Set(catalog.landscapes.map(landscapeCostKey).filter(k => typeof k === 'number'))].sort((a, b) => a - b), [catalog]);
+  const debts = useMemo(() => [...new Set(catalog.landscapes.map(l => l.debt).filter(d => d > 0))].sort((a, b) => a - b), [catalog]);
   const tagCounts = useMemo(() => { const m = new Map(); catalog.landscapes.forEach(l => l.mechanicIds.forEach(t => m.set(t, (m.get(t) || 0) + 1))); return [...m].map(([id, count]) => ({ id, count })).sort((a, b) => b.count - a.count || a.id.localeCompare(b.id)); }, [catalog]);
   // the small number on every chip follows the other filters (see facetCount): "how many would show if I picked this"
   const fc = useMemo(() => {
@@ -37,10 +41,12 @@ export default function Landscapes({ query = '' }) {
     return {
       types: Object.fromEntries(catalog.landscapeTypes.map(t => [t, n('types', t, f.typeMode)])),
       exp: Object.fromEntries(expansions.map(e => [e.name, n('expansions', e.name, f.expMode)])),
+      costs: Object.fromEntries([...coinCosts, NO_COST].map(c => [c, n('costs', c, f.costMode)])),
+      debt: Object.fromEntries(debts.map(d => [d, n('debt', String(d))])),
       yes: n('played', 'yes'), no: n('played', 'no'),
       tag: Object.fromEntries(tagCounts.map(t => [t.id, n('mechanics', t.id, f.mechanicMode)])),
     };
-  }, [catalog, f, plays, tagCounts]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [catalog, f, plays, tagCounts, coinCosts, debts]);   // eslint-disable-line react-hooks/exhaustive-deps
   const tags = tagCounts.filter(t => !mq.trim() || norm(`${humanize(t.id)} ${t.id}`).includes(norm(mq)));
 
   return (
@@ -60,6 +66,30 @@ export default function Landscapes({ query = '' }) {
         </fieldset>
         <fieldset className="dn-fieldset"><legend>Expansion</legend>
           <div className="dn-chips">{expansions.map(e => <Chip key={e.name} pressed={f.expansions.includes(e.name)} count={fc.exp[e.name]} onClick={() => update({ expansions: toggle(f.expansions, e.name) })}><ExpansionBadge name={e.name} /></Chip>)}</div>
+        </fieldset>
+        <fieldset className="dn-fieldset"><legend>Cost</legend>
+          <div className="dn-costrow">
+            <div className="dn-chips" role="group" aria-label="Cost (pick one or more)">
+              {coinCosts.map(c => (
+                <Chip key={c} pressed={f.costs.includes(c)} count={fc.costs[c]} label={`${c} ${c === 1 ? 'coin' : 'coins'} — ${fc.costs[c]} landscapes`} onClick={() => update({ costs: toggle(f.costs, c) })}>
+                  <CoinIcon coins={c} size={26} />
+                </Chip>
+              ))}
+              <Chip pressed={f.costs.includes(NO_COST)} count={fc.costs[NO_COST]} label={`No cost — ${fc.costs[NO_COST]} landscapes`} onClick={() => update({ costs: toggle(f.costs, NO_COST) })}>No cost</Chip>
+            </div>
+          </div>
+          {debts.length > 0 && (
+            <div className="dn-costrow">
+              <div className="dn-chips" role="group" aria-label="Debt cost">
+                <Chip pressed={f.debt === 'has'} label="Any Debt cost" onClick={() => update({ debt: f.debt === 'has' ? 'any' : 'has' })}><PlainDebtIcon size={22} />Any Debt</Chip>
+                {debts.map(d => (
+                  <Chip key={d} pressed={f.debt === String(d)} count={fc.debt[d]} label={`Exactly ${d} Debt — ${fc.debt[d]} landscapes`} onClick={() => update({ debt: f.debt === String(d) ? 'any' : String(d) })}>
+                    <DebtIcon debt={d} size={26} />
+                  </Chip>
+                ))}
+              </div>
+            </div>
+          )}
         </fieldset>
         <ModeRow show ariaLabel="How to match the selected filters" value={landscapeMatchOf(f)} options={[['all'], ['any'], ['none']]} onChange={m => update(landscapeMatchPatch(m))} />
         {f.typeMode === 'none' && f.mechanics.length > 0 && <p className="meta dn-mode-note">Recorded tags stay “any of”: a missing tag doesn’t prove a landscape lacks it.</p>}
@@ -99,6 +129,7 @@ export default function Landscapes({ query = '' }) {
                 <td className="l"><ExpansionBadge name={l.expansion} size={18} /></td>
                 <td className="l name"><a href={landscapeHref(l.id, qs)}>{l.name}</a>{f.text && f.q.trim() && !nameMatches(l, f.q) && <small className="meta dn-snippet">{textSnippet(l.text, f.q)}</small>}</td>
                 <td className="l"><LandscapePill type={l.type} /></td>
+                <td className="dn-cost-cell">{l.coins != null ? <CostIcons coins={l.coins} debt={l.debt} size={26} /> : <span className="dn-nocost" role="img" aria-label="No cost" title={`${PLURAL[l.type] || l.type} have no cost`} />}</td>
                 <td className="l dn-hide-sm">{l.trigger ? humanize(l.trigger) : '—'}</td>
               </tr>
             ))}</tbody>

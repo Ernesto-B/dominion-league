@@ -15,7 +15,7 @@ export function KingdomChip({ r, onRemove, onPeek, plain = false, expansion = fa
   const inner = (
     <>
       {expansion && obj.expansion && <ExpansionBadge name={obj.expansion} size={18} iconOnly />}
-      {r.kind === 'card' && <CostIcons coins={obj.coins} debt={obj.debt} overpay={obj.overpay} size={20} />}
+      {(r.kind === 'card' || obj.coins != null) && <CostIcons coins={obj.coins} debt={obj.debt} overpay={obj.overpay} size={20} />}
       <span className="dn-kchip-name">{displayName(obj)}</span>
       {r.onObj && <span className="meta dn-kchip-on">on {displayName(r.onObj)}</span>}
     </>

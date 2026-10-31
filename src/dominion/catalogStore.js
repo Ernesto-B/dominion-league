@@ -11,7 +11,7 @@
 import { fetchRawCatalog } from './api.js';
 import { buildCatalog } from './model.js';
 
-export const CACHE_KEY = 'dl.catalog.v1';   // bump when the shape of the raw rows changes, so an old copy is never misread
+export const CACHE_KEY = 'dl.catalog.v2';   // bump when the shape of the raw rows changes, so an old copy is never misread
 export const MAX_AGE_MS = 14 * 24 * 3600 * 1000;
 const TABLES = ['cards', 'piles', 'landscapes', 'artifacts', 'artifactMechanics', 'taxonomy', 'cardText'];
 

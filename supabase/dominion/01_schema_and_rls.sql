@@ -152,8 +152,14 @@ create table if not exists public.dominion_card_text (
   text_source          text,
   text_status          text not null,
   symbol_normalization text,
-  source_image_group   text
+  source_image_group   text,
+  -- printed cost of an Event or Project (NULL for everything else: Landmarks, Ways, Traits and the rest have no cost; 0 is a real cost)
+  cost                 integer check (cost is null or cost >= 0),
+  debt_cost            integer check (debt_cost is null or debt_cost >= 0)
 );
+-- a database that already has the table from before costs existed
+alter table public.dominion_card_text add column if not exists cost integer check (cost is null or cost >= 0);
+alter table public.dominion_card_text add column if not exists debt_cost integer check (debt_cost is null or debt_cost >= 0);
 
 -- ------------------------------------------------- row level security
 -- Public reference data: anyone (anon or signed in) may READ, nobody may write through the API.

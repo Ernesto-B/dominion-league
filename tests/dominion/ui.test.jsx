@@ -148,18 +148,23 @@ describe('sortable landscape headers', () => {
   const html = render('landscapes');
   const head = html.match(/<thead>[\s\S]*?<\/thead>/)[0];   // the first table is the landscapes (the second is the Artifacts)
   const cols = ths(head);
-  it('makes Expansion, Landscape, Type and "When it applies" sortable like the rest of the site, with no button in the heading', () => {
-    expect(cols.map(c => c.label)).toEqual(['Expansion Set', 'Landscape', 'Type', 'When it applies']);
+  it('makes Expansion, Landscape, Type, Cost and "When it applies" sortable like the rest of the site, with no button in the heading', () => {
+    expect(cols.map(c => c.label)).toEqual(['Expansion Set', 'Landscape', 'Type', 'Cost', 'When it applies']);
     for (const c of cols) { expect(c.attrs, c.label).toMatch(/class="[^"]*\bsortable\b/); expect(c.attrs).toMatch(/role="button"/); }
     expect(head).not.toContain('<button');
     expect((head.match(/aria-sort=/g) || []).length).toBe(1); expect(cols[1].attrs).toMatch(/aria-sort="ascending"/); expect(dir(cols[1])).toBe('asc');   // sorted by Landscape (name)
   });
+  it('shows each Event and Project\'s cost, and a line (named "No cost" for screen readers) for every other landscape', () => {
+    const rows = html.match(/<tbody>[\s\S]*?<\/tbody>/)[0].match(/<tr[\s\S]*?<\/tr>/g);
+    expect(rows.filter(r => r.includes('aria-label="No cost"'))).toHaveLength(rows.length - 68);   // a line, not the words
+    expect(rows.filter(r => r.includes('class="dn-cost"'))).toHaveLength(68);
+  });
   it('the "Sort by" menu offers the same columns (so a phone, which hides one, can use them too)', () => {
     const sel = html.match(/Sort by <select[\s\S]*?<\/select>/)[0];
-    for (const l of ['Name', 'Type', 'Expansion', 'When it applies']) expect(text(sel)).toContain(l);
+    for (const l of ['Name', 'Type', 'Expansion', 'Cost', 'When it applies']) expect(text(sel)).toContain(l);
   });
   it('does not make the Artifacts table sortable (it is not a landscape list)', () => {
-    expect((html.match(/class="[^"]*\bsortable\b/g) || []).length).toBe(4);   // the four landscape headings only
+    expect((html.match(/class="[^"]*\bsortable\b/g) || []).length).toBe(5);   // the five landscape headings only
   });
   it('uses the very same header component as the Kingdom cards table', () => {
     const cards = ths(render('cards').match(/<thead>[\s\S]*?<\/thead>/)[0]);
@@ -608,10 +613,11 @@ describe('cost icons', () => {
     }
     expect(missing).toEqual([]);
   });
-  it('falls back to readable text, not a broken image, for a cost without artwork', () => {
-    expect(renderToStaticMarkup(<CostIcons coins={13} size={20} />)).toMatch(/dn-cost-text[^>]*>\$13</);
+  it('writes a cost without its own coin (the $14 Dominate) on the blank coin, and falls back to text for a Debt without artwork', () => {
+    const html = renderToStaticMarkup(<CostIcons coins={14} size={26} />);
+    expect(html).toContain('icons/costs/coin.png'); expect(html).toMatch(/<b>14<\/b>/); expect(html).not.toContain('$14');
+    expect(existsSync(file('icons/costs/coin.png'))).toBe(true);
     expect(renderToStaticMarkup(<CostIcons coins={0} debt={7} size={20} />)).toMatch(/7 Debt/);
-    expect(renderToStaticMarkup(<CostIcons coins={13} size={20} />)).not.toContain('<img');
   });
   it('keeps the shipped icons small (the originals were over half a megabyte each)', async () => {
     const { statSync, readdirSync } = await import('node:fs');

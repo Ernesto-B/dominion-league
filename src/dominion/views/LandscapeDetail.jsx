@@ -4,9 +4,11 @@ import { DEFAULT_LANDSCAPE_FILTERS, browseLandscapes, landscapeFiltersFromQuery,
 import ItemNav from '../components/ItemNav.jsx';
 import PlayHistory from '../components/PlayHistory.jsx';
 import { useLeagueGames } from '../useLeagueGames.js';
-import { humanize } from '../constants.js';
+import { PLURAL, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import { ExpansionBadge, LandscapePill, Section, Stat, CardText } from '../components/bits.jsx';
+import CostIcons from '../components/Cost.jsx';
+import { formatCost } from '../model.js';
 
 export default function LandscapeDetail({ id, query = '' }) {
   const { catalog } = useCatalog();
@@ -40,6 +42,9 @@ export default function LandscapeDetail({ id, query = '' }) {
 
       <div className="stats" role="group" aria-label="Landscape facts">
         <Stat value={l.type} label="landscape type" />
+        {l.coins != null
+          ? <Stat value={<CostIcons coins={l.coins} debt={l.debt} size={40} />} label="cost" title={`Printed cost: ${formatCost(l)}`} />
+          : <Stat value="None" label="cost" title={`${PLURAL[l.type] || l.type} have no cost`} />}
         <Stat value={l.copies} label={l.copies === 1 ? 'physical card' : 'physical cards'} />
         {l.trigger && <Stat value={humanize(l.trigger)} label="when it applies" />}
         {lg && lg.stats && <Stat value={(lg.stats.landscapes.get(l.id) || { games: 0 }).games} label="logged games" title="Logged games this landscape was in" />}

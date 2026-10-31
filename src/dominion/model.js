@@ -55,6 +55,8 @@ export function buildCatalog(raw) {
     const rec = textKeys[kind](obj.id).map(k => textRecords.get(k)).find(Boolean);
     obj.text = rec ? rec.card_text : null;
     obj.textStatus = rec ? rec.text_status : null;
+    // an Event or Project has a printed cost (in the card text data, 0 is a real cost); every other landscape has none: coins stays null
+    if (kind === 'landscape') { obj.coins = rec && num(rec.cost) != null ? num(rec.cost) : null; obj.debt = obj.coins != null ? num(rec.debt_cost) || 0 : 0; }
     return obj;
   };
   const cards = raw.cards.map(r => withText('card', normalizeCard(r)));

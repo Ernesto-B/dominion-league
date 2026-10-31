@@ -26,7 +26,7 @@ export default function ItemSearch({ catalog, taken = [], kind = null, label, pl
         <ul className="dn-kresults" aria-label="Matches">{results.map(x => (
           <li key={`${x.kind}:${x.obj.id}`}><button type="button" onClick={() => add(x)}>
             <ExpansionBadge name={x.obj.expansion} size={20} iconOnly />
-            {x.kind === 'card' ? <CostIcons coins={x.obj.coins} debt={x.obj.debt} overpay={x.obj.overpay} size={22} /> : <LandscapePill type={x.obj.type} />}
+            {x.kind === 'card' ? <CostIcons coins={x.obj.coins} debt={x.obj.debt} overpay={x.obj.overpay} size={22} /> : <>{x.obj.coins != null && <CostIcons coins={x.obj.coins} debt={x.obj.debt} size={22} />}<LandscapePill type={x.obj.type} /></>}
             <span className="dn-kresults-name">{x.kind === 'card' ? displayName(x.obj) : x.obj.name}</span>
             <span className="meta">{x.kind === 'card' ? x.obj.types.join(' · ') : x.obj.expansion}</span>
           </button></li>
