@@ -155,6 +155,21 @@ export function activeCardFilters(f) {
 }
 export const activeLandscapeFilters = f => (f.q.trim() ? 1 : 0) + (f.types.length ? 1 : 0) + (f.expansions.length ? 1 : 0) + (f.mechanics.length ? 1 : 0) + (f.costs.length ? 1 : 0) + (f.debt !== 'any' ? 1 : 0) + (f.played !== 'any' ? 1 : 0);
 
+/* One short label per active filter group, for the "what is filtering this list" strip (components/FilterSummary.jsx). `clear` is the patch that
+   switches that group off. The search box is not listed (it is on screen and shows its own text). The same shape serves the Kingdom cards and the Landscapes (they share these field names). */
+export function describeFilters(f, label = v => String(v)) {
+  const out = [], list = (key, name, modeKey) => {
+    if (!f[key] || !f[key].length) return;
+    const none = f[modeKey] === 'none';
+    out.push({ key, text: `${none ? 'Not ' : ''}${name}: ${f[key].map(label).join(', ')}`, clear: { [key]: [] } });
+  };
+  list('types', 'Type', 'typeMode'); list('expansions', 'Set', 'expMode'); list('mechanics', 'Tag', 'mechanicMode');
+  if (f.costs && f.costs.length) out.push({ key: 'costs', text: `${f.costMode === 'none' ? 'Not ' : ''}Cost: ${f.costs.map(c => (c === NO_COST ? 'none' : '$' + c)).join(', ')}`, clear: { costs: [] } });
+  if (f.debt && f.debt !== 'any') out.push({ key: 'debt', text: f.debt === 'none' ? 'No debt' : f.debt === 'has' ? 'Has debt' : `${f.debt} debt`, clear: { debt: 'any' } });
+  if (f.played && f.played !== 'any') out.push({ key: 'played', text: f.played === 'yes' ? 'Played' : 'Not played yet', clear: { played: 'any' } });
+  return out;
+}
+
 export const toggle = (arr, x) => (arr.includes(x) ? arr.filter(y => y !== x) : [...arr, x]);
 
 /* ---- the filters live in the URL: #/dominion/cards?type=Attack&exp=Empires ---------------------------------------

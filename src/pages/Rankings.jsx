@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { f0, ord, short, sgn } from '../lib/format.js';
+import SeasonChip from '../components/SeasonChip.jsx';
 import GroupSwitcher from '../components/GroupSwitcher.jsx';
 import Banner from '../components/Banner.jsx';
 import StoryCards from '../components/StoryCards.jsx';
-import SeasonChip from '../components/SeasonChip.jsx';
 import TierIcon from '../components/TierIcon.jsx';
 import TierLegend from '../components/TierLegend.jsx';
 import LastNight from '../components/LastNight.jsx';
@@ -106,6 +106,7 @@ export default function Rankings() {
   return (
     <>
       <GroupSwitcher route="" />
+      <h1 className="dn-sr">Rankings</h1>
       <Welcome />
       <MeCard ranked={rk} />
       {rk.length > 0 && <Hub />}

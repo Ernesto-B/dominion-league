@@ -7,7 +7,7 @@ export default function SeasonChip() {
   const live = s.status === 'In progress';
   return (
     <span className={`chip ${live ? 'live' : ''}`}>
-      <b>{s.name}</b> {live ? 'in progress' : s.status.toLowerCase()}{live && s.weeksLeft ? `, ${s.weeksLeft} week${s.weeksLeft > 1 ? 's' : ''} left` : ''}
+      <b>{s.name}</b>{live ? '' : ` ${s.status.toLowerCase()}`}{live && s.weeksLeft ? `, ${s.weeksLeft} week${s.weeksLeft > 1 ? 's' : ''} left` : ''}
     </span>
   );
 }
