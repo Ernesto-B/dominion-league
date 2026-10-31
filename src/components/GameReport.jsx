@@ -93,7 +93,7 @@ function PlayerCard({ p, game, mine, open }) {
       <details open={open}>
         <summary>
           <span className="gr-place">{ord(p.place)}</span>
-          <span className="gr-name" onClick={e => e.stopPropagation()}><PlayerLink name={p.name} at={game.snapshot[p.name]} /></span>
+          <span className="gr-name" onClick={e => e.stopPropagation()}><PlayerLink name={p.name} tier={D.tierAt(game, p.name)} /></span>
           <span className="gr-stat"><b>{p.vp != null ? p.vp : '—'}</b><small>VP</small></span>
           <span className={'gr-stat ' + (p.elo ? tone(p.elo.delta) : '')}><b>{p.elo ? sgn(p.elo.delta) : '—'}</b><small>Elo</small></span>
           <span className="gr-stat"><b>{p.xp ? '+' + p.xp.total : '—'}</b><small>XP</small></span>

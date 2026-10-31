@@ -65,7 +65,7 @@ export default function MeCard({ ranked }) {
         <div className="mc-who">
           <p className="mecard-hi">Hi {me.name}{s.titles ? ' · season champion' : ''}</p>
           <div className="mc-tierrow">
-            <p className="mc-tier">{s.tier.name}{s.provisional && <span className="tag">provisional</span>}</p>
+            <p className="mc-tier">{s.tier.name}{s.provisional && <span className="tag">provisional</span>}{s.tierHeld && <span className="tag" title="Your Elo is under this tier's line. Get back over it soon or you drop.">on thin ice</span>}</p>
             {mineP && <PinnedBadges p={mineP} list={list} fit />}
           </div>
         </div>

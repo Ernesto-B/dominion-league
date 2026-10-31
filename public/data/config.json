@@ -2,7 +2,7 @@
   "title": "Dominion Night",
   "subtitle": "Weekly Dominion with the group. Ratings, seasons and records.",
   "repo": "",
-  "elo": { "model": "steady", "k": 100, "provisionalK": 200, "provisionalGames": 10, "start": 1000, "scale": 400, "target": 0.52 },
+  "elo": { "model": "steady", "k": 100, "provisionalK": 200, "provisionalGames": 10, "start": 1000, "scale": 400, "target": 0.52, "demotionGrace": 2, "savingGrace": 0.2 },
   "season": { "prior": 3, "minGamesForRecords": 5, "streakBonus": 0.04, "streakCap": 3, "vpWeight": 0.3 },
   "tiers": [
     { "id": "peasant", "name": "Peasant", "min": null },

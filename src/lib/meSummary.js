@@ -17,7 +17,7 @@ export function meSummary(ranked, name, start = 1000, win = 0) {
   }
   return {
     next,
-    rank: p.rank, of: ranked.length, elo: Math.round(p.elo), fromStart: Math.round(p.elo - start), tier: p.tier, provisional: p.status === 'Provisional',
+    rank: p.rank, of: ranked.length, elo: Math.round(p.elo), fromStart: Math.round(p.elo - start), tier: p.tier, tierHeld: !!p.tierHeld, provisional: p.status === 'Provisional',
     streak: p.streak, titles: p.titles || 0, gap,
     last: last ? { place: last.place, of: last.game.n, date: last.game.date, delta: Math.round(last.after - last.before) } : null,
     form: p.results.slice(-5).map(r => ({ tone: r.pts >= 0.67 ? 'w' : r.pts <= 0.33 ? 'l' : 'm', place: r.place, of: r.game.n, date: r.game.date })),

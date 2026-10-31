@@ -282,6 +282,7 @@ function GameResult({ game, before, ranked, tierFor, xp, D, catalog }) {
               <span className="meta"> · {r.before} → {r.after}{r.rankAfter != null && <> · #{r.rankAfter}</>}</span>
               {r.rankMove !== 0 && <span className={r.rankMove > 0 ? 'up-t' : 'down-t'}> {r.rankMove > 0 ? '▲' : '▼'}{Math.abs(r.rankMove)}</span>}
               {r.tierUp && <span className="pill ok"> now a {r.tierUp.name}</span>}
+              {r.saving > 0 && <span className="pill ok"> Saving Grace +{r.saving}</span>}
               {r.tierDown && <span className="pill warn"> down to {r.tierDown.name}</span>}</>}
             {x && <span className="night-xp"> <b>+<CountUp value={x.xp} ms={800} /> XP</b>{x.levelUp ? <span className="pill ok"> level {x.levelUp}</span> : null}</span>}
           </li>

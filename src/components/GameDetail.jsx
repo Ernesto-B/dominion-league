@@ -12,7 +12,7 @@ const GameKingdom = lazy(() => import('../dominion/components/GameKingdom.jsx'))
 
 // The expanded per-player breakdown under a game row.
 export default function GameDetail({ game: g, onEdit, me = null }) {
-  const { gid, hashFor } = usePage();
+  const { D, gid, hashFor } = usePage();
   // Season score is a 0-1 ratio internally, but displayed x1000 so it reads as a whole-number
   // points total instead of a 3-decimal fraction.
   const sc = x => f0(x * 1000);
@@ -28,7 +28,7 @@ export default function GameDetail({ game: g, onEdit, me = null }) {
           return (
             <tr key={n} className={n === me ? 'gme' : undefined}>
               <td className="l meta">{ord(g.places[n])}</td>
-              <td className="name"><PlayerLink name={n} at={g.snapshot[n]} /></td>
+              <td className="name"><PlayerLink name={n} tier={D.tierAt(g, n)} /></td>
               <td>{elo ? f0(elo.before) + ' → ' + f0(elo.after) : '—'}</td>
               <td className={tone(d, 0.5)}>{d != null ? sgn(d) : ''}</td>
               <td>{score ? sc(score.before) + ' → ' + sc(score.after) : '—'}</td>

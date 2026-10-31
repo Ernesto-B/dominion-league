@@ -14,7 +14,7 @@ export default function GameFinish({ game: g, me = null }) {
   const { D } = usePage();
   const names = ordered(g);
   return names.map((n, i) => {
-    const t = D.tierFor(g.snapshot[n]);
+    const t = D.tierAt(g, n);
     return (
       <Fragment key={n}>
         {sep(g, names, i)}

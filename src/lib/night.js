@@ -105,10 +105,11 @@ export function gameSummary(g, before, ranked, tierFor) {
   if (!g || !g.elo || !Object.keys(g.elo).length) return null;
   const now = new Map(ranked.map(p => [p.name, p]));
   return g.names.slice().sort((a, b) => g.places[a] - g.places[b]).filter(n => g.elo[n]).map(name => {
-    const e = g.elo[name], p = now.get(name), tierAfter = tierFor(e.after), tierBefore = tierFor(e.before);
+    const e = g.elo[name], p = now.get(name), tierAfter = e.tierAfter || tierFor(e.after), tierBefore = e.tierBefore || tierFor(e.before);
     const rankBefore = before.ranks[name] ?? null;
     return {
       name, place: g.places[name], before: Math.round(e.before), after: Math.round(e.after), delta: Math.round(e.after - e.before),
+      saving: e.saving ? Math.round(e.saving) : 0,
       rankBefore, rankAfter: p ? p.rank : null, rankMove: rankBefore != null && p ? rankBefore - p.rank : 0,
       tierUp: tierAfter.id !== tierBefore.id && e.after > e.before ? tierAfter : null,
       tierDown: tierAfter.id !== tierBefore.id && e.after < e.before ? tierAfter : null,

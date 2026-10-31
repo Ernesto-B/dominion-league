@@ -34,13 +34,13 @@ export default function GameCards({ games, open, toggle, onEdit, showDate = fals
             </div>
             <ol className={'gcard-rows' + (g.names.length > 3 ? ' cols2' : '')} style={{ '--rows': Math.ceil(g.names.length / 2) }}>
               {ordered(g).map(n => {
-                const elo = g.elo && g.elo[n], d = elo ? elo.after - elo.before : null, t = D.tierFor(g.snapshot[n]);
+                const elo = g.elo && g.elo[n], d = elo ? elo.after - elo.before : null, t = D.tierAt(g, n);
                 const score = g.score && g.score[n], sd = score ? score.after - score.before : null, vp = g.playerVP && g.playerVP[n];
                 const won = g.places[n] === 1;
                 return (
                   <li key={n} className={'gcard-row' + (n === me ? ' me' : '')}>
                     <span className={'gc-place' + (g.places[n] === 1 ? ' first' : '')}>{ord(g.places[n])}</span>
-                    <span className="gc-name">{isOpen ? <PlayerLink name={n} at={g.snapshot[n]} /> : <>{t && <TierIcon id={t.icon} size={20} alt={t.name + ' tier'} />}{won ? <b>{n}</b> : n}</>}</span>
+                    <span className="gc-name">{isOpen ? <PlayerLink name={n} tier={t} /> : <>{t && <TierIcon id={t.icon} size={20} alt={t.name + ' tier'} />}{won ? <b>{n}</b> : n}</>}</span>
                     <span className={'gc-chg ' + (d != null ? tone(d, 0.5) : '')}>{d != null ? sgn(d) : ''}</span>
                     {isOpen && (
                       <span className="gc-sub">

@@ -79,6 +79,12 @@ function compute(config, csvRows, today) {
   // tier right now — otherwise every past game would silently show
   // today's tier and a rank-up would be invisible in the history.
   const tierFor = elo => tiers[tierIndex(elo)];
+  // Demotion grace: a player's SHOWN tier is not purely a function of their Elo. Dropping under the threshold of the tier they hold keeps the tier for
+  // `demotionGrace` rated games (default 0 = off); if their Elo is back at or over the line after any of them, the grace is forgotten, otherwise they
+  // fall to the tier their Elo gives. The Elo itself is never touched. See `held` / `below` in the game loop.
+  const grace = Math.max(0, Math.floor(+E.demotionGrace || 0));
+  // Saving Grace: a player in that grace who then finishes in the top half gets this share of what they lost in their previous rated game, on top (0 = off)
+  const saving = Math.max(0, +E.savingGrace || 0);
   const rosterKey = new Map();   // lowercase -> display name
   const roster = [];
   function canon(name) {
@@ -171,11 +177,18 @@ function compute(config, csvRows, today) {
   /* Elo, game by game */
   const cur = {};
   roster.forEach(n => cur[n] = E.start);
+  const lastLoss = {};   // what each player lost in their latest rated game (0 if they gained)
+  const held = {}, below = {};   // the tier index each player is shown at, and how many games in a row they have sat under it
+  roster.forEach(n => { held[n] = tierIndex(E.start); below[n] = 0; });
+  const settle = (n, elo) => {
+    const raw = tierIndex(elo);
+    if (raw >= (held[n] ?? 0)) { held[n] = raw; below[n] = 0; } else if (++below[n] > grace) { held[n] = raw; below[n] = 0; }
+  };
   games.forEach(g => {
     g.pts = {}; g.elo = {};
     if (g.n >= 2) g.names.forEach(nm => { g.pts[nm] = avgPts(g, nm); });
     if (rated(g)) {
-      const next = {};
+      const next = {}, bonus = {};
       const scores = steady ? finishScores(g.names.map(nm => g.places[nm]), E) : null;
       g.names.forEach((a, ai) => {
         const pa = ensure(a);
@@ -188,11 +201,19 @@ function compute(config, csvRows, today) {
         });
         const k = pa.rated < E.provisionalGames ? E.provisionalK : E.k;
         next[a] = (cur[a] ?? E.start) + (steady ? k * (scores[ai] - sumE / (g.n - 1)) : k / (g.n - 1) * tot);
+        bonus[a] = (below[a] || 0) > 0 && g.pts[a] >= 0.5 ? saving * (lastLoss[a] || 0) : 0;
+        next[a] += bonus[a];
       });
       g.names.forEach(a => {
         const pa = ensure(a);
+        if (!(a in held)) { held[a] = tierIndex(E.start); below[a] = 0; }
+        const tierBefore = tiers[held[a]];
         g.elo[a] = { before: cur[a] ?? E.start, after: next[a] };
         cur[a] = next[a];
+        lastLoss[a] = Math.max(0, g.elo[a].before - next[a]);
+        if (bonus[a] > 0) g.elo[a].saving = bonus[a];
+        settle(a, next[a]);
+        g.elo[a].tierBefore = tierBefore; g.elo[a].tierAfter = tiers[held[a]]; g.elo[a].held = below[a] > 0;
         pa.rated++; pa.ptsSum += g.pts[a];
         const won = g.places[a] === 1;
         if (won) { pa.wins++; pa.streak++; pa.bestStreak = Math.max(pa.bestStreak, pa.streak); pa.dry = 0; } else { pa.streak = 0; pa.dry++; pa.bestDry = Math.max(pa.bestDry, pa.dry); }
@@ -202,6 +223,7 @@ function compute(config, csvRows, today) {
     }
     g.names.forEach(a => { const p = ensure(a); if (g.n >= 2) p.allGames++; });
     g.snapshot = Object.assign({}, cur);
+    g.tierSnap = {}; Object.keys(cur).forEach(n => { g.tierSnap[n] = tiers[held[n] ?? tierIndex(cur[n])]; });   // each player's shown tier right after this game
   });
   Object.keys(cur).forEach(n => { P[n].elo = cur[n]; });
 
@@ -271,9 +293,10 @@ function compute(config, csvRows, today) {
         Object.values(m).forEach(e => { e.winPct = e.wins / e.games; });
         return m;
       })(),
-      tier: p.rated ? tiers[tierIndex(p.elo)] : null,
+      tier: p.rated ? tiers[held[n] ?? tierIndex(p.elo)] : null,
+      tierHeld: p.rated > 0 && (below[n] || 0) > 0,   // under their tier's line but still shown at it (the demotion grace)
       peakTier: p.rated ? tiers[tierIndex(p.peak)] : null,
-      nextTier: p.rated && tierIndex(p.elo) < tiers.length - 1 ? { tier: tiers[tierIndex(p.elo) + 1], need: Math.max(1, tiers[tierIndex(p.elo) + 1].min - Math.round(p.elo)) } : null,
+      nextTier: p.rated && (held[n] ?? tierIndex(p.elo)) < tiers.length - 1 ? { tier: tiers[(held[n] ?? tierIndex(p.elo)) + 1], need: Math.max(1, tiers[(held[n] ?? tierIndex(p.elo)) + 1].min - Math.round(p.elo)) } : null,
     };
   });
   const ranked = players.filter(p => p.rated > 0)
@@ -496,7 +519,7 @@ function compute(config, csvRows, today) {
 
   if (!seasons.length) warnings.push('No seasons are set up yet. Games will still count for Elo.');
 
-  return { preview, lastNight, config, E, S, roster, players, ranked, games, seasons, currentSeason, currentSeasonFor, nights, tiers, tierFor, startTier: tiers[tierIndex(E.start)], warnings, seasonStandings, h2h, records, today };
+  return { preview, lastNight, config, E, S, roster, players, ranked, games, seasons, currentSeason, currentSeasonFor, nights, tiers, tierFor, tierAt: (g, name) => (g.tierSnap && g.tierSnap[name]) || tierFor(g.snapshot[name]), startTier: tiers[tierIndex(E.start)], warnings, seasonStandings, h2h, records, today };
 }
 
 export { DEFAULT_TIERS, compute, parseCSV, parseFinish, parseISO, fmtDay, todayDay };
