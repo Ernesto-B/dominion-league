@@ -6,6 +6,7 @@ import { useLeagueGames } from '../useLeagueGames.js';
 import { cardHref } from '../links.js';
 import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
+import FilterSummary from '../components/FilterSummary.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
 import { Chip, ExpansionBadge, FilterFold, ModeRow, TypePills, rowLink } from '../components/bits.jsx';
 import CostIcons, { CoinIcon, DebtIcon, PlainDebtIcon } from '../components/Cost.jsx';
@@ -119,6 +120,7 @@ export default function Cards({ query = '' }) {
         </fieldset>
         </FilterFold>
 
+        <FilterSummary f={f} update={update} />
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>
           <button type="button" className="ghost" onClick={clear} disabled={!active}>Clear filters{active ? ` (${active})` : ''}</button>
           <button type="button" className="ghost" onClick={random} disabled={!rows.length}>Random card</button>

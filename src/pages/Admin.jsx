@@ -88,7 +88,7 @@ function PlayerGroups({ status, say }) {
       <div className="tablewrap"><table className="plain">
         <thead><tr><th className="l">Player</th>{allGroups.map(g => <th key={g.id}>{g.name}</th>)}</tr></thead>
         <tbody id="pgTable">{rawPlayers.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => (
-          <tr key={p.id}><td className="l">{p.name}</td>{allGroups.map(g => <td key={g.id}><input type="checkbox" data-pid={p.id} data-pg={g.id} checked={has(p, g.id)} onChange={() => change(p, g.id)} /></td>)}</tr>
+          <tr key={p.id}><td className="l">{p.name}</td>{allGroups.map(g => <td key={g.id}><input type="checkbox" aria-label={`${p.name} plays in ${g.name}`} data-pid={p.id} data-pg={g.id} checked={has(p, g.id)} onChange={() => change(p, g.id)} /></td>)}</tr>
         ))}</tbody>
       </table></div>
       <Msg id="pgMsg" status={status} />
@@ -121,8 +121,8 @@ function PasswordResets({ status, say }) {
 
   const players = rawPlayers.slice().sort((a, b) => a.name.localeCompare(b.name));
   return (
-    <div className="builder">
-      <p className="note">Verify the player in person before resetting. A reset signs them out on every device; give the one-time password directly to that verified person. They must choose a new password at their next sign-in.</p>
+    <div className="builder" style={{ marginTop: 12 }}>
+      <p className="meta" style={{ marginTop: 0 }}>Verify the player in person before resetting. A reset signs them out on every device; give the one-time password directly to that verified person. They must choose a new password at their next sign-in.</p>
       <div className="tablewrap"><table className="plain">
         <thead><tr><th className="l">Player</th><th></th></tr></thead>
         <tbody>{players.map(p => <tr key={p.id}><td className="l">{p.name}</td><td><button type="button" className="ghost" disabled={!!busy} onClick={() => reset(p)}>{busy === p.id ? 'Resetting…' : 'Reset password'}</button></td></tr>)}</tbody>
@@ -333,10 +333,10 @@ export default function Admin() {
       {shown === 'people' ? <>
         <h2>New player</h2>
         <NewPlayer {...p} />
-        <h2>Who plays in which group</h2>
-        <PlayerGroups {...p} />
-        <h2>Password recovery</h2>
-        <PasswordResets {...p} />
+        <div className="admin-pair">
+          <section><h2>Who plays in which group</h2><PlayerGroups {...p} /></section>
+          <section><h2>Password recovery</h2><PasswordResets {...p} /></section>
+        </div>
       </> : <>
         <h2>Sets</h2>
         <Sets {...p} />

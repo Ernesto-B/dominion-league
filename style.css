@@ -1552,3 +1552,34 @@ html.is-scrolling .pill.hot,html.is-scrolling .staticon.hot{animation-play-state
 .gr-actions>button.ghost{color:var(--muted);border-color:color-mix(in srgb,var(--line) 70%,transparent);font-weight:500}
 .gr-actions>button.ghost:hover{color:var(--ink);opacity:1}
 .dn-nocost{display:inline-block;width:30px;height:2px;border-radius:2px;background:var(--muted);opacity:.5;vertical-align:middle}
+
+/* ---------- UX audit: sizes and the active-filter strip ---------- */
+.dn-active{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;padding:0}
+.dn-active li{display:inline-flex;align-items:center;gap:2px;padding:2px 2px 2px 10px;border:1px solid color-mix(in srgb,var(--felt) 55%,var(--line));border-radius:999px;background:color-mix(in srgb,var(--felt) 12%,transparent);font-size:13px}
+.dn-active-x{width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:50%;background:none;color:var(--muted);font:inherit;font-size:12px;cursor:pointer}
+.dn-active-x:hover{color:var(--ink)}
+/* 11px was the smallest text on the site: small labels and units are 12px now */
+.lvl,.pp-chev,.ss-chev,.gr-count,.gr-stat small{font-size:12px}
+.mc-label{font-size:12px}
+/* last block on purpose: it has to beat the earlier size rules above (some of them set min-height:0) */
+@media (pointer:coarse){
+  .pp-btn,.ss-btn,.pp-step{min-height:44px}
+  .pp-step{width:44px}
+  .gr-top a,.gr-top .off{display:inline-flex;align-items:center;min-height:44px;padding:0 6px}
+  .mc-badges a{display:inline-block;padding:13px 0;margin:-13px 0}
+  a:has(>.dn-exp){display:inline-block;padding:11px 0;margin:-11px 0}
+  .dn-active-x{width:44px;height:44px;margin:-10px 0}
+  input[type=checkbox]{width:22px;height:22px}
+  label:has(>input[type=checkbox]){min-height:44px;display:inline-flex;align-items:center;gap:8px}
+  .updatebar-go,.updatebar-x{min-height:44px}
+}
+
+/* Admin > People on a wide screen: the group table and password recovery sit side by side, each half width (one column everywhere else) */
+@media (min-width:1024px){.admin-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+  /* the Reset buttons are slim here so a row is as tall as a row of the group table beside it */
+  .admin-pair td>button{min-height:0;padding:3px 12px;font-size:13px;line-height:1.1}
+  /* a fixed height, not whatever each cell's content adds up to, so the two tables are the same height whatever the browser's font and rounding do */
+  .admin-pair table th,.admin-pair table td{padding-top:0;padding-bottom:0;box-sizing:border-box}
+  .admin-pair thead tr{height:38px}
+  .admin-pair tbody tr{height:42px}}
+.admin-pair>section{min-width:0}

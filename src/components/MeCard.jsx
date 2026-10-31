@@ -69,7 +69,7 @@ export default function MeCard({ ranked }) {
             {mineP && <PinnedBadges p={mineP} list={list} fit />}
           </div>
         </div>
-        <p className="mecard-go"><a className="btn ghost" href={mine}>Your page</a>{me.is_admin && <a className="btn" href={hashFor('night', gid)}>Game night</a>}</p>
+        <p className="mecard-go"><a className="btn ghost" href={mine}>Your page</a>{me.is_admin && <a className="btn gamenight" href={hashFor('night', gid)}><img src="icons/nav/add-a-game.png" alt="" />Game night</a>}</p>
       </div>
 
       <div className="mc-tiles">
