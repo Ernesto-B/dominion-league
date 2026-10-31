@@ -4,7 +4,7 @@ Instructions for AI coding agents working on this repo. For end-user setup/opera
 
 ## What this is
 
-A static Dominion board-game league tracker: Elo rankings, seasons, head-to-head, records, a game log. No build step, no bundler, no framework — plain HTML/CSS/JS, hosted on GitHub Pages. Supabase (Postgres + Auth + Edge Functions) is the entire backend; the browser talks to it directly over its REST/Auth/Functions APIs.
+A static Dominion board-game league tracker: Elo rankings, seasons, head-to-head, records, a game log. React + Vite (built by GitHub Actions), hosted on GitHub Pages. Supabase (Postgres + Auth + Edge Functions) is the entire backend; the browser talks to it directly over its REST/Auth/Functions APIs.
 
 ## Hard constraints — read before changing architecture
 
@@ -65,6 +65,13 @@ spreadsheet verified) is pairwise Elo, K=200. The league runs `steady` (`src/lib
 table that pays the top half first and the win second, half the top-half bonus for the exact middle of an odd table, and a table that pays `target`
 (0.52) of the points on average, which is the deliberate slow upward drift. Tier thresholds in `config.json` are the K=200 ones scaled by K/200
 (1125 / 1275 / 1475 / 1700): change K and the tiers together. Ratings are recomputed from the games on every load, so changing the model rewrites history.
+
+**Tiers are not a pure function of Elo any more.** `config.elo.demotionGrace` (2 now): a player who falls under the line of the tier they hold keeps it for that many more rated games; if their Elo is
+back at or over the line after any of them the grace resets, otherwise they drop. `config.elo.savingGrace` (0.2): in grace, a top-half finish (`pts >= 0.5`) adds that share of what they lost in their
+previous rated game, on top of the normal gain. Elo itself is never clamped except by that bonus. The engine keeps `held[name]` / `below[name]` per player and records, per game and player,
+`g.elo[name].tierBefore / tierAfter / held / below / saving` and `g.tierSnap`. **Show a tier after a game with `D.tierAt(game, name)`, never `D.tierFor(elo)`** (that is only the tier an Elo
+earns on its own; `tierAt` falls back to it for a game without a snapshot). `p.tier` / `p.tierHeld` / `p.nextTier` on a player follow the held tier. The rules are explained on Rankings ("How ratings and tiers
+work") from the config values, and the game report's Players tab says when a tier rose, dropped or is on thin ice (`tierMove` in `lib/gameReport.js`). Tests: `tests/demotionGrace.test.js`.
 
 **Season score** = the average of each Regular game's season points with `prior` imaginary average games. A game's season points are
 `(1 - vpWeight) x finish points + vpWeight x (your VP / the winner's VP)` (0.3: 70% place, 30% VP share; a ratio, so it never depends on how many VP an
@@ -188,7 +195,7 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   instead (`Emulation.setDeviceMetricsOverride` with `mobile:true`, touch on, a phone user agent; Node's built-in
   `WebSocket` is enough, no packages). Useful audit per page: horizontal overflow (`documentElement.scrollWidth`), interactive
   elements under 40px, text under 12px, tables that still scroll sideways.
-- The Collection catalog is cached in `localStorage` (`catalogStore.js`, stale-while-revalidate, key `dl.catalog.v1`): bump the
+- The Collection catalog is cached in `localStorage` (`catalogStore.js`, stale-while-revalidate, key `dl.catalog.v2`): bump the
   key whenever the shape of the raw catalog rows changes. `React.lazy` splits the Collection, Admin, the Add Game dialog and a
   game's kingdom list out of the main bundle; `vite.config.js` gives React and the Supabase client their own long-cached chunks.
 
@@ -232,6 +239,11 @@ technique is the best way to prove any refactor *doesn't* change what users see:
 - On a phone, a ⌄ opens a card's (or landscape's) text in a pop-out (`dominion/components/CardPeek.jsx`, drawn on `<body>` so a tap outside it closes it): the whole bottom edge of a draft tile and of a Random tile, and a small ⌄ on each chip of the hand-picker. Hidden above 720px, where the Show card text button puts the text inline.
 - A saved night is stamped with `NIGHT_VERSION` (`lib/night.js`): bump it when the SHAPE of a night changes in a way an old save could not survive (a save of another version starts a fresh night). `cleanNight` also checks every field's type on load and resets only the odd ones, so a save can cost a field, never the page; add a rule to `FIELDS` whenever you add a field to `blankNight`. If Game night still fails to draw, `NightBoundary` offers "Start a fresh Game night", which clears the save.
 - The game report (branch `game-insights`): `#/games/<group>/<id>` is no longer "the list with that row opened" but `components/GameReport.jsx`, one game in depth, fed by the pure `lib/gameReport.js` (`gameReport(D, g, { catalog })`). Header with the game in its night and season, up to five highlights, then tabs Players (each result, Elo / rank / season score / XP, and "against their usual" = this game vs the same player's OTHER games, plus how they do with this game's expansions and kingdom traits), Kingdom (average cost, cost levels, Attacks, landscapes against the group's usual, the cards by expansion), Time (length against the group's and the table size's, when it began and ended) and Rewards (XP by part, levels, badges, cards and landscapes new to each player, the same test XP pays for). Every list row has a "Full game report" link. A game's `startedAt` / `endedAt` come from the new `games.started_at` / `ended_at` columns (`supabase/schema.sql`, sent by Game night through `callGameRpc`, which retries without them on a database that has not been migrated), `savedAt` from `created_at`.
+- **Two tables at once** (`MAX_TABLES = 2` in `lib/night.js`): Game night's `Tables` wrapper (`pages/Night.jsx`) shows Table 1 / Table 2 tabs and keeps BOTH `NightFlow`s mounted (the inactive one is `hidden`), so
+  each clock (a `startedAt` timestamp) keeps running. Slot 0 keeps the old key `dl.night.<group>`, slot 1 is `dl.night.<group>.t2` (`key/loadNight/saveNight/clearNight(…, slot)`, `hasNight`, `tableLabel`; no
+  migration, `NIGHT_VERSION` unchanged). One shared device, so a player seated at one table is greyed out (`aria-disabled`) at the other, and the other table's kingdom cards AND landscapes are kept out of
+  rolls, snake-draft pools and hand-picking: the randomizer option `excludeLandscapes` and `withAvoid(options, items)` (`dominion/randomizer.js`), the `avoid` prop of `RandomizerPanel` / `KingdomPicker` / `KingdomStep`
+  (the owner has one copy of each pile).
 - A Game night is kept in localStorage per group (`dl.night.<group>`, with `savedAt`; `NIGHT_TTL` = 12 hours), NOT sessionStorage: a phone puts background tabs to sleep and kills installed apps, and a night in progress must survive that. `Night.jsx` is keyed by the group, so changing group starts that group's own night.
 - The snake draft (`dominion/draft.js`, pure and tested; `components/SnakeDraft.jsx`) is a mode of Game night's Kingdom step: a pool twice the kingdom size (first half under all the
   randomizer's rules), picks in snake order on one device, then `finishDraft` rebuilds the kingdom (with setup notes) the same shape as a roll. It is in memory only: a reload mid-draft starts over.
@@ -283,6 +295,12 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   review-status table as clutter (the *behaviour* — never a "without" filter, rules that require tags only ever add cards — is
   what keeps this honest). Landscape/Artifact
   tags use a *different vocabulary* from the Kingdom taxonomy — never join them to it.
+- **Landscape costs.** Events and Projects have a printed cost (`dominion_card_text.cost` / `debt_cost`, card-text dataset v4); every other landscape has none, drawn as a short line (`.dn-nocost`),
+  never the words "No cost". `model.js` gives a landscape `coins` / `debt`, and `coins == null` means no cost. The Landscapes page has a Cost column and a Cost filter (coin chips, "No cost", Debt) with the same
+  URL codec as the Kingdom cards. A coin cost with no artwork in `public/icons/costs/` (the $14 Dominate) is drawn as the blank coin `coin.png` with the number on it (`components/Cost.jsx`, `.dn-coin-num`); never
+  invent cost icons. The randomizer's cost controls, cost spread and stats only ever read Kingdom cards, so landscape costs do not affect a roll.
+- **Piles vs names on the Overview.** The type matrix's "Piles" column and the "Piles by expansion" donut count supply piles (`byExpansion[].piles`); "Printed card types", the type columns and the cost chart
+  still count card names. Keep the distinction explicit in any new chart label.
 - **A multi-type card has several printed types** and is listed/counted under each (122 of the 331 names).
 - **Supabase silently truncates responses (1,000 rows by default).** Anything that could grow past that goes
   through `fetchAllRows` (count first, page with a stable order, throw on mismatch) — never a bare `.select()`.
@@ -345,7 +363,7 @@ technique is the best way to prove any refactor *doesn't* change what users see:
 
 ## Testing — what's actually available
 
-**`npm test`** (Vitest, Node only — no browser) runs ~265 tests on the REAL Dominion data: dataset counts and
+**`npm test`** (Vitest, Node only — no browser) runs ~580 tests (rating engine, game report, Game night, randomizer, and the Dominion data below) on the REAL Dominion data: dataset counts and
 integrity, the data layer (including the 1,000-row truncation trap), filters, every Dominion view rendered with
 `react-dom/server`, routing (existing routes included), no-secrets-in-source, and SQL safety. **`npm run
 dominion:test-db`** builds a throwaway local Postgres and tests the schema, seed, constraints and RLS/privileges
@@ -353,6 +371,8 @@ dominion:test-db`** builds a throwaway local Postgres and tests the schema, seed
 `p_kingdom` argument of `add_game`/`edit_game` (atomic rejection, older-client compatibility), who can read/write it, and that
 re-seeding the catalog isn't blocked. There is no linter or
 type checker in this project, so none is run. The browser-level checks below are still ad hoc (not committed).
+
+**Render-test every component you touch** (`react-dom/server` with a `PageContext` value, see `tests/gameReport.test.jsx`): `npm run build` cannot see a sub-component that uses a variable only its parent has, and that crashed two report tabs.
 
 There is no interactive browser available to the agent. What's actually been used
 to verify changes, in order of how often (a real headless Chrome *is* usable for DOM dumps,
@@ -389,7 +409,11 @@ see the end of this list):
 
 ## Deployment
 
-- `main` → GitHub Pages, built and published by `.github/workflows/deploy.yml` (Vite build → `dist/`) on every push.
+- `main` → GitHub Pages, built and published by `.github/workflows/deploy.yml` on every push. The build job runs `npm test` first, so a failing test stops the deploy and the live site keeps the last good build; then the Vite build → `dist/`.
+  `npm run preview` serves whatever `dist/` was last built from: run `npm run build` first or it shows an old version.
+- A new deploy is announced, never forced: `components/UpdateBar.jsx` (production only) fetches `./?_v=<time>` when the tab comes back into view and every 10 minutes, compares the entry script's hashed name
+  (`assets/index-XXXX.js`, `lib/version.js`) with the one running, and shows a small dismissible "A new version is available. Reload" pill. `public/sw.js` skips any request with `_v` so the check reaches the network.
+  The error screen (`PageBoundary.jsx`) also prints the error message under "Something went wrong".
 - `supabase/schema.sql` is meant to be safely re-run in the Supabase SQL editor after any
   change to it (that's the whole point of the `drop policy if exists` pattern and
   `create table if not exists` / `add column if not exists` throughout) — confirm new

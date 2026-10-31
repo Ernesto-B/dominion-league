@@ -910,6 +910,10 @@ html{overscroll-behavior-y:contain}   /* the browser's own pull-to-refresh would
 .ptr{position:fixed;top:env(safe-area-inset-top);left:50%;z-index:90;width:40px;height:40px;border-radius:50%;background:var(--panel);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.35);display:grid;place-items:center;pointer-events:none}
 .ptr i{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--muted);border-top-color:var(--brass)}
 .ptr.ready i{border-color:var(--brass);border-top-color:var(--brass)}
+.updatebar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 24px);padding:8px 8px 8px 16px;border-radius:999px;background:var(--bg);color:var(--ink);border:1px solid var(--line);box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:14px}
+.updatebar-go{padding:6px 14px;border-radius:999px;border:0;background:var(--brass);color:#140d02;font:inherit;font-weight:700;cursor:pointer}
+.updatebar-x{width:28px;height:28px;padding:0;border:0;border-radius:50%;background:none;color:var(--muted);font:inherit;cursor:pointer}
+@media (max-width:720px){.updatebar{bottom:calc(72px + env(safe-area-inset-bottom))}}
 .offlinebar{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;margin:0;padding:8px 16px;background:var(--brass-soft);color:var(--ink);font-size:14px;text-align:center}
 
 /* ---------- motion: small, quick, and switched off for anyone who asks for less ---------- */
@@ -1265,6 +1269,7 @@ a:hover .dn-exp-label{text-decoration:underline}
 .hud img.tier{flex:none}
 .hud-name{display:none}   /* the name is in the me card; the HUD is icons and numbers */
 .hud-lvl{font:600 12px var(--text);color:var(--brass);white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.hud-lvl b.hud-none{opacity:.6}
 .hud-lvl b{font:800 18px var(--display);letter-spacing:0;margin-left:2px}
 .hud-bar{flex:none;width:60px;height:8px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden}
 .hud-bar i{display:block;height:100%;border-radius:inherit;transform-origin:left;transform:scaleX(var(--p));background:linear-gradient(90deg,var(--brass),#f5df9b)}

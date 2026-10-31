@@ -15,6 +15,7 @@ const put = async (req, res) => { if (res && res.ok) (await caches.open(CACHE)).
 self.addEventListener('fetch', e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (url.searchParams.has('_v')) return;   // the site's own "is there a new version?" check: always the network (components/UpdateBar.jsx)
   const path = url.pathname;
   if (req.mode === 'navigate' || path.endsWith('/data/config.json') || path.endsWith('.webmanifest')) {
     e.respondWith(fetch(req).then(res => put(req.mode === 'navigate' ? new Request(new URL('./', self.registration.scope)) : req, res)).catch(async () =>

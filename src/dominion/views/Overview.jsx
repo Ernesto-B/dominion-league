@@ -51,10 +51,10 @@ export default function Overview({ query = '' }) {
       </details>
 
       <div className="grid2">
-        <Section title="Card names by expansion" id="ov-exp">
+        <Section title="Piles by expansion" id="ov-exp">
             <div className="builder">
-              <Donut label="Kingdom card names per expansion" center="card names"
-                items={s.byExpansion.map(e => ({ key: e.name, label: e.label, value: e.names, icon: e.icon && <SetIcon name={e.icon} size={18} />, href: cardsFilterHref({ expansions: [e.name] }) }))} />
+              <Donut label="Supply piles per expansion" center="piles"
+                items={s.byExpansion.map(e => ({ key: e.name, label: e.label, value: e.piles, icon: e.icon && <SetIcon name={e.icon} size={18} />, href: cardsFilterHref({ expansions: [e.name] }) }))} />
             </div>
         </Section>
         <Section title="Printed card types" id="ov-types">

@@ -18,6 +18,7 @@ import PeekLayer from './dominion/components/CardPeek.jsx';
 import { popup } from './components/popup.js';
 import BottomNav from './components/BottomNav.jsx';
 import OfflineBar from './components/OfflineBar.jsx';
+import UpdateBar from './components/UpdateBar.jsx';
 import PullToRefresh from './components/PullToRefresh.jsx';
 
 function Shell() {
@@ -72,6 +73,7 @@ function Shell() {
       {ready && <PullToRefresh onRefresh={boot} />}
       {ready && <BottomNav ready={{ ...state, route }} hash={hash} />}
       {ready && (['home', 'season', 'games', 'players', 'records', 'night', 'dominion'].includes(route.route)) && <ScrollTopButton lift={route.route === 'night'} />}
+      <UpdateBar />
       <PopLayer />
       <PeekLayer />
     </>

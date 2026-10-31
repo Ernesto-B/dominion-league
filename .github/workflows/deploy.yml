@@ -24,6 +24,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm test            # a failing test stops the deploy: nothing below runs, so the live site keeps the last good build
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -15,11 +15,16 @@ export default function PlayerHud() {
     <a className="hud" href={hashFor('players', gid, encodeURIComponent(me.name))} aria-label={`${me.name}${lv ? `, level ${lv.level}` : ''}${p && p.rated ? `, Elo ${f0(p.elo)}` : ''}: your page`}>
       {p && p.tier ? <TierIcon id={p.tier.icon} size={30} alt="" /> : null}
       <span className="hud-name">{me.name}</span>
-      {lv && <>
+      {lv ? <>
         <span className="hud-lvl">Lv <b>{lv.level}</b></span>
         <span className="hud-bar" role="img" aria-label={`${Math.round(lv.pct * 100)}% of the way to level ${lv.level + 1}`}><i style={{ '--p': Math.max(0.04, lv.pct) }}></i></span>
+      </> : <>
+        {/* no games logged yet: the same HUD, empty, so the corner never shows a bare number */}
+        <span className="hud-lvl">Lv <b className="hud-none">–</b></span>
+        <span className="hud-bar" role="img" aria-label="No experience yet"></span>
       </>}
-      {p && p.rated && <span className="hud-stat" title="Elo"><img src="icons/stats/elo.png" alt="" width="18" height="18" />{f0(p.elo)}</span>}
+      {p && p.rated ? <span className="hud-stat" title="Elo"><img src="icons/stats/elo.png" alt="" width="18" height="18" />{f0(p.elo)}</span>
+        : !lv && <span className="hud-stat" title="Elo: no rated games yet"><img src="icons/stats/elo.png" alt="" width="18" height="18" />–</span>}
       {p && p.streak >= 3 && <span className="hud-stat hud-hot" title={`${p.streak}-game win streak`}><img src="icons/stats/win-streak.png" alt="" width="18" height="18" />{p.streak}</span>}
     </a>
   );

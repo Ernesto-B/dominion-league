@@ -43,7 +43,7 @@ describe('Overview', () => {
     expect(html).not.toContain('dn-help');                                              // the old custom popover is gone
   });
   it('breaks down by expansion (11 rows + a total), by printed type, and by landscape type', () => {
-    expect(html).toContain('Card names by expansion'); expect(html).toContain('Printed card types'); expect(html).toContain('aria-label="Landscape designs per type"');
+    expect(html).toContain('Piles by expansion'); expect(html).toContain('Printed card types'); expect(html).toContain('aria-label="Landscape designs per type"');
     expect(html).toMatch(/<tr class="dn-total">/);
     expect(t).toMatch(/Base Game/); expect(t).toMatch(/Cornucopia & Guilds/);
     expect(t).toMatch(/Events.*48/); expect(t).toMatch(/Traits.*15/);
@@ -183,7 +183,7 @@ describe('the Overview charts', () => {
   });
   it('uses a different kind of chart for each question, not one bar chart repeated', () => {
     expect(html).not.toContain('dn-treemap'); expect((html.match(/class="dn-bars"/g) || []).length).toBe(1);   // one plain bar chart, not one for everything
-    for (const [cls, label] of [['dn-donut', 'Kingdom card names per expansion'], ['dn-bars', 'Kingdom card names per printed type'], ['dn-lol', 'Physical Kingdom cards per expansion'],
+    for (const [cls, label] of [['dn-donut', 'Supply piles per expansion'], ['dn-bars', 'Kingdom card names per printed type'], ['dn-lol', 'Physical Kingdom cards per expansion'],
       ['dn-seg', 'Supply piles by number of card names'], ['dn-waffle-wrap', 'Landscape designs per type'], ['dn-cols', 'Kingdom card names per coin cost'], ['dn-heat', 'Card names recorded with each mechanic, most common first']])
       expect(html, label).toMatch(new RegExp(`class="${cls}"[^>]*aria-label="${label}"`));
   });
