@@ -87,6 +87,7 @@ function Players({ rep, game, me }) {
 }
 
 function PlayerCard({ p, game, mine, open }) {
+  const { D } = usePage();
   const t = p.table;
   return (
     <li className={'gr-player' + (p.won ? ' won' : '') + (mine ? ' me' : '')}>

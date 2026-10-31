@@ -1,4 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
+import { PageContext } from '../src/PageContext.js';
+import GameReport from '../src/components/GameReport.jsx';
 import * as Eng from '../src/lib/engine.js';
 import { gameReport, kingdomStats } from '../src/lib/gameReport.js';
 import { realCatalog } from './dominion/fixtures.js';
@@ -133,5 +137,14 @@ describe('when a match began', () => {
     expect(startLabel({})).toBeNull(); expect(startLabel({ date: '2026-10-29', savedAt: '2026-10-29T20:00:00Z' })).toMatch(/^\d{1,2}:\d{2}/);   // only a save time, close to the game's day: shown as a plain time
     expect(startLabel({ date: '2026-01-10', savedAt: '2026-10-29T20:00:00Z' })).toBeNull();                                                  // a bulk import: the save time says nothing expect(startLabel({ savedAt: '2026-10-29T20:00:00Z', minutes: 40 })).toMatch(/^~\d{1,2}:\d{2}/); expect(startLabel({ startedAt: '2026-10-29T19:04:00Z' })).not.toMatch(/^~/);
     expect(startLabel({ startedAt: 'garbage' })).toBeNull();
+  });
+});
+
+describe('the game report page', () => {
+  it('renders every tab without throwing (the Players cards use the tier the game left each player with)', () => {
+    const D = run(rows());
+    const page = { D, gid: 'a', hashFor: (r, g, x) => `#/${r}/${g}${x != null ? '/' + x : ''}`, me: null, catalog, allGroups: [{ id: 'a' }] };
+    const html = renderToString(createElement(PageContext.Provider, { value: page }, createElement(GameReport, { game: D.games[3] })));
+    expect(html).toContain('gr-player'); expect(html).toContain('Dee');
   });
 });
