@@ -213,7 +213,7 @@ function compute(config, csvRows, today) {
         lastLoss[a] = Math.max(0, g.elo[a].before - next[a]);
         if (bonus[a] > 0) g.elo[a].saving = bonus[a];
         settle(a, next[a]);
-        g.elo[a].tierBefore = tierBefore; g.elo[a].tierAfter = tiers[held[a]]; g.elo[a].held = below[a] > 0;
+        g.elo[a].tierBefore = tierBefore; g.elo[a].tierAfter = tiers[held[a]]; g.elo[a].held = below[a] > 0; g.elo[a].below = below[a];
         pa.rated++; pa.ptsSum += g.pts[a];
         const won = g.places[a] === 1;
         if (won) { pa.wins++; pa.streak++; pa.bestStreak = Math.max(pa.bestStreak, pa.streak); pa.dry = 0; } else { pa.streak = 0; pa.dry++; pa.bestDry = Math.max(pa.bestDry, pa.dry); }

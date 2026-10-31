@@ -86,6 +86,12 @@ export function Players({ rep, game, me }) {
   );
 }
 
+function GraceNote({ g }) {
+  if (g.kind === 'up') return <>Rose to <b>{g.tier}</b></>;
+  if (g.kind === 'down') return <>Dropped from <b>{g.from}</b> to <b>{g.tier}</b></>;
+  return <>On thin ice: still <b>{g.tier}</b> under the line, {g.left > 0 ? `${g.left} more game${g.left === 1 ? '' : 's'} of grace` : 'out of grace, the next game under the line drops them'}</>;
+}
+
 function PlayerCard({ p, game, mine, open }) {
   const { D } = usePage();
   const t = p.table;
@@ -103,6 +109,8 @@ function PlayerCard({ p, game, mine, open }) {
         <div className="gr-body">
           <ul className="gr-facts">
             {p.elo && <li>Elo <b>{f0(p.elo.before)} → {f0(p.elo.after)}</b>{p.rank && p.rank.after != null ? <> · ladder <b>{p.rank.before != null ? `#${p.rank.before} → #${p.rank.after}` : `new at #${p.rank.after}`}</b></> : null}</li>}
+            {p.elo && p.elo.saving > 0 && <li>Saving Grace <b className="up-t">+{f0(p.elo.saving)} Elo</b> <small>a top-half finish while under the line returns part of the last loss</small></li>}
+            {p.elo && p.elo.grace && <li><GraceNote g={p.elo.grace} /></li>}
             {p.score && <li>Season score <b>{f0(p.score.before * 1000)} → {f0(p.score.after * 1000)}</b> <span className={tone(p.score.delta, 0.0005)}>({sgn(p.score.delta * 1000)})</span></li>}
             {p.vpShare != null && <li>{Math.round(p.vpShare * 100)}% of the winner’s VP</li>}
             {t && <li>The table averaged <b>{f0(t.oppAvg)}</b> Elo, {Math.abs(t.diff) < 1 ? 'level with their rating' : `${Math.round(Math.abs(t.diff))} ${t.diff > 0 ? 'above' : 'below'} their own rating`}. Expected to beat <b>{Math.round(t.expected * 100)}%</b> of it, beat <b>{Math.round(t.actual * 100)}%</b>.</li>}

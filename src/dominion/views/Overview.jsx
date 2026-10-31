@@ -84,7 +84,7 @@ export default function Overview({ query = '' }) {
       </div>
 
       <Section title="Card types by expansion" id="st-matrix">
-        <TypeMatrix matrix={s.typeMatrix} names={s.names} cards={catalog.cards} chart={chart} onChart={setChart} />
+        <TypeMatrix matrix={s.typeMatrix} piles={s.piles} cards={catalog.cards} chart={chart} onChart={setChart} />
       </Section>
 
       <div className="grid2">
@@ -112,7 +112,7 @@ export default function Overview({ query = '' }) {
       </div>
 
       <div className="grid2">
-        <Section title="Coin cost" id="st-cost">
+        <Section title="Card Cost" id="st-cost">
           <div className="builder">
             <Columns label="Kingdom card names per coin cost" items={[
               ...s.coinCosts.map(c => ({ key: 'c' + c.key, label: <CostIcons coins={c.key} size={24} />, value: c.count, href: cardsFilterHref({ costs: [c.key] }), title: `${c.count} cards cost ${c.key} coins — show them` })),

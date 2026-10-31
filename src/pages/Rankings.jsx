@@ -88,7 +88,9 @@ export default function Rankings() {
     </div>
     <h2>Rank tiers</h2>
     <TierLegend />
-    <p className="note">Your tier follows your current Elo, so it can go down as well as up. The trophy is for winning a season and never goes away.</p>
+    <p className="note">Your tier follows your Elo, so it can go down as well as up. {D.E.demotionGrace > 0 && <><b>Demotion grace:</b> if your Elo falls under the line of the tier you hold, you keep that tier for {D.E.demotionGrace} more game{D.E.demotionGrace === 1 ? '' : 's'}. Get back to the line in any of them and the grace resets; stay under and you drop. Your Elo itself is never changed by it.</>}</p>
+    {D.E.demotionGrace > 0 && D.E.savingGrace > 0 && <p className="note"><b>Saving Grace:</b> while you are in grace, a top-half finish adds {Math.round(D.E.savingGrace * 100)}% of what you lost in your previous rated game on top of the normal gain, so one decent night can pull you back over the line.</p>}
+    <p className="note">The trophy is for winning a season and never goes away.</p>
     <p className="note">Everyone starts at {D.E.start} as a {D.startTier.name} and climbs from there. Elo carries across seasons; friendly games never count. New players move faster for their first {D.E.provisionalGames} games (provisional).</p>
     <p className="note">This ladder is Elo — a lifetime skill rating that never resets. It's not what decides a season's winner; that's points, on the <a href={hashFor('season', gid)}>Season page</a>.</p>
   </>;

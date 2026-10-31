@@ -39,7 +39,7 @@ export function summarize(catalog) {
     types: matrixTypes.map(t => t.key), skipped: MATRIX_SKIPPED_TYPES.filter(t => typeCounts.has(t)),
     rows: byExpansion.map(e => {
       const counts = Object.fromEntries(matrixTypes.map(t => [t.key, cards.filter(c => c.expansion === e.name && c.types.includes(t.key)).length]));
-      return { name: e.name, label: e.label, icon: e.icon, names: e.names, counts };
+      return { name: e.name, label: e.label, icon: e.icon, names: e.names, piles: e.piles, counts };
     }),
     totals: Object.fromEntries(matrixTypes.map(t => [t.key, t.count])),
   };
@@ -89,12 +89,12 @@ export function summarize(catalog) {
 }
 
 /* Orders the expansion rows of the type matrix. key: null = the collection's own order; 'expansion' = A–Z by name;
-   'names' = card names; otherwise a printed type (its count in that expansion). Ties fall back to A–Z, whichever
+   'piles' = supply piles (or 'names' = card names); otherwise a printed type (its count in that expansion). Ties fall back to A–Z, whichever
    direction, so equal counts never reshuffle. */
 export function sortMatrixRows(rows, { key = null, dir = 'asc' } = {}) {
   if (!key) return rows;
   const sign = dir === 'desc' ? -1 : 1;
-  const val = r => (key === 'names' ? r.names : r.counts[key]);
+  const val = r => (key === 'piles' ? r.piles : key === 'names' ? r.names : r.counts[key]);
   return rows.slice().sort((a, b) => (key === 'expansion'
     ? sign * a.label.localeCompare(b.label)
     : sign * (val(a) - val(b)) || a.label.localeCompare(b.label)));

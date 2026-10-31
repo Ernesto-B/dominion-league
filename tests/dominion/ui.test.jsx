@@ -53,7 +53,7 @@ describe('Overview', () => {
     expect(t).not.toMatch(/Attacks counts/); expect(t).not.toMatch(/Only edition/);
   });
   it('also carries what used to be the Statistics tab (one page, no duplicate charts)', () => {
-    for (const h of ['Physical cards by expansion', 'Supply piles', 'Card types by expansion', 'Most common type combinations', 'Coin cost', 'Recorded mechanics']) expect(t).toContain(h);
+    for (const h of ['Physical cards by expansion', 'Supply piles', 'Card types by expansion', 'Most common type combinations', 'Card Cost', 'Recorded mechanics']) expect(t).toContain(h);
     expect((html.match(/aria-label="Landscape designs per type"/g) || []).length).toBe(1);
     expect((html.match(/aria-label="Kingdom card names per printed type"/g) || []).length).toBe(1);
   });
@@ -519,7 +519,7 @@ describe('Statistics', () => {
     expect(t).toMatch(/1,?634 recorded mechanic tags across 96 of the 98 defined mechanics/);
   });
   it('covers the distributions asked for', () => {
-    for (const h of ['Physical cards by expansion', 'Printed card types', 'Supply piles', 'Landscapes', 'Coin cost', 'Recorded mechanics']) expect(t).toContain(h);
+    for (const h of ['Physical cards by expansion', 'Printed card types', 'Supply piles', 'Landscapes', 'Card Cost', 'Recorded mechanics']) expect(t).toContain(h);
     expect(t).toMatch(/Out of 331 card names\. 4 cards cost only Debt \(City Quarter, Engineer, Overlord, Royal Blacksmith\) and have no coin cost, so they get their own bar rather than counting as \$0/);
     expect(html).toContain('aria-label="Debt only: cards that cost only Debt"'); expect(html).not.toContain('coin-0.png');
     expect(t).toMatch(/Out of 310 piles/);
@@ -537,7 +537,7 @@ describe('the card-types-by-expansion table on Statistics', () => {
   });
   it('has a sortable heading for the expansion, the card names and every printed type, in the site\'s style (no buttons)', () => {
     const cols = ths(head);
-    expect(cols.map(c => c.label)).toEqual(['Expansion', 'Card names', 'Action', 'Attack', 'Duration', 'Treasure', 'Reaction', 'Victory', 'Command', 'Gathering', 'Looter']);
+    expect(cols.map(c => c.label)).toEqual(['Expansion', 'Piles', 'Action', 'Attack', 'Duration', 'Treasure', 'Reaction', 'Victory', 'Command', 'Gathering', 'Looter']);
     expect(text(head)).not.toMatch(/Knight|Castle/);
     for (const c of cols) expect(c.attrs, c.label).toMatch(/class="[^"]*\bsortable\b/);
     expect(head).not.toContain('<button');

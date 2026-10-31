@@ -150,6 +150,17 @@ function explainXp(D, g, name, parts, h, { badges, newCards, newLandscapes, tabl
   return out;
 }
 
+// What the tier did this game, for the report: stayed, rose, dropped, or is being held under the line (demotion grace).
+function tierMove(e, E) {
+  const a = e.tierBefore, b = e.tierAfter;
+  if (!a || !b) return null;
+  const left = Math.max(0, Math.floor(+E.demotionGrace || 0)) - (e.below || 0);
+  if (b.min > a.min) return { kind: 'up', tier: b.name };
+  if (b.min < a.min) return { kind: 'down', tier: b.name, from: a.name };
+  if (e.held) return { kind: 'held', tier: b.name, left: Math.max(0, left) };
+  return null;
+}
+
 export function gameReport(D, g, { catalog = null } = {}) {
   const xpMap = leagueXp(D, catalog), hist = histories(D), base = baselines(D, catalog), scale = D.E.scale;
   const order = inOrder(g), idxOf = new Map(D.games.map(x => [x.line, x.idx]));
@@ -244,7 +255,7 @@ export function gameReport(D, g, { catalog = null } = {}) {
     return {
       name, place: g.places[name], won: g.places[name] === 1, vp: mine ? mine.vp : null, pts: g.pts[name],
       vpShare: (() => { const top = Math.max(...Object.values(g.playerVP || {}).map(Number).filter(x => !Number.isNaN(x)), 0); return mine && mine.vp != null && top > 0 ? mine.vp / top : null; })(),
-      elo: elo ? { before: elo.before, after: elo.after, delta: elo.after - elo.before } : null,
+      elo: elo ? { before: elo.before, after: elo.after, delta: elo.after - elo.before, saving: elo.saving || 0, grace: tierMove(elo, D.E) } : null,
       score: score ? { before: score.before, after: score.after, delta: score.after - score.before } : null,
       rank: ranks.after ? { before: ranks.before ? ranks.before.get(name) ?? null : null, after: ranks.after.get(name) ?? null } : null,
       table: oppAvg != null && elo ? { oppAvg, own: elo.before, diff: oppAvg - elo.before, expected: exp, actual: g.pts[name] } : null,

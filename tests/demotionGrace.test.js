@@ -54,3 +54,21 @@ describe('saving grace', () => {
     on.games.forEach(g => expect(g.elo.A.saving).toBeUndefined());
   });
 });
+
+describe('game report shows the grace', () => {
+  it('reports held, dropped and Saving Grace per player', async () => {
+    const { gameReport } = await import('../src/lib/gameReport.js');
+    const c = cfg(1); c.elo.savingGrace = 0.5;
+    const seq = ['A', 'A', 'A', 'B', 'A', 'B', 'B', 'B'], seq2 = ['A', 'A', 'A', 'B', 'B', 'B', 'A', 'A'];
+    const rows = seq.map((w, i) => row(`2026-01-${String(i + 1).padStart(2, '0')}`, w === 'A' ? 'A > B' : 'B > A'));
+    const D = Eng.compute(c, rows, 100000);
+    const kinds = D.games.map(g => (gameReport(D, g, {}).players.find(p => p.name === 'A').elo || {}).grace);
+    expect(kinds.some(k => k && k.kind === 'up')).toBe(true);
+    expect(kinds.some(k => k && k.kind === 'held' && k.left === 0)).toBe(true);
+    expect(kinds.some(k => k && k.kind === 'down')).toBe(true);
+    const c2 = cfg(2); c2.elo.savingGrace = 0.5;
+    const D2 = Eng.compute(c2, seq2.map((w, i) => row(`2026-02-${String(i + 1).padStart(2, '0')}`, w === 'A' ? 'A > B' : 'B > A')), 100000);
+    const saved = D2.games.map(g => gameReport(D2, g, {}).players.map(p => p.elo && p.elo.saving)).flat();
+    expect(saved.some(v => v > 0)).toBe(true);
+  });
+});
