@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { PageContext } from '../src/PageContext.js';
-import GameReport from '../src/components/GameReport.jsx';
+import GameReport, { Players, Kingdom, Time, Rewards } from '../src/components/GameReport.jsx';
 import * as Eng from '../src/lib/engine.js';
 import { gameReport, kingdomStats } from '../src/lib/gameReport.js';
 import { realCatalog } from './dominion/fixtures.js';
@@ -141,10 +141,25 @@ describe('when a match began', () => {
 });
 
 describe('the game report page', () => {
-  it('renders every tab without throwing (the Players cards use the tier the game left each player with)', () => {
-    const D = run(rows());
-    const page = { D, gid: 'a', hashFor: (r, g, x) => `#/${r}/${g}${x != null ? '/' + x : ''}`, me: null, catalog, allGroups: [{ id: 'a' }] };
-    const html = renderToString(createElement(PageContext.Provider, { value: page }, createElement(GameReport, { game: D.games[3] })));
-    expect(html).toContain('gr-player'); expect(html).toContain('Dee');
+  const D = run(rows());
+  const page = { D, gid: 'a', hashFor: (r, g, x) => `#/${r}/${g}${x != null ? '/' + x : ''}`, me: null, catalog, allGroups: [{ id: 'a' }] };
+  const draw = el => renderToString(createElement(PageContext.Provider, { value: page }, el));
+  it('renders the page without throwing', () => {
+    expect(draw(createElement(GameReport, { game: D.games[3] }))).toContain('gr-player');
+  });
+  // each tab is a component of its own, with its own scope: render every one of them for every game, with and without a signed-in player
+  it('renders every tab for every game', () => {
+    D.games.forEach(game => {
+      const rep = gameReport(D, game, { catalog });
+      [undefined, { name: 'Ann' }].forEach(me => {
+        page.me = me || null;
+        expect(draw(createElement(Players, { rep, game, me: page.me }))).toContain('gr-player');
+        draw(createElement(Kingdom, { rep, game, loaded: true }));
+        draw(createElement(Time, { rep }));
+        const html = draw(createElement(Rewards, { rep, me: page.me, loaded: true }));
+        expect(html).toContain('gr-xp');
+        expect(html).toContain('href="#/players/a/');   // a player's name links to their page
+      });
+    });
   });
 });

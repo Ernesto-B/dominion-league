@@ -78,7 +78,7 @@ export default function GameReport({ game }) {
 }
 
 /* ---- Players ---- */
-function Players({ rep, game, me }) {
+export function Players({ rep, game, me }) {
   return (
     <ol className="gr-players">
       {rep.players.map((p, i) => <PlayerCard key={p.name} p={p} game={game} mine={!!me && me.name === p.name} open={me ? me.name === p.name : i === 0} />)}
@@ -148,7 +148,7 @@ function Compare({ c }) {
 }
 
 /* ---- Kingdom ---- */
-function Kingdom({ rep, game, loaded }) {
+export function Kingdom({ rep, game, loaded }) {
   const k = rep.kingdom;
   const [focus, setFocus] = useState(null);   // { kind: 'type' | 'tool', key, label } or null
   if (!game.kingdom || !game.kingdom.length) return <p className="empty">No kingdom was logged for this game. Games started from Game night record one.</p>;
@@ -210,7 +210,7 @@ function KingdomFacts({ k, focus, setFocus }) {
 }
 
 /* ---- Time ---- */
-function Time({ rep }) {
+export function Time({ rep }) {
   const t = rep.time, w = rep.when;
   const at = [w.startedAt && clock(w.startedAt) ? `Started ${clock(w.startedAt)}` : null, w.endedAt && clock(w.endedAt) ? `ended ${clock(w.endedAt)}` : null].filter(Boolean).join(' · ');
   const saved = !at && w.savedAt && clock(w.savedAt) ? `Logged at ${clock(w.savedAt)}` : null;
@@ -263,7 +263,8 @@ function XpParts({ p }) {
   );
 }
 
-function Rewards({ rep, me, loaded }) {
+export function Rewards({ rep, me, loaded }) {
+  const { gid, hashFor } = usePage();
   const withXp = rep.players.filter(p => p.xp);
   const levels = withXp.filter(p => p.xp.levelUp), many = new Set([...levels.map(p => p.name), ...rep.players.filter(p => p.badges.length).map(p => p.name)]).size > 1;
   const anyNew = rep.players.some(p => p.newCards.length || p.newLandscapes.length);
