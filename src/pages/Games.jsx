@@ -1,5 +1,5 @@
 
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useLayoutEffect, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { SET_NAMES } from '../lib/sets.js';
 import GroupSwitcher from '../components/GroupSwitcher.jsx';
@@ -36,6 +36,12 @@ export default function Games() {
   // #/games/<group>/<id> — a link to one game opens that game's report (components/GameReport.jsx), the deepest view there is. An id that isn't in this group
   // is ignored and the list shows as usual.
   const target = /^\d+$/.test(arg || '') ? D.games.find(g => g.line === +arg) : null;
+  // #/games/<group>?game=<id> — the list with that game opened, tinted and scrolled to (Records and badge dates link here). Arriving clears any filters that would hide it.
+  const hlId = (/^\?game=(\d+)$/.exec(arg || '') || [])[1];
+  const hl = hlId ? D.games.find(g => g.line === +hlId) : null;
+  useLayoutEffect(() => {
+    if (hl && !matches(hl, saved)) { saved = { season: 'all', type: 'all', player: 'all', set: 'all' }; setGf(saved); }
+  }, [arg]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const list = D.games.filter(g => matches(g, gf)).slice().reverse();
   if (target) return <><GroupSwitcher route="games" /><Suspense fallback={<p className="loading">Loading the game…</p>}><GameReport key={target.line} game={target} /></Suspense></>;
@@ -76,7 +82,7 @@ export default function Games() {
         </div>
       </div>
       {modal && <Suspense fallback={null}><GameModal key={String(modal.editId)} editId={modal.editId} draft={modal.draft} onClose={() => setModal(null)} /></Suspense>}
-      {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}`} games={list} mark={gf.player !== 'all' ? gf.player : null} view={view} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
+      {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} games={list} highlight={hl ? hl.line : undefined} mark={gf.player !== 'all' ? gf.player : null} view={view} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
     </>
   );
 }

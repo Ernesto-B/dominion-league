@@ -44,7 +44,7 @@ export default function Badges({ p, focus = null }) {
     }, 450);
     return () => clearTimeout(t);
   }, [focus, holderDom]);
-  const when = b => b.earned && (b.earned.line != null ? <small className="badge-when">Earned <a href={hashFor('games', gid, b.earned.line)}>{short(b.earned.date)}</a></small> : <small className="badge-when">Earned</small>);
+  const when = b => b.earned && (b.earned.line != null ? <small className="badge-when">Earned <a href={hashFor('games', gid) + '?game=' + b.earned.line}>{short(b.earned.date)}</a></small> : <small className="badge-when">Earned</small>);
   return (
     <details className="badges-fold" open={open} onToggle={e => { const o = e.currentTarget.open; setOpen(o); try { localStorage.setItem(KEY, o ? '1' : '0'); } catch { /* not remembered */ } }}>
       <summary><h2>Badges <span className="meta">{got} of {list.length}</span></h2></summary>

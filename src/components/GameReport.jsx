@@ -271,7 +271,7 @@ function Rewards({ rep, me, loaded }) {
       <ul className="gr-xps">
         {withXp.map(p => (
           <li key={p.name} className="gr-xp">
-            <div className="gr-xp-h"><b>{p.name}</b><span>+{p.xp.total} XP</span><small>Lv {p.xp.levelBefore}{p.xp.levelUp ? ` → ${p.xp.levelAfter}` : ''}</small></div>
+            <div className="gr-xp-h"><b><a className="pl" href={hashFor('players', gid, encodeURIComponent(p.name))}>{p.name}</a></b><span>+{p.xp.total} XP</span><small>Lv {p.xp.levelBefore}{p.xp.levelUp ? ` → ${p.xp.levelAfter}` : ''}</small></div>
             <XpParts p={p} />
           </li>
         ))}

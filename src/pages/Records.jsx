@@ -54,7 +54,7 @@ export default function Records() {
   ];
 
   // [label, who, when (a link to that game), value]
-  const when = (date, line) => line == null ? date : <a className="gamelink" href={hashFor('games', gid, line)} title="Open this game in the Games page">{date}</a>;
+  const when = (date, line) => line == null ? date : <a className="gamelink" href={hashFor('games', gid) + '?game=' + line} title="Open this game in the Games page">{date}</a>;
   const single = [];
   if (R.gain) single.push(['Biggest Elo gain in one game', <PlayerLink name={R.gain.name} />, when(R.gain.date, R.gain.line), sgn(R.gain.value)]);
   if (R.loss) single.push(['Biggest Elo drop in one game', <PlayerLink name={R.loss.name} />, when(R.loss.date, R.loss.line), sgn(R.loss.value)]);

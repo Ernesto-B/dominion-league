@@ -43,7 +43,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--text
   }
 }
 a{color:inherit}
-html{touch-action:manipulation}   /* a tap is only ever a tap: no double-tap-to-zoom to wait out, so a second tap right after the first is never swallowed (pinching still zooms) */
+html,body,#root,*{touch-action:manipulation}   /* a tap is only ever a tap: no double-tap-to-zoom to wait out, so a second tap right after the first is never swallowed (pinching still zooms) */
 a,button,select,summary,label,input{touch-action:manipulation}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:3px}
 .skip{position:absolute;left:-999px;top:0;background:var(--ink);color:var(--bg);padding:8px 12px;z-index:10}
