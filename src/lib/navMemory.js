@@ -59,3 +59,9 @@ export function startNavMemory() {
   const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
   if (nav && nav.type === 'reload') { const y = read()[currentId]; if (y > 0) restore(y); }   // a reload keeps your place too
 }
+
+/* "Stay where you are": a control that swaps one detail page for another (Random / Previous / Next on a card page) calls keepScrollOnce() just before it changes the address, and the next
+   page change leaves the scroll position alone instead of jumping to the top. It only lasts a moment, so a later, unrelated link still starts at the top. */
+let keepUntil = 0;
+export const keepScrollOnce = () => { keepUntil = Date.now() + 1500; };
+export const takeKeepScroll = () => { const on = Date.now() < keepUntil; keepUntil = 0; return on; };

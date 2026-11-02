@@ -48,3 +48,12 @@ describe('going back to where you were', () => {
     nav.scrollBackTo(0); expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
   });
 });
+
+describe('staying where you are', () => {
+  it('lasts for one page change, and not longer', async () => {
+    const nav = await import('../src/lib/navMemory.js');
+    expect(nav.takeKeepScroll()).toBe(false);
+    nav.keepScrollOnce(); expect(nav.takeKeepScroll()).toBe(true); expect(nav.takeKeepScroll()).toBe(false);   // used up by the one change
+    nav.keepScrollOnce(); vi.advanceTimersByTime(2000); expect(nav.takeKeepScroll()).toBe(false);              // or gone after a moment
+  });
+});

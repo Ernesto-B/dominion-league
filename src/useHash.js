@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { navigated } from './dominion/scrollMemory.js';
-import { onNavigate, restore, startNavMemory } from './lib/navMemory.js';
+import { onNavigate, restore, startNavMemory, takeKeepScroll } from './lib/navMemory.js';
 
 let started = false;
 
@@ -16,7 +16,7 @@ function subscribe(cb) {
     // a different page starts at the top, unless this is a Back / Forward to a page you had scrolled (lib/navMemory.js puts you back there);
     // a change of the query alone (a filter click) is the same page
     const go = onNavigate({ pathChanged: pathOf(last) !== pathOf(prev) });
-    if (go === 'top') window.scrollTo(0, 0);
+    if (go === 'top') { if (!takeKeepScroll()) window.scrollTo(0, 0); }   // unless the control that was pressed asked to stay where it is (keepScrollOnce)
     else if (go && go.restore != null) restore(go.restore);
   };
   window.addEventListener('hashchange', onChange);
