@@ -16,7 +16,7 @@ import PopLayer from './components/PopLayer.jsx';
 import { useScrollCalm } from './useScrollCalm.js';
 import PeekLayer from './dominion/components/CardPeek.jsx';
 import HoverLayer from './dominion/components/CardHover.jsx';
-import { loadManifest, recentKingdomIds, warmPictures } from './dominion/cardImages.js';
+import { loadManifest, recentKingdomIds, startBackgroundFill, warmPictures } from './dominion/cardImages.js';
 import { popup } from './components/popup.js';
 import BottomNav from './components/BottomNav.jsx';
 import OfflineBar from './components/OfflineBar.jsx';
@@ -36,7 +36,8 @@ function Shell() {
   const lastGames = route ? pickD(state, route.gid).games : null;   // after `route`: it is created above this line, and an earlier use crashed the whole app
   useEffect(() => {
     if (!lastGames) return undefined;
-    const go = () => warmPictures(recentKingdomIds(lastGames));
+    // first the last games' pictures (small, soon wanted), then the rest of the set a little at a time (see cardImages.js startBackgroundFill)
+    const go = () => warmPictures(recentKingdomIds(lastGames)).then(() => startBackgroundFill(recentKingdomIds(lastGames, 10)));
     const h = typeof requestIdleCallback === 'function' ? requestIdleCallback(go, { timeout: 4000 }) : setTimeout(go, 1500);
     return () => { if (typeof cancelIdleCallback === 'function' && typeof h === 'number') cancelIdleCallback(h); else clearTimeout(h); };
   }, [lastGames]);

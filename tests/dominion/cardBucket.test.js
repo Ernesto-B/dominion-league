@@ -7,7 +7,7 @@ vi.mock('../../src/lib/supabase.js', () => ({
 }));
 const store = {};
 beforeEach(() => { downloads.length = 0; bucketFiles = {}; Object.keys(store).forEach(k => delete store[k]); globalThis.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } }; });
-afterEach(async () => { const m = await import('../../src/dominion/cardImages.js'); m._setManifest(null); });
+afterEach(async () => { vi.unstubAllGlobals(); const m = await import('../../src/dominion/cardImages.js'); m.stopBackgroundFill(); m._setManifest(null); });
 
 const MANIFEST = JSON.stringify({ v: 2, items: { 'plunder:crew': { w: 300, h: 480, k: 'abc' } } });
 
@@ -84,5 +84,45 @@ describe('warming pictures', () => {
     await m.warmPictures(['a:two'], 'big');
     expect(downloads).toContain('card-images/a/two@big.webp');
     expect(m.recentKingdomIds([{ kingdom: [{ id: 'a:one' }] }, { kingdom: [{ id: 'a:two' }, { id: 'a:one' }] }, { kingdom: null }], 2)).toEqual(['a:two', 'a:one']);
+  });
+});
+
+describe('filling the device in the background', () => {
+  const fakeCaches = () => { const store = new Map(); return { open: async () => ({ match: async k => store.get(k) || undefined, put: async (k, v) => { store.set(k, v); } }), store }; };
+  const items = { 'a:one': { w: 300, h: 480, k: '1' }, 'a:two': { w: 300, h: 480, k: '2' }, 'a:three': { w: 300, h: 480, k: '3' } };
+  const now = fn => setTimeout(fn, 0);
+
+  it('saves every small picture once, first the ones asked for first, and keeps nothing in memory', async () => {
+    vi.stubGlobal('caches', fakeCaches());
+    const m = await import('../../src/dominion/cardImages.js');
+    await m.clearCardCache();   // forget the saved-store handle of an earlier test
+    m._setManifest({ v: 2, items }, 'bucket');
+    Object.keys(items).forEach(id => { bucketFiles[id.replace(':', '/') + '.webp'] = 'x'; });
+    await m.startBackgroundFill(['a:three'], { wait: now, pause: () => false });
+    expect(downloads[0]).toBe('card-images/a/three.webp'); expect([...downloads].sort()).toEqual(['card-images/a/one.webp', 'card-images/a/three.webp', 'card-images/a/two.webp']);
+    expect(globalThis.caches.store.size).toBe(3);
+    downloads.length = 0;
+    m.stopBackgroundFill();
+    await m.startBackgroundFill([], { wait: now, pause: () => false });   // a second pass finds them all already saved
+    expect(downloads).toEqual([]);
+  });
+  it('waits while paused (hidden tab, data saver) and does nothing for a site not using the bucket', async () => {
+    vi.stubGlobal('caches', fakeCaches());
+    const m = await import('../../src/dominion/cardImages.js');
+    m._setManifest({ v: 2, items }, 'local');
+    await m.startBackgroundFill([], { wait: now, pause: () => false });
+    expect(downloads).toEqual([]);
+    vi.stubGlobal('navigator', { connection: { saveData: true } }); expect(m.shouldPauseFill()).toBe(true);
+    vi.stubGlobal('navigator', { connection: { effectiveType: '2g' } }); expect(m.shouldPauseFill()).toBe(true);
+    vi.stubGlobal('navigator', { connection: { effectiveType: '4g' } }); expect(m.shouldPauseFill()).toBe(false);
+  });
+  it('asks the browser to keep the saved pictures once a bucket list arrives', async () => {
+    let asked = 0;
+    vi.stubGlobal('navigator', { storage: { persist: () => { asked++; return Promise.resolve(true); } } });
+    const m = await import('../../src/dominion/cardImages.js');
+    await m.clearCardCache(); m._setManifest(null);
+    bucketFiles['manifest.json'] = MANIFEST;
+    await m.loadManifest(() => Promise.resolve({ ok: false })); await m.loadManifest(() => Promise.resolve({ ok: false }));
+    expect(asked).toBe(1);
   });
 });

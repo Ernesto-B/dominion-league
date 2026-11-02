@@ -35,7 +35,7 @@ describe('card pictures', () => {
   it('waits for a private picture (a reserved space, no <img>) until it has been downloaded', () => {
     _setManifest(M({ 'plunder:crew': { w: 300, h: 480, k: 'a' } }), 'bucket');
     const html = renderToString(createElement(CardFace, { id: 'plunder:crew', name: 'Crew' }));
-    expect(html).toContain('dn-face-wait'); expect(html).not.toContain('<img'); expect(html).toContain('aspect-ratio:300 / 480');
+    expect(html).toContain('dn-face-wait'); expect(html).not.toContain('<img'); expect(html).toContain('aspect-ratio:300 / 480'); expect(html).toContain('Loading…');   // it says so while it waits
   });
 });
 

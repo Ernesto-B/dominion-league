@@ -13,6 +13,7 @@ export default function CardFace({ id, name, onOpen, className = '', size = 'sma
   const bucket = cardImageMode() === 'bucket';
   const ref = useRef(null);
   const [near, setNear] = useState(!bucket || kind === 'big');
+  const [failed, setFailed] = useState(false);   // the download came back empty: say so, instead of waiting forever
   const [src, setSrc] = useState(() => (p && !bucket ? localSrc(p) : null));   // the local folder's URL needs no waiting (and renders on the server)
   useEffect(() => {
     if (!bucket || near || !ref.current || typeof IntersectionObserver === 'undefined') { setNear(true); return undefined; }
@@ -23,7 +24,8 @@ export default function CardFace({ id, name, onOpen, className = '', size = 'sma
   const key = p ? p.key : null;
   useEffect(() => {
     let live = true;
-    if (p && near) pictureSrc(p).then(u => { if (live) setSrc(u); });
+    setFailed(false);
+    if (p && near) pictureSrc(p).then(u => { if (live) { setSrc(u); setFailed(!u); } });
     if (!p) setSrc(null);
     return () => { live = false; };
   }, [key, near]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -32,7 +34,7 @@ export default function CardFace({ id, name, onOpen, className = '', size = 'sma
   const cls = 'dn-face' + (wide ? ' wide' : '') + (className ? ' ' + className : '');
   const inner = src
     ? <img className="dn-face-img" src={src} width={p.width} height={p.height} alt={onOpen ? '' : name} loading={bucket || kind === 'big' ? 'eager' : 'lazy'} decoding="async" draggable="false" />
-    : <span className="dn-face-img dn-face-wait" style={{ aspectRatio: `${p.width} / ${p.height}` }} role={onOpen ? undefined : 'img'} aria-label={onOpen ? undefined : name} />;
+    : <span className={'dn-face-img dn-face-wait' + (failed ? ' failed' : '')} style={{ aspectRatio: `${p.width} / ${p.height}` }} role={onOpen ? undefined : 'img'} aria-label={onOpen ? undefined : name} aria-busy={!failed}><small>{failed ? 'Couldn’t load' : 'Loading…'}</small></span>;
   return onOpen
     ? <button type="button" ref={ref} className={cls} onClick={onOpen} aria-label={`${name}: show the card larger`}>{inner}</button>
     : <span ref={ref} className={cls}>{inner}</span>;

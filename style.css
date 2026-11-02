@@ -1638,7 +1638,10 @@ button.dn-face{cursor:zoom-in}
 .dn-peek-box .dn-face.big.wide{max-width:min(440px,92vw,calc((80vh - 110px) * 1.6))}
 .dn-peek-members{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:0 0 12px}
 .dn-peek-members .dn-face.big{max-width:none;margin:0}
-.dn-face-wait{display:block;width:100%;background:color-mix(in srgb,var(--ink) 8%,var(--panel))}
+.dn-face-wait{display:grid;place-items:center;width:100%;background:color-mix(in srgb,var(--ink) 8%,var(--panel));color:var(--muted);text-align:center;overflow:hidden;position:relative}
+.dn-face-wait small{font-size:12px;line-height:1.2;padding:0 6px}
+.dn-face-wait:not(.failed)::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,color-mix(in srgb,var(--ink) 10%,transparent) 50%,transparent 70%);transform:translateX(-100%)}
+@media (prefers-reduced-motion:no-preference){.dn-face-wait:not(.failed)::after{animation:dn-shimmer 1.4s ease-in-out infinite}@keyframes dn-shimmer{to{transform:translateX(100%)}}}
 /* card pictures in lists, chips and the game report */
 .gr-cardshead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
 .gr-cardshead .gr-h{margin:0}

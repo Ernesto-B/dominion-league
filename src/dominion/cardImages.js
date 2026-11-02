@@ -44,12 +44,20 @@ export function loadManifest(fetcher = (...a) => fetch(...a)) {
   const fetchIt = async () => {
     for (const [name, get] of order()) {
       const m = await get(fetcher);
-      if (m) { manifest = m; mode = name; try { localStorage.setItem(MANIFEST_KEY, JSON.stringify({ m, mode: name, at: Date.now() })); } catch { /* storage full: not kept */ } return; }
+      if (m) { manifest = m; mode = name; try { localStorage.setItem(MANIFEST_KEY, JSON.stringify({ m, mode: name, at: Date.now() })); } catch { /* storage full: not kept */ } if (name === 'bucket') keepPictures(); return; }
     }
     if (!saved) { manifest = { v: 2, items: {} }; failed = true; }   // none anywhere: no pictures for now
   };
   loading = (fresh ? Promise.resolve() : fetchIt()).then(() => { announce(); return manifest; });
   return loading;
+}
+
+// Ask the browser to treat this site's saved data (the pictures) as permanent, so a phone short of space, or Safari's seven-day clean-up, does not delete it. Best-effort: a browser may decline
+// or ask the person once; nothing depends on the answer.
+let persistAsked = false;
+function keepPictures() {
+  if (persistAsked) return; persistAsked = true;
+  try { if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch { /* not available */ }
 }
 
 // ---- finding a picture ----
@@ -104,7 +112,7 @@ export function pictureSrc(p) {
 // Forget every saved picture and the manifest (signing out: the pictures belong to signed-in members)
 export async function clearCardCache() {
   urls.forEach(p => p.then(u => u && URL.revokeObjectURL(u)));
-  urls.clear(); manifest = null; loading = null; failed = false; cacheHandle = null;
+  stopBackgroundFill(); urls.clear(); manifest = null; loading = null; failed = false; cacheHandle = null; persistAsked = false;
   try { localStorage.removeItem(MANIFEST_KEY); } catch { /* nothing to clear */ }
   try { if (typeof caches !== 'undefined') await caches.delete(CACHE); } catch { /* nothing to clear */ }
 }
@@ -151,3 +159,50 @@ export function warmPictures(ids, kind = 'small') {
 }
 // the cards and landscapes in the kingdoms of a league's last few games (the ones a viewer is most likely to open next)
 export const recentKingdomIds = (games, n = 3) => [...new Set((games || []).slice(-n).flatMap(g => (g.kingdom || []).map(k => k.id)))];
+
+/* ---- filling the device in the background ----
+   After the site is up, the small picture of every card and landscape (about 10 MB, once per device) is saved to the device a little at a time, so no picture is ever waited for.
+   Gentle on purpose: two downloads at once at most, only when the browser is idle, nothing at all while the tab is hidden, on "data saver" or on a slow connection, and it stands aside while a
+   screen is loading pictures itself. The pictures go into the saved store only: no object URL, so nothing is held in memory. What is already saved is skipped, so it resumes where it left off. */
+const FILL_WORKERS = 2;
+export function shouldPauseFill() {
+  try {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return true;
+    const c = typeof navigator !== 'undefined' && navigator.connection;
+    return !!(c && (c.saveData || /(^|-)2g$/.test(c.effectiveType || '')));
+  } catch { return false; }
+}
+// make sure ONE picture is in the saved store (no memory kept); true when it had to be downloaded
+export async function ensureSaved(p) {
+  const cache = await openCache();
+  if (!cache) return false;
+  if (await cache.match(cacheKey(p.key))) return false;
+  const { sb } = await import('../lib/supabase.js');
+  const { data, error } = await sb.storage.from(BUCKET).download(p.path);
+  if (error || !data) return false;
+  try { await cache.put(cacheKey(p.key), new Response(data, { headers: { 'content-type': 'image/webp' } })); } catch { return false; }
+  return true;
+}
+let fillStop = null;
+export function stopBackgroundFill() { if (fillStop) fillStop(); fillStop = null; }
+// `wait(fn)` runs fn when the browser is idle (injectable for tests); resolves when every picture is saved or it is stopped
+export function startBackgroundFill(first = [], { wait = fn => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn, { timeout: 3000 }) : setTimeout(fn, 250)), pause = shouldPauseFill, retryMs = 5000 } = {}) {
+  if (fillStop || mode !== 'bucket' || !manifest) return Promise.resolve();
+  const ids = [...new Set([...first, ...Object.keys(manifest.items)])].filter(id => manifest.items[id]);
+  let i = 0, stopped = false;
+  fillStop = () => { stopped = true; };
+  const worker = () => new Promise(done => {
+    const step = () => {
+      if (stopped || i >= ids.length) return done();
+      if (pause() || running > 0) { setTimeout(step, running > 0 ? 1000 : retryMs); return; }   // hidden / data saver / a screen is loading pictures itself: wait
+      wait(async () => {
+        if (stopped) return done();
+        const id = ids[i++], c = cardImage(id);
+        try { if (c) await ensureSaved(c.small); } catch { /* one picture failing never stops the rest */ }
+        step();
+      });
+    };
+    step();
+  });
+  return Promise.all(Array.from({ length: FILL_WORKERS }, worker)).then(() => { fillStop = null; });
+}
