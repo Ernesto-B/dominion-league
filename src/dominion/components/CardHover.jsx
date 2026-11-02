@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { cardImage, useCardImages } from '../cardImages.js';
+import { cardImage, useCardImages, warmPictures } from '../cardImages.js';
 import CardFace from './CardFace.jsx';
 
 /* The card beside the pointer: rest the mouse on a card's chip (anywhere on the site) and, after a moment, its picture appears next to the cursor; move off and it goes.
@@ -19,6 +19,7 @@ const start = (which, e) => {
   const id = typeof which === 'function' ? which() : which;   // a row can name its picture lazily (a pile's picture is only known once the manifest has loaded)
   if (!id || !canHover() || !cardImage(id)) return;
   last = { x: e.clientX, y: e.clientY };
+  warmPictures([id], 'big');   // the download starts the moment the mouse arrives, so it is usually done by the time the delay is over
   clearTimeout(timer);
   timer = setTimeout(() => publish({ id, ...last }), DELAY);
 };

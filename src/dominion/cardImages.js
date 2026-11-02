@@ -13,7 +13,7 @@ const BUCKET = 'card-images';
 const CACHE = 'dl-cards-v1';
 const MANIFEST_KEY = 'dl.cards.manifest';
 const REFRESH_MS = 6 * 60 * 60 * 1000;
-const MAX_PARALLEL = 6;
+const MAX_PARALLEL = 12;   // the database host speaks HTTP/2, which runs many requests at once on one connection
 
 let manifest = null, loading = null, failed = false, mode = 'local';   // mode: where the manifest was found, 'bucket' or 'local'
 const listeners = new Set();
@@ -71,7 +71,8 @@ const urls = new Map();   // key -> Promise<object URL>, so one picture is only 
 let running = 0; const waiting = [];
 const slot = () => new Promise(res => { const go = () => { running++; res(); }; running < MAX_PARALLEL ? go() : waiting.push(go); });
 const release = () => { running--; const next = waiting.shift(); if (next) next(); };
-const openCache = async () => { try { return typeof caches !== 'undefined' ? await caches.open(CACHE) : null; } catch { return null; } };
+let cacheHandle = null;   // opened once: every picture used to open it again
+const openCache = () => (cacheHandle || (cacheHandle = (async () => { try { return typeof caches !== 'undefined' ? await caches.open(CACHE) : null; } catch { return null; } })()));
 const cacheKey = key => `https://cards.invalid/${key}`;
 
 // A page-load-stable source for an <img>: the local folder's own URL, or an object URL made from the saved (or just downloaded) picture. Resolves to null when it cannot be had.
@@ -103,7 +104,7 @@ export function pictureSrc(p) {
 // Forget every saved picture and the manifest (signing out: the pictures belong to signed-in members)
 export async function clearCardCache() {
   urls.forEach(p => p.then(u => u && URL.revokeObjectURL(u)));
-  urls.clear(); manifest = null; loading = null; failed = false;
+  urls.clear(); manifest = null; loading = null; failed = false; cacheHandle = null;
   try { localStorage.removeItem(MANIFEST_KEY); } catch { /* nothing to clear */ }
   try { if (typeof caches !== 'undefined') await caches.delete(CACHE); } catch { /* nothing to clear */ }
 }
@@ -142,3 +143,11 @@ export function slotFaceId(slot) {
   const c = slot.cards.find(x => cardImage(x.id));
   return c ? c.id : null;
 }
+
+/* Start downloading pictures before anything asks for them, so they are already on the device (and in memory) when a screen needs them. `ids` are catalog ids; `kind` is 'small' (the grids) or
+   'big' (the enlarge view). Quiet and best-effort: a picture that is not in the list, or fails, is simply skipped. */
+export function warmPictures(ids, kind = 'small') {
+  return loadManifest().then(() => Promise.all([...new Set(ids)].map(id => { const c = cardImage(id), p = c && (kind === 'big' && c.big ? c.big : c.small); return p ? pictureSrc(p) : null; }))).catch(() => {});
+}
+// the cards and landscapes in the kingdoms of a league's last few games (the ones a viewer is most likely to open next)
+export const recentKingdomIds = (games, n = 3) => [...new Set((games || []).slice(-n).flatMap(g => (g.kingdom || []).map(k => k.id)))];
