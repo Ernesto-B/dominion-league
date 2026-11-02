@@ -38,6 +38,12 @@ export default function Randomizer({ query = '' }) {
     try { await navigator.clipboard.writeText(location.href); setCopied('Link copied'); } catch { setCopied('Couldn’t copy — copy the address from your browser’s address bar.'); }
     setTimeout(() => setCopied(''), 3500);
   };
+  // for everyone who can't log a game: the roll's seed to the clipboard, to send to whoever will set the game up (they type it into Game night's seed box)
+  const shareSeed = async () => {
+    const seed = formatSeed(state.seed);
+    try { await navigator.clipboard.writeText(seed); setCopied(`Seed ${seed} copied`); } catch { setCopied(`Seed: ${seed}`); }   // no clipboard here: show it to copy by hand
+    setTimeout(() => setCopied(''), 3500);
+  };
   const shareImage = async () => {
     setCopied('Making the picture…');
     try {
@@ -64,6 +70,7 @@ export default function Randomizer({ query = '' }) {
     <>
       <button type="button" className="ghost" onClick={copy}>Copy link</button>
       <button type="button" className="ghost" onClick={shareImage}>Share image</button>
+      {!canLog && state && state.seed != null && <button type="button" className="ghost" onClick={shareSeed} title="Copy this roll's seed">Share seed</button>}
       {canLog && <button type="button" className="ghost" onClick={logIt} title="Copy the seed and open Game night with this kingdom">Use for a game →</button>}
       <span className="meta" role="status" aria-live="polite">{copied}</span>
     </>

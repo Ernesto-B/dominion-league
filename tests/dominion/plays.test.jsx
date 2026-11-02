@@ -155,3 +155,15 @@ describe('the Insights page', () => {
     expect(text(view('insights', { D: { games: games.slice(0, 2) } }))).toMatch(/Once you.ve played 3 games/);
   });
 });
+
+describe('the Randomizer\'s hand-off buttons', () => {
+  const q = 'randomizer?c=dominion-base-game:village&c=dominion-base-game:smithy&seed=424242';
+  it('a regular player gets "Share seed", the admin gets "Use for a game"', () => {
+    const player = view(q, { me: { name: 'Ann', is_admin: false } }), admin = view(q, { me: { name: 'Ann', is_admin: true } });
+    expect(player).toContain('Share seed'); expect(player).not.toContain('Use for a game');
+    expect(admin).toContain('Use for a game'); expect(admin).not.toContain('Share seed');
+  });
+  it('a kingdom with no seed (a locked or re-rolled one) has nothing to share', () => {
+    expect(view('randomizer?c=dominion-base-game:village&c=dominion-base-game:smithy', { me: { name: 'Ann', is_admin: false } })).not.toContain('Share seed');
+  });
+});
