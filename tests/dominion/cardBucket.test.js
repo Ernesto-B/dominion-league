@@ -72,3 +72,17 @@ describe('a list saved from another source', () => {
     expect(out.items['a:new']).toBeTruthy();   // fetched again
   });
 });
+
+describe('warming pictures', () => {
+  it('downloads each once, ahead of use, and a repeat costs nothing', async () => {
+    const m = await import('../../src/dominion/cardImages.js');
+    m._setManifest({ v: 2, items: { 'a:one': { w: 300, h: 480, k: '1' }, 'a:two': { w: 300, h: 480, bw: 500, bh: 800, k: '2' } } }, 'bucket');
+    bucketFiles['a/one.webp'] = 'x'; bucketFiles['a/two.webp'] = 'y'; bucketFiles['a/two@big.webp'] = 'z';
+    await m.warmPictures(['a:one', 'a:two', 'a:one', 'a:missing']);
+    await m.warmPictures(['a:one', 'a:two'], 'small');
+    expect(downloads.sort()).toEqual(['card-images/a/one.webp', 'card-images/a/two.webp']);
+    await m.warmPictures(['a:two'], 'big');
+    expect(downloads).toContain('card-images/a/two@big.webp');
+    expect(m.recentKingdomIds([{ kingdom: [{ id: 'a:one' }] }, { kingdom: [{ id: 'a:two' }, { id: 'a:one' }] }, { kingdom: null }], 2)).toEqual(['a:two', 'a:one']);
+  });
+});
