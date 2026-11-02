@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { useOpenGames } from '../lib/entryState.js';
 import { setIconPath } from '../lib/sets.js';
 import GameFinish, { finishText } from './GameFinish.jsx';
 import GameDetail from './GameDetail.jsx';
@@ -13,8 +14,8 @@ import { usePage } from '../PageContext.js';
 // Sortable list of games, each row expandable into its per-player breakdown. `onEdit(line)` adds the
 // admin Edit column. Re-key it (e.g. on filter changes) to reset the sort and collapse every row.
 // `highlight` (a game id) opens that row, tints it and scrolls it into view — used by links to a game.
-export default function GamesTable({ games, onEdit, highlight, view = 'cards', mark }) {   // a wide screen shows cards unless the Games page's switch says table
-  const [open, setOpen] = useState(() => new Set(highlight != null ? [highlight] : []));
+export default function GamesTable({ games, onEdit, highlight, view = 'cards', mark, stateKey = '' }) {   // `stateKey`: what the expanded rows belong to (a filter choice, a season): another value starts closed   // a wide screen shows cards unless the Games page's switch says table
+  const [open, toggle] = useOpenGames('games|' + stateKey + (mark === undefined ? '' : '|' + mark), () => new Set(highlight != null ? [highlight] : []));   // kept for Back (lib/entryState.js)
   const wrap = useRef(null);
   const wide = useWide();
   const { me } = usePage();
@@ -25,7 +26,6 @@ export default function GamesTable({ games, onEdit, highlight, view = 'cards', m
     const row = [...wrap.current.querySelectorAll(`[data-g="${highlight}"]`)].find(e => e.offsetParent !== null);   // the table row or, on a phone with the card list, the card
     if (row) row.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [highlight]);
-  const toggle = line => setOpen(o => { const n = new Set(o); n.has(line) ? n.delete(line) : n.add(line); return n; });
   // on a phone only the date and the finish order stay as columns; sets, VP, landscapes and notes live in the expanded row
   const head = [{ label: '' }, { label: 'Date', cls: 'l' }, { label: '' }, { label: 'Finish', cls: 'l' }, { label: 'Sets', cls: 'l dn-hide-sm' },
     { label: 'VP', cls: 'dn-hide-sm' }, { label: 'Landscapes', cls: 'l dn-hide-sm' }, { label: 'Notes', cls: 'l dn-hide-sm' }, ...(onEdit ? [{ label: '', cls: 'dn-hide-sm' }] : [])];

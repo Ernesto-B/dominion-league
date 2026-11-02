@@ -1,4 +1,5 @@
-import { Fragment, useState } from 'react';
+import { Fragment } from 'react';
+import { useOpenGames } from '../lib/entryState.js';
 import { long, sgn } from '../lib/format.js';
 import GameFinish, { ordered } from './GameFinish.jsx';
 import GameDetail from './GameDetail.jsx';
@@ -7,11 +8,10 @@ import GameCards from './GameCards.jsx';
 
 // The most recent night's tables, newest first, each expandable into its per-player breakdown.
 export default function LastNight({ games }) {
-  const [open, setOpen] = useState(() => new Set());
+  const [open, toggle] = useOpenGames('last-night');   // kept for Back (lib/entryState.js)
   if (!games.length) return null;
   const { day, date } = games[games.length - 1];
   const todays = games.filter(g => g.day === day).slice().reverse();
-  const toggle = line => setOpen(o => { const n = new Set(o); n.has(line) ? n.delete(line) : n.add(line); return n; });
   return (
     <>
       <h2>Last night, {long(date)}</h2>
