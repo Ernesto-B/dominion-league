@@ -1615,7 +1615,8 @@ button.dn-face{cursor:zoom-in}
 .dn-hero{display:grid;grid-template-columns:minmax(0,1fr);gap:0 24px;align-items:start}
 .dn-hero>.head{grid-area:head}.dn-hero>.stats,.dn-hero>.dn-hero-side{grid-area:stats}.dn-hero>.dn-face.hero{grid-area:face;width:min(260px,70vw);margin:0 auto 18px}
 .dn-hero>.dn-face.hero.wide{width:min(340px,90vw)}
-.dn-hero{grid-template-areas:"head" "face" "stats"}
+.dn-hero{grid-template-areas:"head" "face" "steps" "stats"}
+.dn-hero>.dn-itemnav-steps.below{grid-area:steps;display:none}
 @media (min-width:900px){
   .dn-hero:has(>.dn-face.hero){grid-template-columns:minmax(0,1fr) 250px;grid-template-areas:"head face" "stats face"}
   .dn-hero:has(>.dn-face.hero.wide){grid-template-columns:minmax(0,1fr) 330px}
@@ -1711,3 +1712,15 @@ a.gr-face{position:relative}
 .dn-kchip.tap,.dn-draft-mine li.tap,.dn-draft-ban.tap{cursor:pointer}
 .dn-kchip.tap:focus-visible,.dn-draft-mine li.tap:focus-visible,.dn-draft-ban.tap:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .dn-draft-mine li.tap:active,.dn-kchip.tap:active{opacity:.75}
+
+/* Previous / Next / Random under the card's picture on a phone (the strip at the top keeps the way back to the list and hides its own copy there) */
+@media (max-width:720px){
+  .dn-itemnav>.dn-itemnav-steps{display:none}
+  .dn-hero>.dn-itemnav-steps.below{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-areas:"prev rand next" "count count count";gap:8px;margin:0 0 20px;width:100%}
+  .dn-itemnav-steps.below .dn-s-prev{grid-area:prev}.dn-itemnav-steps.below .dn-s-next{grid-area:next}.dn-itemnav-steps.below .dn-s-rand{grid-area:rand}.dn-itemnav-steps.below .dn-s-count{grid-area:count;text-align:center;font-size:13px}
+  .dn-itemnav-steps.below .dn-s-prev>*,.dn-itemnav-steps.below .dn-s-next>*{display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 6px;border:1px solid var(--line);border-radius:10px;background:var(--panel);text-decoration:none;font-weight:600;font-size:15px;margin:0}
+  .dn-itemnav-steps.below .dn-s-prev>a,.dn-itemnav-steps.below .dn-s-next>a{padding:0 6px}
+  .dn-itemnav-steps.below{align-items:stretch}
+  .dn-itemnav-steps.below .dn-s-rand{min-height:48px;height:100%;width:100%;margin:0;padding:0 4px;border-radius:10px;font-weight:700;font-size:14px;white-space:nowrap}
+  .dn-itemnav-steps.below .dn-s-prev>*,.dn-itemnav-steps.below .dn-s-next>*{white-space:nowrap;font-size:14px;height:100%}
+}

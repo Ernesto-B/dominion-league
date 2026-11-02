@@ -1,7 +1,7 @@
 import { useCatalog } from '../CatalogContext.jsx';
 import { cardHref, dominionHref, cardsFilterHref } from '../links.js';
 import { DEFAULT_CARD_FILTERS, browseCards, cardFiltersFromQuery, cardFiltersToQuery, neighbors, pickRandom } from '../filters.js';
-import ItemNav from '../components/ItemNav.jsx';
+import ItemNav, { ItemSteps } from '../components/ItemNav.jsx';
 import PlayHistory from '../components/PlayHistory.jsx';
 import { useLeagueGames } from '../useLeagueGames.js';
 import { useState } from 'react';
@@ -72,6 +72,7 @@ export default function CardDetail({ id, query = '' }) {
         </div>
       </div>
       <CardFace id={card.id} name={card.name} className="hero" />
+      <ItemSteps below nav={nav} hrefFor={c => cardHref(c.id, qs)} onRandom={random} randomLabel="Random card" />   {/* phone only: under the picture, where a thumb reaches */}
 
       {pictured && (
         <div className="dn-hero-side">

@@ -1,7 +1,7 @@
 import { useCatalog } from '../CatalogContext.jsx';
 import { dominionHref, landscapeHref, landscapesFilterHref } from '../links.js';
 import { DEFAULT_LANDSCAPE_FILTERS, browseLandscapes, landscapeFiltersFromQuery, landscapeFiltersToQuery, neighbors, pickRandom } from '../filters.js';
-import ItemNav from '../components/ItemNav.jsx';
+import ItemNav, { ItemSteps } from '../components/ItemNav.jsx';
 import PlayHistory from '../components/PlayHistory.jsx';
 import { useLeagueGames } from '../useLeagueGames.js';
 import { PLURAL, humanize } from '../constants.js';
@@ -61,6 +61,7 @@ export default function LandscapeDetail({ id, query = '' }) {
         </div>
       </div>
       <CardFace id={l.id} name={l.name} className="hero" />
+      <ItemSteps below nav={nav} hrefFor={o => landscapeHref(o.id, qs)} onRandom={random} randomLabel="Random landscape" />   {/* phone only: under the picture, where a thumb reaches */}
 
       {picture(l.id) && (
         <div className="dn-hero-side">
