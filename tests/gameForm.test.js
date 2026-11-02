@@ -18,6 +18,11 @@ describe('a game\'s minutes', () => {
   it('a new game saves the whole minutes on the Game night clock', () => {
     expect(buildGameArgs(bs({ picked: ['Ann'], startedAt: start }), 'g1', ids, start + 47.4 * 60000).p_minutes).toBe(47);
   });
+  it('saves the minutes typed into the Save step instead of the clock, even with no clock', () => {
+    expect(buildGameArgs(bs({ picked: ['Ann'], startedAt: start, endedAt: start + 90 * 60000, minutesEdit: 55 }), 'g1', ids).p_minutes).toBe(55);
+    expect(buildGameArgs(bs({ picked: ['Ann'], minutesEdit: 30 }), 'g1', ids).p_minutes).toBe(30);
+    expect(buildGameArgs(bs({ picked: ['Ann'], startedAt: start, endedAt: start + 41 * 60000, minutesEdit: null }), 'g1', ids).p_minutes).toBe(41);
+  });
   it('saves the time up to the end of Play, not up to the save', () => {
     expect(buildGameArgs(bs({ picked: ['Ann'], startedAt: start, endedAt: start + 41 * 60000 }), 'g1', ids, start + 55 * 60000).p_minutes).toBe(41);
   });

@@ -3,7 +3,7 @@
      kingdomTouched, vp: { name: text }, notes, editId }. */
 import { SET_NAMES, LANDSCAPES } from './sets.js';
 import { toPayload } from '../dominion/kingdom.js';
-import { playedMinutes } from './night.js';
+import { cleanMinutes, playedMinutes } from './night.js';
 
 export const toggle = (arr, n) => (arr.includes(n) ? arr.filter(x => x !== n) : [...arr, n]);
 
@@ -40,7 +40,7 @@ export function buildGameArgs(bs, gid, playerIdByName, now = Date.now()) {
   return {
     p_date: bs.date, p_type: bs.type || '', p_sets: bs.sets.length ? SET_NAMES.filter(n => bs.sets.includes(n)).join('; ') : null, p_strategy: null,
     p_landscapes: bs.landscapes.length ? LANDSCAPES.filter(n => bs.landscapes.includes(n)).join('; ') : null,
-    p_winner_vp: null, p_minutes: bs.editId ? bs.minutes ?? null : playedMinutes(bs.startedAt, bs.endedAt ?? now), p_notes: bs.notes || null,
+    p_winner_vp: null, p_minutes: bs.minutesEdit != null ? cleanMinutes(bs.minutesEdit) : bs.editId ? bs.minutes ?? null : playedMinutes(bs.startedAt, bs.endedAt ?? now), p_notes: bs.notes || null,
     p_group_id: gid, p_results: buildResults(bs, playerIdByName),
     ...(bs.kingdomTouched || (!bs.editId && bs.kingdom.length) ? { p_kingdom: toPayload(bs.kingdom) } : {}),
     // the match's own clock, only for a NEW game that ran on Game night's timer (an edit leaves the saved times as they are)

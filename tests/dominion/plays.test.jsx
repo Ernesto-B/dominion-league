@@ -108,15 +108,6 @@ describe('"only these types" and the combinations table', () => {
     expect(cardFiltersToQuery({ ...DEFAULT_CARD_FILTERS, types: ['Action', 'Attack'], typeMode: 'exact' })).toBe('?type=Action&type=Attack&tmode=exact');
     expect(cardFiltersFromQuery('?type=Action&tmode=exact').typeMode).toBe('exact'); expect(cardFiltersFromQuery('?tmode=banana').typeMode).toBe('all');
   });
-  it('every row of "Most common type combinations" opens the cards it counts, on the whole row or its name', () => {
-    const h = view(''), sec = h.slice(h.indexOf('id="st-combos"')), tbody = sec.match(/<tbody>[\s\S]*?<\/tbody>/)[0];
-    expect((tbody.match(/<tr class="dn-rowlink"/g) || []).length).toBe(10);
-    for (const c of s2.combos.slice(0, 10)) {
-      const types = c.key.split(' + '), href = `#/dominion/cards?${types.map(t => 'type=' + t).join('&amp;')}&amp;tmode=exact`;   // the markup escapes & in attributes
-      expect(tbody, c.key).toContain(`<a href="${href}"`);
-      expect(exact(types).length, c.key).toBe(c.count);                                                      // the list the row opens is exactly the number the row shows
-    }
-  });
 });
 
 describe('the Collection pages with play data', () => {

@@ -53,7 +53,7 @@ describe('Overview', () => {
     expect(t).not.toMatch(/Attacks counts/); expect(t).not.toMatch(/Only edition/);
   });
   it('also carries what used to be the Statistics tab (one page, no duplicate charts)', () => {
-    for (const h of ['Physical cards by expansion', 'Supply piles', 'Card types by expansion', 'Most common type combinations', 'Card Cost', 'Recorded mechanics']) expect(t).toContain(h);
+    for (const h of ['Physical cards by expansion', 'Card types by expansion', 'Card Cost', 'Recorded mechanics']) expect(t).toContain(h);
     expect((html.match(/aria-label="Landscape designs per type"/g) || []).length).toBe(1);
     expect((html.match(/aria-label="Kingdom card names per printed type"/g) || []).length).toBe(1);
   });
@@ -184,7 +184,7 @@ describe('the Overview charts', () => {
   it('uses a different kind of chart for each question, not one bar chart repeated', () => {
     expect(html).not.toContain('dn-treemap'); expect((html.match(/class="dn-bars"/g) || []).length).toBe(1);   // one plain bar chart, not one for everything
     for (const [cls, label] of [['dn-donut', 'Supply piles per expansion'], ['dn-bars', 'Kingdom card names per printed type'], ['dn-lol', 'Physical Kingdom cards per expansion'],
-      ['dn-seg', 'Supply piles by number of card names'], ['dn-waffle-wrap', 'Landscape designs per type'], ['dn-cols', 'Kingdom card names per coin cost'], ['dn-heat', 'Card names recorded with each mechanic, most common first']])
+      ['dn-seg', 'Landscape designs per expansion'], ['dn-waffle-wrap', 'Landscape designs per type'], ['dn-cols', 'Kingdom card names per coin cost'], ['dn-heat', 'Card names recorded with each mechanic, most common first']])
       expect(html, label).toMatch(new RegExp(`class="${cls}"[^>]*aria-label="${label}"`));
   });
   it('keeps every number as real text and the filter links', () => {
@@ -519,17 +519,16 @@ describe('Statistics', () => {
     expect(t).toMatch(/1,?634 recorded mechanic tags across 96 of the 98 defined mechanics/);
   });
   it('covers the distributions asked for', () => {
-    for (const h of ['Physical cards by expansion', 'Printed card types', 'Supply piles', 'Landscapes', 'Card Cost', 'Recorded mechanics']) expect(t).toContain(h);
+    for (const h of ['Physical cards by expansion', 'Printed card types', 'Landscapes', 'Card Cost', 'Recorded mechanics']) expect(t).toContain(h);
     expect(t).toMatch(/Out of 331 card names\. 4 cards cost only Debt \(City Quarter, Engineer, Overlord, Royal Blacksmith\) and have no coin cost, so they get their own bar rather than counting as \$0/);
     expect(html).toContain('aria-label="Debt only: cards that cost only Debt"'); expect(html).not.toContain('coin-0.png');
-    expect(t).toMatch(/Out of 310 piles/);
   });
   it('no longer shows a Data checks section (the checks themselves still pass on the real data)', () => { expect(t).not.toMatch(/Data checks/); expect(html).not.toContain('dn-checks'); });
 });
 
 describe('the card-types-by-expansion table on Statistics', () => {
   const html = render('');
-  const sec = html.slice(html.indexOf('id="st-matrix"'), html.indexOf('id="st-combos"'));
+  const sec = html.slice(html.indexOf('id="st-matrix"'), html.indexOf('id="st-mech"'));
   const head = sec.match(/<thead>[\s\S]*?<\/thead>/)[0], body = sec.match(/<tbody>[\s\S]*?<\/tbody>/)[0];
   it('has a heading, 11 expansion rows and a totals row', () => {
     expect(text(sec)).toContain('Card types by expansion'); expect((body.match(/<tr/g) || []).length).toBe(12); expect(body).toContain('class="dn-total"');

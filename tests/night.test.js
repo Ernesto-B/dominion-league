@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { STEPS, blankNight, canAdvance, advance, back, nextStep, prevStep, stepNumber, elapsed, loadNight, saveNight, clearNight, todayISO, NIGHT_TTL, NIGHT_VERSION, cleanNight } from '../src/lib/night.js';
+import { STEPS, blankNight, canAdvance, advance, back, nextStep, prevStep, stepNumber, elapsed, loadNight, saveNight, clearNight, todayISO, NIGHT_TTL, NIGHT_VERSION, cleanNight, cleanMinutes } from '../src/lib/night.js';
 
 const memory = (init = {}) => { const m = { ...init }; return { getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = v; }, removeItem: k => { delete m[k]; }, m }; };
 
@@ -14,11 +14,20 @@ describe('Game night steps', () => {
     expect(canAdvance('players', { ...st, picked: ['Ann'] })).toBe(false); expect(canAdvance('players', { ...st, picked: ['Ann', 'Bob'] })).toBe(true);
     for (const s of ['kingdom', 'play', 'scores', 'review']) expect(canAdvance(s, st)).toBe(true);
   });
-  it('starts the clock when the game begins, once, and goes back without touching it', () => {
+  it('starts the clock when the game begins, and Back from Play throws it away', () => {
     let st = { ...blankNight(), picked: ['Ann', 'Bob'], kingdom: [{ kind: 'card', id: 'a:b' }] };   // a kingdom, so there is a Play step
     st = advance(st, 1000); expect(st.step).toBe('kingdom'); expect(st.startedAt).toBeNull();
     st = advance(st, 5000); expect(st.step).toBe('play'); expect(st.startedAt).toBe(5000);
-    st = advance(st, 9000); expect(st.step).toBe('scores'); st = back(back(st)); expect(st.step).toBe('kingdom'); st = advance(st, 20000); expect(st.step).toBe('play'); expect(st.startedAt).toBe(5000);   // never restarted
+    st = back({ ...st, minutesEdit: 40 }); expect(st.step).toBe('kingdom'); expect(st.startedAt).toBeNull(); expect(st.endedAt).toBeNull(); expect(st.minutesEdit).toBeNull();   // the clock is reset
+    st = advance(st, 20000); expect(st.step).toBe('play'); expect(st.startedAt).toBe(20000);   // a fresh clock
+  });
+  it('going back from the scores to Play keeps the same clock running', () => {
+    let st = { ...blankNight(), picked: ['Ann', 'Bob'], kingdom: [{ kind: 'card', id: 'a:b' }], step: 'play', startedAt: 5000 };
+    st = advance(st, 9000); expect(st.step).toBe('scores'); expect(st.endedAt).toBe(9000);
+    st = back(st); expect(st.step).toBe('play'); expect(st.startedAt).toBe(5000); expect(st.endedAt).toBeNull();
+  });
+  it('lets the Save step override the match time with a whole number of minutes', () => {
+    expect(cleanMinutes('45')).toBe(45); expect(cleanMinutes('44.6')).toBe(45); expect(cleanMinutes('')).toBeNull(); expect(cleanMinutes('0')).toBeNull(); expect(cleanMinutes('2000')).toBeNull(); expect(cleanMinutes('abc')).toBeNull();
   });
   it('skips the Play step when there is no kingdom to keep on screen, in both directions', () => {
     let st = { ...blankNight(), picked: ['Ann', 'Bob'], step: 'kingdom' };

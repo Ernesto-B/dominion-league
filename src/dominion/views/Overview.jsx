@@ -72,46 +72,6 @@ export default function Overview({ query = '' }) {
               items={s.byExpansion.map(e => ({ key: e.name, label: e.label, value: e.copies, icon: e.icon && <SetIcon name={e.icon} size={18} />, href: cardsFilterHref({ expansions: [e.name] }) }))} />
           </div>
         </Section>
-        <Section title="Supply piles" id="st-piles">
-          <div className="builder">
-            <p className="meta" style={{ marginTop: 0 }}>Piles by how many card names they hold</p>
-            <Segments label="Supply piles by number of card names" items={s.pileSizes.map(p => ({ key: 'n' + p.key, label: p.key === 1 ? 'One name' : `${p.key} names`, value: p.count }))} />
-            <p className="meta">Piles by physical cards in the pile</p>
-            <Segments label="Supply piles by number of physical cards" items={s.pileCopies.map(p => ({ key: 'c' + p.key, label: `${p.key} ${p.key === 1 ? 'card' : 'cards'}`, value: p.count }))} />
-            <p className="note" style={{ marginBottom: 0 }}>Out of {s.piles} piles. A pile with several names is a split or mixed pile (Knights, Castles, and the split piles).</p>
-          </div>
-        </Section>
-      </div>
-
-      <Section title="Card types by expansion" id="st-matrix">
-        <TypeMatrix matrix={s.typeMatrix} piles={s.piles} cards={catalog.cards} chart={chart} onChart={setChart} />
-      </Section>
-
-      <div className="grid2">
-        <Section title="Most common type combinations" id="st-combos">
-          <div className="tablewrap"><table className="plain dn-table">
-            <caption className="dn-sr">The most common combinations of printed types on a single card</caption>
-            <thead><tr><th className="l" scope="col">Printed together</th><th scope="col">Card names</th><th scope="col">Share of {s.names}</th></tr></thead>
-            <tbody>{s.combos.slice(0, 10).map(c => {
-              // a row counts cards whose printed types are EXACTLY this combination, so the link filters the same way
-              const href = cardsFilterHref({ types: c.key.split(' + '), typeMode: 'exact' });
-              return <tr key={c.key} {...rowLink(href)}><td className="l"><a href={href} title={`Show the ${c.count} cards that are exactly ${c.key}`}>{c.key}</a></td><td>{c.count}</td><td>{pct(c.count, s.names)}</td></tr>;
-            })}</tbody>
-          </table></div>
-          <p className="note">{s.multiType} of {s.names} card names have more than one printed type.</p>
-        </Section>
-        <Section title="Landscapes" id="st-land">
-          <div className="builder">
-            <p className="meta" style={{ marginTop: 0 }}>By type</p>
-            <Waffle label="Landscape designs per type" items={s.landscapeByType.map(t => ({ key: t.key, label: PLURAL[t.key] || t.key, value: t.count, href: landscapesFilterHref({ types: [t.key] }) }))} />
-            <p className="meta">By expansion</p>
-            <Segments label="Landscape designs per expansion" items={s.landscapeByExpansion.map(x => { const e = s.byExpansion.find(b => b.name === x.key); return { key: x.key, label: e ? e.label : x.key, value: x.count, icon: e?.icon && <SetIcon name={e.icon} size={18} /> }; })} />
-          </div>
-          <p className="note">{s.landscapes} landscape designs, one card each. Not Kingdom cards.</p>
-        </Section>
-      </div>
-
-      <div className="grid2">
         <Section title="Card Cost" id="st-cost">
           <div className="builder">
             <Columns label="Kingdom card names per coin cost" items={[
@@ -125,7 +85,13 @@ export default function Overview({ query = '' }) {
             </p>
           </div>
         </Section>
+      </div>
 
+      <Section title="Card types by expansion" id="st-matrix">
+        <TypeMatrix matrix={s.typeMatrix} piles={s.piles} cards={catalog.cards} chart={chart} onChart={setChart} />
+      </Section>
+
+      <div className="grid2">
         <Section title="Recorded mechanics" id="st-mech">
           <div className="builder">
             <p className="meta" style={{ marginTop: 0 }}>
@@ -139,6 +105,15 @@ export default function Overview({ query = '' }) {
               </details>
             )}
           </div>
+        </Section>
+        <Section title="Landscapes" id="st-land">
+          <div className="builder">
+            <p className="meta" style={{ marginTop: 0 }}>By type</p>
+            <Waffle label="Landscape designs per type" items={s.landscapeByType.map(t => ({ key: t.key, label: PLURAL[t.key] || t.key, value: t.count, href: landscapesFilterHref({ types: [t.key] }) }))} />
+            <p className="meta">By expansion</p>
+            <Segments label="Landscape designs per expansion" items={s.landscapeByExpansion.map(x => { const e = s.byExpansion.find(b => b.name === x.key); return { key: x.key, label: e ? e.label : x.key, value: x.count, icon: e?.icon && <SetIcon name={e.icon} size={18} /> }; })} />
+          </div>
+          <p className="note">{s.landscapes} landscape designs, one card each. Not Kingdom cards.</p>
         </Section>
       </div>
     </>

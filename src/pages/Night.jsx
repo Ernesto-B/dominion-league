@@ -5,7 +5,7 @@ import { SET_NAMES, LANDSCAPES } from '../lib/sets.js';
 import { buildGameArgs, callGameRpc, resortByVP, toggle } from '../lib/gameForm.js';
 import { badgesFor, gameXp, leagueXp } from '../lib/xp.js';
 import { BadgeReward, LevelReward } from '../components/RewardCard.jsx';
-import { MAX_TABLES, STEPS, advance, back, blankNight, clearNight, elapsed, gameSummary, hasNight, loadNight, saveNight, stepNumber, tableLabel } from '../lib/night.js';
+import { MAX_TABLES, STEPS, advance, back, blankNight, cleanMinutes, clearNight, elapsed, gameSummary, hasNight, loadNight, playedMinutes, saveNight, stepNumber, tableLabel } from '../lib/night.js';
 import NameIcon from '../components/NameIcon.jsx';
 import SetIcon from '../components/SetIcon.jsx';
 import EloPreview from '../components/EloPreview.jsx';
@@ -137,6 +137,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
   const groupName = (allGroups.find(g => g.id === gid) || {}).name;
   const roster = D.roster.slice().sort((a, b) => a.localeCompare(b));
   const patch = p => setSt(s => ({ ...s, ...p }));
+  const clockMinutes = playedMinutes(st.startedAt, st.endedAt ?? Date.now());   // what the timer measured, for the Save step's Match time
   if (!me || !me.is_admin) return <><h1>Game night</h1><p className="empty">Only the admin can log a game.</p></>;
   const catalog = cat.status === 'ready' ? cat.catalog : null;
   const items = st.kingdom;
@@ -288,6 +289,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
               <label className="f">Date <input type="date" value={st.date} onChange={e => patch({ date: e.target.value })} /></label>
               <label className="f">Type <select value={st.type} onChange={e => patch({ type: e.target.value })}>{['', 'Playoff', 'Friendly'].map(t => <option key={t} value={t}>{t || 'Regular'}</option>)}</select></label>
             </div>
+            <MatchTime clock={clockMinutes} value={st.minutesEdit} onChange={v => patch({ minutesEdit: v })} />
             <ol className="night-result">{st.picked.map((n, i) => <li key={n}><b>{st.tie[n] ? '=' : i + 1}</b> {n}{st.vp[n] !== undefined && st.vp[n] !== '' && <span className="meta"> — {st.vp[n]} VP</span>}</li>)}</ol>
             <p className="meta" style={{ marginBottom: 4 }}>Expansions in play (from the kingdom cards — change if needed)</p>
             <div className="pills" id="bsets">{SET_NAMES.filter(n => enabledSets.has(n) || st.sets.includes(n)).map(n => <a key={n} href="#" aria-current={st.sets.includes(n) ? 'true' : undefined} onClick={e => { e.preventDefault(); patch({ sets: toggle(st.sets, n) }); }}><SetIcon name={n} size={18} />{n}</a>)}</div>
@@ -379,4 +381,19 @@ function RolledNotes({ setup }) {
   if (setup.shelters != null) lines.push(setup.shelters ? 'Use Shelters instead of Estates.' : 'Use Estates (no Shelters).');
   if (setup.ruins) lines.push('A Looter is in: add the Ruins pile.');
   return lines.length ? <ul className="dn-plain-list night-notes">{lines.map(l => <li key={l}>{l}</li>)}</ul> : null;
+}
+
+// The Save step's match time: what the timer measured, editable in whole minutes for a break in the middle or a clock left running. Typing is kept as text so
+// clearing the box to type a new number does not snap back; a value that is not 1 to 1440 falls back to the timer.
+export function MatchTime({ clock, value, onChange }) {
+  const [text, setText] = useState(value != null ? String(value) : '');
+  const shown = text !== '' ? text : clock != null ? String(clock) : '';
+  return (
+    <label className="f night-minutes">Match time
+      <input type="number" inputMode="numeric" min="1" max="1440" step="1" value={shown} placeholder="—"
+        onChange={e => { setText(e.target.value); onChange(cleanMinutes(e.target.value)); }}
+        onBlur={() => { if (cleanMinutes(text) == null) setText(''); }} /> min
+      {value != null && clock != null && value !== clock && <button type="button" className="linkish" onClick={() => { setText(''); onChange(null); }}>use the timer ({clock} min)</button>}
+    </label>
+  );
 }
