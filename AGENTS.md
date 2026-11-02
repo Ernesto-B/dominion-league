@@ -413,6 +413,7 @@ see the end of this list):
    REAL `src/main.jsx`, plus a scenario script that drives the live DOM and writes PASS/FAIL lines into the page; run it with
    `Google Chrome --headless=new --virtual-time-budget=90000 --dump-dom <url>` and grep the lines. Headless Chrome barely
    fires `scroll` events, so record scroll positions at navigation time, not from scroll listeners.
+5. `npm run smoke` (dev/smoke.mjs): boots the whole site on the fake data in headless Chrome (macOS path in `dev/cdp.mjs`) and fails on any uncaught error or blank page on eleven routes. **Run it before pushing anything that touches `App.jsx`, a page, or startup code**: a crash in `App.jsx` itself passes the build and every unit test (it shipped a blank site once).
 5. Visual/UX verification is **always** the owner's — say so explicitly rather than
    claiming a styling or layout change "looks right."
 

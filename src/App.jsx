@@ -30,16 +30,16 @@ function Shell() {
   const catalog = useLeagueCatalog();
   const ready = state.status === 'ready';
   useEffect(() => { if (ready) loadManifest(); }, [ready]);
+  const lastGid = useRef((() => { try { return localStorage.getItem('dl.group'); } catch { return null; } })());
+  const route = useMemo(() => ready ? parseHash(hash, state.allGroups, lastGid.current) : null, [ready, hash, state.allGroups]);
   // once the league is in, quietly fetch the pictures of the last few games' kingdoms (about 30 small files, once per device) so the report and Last night open with them already there
-  const lastGames = ready ? pickD(state, route.gid).games : null;
+  const lastGames = route ? pickD(state, route.gid).games : null;   // after `route`: it is created above this line, and an earlier use crashed the whole app
   useEffect(() => {
     if (!lastGames) return undefined;
     const go = () => warmPictures(recentKingdomIds(lastGames));
     const h = typeof requestIdleCallback === 'function' ? requestIdleCallback(go, { timeout: 4000 }) : setTimeout(go, 1500);
     return () => { if (typeof cancelIdleCallback === 'function' && typeof h === 'number') cancelIdleCallback(h); else clearTimeout(h); };
-  }, [lastGames]);   // the card pictures need a signed-in member: ask again once the site is ready (a load before sign-in finds nothing)
-  const lastGid = useRef((() => { try { return localStorage.getItem('dl.group'); } catch { return null; } })());
-  const route = useMemo(() => ready ? parseHash(hash, state.allGroups, lastGid.current) : null, [ready, hash, state.allGroups]);
+  }, [lastGames]);
   useEffect(() => {   // remember a group the viewer picked (named in the URL) so other pages keep it
     if (!route?.explicit) return;
     lastGid.current = route.gid;
