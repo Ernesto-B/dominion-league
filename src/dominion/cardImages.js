@@ -15,7 +15,7 @@ const MANIFEST_KEY = 'dl.cards.manifest';
 const REFRESH_MS = 6 * 60 * 60 * 1000;
 const MAX_PARALLEL = 6;
 
-let manifest = null, loading = null, mode = 'local';   // mode: where the manifest was found, 'bucket' or 'local'
+let manifest = null, loading = null, failed = false, mode = 'local';   // mode: where the manifest was found, 'bucket' or 'local'
 const listeners = new Set();
 const announce = () => listeners.forEach(f => f());
 
@@ -34,7 +34,8 @@ async function fromLocal(fetcher) {
 const order = () => (import.meta.env && import.meta.env.DEV ? [['local', fromLocal], ['bucket', fromBucket]] : [['bucket', fromBucket], ['local', fromLocal]]);
 
 export function loadManifest(fetcher = (...a) => fetch(...a)) {
-  if (loading) return loading;
+  if (loading && !failed) return loading;   // a load that found nothing (not signed in yet, offline) is tried again the next time it is asked for
+  failed = false;
   const saved = (() => { try { const s = JSON.parse(localStorage.getItem(MANIFEST_KEY) || 'null'); return s && s.m && s.m.items ? s : null; } catch { return null; } })();
   if (saved) { manifest = saved.m; mode = saved.mode || 'local'; }   // shown at once; refreshed below when it is old
   const fresh = !!saved && Date.now() - saved.at < REFRESH_MS;
@@ -43,7 +44,7 @@ export function loadManifest(fetcher = (...a) => fetch(...a)) {
       const m = await get(fetcher);
       if (m) { manifest = m; mode = name; try { localStorage.setItem(MANIFEST_KEY, JSON.stringify({ m, mode: name, at: Date.now() })); } catch { /* storage full: not kept */ } return; }
     }
-    if (!saved) manifest = { v: 2, items: {} };   // none anywhere: no pictures
+    if (!saved) { manifest = { v: 2, items: {} }; failed = true; }   // none anywhere: no pictures for now
   };
   loading = (fresh ? Promise.resolve() : fetchIt()).then(() => { announce(); return manifest; });
   return loading;
@@ -100,13 +101,13 @@ export function pictureSrc(p) {
 // Forget every saved picture and the manifest (signing out: the pictures belong to signed-in members)
 export async function clearCardCache() {
   urls.forEach(p => p.then(u => u && URL.revokeObjectURL(u)));
-  urls.clear(); manifest = null; loading = null;
+  urls.clear(); manifest = null; loading = null; failed = false;
   try { localStorage.removeItem(MANIFEST_KEY); } catch { /* nothing to clear */ }
   try { if (typeof caches !== 'undefined') await caches.delete(CACHE); } catch { /* nothing to clear */ }
 }
 
 // for tests
-export const _setManifest = (m, m2 = 'local') => { manifest = m; mode = m2; loading = m ? Promise.resolve(m) : null; urls.clear(); };
+export const _setManifest = (m, m2 = 'local') => { manifest = m; mode = m2; loading = m ? Promise.resolve(m) : null; failed = false; urls.clear(); };
 
 // Re-renders the caller once the manifest has loaded (instantly when it already has).
 export function useCardImages() {

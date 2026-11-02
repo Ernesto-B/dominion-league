@@ -49,3 +49,15 @@ describe('the private bucket', () => {
     expect(store['dl.cards.manifest']).toBeUndefined(); expect(m.anyCardImages()).toBe(false);
   });
 });
+
+describe('a load before sign-in', () => {
+  it('finding nothing is not remembered: the next ask tries again and finds the pictures', async () => {
+    const m = await import('../../src/dominion/cardImages.js');
+    m._setManifest(null);
+    const first = await m.loadManifest(() => Promise.resolve({ ok: false }));   // signed out: the bucket refuses, there is no local folder
+    expect(first.items).toEqual({});
+    bucketFiles['manifest.json'] = MANIFEST;                                      // signed in now
+    const second = await m.loadManifest(() => Promise.resolve({ ok: false }));
+    expect(second.items['plunder:crew']).toBeTruthy();
+  });
+});

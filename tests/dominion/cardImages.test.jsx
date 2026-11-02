@@ -91,3 +91,11 @@ describe('the card beside the mouse', () => {
     h.onMouseEnter({ clientX: 5, clientY: 5 });   // no matchMedia here (Node): nothing is scheduled, nothing throws
   });
 });
+
+describe('hovering a table row', () => {
+  it('can name its picture lazily, and a row with no picture shows nothing', () => {
+    const h = hoverHandlers(() => null);
+    h.onMouseEnter({ clientX: 1, clientY: 1 });   // no picture, no mouse here: nothing scheduled, nothing thrown
+    expect(typeof hoverHandlers('a:b').onMouseEnter).toBe('function');
+  });
+});
