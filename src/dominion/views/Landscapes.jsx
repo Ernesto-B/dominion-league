@@ -6,6 +6,7 @@ import { useLeagueGames } from '../useLeagueGames.js';
 import { artifactHref, landscapeHref } from '../links.js';
 import { PLURAL, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
+import { hoverHandlers } from '../components/CardHover.jsx';
 import FilterSummary from '../components/FilterSummary.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
 import CostIcons, { CoinIcon, DebtIcon, PlainDebtIcon } from '../components/Cost.jsx';
@@ -127,7 +128,7 @@ export default function Landscapes({ query = '' }) {
             <caption className="dn-sr">Landscapes matching the current filters</caption>
             <SortHeaders columns={COLUMNS} sort={f.sort} dir={f.dir} onSort={sortBy} />
             <tbody>{rows.map(l => (
-              <tr key={l.id} {...rowLink(landscapeHref(l.id, qs))}>
+              <tr key={l.id} {...rowLink(landscapeHref(l.id, qs))} {...hoverHandlers(l.id)}>
                 <td className="l"><ExpansionBadge name={l.expansion} size={18} /></td>
                 <td className="l name"><a href={landscapeHref(l.id, qs)}>{l.name}</a>{f.text && f.q.trim() && !nameMatches(l, f.q) && <small className="meta dn-snippet">{textSnippet(l.text, f.q)}</small>}</td>
                 <td className="l"><LandscapePill type={l.type} /></td>
@@ -148,7 +149,7 @@ export default function Landscapes({ query = '' }) {
             <caption className="dn-sr">Artifacts in the collection</caption>
             <thead><tr><th className="l" scope="col">Artifact</th><th className="l" scope="col">Expansion</th><th className="dn-hide-sm" scope="col">Copies</th><th className="l dn-hide-sm" scope="col">Behaviour</th><th className="l dn-hide-sm" scope="col">Recorded tags</th></tr></thead>
             <tbody>{catalog.artifacts.map(a => (
-              <tr key={a.id}>
+              <tr key={a.id} {...hoverHandlers(a.id)}>
                 <td className="l name"><a href={artifactHref(a.id)}><b>{a.name}</b></a></td>
                 <td className="l"><ExpansionBadge name={a.expansion} size={14} /></td>
                 <td className="dn-hide-sm">{a.copies}</td>

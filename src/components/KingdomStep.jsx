@@ -61,7 +61,7 @@ function RandomRoll({ catalog, roll, setRollOpts, resetRoll, kept, onKeep, hand,
     const cards = resolved.filter(r => r.kind === 'card' && !r.missing).sort(shelfOrder), lands = resolved.filter(r => r.kind === 'landscape' && !r.missing).sort(shelfOrder);
     // cards taken out by hand stay where they were rolled, struck through, with the card typed in beside them (as on a finished draft)
     const swaps = randomOriginal ? handSwaps(randomOriginal, cards.map(r => r.id)) : null;
-    const chip = id => { const r = resolveKingdom(catalog, [{ kind: 'card', id }])[0]; return <KingdomChip key={id} r={r} plain expansion />; };
+    const chip = id => { const r = resolveKingdom(catalog, [{ kind: 'card', id }])[0]; return <KingdomChip key={id} r={r} plain expansion catalog={catalog} />; };
     const found = ids => resolveKingdom(catalog, ids.map(id => ({ kind: 'card', id }))).filter(r => !r.missing);
     // one entry per card, filed under its own expansion: a swapped-out card sits in ITS expansion's row with its replacement beside it; a card only added by hand is filed under its own
     const entries = swaps
@@ -69,13 +69,13 @@ function RandomRoll({ catalog, roll, setRollOpts, resetRoll, kept, onKeep, hand,
           ? <span key={r.id} className="dn-swapped"><span className="gone">{chip(r.id)}</span>{swaps.replacedBy.has(r.id) ? <><b className="dn-swap-in">→</b>{chip(swaps.replacedBy.get(r.id))}</> : <em className="meta">removed</em>}</span>
           : chip(r.id) })),
          ...found(swaps.extra).map(r => ({ r, node: <span key={'+' + r.id} className="dn-swapped"><b className="dn-swap-in">+</b>{chip(r.id)}</span> }))]
-      : cards.map(r => ({ r, node: <KingdomChip key={r.id} r={r} plain expansion /> }));
+      : cards.map(r => ({ r, node: <KingdomChip key={r.id} r={r} plain expansion catalog={catalog} /> }));
     return (
       <section className="builder dn-draft" aria-label="Kingdom chosen">
         <p className="dn-draft-done"><b>Kingdom Chosen</b>{rolled && rolled.seed != null && <span className="meta"> · Seed {formatSeed(rolled.seed)}</span>}</p>
         <p className="meta" style={{ margin: '0 0 6px' }}>{cards.length} Kingdom card{cards.length === 1 ? '' : 's'}</p>
         <ShelfGroups entries={entries} />
-        {lands.length > 0 && <><p className="meta" style={{ margin: '12px 0 6px' }}>Landscapes</p><ShelfGroups entries={lands.map(r => ({ r, node: <KingdomChip key={r.id} r={r} plain expansion /> }))} /></>}
+        {lands.length > 0 && <><p className="meta" style={{ margin: '12px 0 6px' }}>Landscapes</p><ShelfGroups entries={lands.map(r => ({ r, node: <KingdomChip key={r.id} r={r} plain expansion catalog={catalog} /> }))} /></>}
         {setupNow && <Setup catalog={catalog} setup={setupNow} />}
         <div className="controls dn-rz-go">
           <button type="button" className="ghost" onClick={() => setRandomDone(false)}>Back to the roll</button>

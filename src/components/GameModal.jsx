@@ -82,6 +82,7 @@ export default function GameModal({ editId, draft, onClose }) {
           <label className="f">Type <select id="bty" value={bs.type} onChange={e => set({ type: e.target.value })}>
             {['', 'Playoff', 'Friendly'].map(t => <option key={t} value={t}>{t || 'Regular'}</option>)}
           </select></label>
+          <label className="f">Length <input type="number" id="bmin" inputMode="numeric" min="1" max="1440" step="1" style={{ width: 80 }} placeholder="—" value={bs.minutes ?? ''} onChange={e => set({ minutes: e.target.value === '' ? null : e.target.value })} /> min</label>
         </div>
         <p className="meta">1. Click everyone who played.</p>
         <div className="pills" id="bpick">

@@ -84,27 +84,44 @@ export function Lollipop({ items, label, max, format = fmt }) {
   );
 }
 
+/* ---- the hover behaviour of Segments and Waffle (the Donut has its own): pointing at a part, or at its row in the legend, lights that kind up and dims the rest, and a line above
+   says what it is (name, count, share; with nothing pointed at, the whole). Clicking a part opens the matching list. Keyboard focus on a legend link does the same as pointing. */
+function useHot(data, unit) {
+  const [hot, setHot] = useState(null);
+  const total = Math.max(1, sum(data)), lit = data.find(i => i.key === hot) || null;
+  const bind = key => ({ onMouseEnter: () => setHot(key), onMouseLeave: () => setHot(null), onFocus: () => setHot(key), onBlur: () => setHot(null) });
+  const read = (
+    <p className="dn-chart-read" aria-hidden="true" style={lit ? { '--c': lit.color } : undefined}>
+      {lit ? <><i style={{ background: lit.color }} /><b>{lit.label}</b> {fmt(lit.value)} · {share(lit.value, total)}</> : <span>{fmt(sum(data))} {unit}</span>}
+    </p>
+  );
+  return { hot, bind, read, total };
+}
+const open = href => () => { if (href) window.location.hash = href; };
+
 /* ---- Segments: one bar split into parts, with the parts listed under it */
-export function Segments({ items, label }) {
-  const data = colored(items), total = Math.max(1, sum(data));
+export function Segments({ items, label, unit = 'in all' }) {
+  const data = colored(items), { hot, bind, read, total } = useHot(data, unit);
   return (
     <div className="dn-seg" role="group" aria-label={label}>
-      <div className="dn-seg-bar" aria-hidden="true">{data.map(i => <span key={i.key} style={{ width: `${(i.value / total) * 100}%`, background: i.color }} title={`${i.label}: ${fmt(i.value)}`} />)}</div>
+      {read}
+      <div className={'dn-seg-bar' + (hot ? ' hot' : '')} aria-hidden="true">{data.map(i => <span key={i.key} className={hot === i.key ? 'on' : undefined} style={{ width: `${(i.value / total) * 100}%`, background: i.color, cursor: i.href ? 'pointer' : undefined }} onClick={open(i.href)} {...bind(i.key)} />)}</div>
       <ol className="dn-legend">
-        {data.map(i => <li key={i.key}><i style={{ background: i.color }} aria-hidden="true" /><span className="dn-legend-name"><Name i={i} /></span><span className="dn-legend-n">{fmt(i.value)}</span><span className="dn-legend-p">{share(i.value, total)}</span></li>)}
+        {data.map(i => <li key={i.key} className={hot === i.key ? 'on' : undefined} {...bind(i.key)}><i style={{ background: i.color }} aria-hidden="true" /><span className="dn-legend-name"><Name i={i} /></span><span className="dn-legend-n">{fmt(i.value)}</span><span className="dn-legend-p">{share(i.value, total)}</span></li>)}
       </ol>
     </div>
   );
 }
 
 /* ---- Waffle: one square for every thing counted, grouped and coloured by kind */
-export function Waffle({ items, label }) {
-  const data = items.map(i => ({ ...i, color: i.color || typeColor(i.key) })), total = sum(data);
+export function Waffle({ items, label, unit = 'in all' }) {
+  const data = items.map(i => ({ ...i, color: i.color || typeColor(i.key) })), { hot, bind, read, total } = useHot(data, unit);
   return (
     <div className="dn-waffle-wrap" role="group" aria-label={label}>
-      <div className="dn-waffle" aria-hidden="true">{data.flatMap(i => Array.from({ length: i.value }, (_, k) => <span key={`${i.key}${k}`} style={{ background: i.color }} title={i.label} />))}</div>
+      {read}
+      <div className={'dn-waffle' + (hot ? ' hot' : '')} aria-hidden="true">{data.flatMap(i => Array.from({ length: i.value }, (_, k) => <span key={`${i.key}${k}`} className={hot === i.key ? 'on' : undefined} style={{ background: i.color, cursor: i.href ? 'pointer' : undefined }} onClick={open(i.href)} {...bind(i.key)} />))}</div>
       <ol className="dn-legend">
-        {data.map(i => <li key={i.key}><i style={{ background: i.color }} aria-hidden="true" /><span className="dn-legend-name"><Name i={i} /></span><span className="dn-legend-n">{fmt(i.value)}</span><span className="dn-legend-p">{share(i.value, Math.max(1, total))}</span></li>)}
+        {data.map(i => <li key={i.key} className={hot === i.key ? 'on' : undefined} {...bind(i.key)}><i style={{ background: i.color }} aria-hidden="true" /><span className="dn-legend-name"><Name i={i} /></span><span className="dn-legend-n">{fmt(i.value)}</span><span className="dn-legend-p">{share(i.value, total)}</span></li>)}
       </ol>
     </div>
   );

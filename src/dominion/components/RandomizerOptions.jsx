@@ -1,4 +1,4 @@
-import { CARD_COUNTS, COST_SPREADS, REQUIRE_RULES, ruleIsExact } from '../randomizer.js';
+import { CARD_COUNTS, COST_SPREADS, REQUIRE_RULES, THEMES, THEME_KEYS, ruleIsExact } from '../randomizer.js';
 import { toggle } from '../filters.js';
 import { PLURAL } from '../constants.js';
 import { resolveKingdom } from '../kingdom.js';
@@ -16,6 +16,7 @@ const itemsOf = ids => ids.map(id => ({ kind: 'card', id }));
    `opts` is a full options object (see DEFAULT_OPTIONS) and `setOpts(patch)` merges a change into it. */
 export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = false, foldExpansions = false, cardCount = null }) {
   const attacksOn = opts.maxAttacks !== 0;
+  const themes = opts.themes || [];   // a night saved before themes existed has none
   const listsOn = opts.include.length + opts.exclude.length;
   const tagRules = Object.entries(REQUIRE_RULES).filter(([k]) => !ruleIsExact(k)), costRules = Object.entries(REQUIRE_RULES).filter(([k]) => ruleIsExact(k));
   const ruleChip = ([k, r]) => <Chip key={k} pressed={opts.require.includes(k)} label={r.coins != null ? `A card costing ${r.coins} coins` : r.atLeast != null ? `A card costing ${r.atLeast} coins or more` : undefined} onClick={() => setOpts({ require: toggle(opts.require, k) })}>{r.coins != null ? <CoinIcon coins={r.coins} size={24} /> : r.atLeast != null ? <><CoinIcon coins={r.atLeast} size={24} />+</> : r.chip || r.box || r.label}</Chip>;
@@ -58,8 +59,10 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
         <div className="dn-chips">
           <Chip pressed={attacksOn} onClick={() => setOpts({ maxAttacks: attacksOn ? 0 : DEFAULT_MAX_ATTACKS })}>{attacksOn ? 'Allowed' : 'None'}</Chip>
           {attacksOn && <>
+            <label className="dn-atk">at least <input type="number" min="0" max="12" inputMode="numeric" className="dn-num" placeholder="0" aria-label="Fewest Attacks" value={opts.minAttacks || ''}
+              onChange={e => { const n = e.target.value === '' ? 0 : Math.max(0, Math.min(12, Math.round(Number(e.target.value)) || 0)); setOpts({ minAttacks: n, ...(n > 0 && opts.maxAttacks != null && opts.maxAttacks < n ? { maxAttacks: n } : {}) }); }} /></label>
             <label className="dn-atk">at most <input type="number" min="1" max="12" inputMode="numeric" className="dn-num" placeholder="any" aria-label="Most Attacks" value={opts.maxAttacks ?? ''}
-              onChange={e => setOpts({ maxAttacks: e.target.value === '' ? null : Math.max(1, Math.min(12, Math.round(Number(e.target.value)) || 1)) })} /></label>
+              onChange={e => { const n = e.target.value === '' ? null : Math.max(1, Math.min(12, Math.round(Number(e.target.value)) || 1)); setOpts({ maxAttacks: n, ...(n != null && (opts.minAttacks || 0) > n ? { minAttacks: n } : {}) }); }} /></label>
             <Chip pressed={opts.reaction} onClick={() => setOpts({ reaction: !opts.reaction })}>Reaction</Chip>
             <Chip pressed={opts.junkTrash} onClick={() => setOpts({ junkTrash: !opts.junkTrash })}>Trasher if junk</Chip>
           </>}
@@ -69,6 +72,9 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
         <div className="dn-chips" role="radiogroup" aria-label="Cost spread">
           <Chip pressed={!opts.costSpread} onClick={() => setOpts({ costSpread: null })}>Off</Chip>
           {Object.entries(COST_SPREADS).map(([k, c]) => <Chip key={k} pressed={opts.costSpread === k} onClick={() => setOpts({ costSpread: k })}>{c.label}</Chip>)}
+          <label className="dn-atk">none above <select className="dn-num" aria-label="Highest card cost" value={opts.maxCost ?? ''} onChange={e => setOpts({ maxCost: e.target.value === '' ? null : Number(e.target.value) })}>
+            <option value="">any</option>{[3, 4, 5, 6].map(c => <option key={c} value={c}>${c}</option>)}
+          </select></label>
         </div>
 
         <p className="dn-rz-lab">Prioritize</p>
@@ -93,6 +99,19 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
             <ItemSearch catalog={catalog} kind="card" taken={[...itemsOf(opts.include), ...itemsOf(opts.exclude)]} label="Add a card" onAdd={x => setOpts({ exclude: [...opts.exclude, x.obj.id] })} />
           </div>
         </div>
+      </details>
+
+      <details className="dn-mech dn-rz-details">
+        <summary>Advanced{themes.length ? <span className="meta"> · {themes.length} on</span> : null}</summary>
+        <p className="meta dn-rz-listh" style={{ marginTop: 8 }}>Build the kingdom around (pick any)</p>
+        <ul className="dn-themes">
+          {THEME_KEYS.map(k => (
+            <li key={k}>
+              <Chip pressed={themes.includes(k)} onClick={() => setOpts({ themes: toggle(themes, k) })}>{THEMES[k].chip}</Chip>
+              <span className="meta">{THEMES[k].hint}</span>
+            </li>
+          ))}
+        </ul>
       </details>
     </>
   );

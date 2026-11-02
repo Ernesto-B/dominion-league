@@ -99,9 +99,9 @@ the change is genuinely about the math/model itself.
   **unconditional** even when the stat is 0 (a tile that hides its icon at zero looks broken, not
   clean — this was a real bug, fixed once already).
 - **Every game has a permanent id** — `games.id` in the database, exposed as `game.line` everywhere
-  in the model. A link to one game is `hashFor('games', gid, game.line)` → `#/games/<group>/<id>`,
-  which opens that game's report (see the game report note below). Records and Players link their dates this way; do the same for any
-  new "this game" mention. Engine records that point at a game must carry `line` (Elo gain/drop do).
+  in the model. A link to one game's REPORT is `hashFor('games', gid, game.line)` → `#/games/<group>/<id>` (see the game report note below), used by the
+  "Full game report" buttons and the report's Older / Newer. A DATE that mentions a game (Records, Players, badges, the Insights and card pages' play history) opens the Games list with that game
+  highlighted instead: `hashFor('games', gid) + '?game=' + game.line`. Do the same for any new "this game" mention. Engine records that point at a game must carry `line` (Elo gain/drop do).
 - **Group scoping: each group is a fully separate league, not a filtered view of one
   shared dataset.** `buildLeague()` in `src/lib/league.js` calls `Eng.compute()` once per group the
   viewer belongs to, each time with only that group's players/games/seasons —
@@ -318,6 +318,15 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   under the title, not a permanent block and not a custom popover.
 - Popup/portal content has no PageContext, and these views read `CatalogContext` — keep that in mind if you
   ever render catalog content outside `DominionData`/`CatalogProvider`.
+
+## Card pictures
+
+The owner's card images are shown on the Collection, Game night and the game report (plan, numbers and the owner's go-live steps: `docs/card-images.md`). Rules that matter when touching it:
+- The pictures are **never committed** (`public/cards/` is gitignored): `npm run cards:build -- <folder>` makes them, `npm run cards:upload` puts them in the PRIVATE Supabase bucket `card-images`
+  (`supabase/dominion/03_card_images_bucket.sql`, applied with `npm run db:apply -- images`). Never make the bucket public or add a write policy.
+- `src/dominion/cardImages.js` is the only file that knows where a picture comes from; screens ask for a card id and draw `<CardFace id size|className="crop|big">`, which draws nothing when there is no picture, so
+  keep the text version as the fallback everywhere. Pictures load only near the screen; a private one is downloaded once per device and kept in Cache Storage.
+- A pile with several names (Knights, Castles, the split piles) can have a picture of its own (`<expansion id>:pile:<slug>`, `slotFaceId`).
 
 ## Gotchas already paid for — don't rediscover these
 

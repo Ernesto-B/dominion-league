@@ -6,5 +6,8 @@ dist/
 .DS_Store
 dist-fake/
 
+# Card pictures are the owner's files: built locally by `npm run cards:build`, uploaded to the private Supabase bucket, never committed
+public/cards/
+
 # Personal notes
 todo.md

@@ -114,7 +114,7 @@ describe('the Collection pages with play data', () => {
   it('a card page shows how often it was played, its recent games as links, and the viewer\'s record', () => {
     const h = view(`cards/${encodeURIComponent(card('Village').id)}`), t = text(h);
     expect(t).toMatch(/4\s+logged games/); expect(t).toMatch(/In our games/); expect(t).toMatch(/In 4 logged games for Friends/);
-    expect(h).toContain('href="#/games/g1/4"'); expect(t).toMatch(/won by Ann/); expect(t).toMatch(/won by Ann & Bob/);
+    expect(h).toContain('href="#/games/g1?game=4"'); expect(h).not.toContain('href="#/games/g1/4"'); expect(t).toMatch(/won by Ann/);   // a date opens the Games list with that game highlighted, not its report expect(t).toMatch(/won by Ann & Bob/);
     expect(t).toMatch(/You played it in 4 games and won 3/);
   });
   it('says so when a card has never been played, and shows no section at all without any logged kingdom', () => {
@@ -142,6 +142,7 @@ describe('the Insights page', () => {
   it('shows the most played, what has not been played, and the viewer\'s record', () => {
     const h = view('insights'), t = text(h);
     expect(t).toMatch(/Based on 4 of 5 games in Friends/); expect(t).toMatch(/Most played cards/); expect(t).toMatch(/Village/);
+    expect(h).toMatch(/href="#\/games\/g1\?game=\d+"/); expect(h).not.toMatch(/href="#\/games\/g1\/\d+"/);   // the Last played dates highlight the game in the Games list
     expect(t).toMatch(/Not played yet/); expect(h).toContain('played=no'); expect(t).toMatch(/Your record with cards/); expect(t).toMatch(/75%/);
   });
   it('explains itself when no kingdom has been logged, with a pointer for an admin', () => {

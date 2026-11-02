@@ -186,3 +186,14 @@ describe('landscape costs', () => {
     expect(cat.landscapes.some(l => l.type === 'Event' && l.coins === 0)).toBe(true);
   });
 });
+
+describe('related cards on a card page', () => {
+  it('lists only cards recorded with two or more of the same mechanics, so a card whose tags nothing else shares twice has none', async () => {
+    const { realCatalog } = await import('./fixtures.js');
+    const { sharedMechanicCards } = await import('../../src/dominion/model.js');
+    const cat = realCatalog(), displace = cat.cardsById.get('menagerie:displace'), village = cat.cardsById.get('dominion-base-game:village');
+    expect(sharedMechanicCards(cat, displace, { limit: Infinity })).toEqual([]);
+    const rel = sharedMechanicCards(cat, village, { limit: Infinity });
+    expect(rel.length).toBeGreaterThan(5); expect(rel.every(x => x.shared.length >= 2)).toBe(true);
+  });
+});

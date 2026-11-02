@@ -12,6 +12,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "cards:upload": "node scripts/dominion/upload-card-images.mjs",
+    "cards:build": "node scripts/dominion/build-card-images.mjs",
     "dominion:seed": "node scripts/dominion/build-seed.mjs",
     "dominion:validate": "vitest run tests/dominion/data.test.js",
     "dominion:test-db": "node scripts/dominion/test-db.mjs",
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.1.2",
+    "sharp": "^0.35.5",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
   }

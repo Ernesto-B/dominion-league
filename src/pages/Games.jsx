@@ -35,7 +35,8 @@ export default function Games() {
     && (f.player === 'all' || g.places[f.player] != null) && (f.set === 'all' || g.sets.includes(f.set));
   // #/games/<group>/<id> — a link to one game opens that game's report (components/GameReport.jsx), the deepest view there is. An id that isn't in this group
   // is ignored and the list shows as usual.
-  const target = /^\d+$/.test(arg || '') ? D.games.find(g => g.line === +arg) : null;
+  const argId = (arg || '').split('?')[0];   // `?tab=kingdom` after the id is the report's open tab (GameReport.jsx)
+  const target = /^\d+$/.test(argId) ? D.games.find(g => g.line === +argId) : null;
   // #/games/<group>?game=<id> — the list with that game opened, tinted and scrolled to (Records and badge dates link here). Arriving clears any filters that would hide it.
   const hlId = (/^\?game=(\d+)$/.exec(arg || '') || [])[1];
   const hl = hlId ? D.games.find(g => g.line === +hlId) : null;

@@ -6,6 +6,7 @@ import { useLeagueGames } from '../useLeagueGames.js';
 import { cardHref } from '../links.js';
 import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
+import { hoverHandlers } from '../components/CardHover.jsx';
 import FilterSummary from '../components/FilterSummary.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
 import { Chip, ExpansionBadge, FilterFold, ModeRow, TypePills, rowLink } from '../components/bits.jsx';
@@ -135,7 +136,7 @@ export default function Cards({ query = '' }) {
             <SortHeaders columns={plays ? [...COLUMNS, PLAYED_COLUMN] : COLUMNS} sort={f.sort} dir={f.dir} onSort={sortBy} />
             <tbody>{rows.map(c => {
               return (
-                <tr key={c.id} {...rowLink(cardHref(c.id, qs))}>
+                <tr key={c.id} {...rowLink(cardHref(c.id, qs))} {...hoverHandlers(c.id)}>
                   <td className="l"><ExpansionBadge name={c.expansion} size={18} /></td>
                   <td className="l name"><a href={cardHref(c.id, qs)}>{c.name}</a>{c.previousName && <small className="meta"> (was {c.previousName})</small>}{f.text && f.q.trim() && !nameMatches(c, f.q) && <small className="meta dn-snippet">{textSnippet(c.text, f.q)}</small>}</td>
                   <td className="l"><TypePills types={c.types} /></td>

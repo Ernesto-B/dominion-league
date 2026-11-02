@@ -3,6 +3,7 @@ import { sb } from './lib/supabase.js';
 import { fetchConfig, loadData } from './lib/data.js';
 import { buildLeague } from './lib/league.js';
 import { saveSnapshot, loadSnapshot, clearSnapshot } from './lib/snapshot.js';
+import { clearCardCache } from './dominion/cardImages.js';
 
 /* The session/data state machine, ported from the old boot():
      loading -> login | pwchange | ready | error
@@ -62,7 +63,7 @@ export function LeagueProvider({ children }) {
     const online = () => { if (statusRef.current === 'ready') boot(); };   // back on the network: replace the saved copy with the live one
     window.addEventListener('online', online);
     const { data: { subscription } } = sb.auth.onAuthStateChange(event => {
-      if (event === 'SIGNED_OUT' && statusRef.current === 'ready') { clearSnapshot(); location.hash = ''; boot(); }
+      if (event === 'SIGNED_OUT' && statusRef.current === 'ready') { clearSnapshot(); clearCardCache(); location.hash = ''; boot(); }
     });
     return () => { subscription.unsubscribe(); window.removeEventListener('online', online); };
   }, [boot]);

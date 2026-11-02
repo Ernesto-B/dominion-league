@@ -7,6 +7,9 @@ import RandomizerOptions from './RandomizerOptions.jsx';
 import { displayName, primaryType } from '../kingdom.js';
 import { Setup } from './RandomizerPanel.jsx';
 import { openPeek } from './CardPeek.jsx';
+import CardFace from './CardFace.jsx';
+import { hoverHandlers } from './CardHover.jsx';
+import { slotFaceId, useCardImages, useCardView } from '../cardImages.js';
 
 /* Pick the kingdom in turns. One device is enough: pass it round, or let one person tap each player's choice.
    The draft is CONTROLLED: its whole state (`value`, see draftState in draft.js) lives in the saved Game night, so leaving the page, or the
@@ -24,6 +27,10 @@ import { openPeek } from './CardPeek.jsx';
 const seatColor = i => `hsl(${(i * 67 + 24) % 360} 68% 62%)`;
 
 export default function SnakeDraft({ catalog, players, opts, setOpts, plays = null, value, onChange, onDone, onRestart, onReset, items = [], setup = null, hand = false, setHand = () => {}, handPanel = null }) {
+  const { get: picture, any: anyPictures } = useCardImages();
+  const [cardView] = useCardView();
+  const faces = anyPictures && cardView === 'faces';   // the pool drawn as the cards themselves, when there are pictures (a card without one keeps its text tile)
+  const faceOf = s => { const id = slotFaceId(s); return id ? { id } : null; };
   const { seats } = value;
   const set = patch => onChange({ ...value, ...patch });
   const top = useRef(null);
@@ -92,6 +99,8 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
 
   // after a finished draft, cards taken out by hand are struck through where they were drafted, with the card typed in beside them
   const swaps = value.finished && value.original ? handSwaps(value.original, items.filter(i => i.kind === 'card').map(i => i.id)) : null;
+  // a tap or click on a pick or a ban enlarges that card (its dialog links to the card's page)
+  const tapToEnlarge = slot => ({ role: 'button', tabIndex: 0, 'aria-label': `${slot.name}: show the card larger`, onClick: () => openPeek(catalog, { kind: 'card', s: slot }), onKeyDown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPeek(catalog, { kind: 'card', s: slot }); } } });
   const nameOf = id => { const c = catalog.cardsById.get(id); return c ? displayName(c) : id; };
   const seatsSummary = (
     <ul className="dn-draft-picks">{seats.map((n, si) => {
@@ -101,12 +110,12 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
       return (
         <li key={n} className={'dn-draft-seat' + (!value.finished && n === turn ? ' now' : '')} style={{ '--seat': seatColor(si) }}>
           <p className="dn-draft-seat-head"><b>{n}</b><span className="meta">{!value.finished && n === turn ? `${phase === 'ban' ? 'banning' : 'picking'} now · ` : ''}{mine.length} picked{value.finished ? '' : left ? `, ${left} to go` : ', done'}</span></p>
-          {bans.map(b => (b.skipped ? <p key={b.key} className="dn-draft-ban skipped"><span className="n">Ban</span><em>skipped</em></p> : <p key={b.key} className="dn-draft-ban"><span className="n">Ban</span><ExpansionBadge name={b.expansion} size={16} iconOnly />{b.name}</p>))}
+          {bans.map(b => (b.skipped ? <p key={b.key} className="dn-draft-ban skipped"><span className="n">Ban</span><em>skipped</em></p> : <p key={b.key} className="dn-draft-ban tap" {...hoverHandlers(() => slotFaceId(b))} {...tapToEnlarge(b)}><span className="n">Ban</span><ExpansionBadge name={b.expansion} size={16} iconOnly />{b.name}</p>))}
           {mine.length ? (
             <ol className="dn-draft-mine">{mine.map(m => (
               swaps && swaps.removed.includes(m.slot.cards[0].id)
-                ? <li key={m.key} className="replaced"><span className="n">#{m.n}</span><ExpansionBadge name={m.slot.expansion} size={16} iconOnly /><s>{m.slot.name}</s>{swaps.replacedBy.has(m.slot.cards[0].id) ? <b className="dn-swap-in" title="Picked by hand instead">→ {nameOf(swaps.replacedBy.get(m.slot.cards[0].id))}</b> : <em className="meta"> removed</em>}</li>
-                : <li key={m.key} className={'t-' + primaryType(m.slot.cards.find(c => primaryType(c) === 'Attack') || m.slot.cards[0]).toLowerCase()}><span className="n">#{m.n}</span><ExpansionBadge name={m.slot.expansion} size={16} iconOnly />{m.slot.name}</li>
+                ? <li key={m.key} className="replaced" {...hoverHandlers(() => slotFaceId(m.slot))} {...tapToEnlarge(m.slot)}><span className="n">#{m.n}</span><ExpansionBadge name={m.slot.expansion} size={16} iconOnly /><s>{m.slot.name}</s>{swaps.replacedBy.has(m.slot.cards[0].id) ? <b className="dn-swap-in" title="Picked by hand instead">→ {nameOf(swaps.replacedBy.get(m.slot.cards[0].id))}</b> : <em className="meta"> removed</em>}</li>
+                : <li key={m.key} className={'tap t-' + primaryType(m.slot.cards.find(c => primaryType(c) === 'Attack') || m.slot.cards[0]).toLowerCase()} {...hoverHandlers(() => slotFaceId(m.slot))} {...tapToEnlarge(m.slot)}><span className="n">#{m.n}</span><ExpansionBadge name={m.slot.expansion} size={16} iconOnly />{m.slot.name}</li>
             ))}</ol>
           ) : <p className="meta" style={{ margin: 0 }}>Nothing yet</p>}
         </li>
@@ -145,9 +154,18 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
         <button type="button" className="ghost" disabled={!picks.length && !banned.length} onClick={undo}>{picks.length || !banned.length ? 'Undo last pick' : 'Undo last ban'}</button>
         <button type="button" className="ghost" onClick={onRestart}>Restart Drafting</button>
       </div>
-      <ul className="dn-rzgrid dn-draft-pool" aria-label="Cards to choose from">
+      <ul className={'dn-rzgrid dn-draft-pool' + (faces ? ' faces' : '')} aria-label="Cards to choose from">
         {draft.pool.map(s => {
           const t = taken.get(s.key);
+          if (faces && faceOf(s)) return (
+            <li key={s.key} onClick={t ? undefined : () => take(s.key)} className={'dn-draftface' + (t ? ' taken' : '') + (t && t.ban ? ' banned' : '')} style={t ? { '--seat': seatColor(seatOf(t.by)) } : undefined}>
+              <button type="button" className="dn-draftface-take" disabled={!!t} aria-label={t ? `${s.name}, ${t.ban ? 'banned' : 'taken'} by ${t.by}` : `${turn} ${phase === 'ban' ? 'bans' : 'takes'} ${s.name}`}>
+                <CardFace id={faceOf(s).id} name={s.name} />
+                {t && <span className="dn-draft-by">{t.ban ? 'Banned' : '#' + t.n} · {t.by}</span>}
+              </button>
+              <button type="button" className="dn-draftface-zoom" aria-label={`Show ${s.name} larger`} onClick={e => { e.stopPropagation(); openPeek(catalog, { kind: 'card', s, face: faceOf(s).id }); }}>⤢</button>
+            </li>
+          );
           return (
             <li key={s.key} onClick={t ? undefined : () => take(s.key)} className={'dn-rztile dn-draft-tile t-' + primaryType(s.cards.find(c => primaryType(c) === 'Attack') || s.cards[0]).toLowerCase() + (t ? ' taken' : '') + (t && t.ban ? ' banned' : '')} style={t ? { '--seat': seatColor(seatOf(t.by)) } : undefined}>
               <button type="button" className="dn-draft-take" disabled={!!t} aria-label={t ? `${s.name}, ${t.ban ? 'banned' : 'taken'} by ${t.by}` : `${turn} ${phase === 'ban' ? 'bans' : 'takes'} ${s.name}`}>
@@ -168,8 +186,13 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
         <>
           <h3 className="dn-rz-sub">Landscapes in this game</h3>
           <p className="meta" style={{ marginTop: 0 }}>These are in play whichever cards you pick. They aren’t drafted.</p>
-          <ul className="dn-rzgrid dn-draft-pool dn-draft-lands" aria-label="Landscapes">
-            {draft.landscapes.map(l => (
+          <ul className={'dn-rzgrid dn-draft-pool dn-draft-lands' + (faces ? ' faces land' : '')} aria-label="Landscapes">
+            {draft.landscapes.map(l => (faces && picture(l.landscape.id) ? (
+              <li key={l.landscape.id} className="dn-draftface static">
+                <CardFace id={l.landscape.id} name={l.landscape.name} onOpen={() => openPeek(catalog, { kind: 'landscape', l, face: l.landscape.id })} />
+                {l.landscape.type === 'Trait' && <p className="meta dn-rzface-cap">Goes on one of the Kingdom cards once they are chosen.</p>}
+              </li>
+            ) : (
               <li key={l.landscape.id} className={'dn-rztile dn-draft-tile land t-' + l.landscape.type.toLowerCase()}>
                 <div className="dn-draft-take">
                   <span className="dn-rz-main">
@@ -181,7 +204,7 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
                 {value.showText && <div className="dn-rz-text"><CardText text={l.landscape.text} hasAnyText={catalog.meta.textRecordCount > 0} /></div>}
                 <button type="button" className="dn-draft-more" aria-label={`Show the text of ${l.landscape.name}`} onClick={() => openPeek(catalog, { kind: 'landscape', l })}>⌄</button>
               </li>
-            ))}
+            )))}
           </ul>
         </>
       )}

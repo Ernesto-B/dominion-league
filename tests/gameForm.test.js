@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resortByVP, buildResults, buildGameArgs, callGameRpc, toggle } from '../src/lib/gameForm.js';
+import { resortByVP, buildResults, buildGameArgs, callGameRpc, toggle, minutesFor } from '../src/lib/gameForm.js';
 
 const ids = new Map([['Ann', 'u-ann'], ['Bob', 'u-bob'], ['Cy', 'u-cy'], ['Dee', 'u-dee']]);
 const bs = (over = {}) => ({ date: '2026-02-03', type: '', picked: [], tie: {}, sets: [], landscapes: [], kingdom: [], kingdomTouched: false, vp: {}, notes: '', editId: null, ...over });
@@ -76,5 +76,23 @@ describe('the match clock sent with a new game', () => {
     const other = await callGameRpc(sb([{ code: '42501', message: 'only the admin can add games' }]), 'add_game', args);
     expect(other.error.code).toBe('42501'); expect(calls).toHaveLength(1);
     calls.length = 0; await callGameRpc(sb([]), 'add_game', args); expect(calls).toHaveLength(1);
+  });
+});
+
+describe('the Length box of the Add / Edit dialog', () => {
+  const start = Date.UTC(2026, 1, 3, 19, 0);
+  it('an edit saves what is in the box: a changed length, the same length, or none when it is emptied', () => {
+    expect(minutesFor({ editId: 5, minutes: '55' })).toBe(55);
+    expect(minutesFor({ editId: 5, minutes: 41 })).toBe(41);
+    expect(minutesFor({ editId: 5, minutes: null })).toBeNull();
+    expect(minutesFor({ editId: 5, minutes: '0' })).toBeNull();            // not a length
+  });
+  it('a new game uses a typed length, else the Game night clock', () => {
+    expect(minutesFor({ editId: null, minutes: '35', startedAt: start }, start + 90 * 60000)).toBe(35);
+    expect(minutesFor({ editId: null, startedAt: start }, start + 47 * 60000)).toBe(47);
+    expect(minutesFor({ editId: null, minutes: '', startedAt: null })).toBeNull();
+  });
+  it('the Save step\'s Match time still wins over everything', () => {
+    expect(minutesFor({ editId: null, minutesEdit: 20, minutes: 99, startedAt: start }, start + 60 * 60000)).toBe(20);
   });
 });

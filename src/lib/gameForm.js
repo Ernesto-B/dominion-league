@@ -33,6 +33,14 @@ export function buildResults(bs, playerIdByName) {
   return results;
 }
 
+// The minutes to save. The Save step's Match time (Game night) wins; then the Length box of the Add / Edit dialog (a number, or empty to record none: an edit overwrites the column, so
+// an emptied box clears it); a new game with neither uses the Game night clock.
+export function minutesFor(bs, now = Date.now()) {
+  if (bs.minutesEdit != null) return cleanMinutes(bs.minutesEdit);
+  if (bs.editId || (bs.minutes != null && bs.minutes !== '')) return cleanMinutes(bs.minutes);
+  return playedMinutes(bs.startedAt, bs.endedAt ?? now);
+}
+
 // the arguments of the add_game / edit_game RPCs. A new game's minutes come from the Game night clock; an edit sends back the minutes it
 // already has (edit_game overwrites the column, so leaving them out would erase them). The kingdom is sent only when there is something to say: an edit that never
 // touched it leaves it alone on the server.
@@ -40,7 +48,7 @@ export function buildGameArgs(bs, gid, playerIdByName, now = Date.now()) {
   return {
     p_date: bs.date, p_type: bs.type || '', p_sets: bs.sets.length ? SET_NAMES.filter(n => bs.sets.includes(n)).join('; ') : null, p_strategy: null,
     p_landscapes: bs.landscapes.length ? LANDSCAPES.filter(n => bs.landscapes.includes(n)).join('; ') : null,
-    p_winner_vp: null, p_minutes: bs.minutesEdit != null ? cleanMinutes(bs.minutesEdit) : bs.editId ? bs.minutes ?? null : playedMinutes(bs.startedAt, bs.endedAt ?? now), p_notes: bs.notes || null,
+    p_winner_vp: null, p_minutes: minutesFor(bs, now), p_notes: bs.notes || null,
     p_group_id: gid, p_results: buildResults(bs, playerIdByName),
     ...(bs.kingdomTouched || (!bs.editId && bs.kingdom.length) ? { p_kingdom: toPayload(bs.kingdom) } : {}),
     // the match's own clock, only for a NEW game that ran on Game night's timer (an edit leaves the saved times as they are)

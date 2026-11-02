@@ -7,6 +7,8 @@ import { EmptyState } from '../components/States.jsx';
 import { ExpansionBadge, Section, TypePills } from '../components/bits.jsx';
 import CostIcons from '../components/Cost.jsx';
 import { usePager } from '../components/Pager.jsx';
+import { hoverHandlers } from '../components/CardHover.jsx';
+import { slotFaceId } from '../cardImages.js';
 
 const pct = r => `${Math.round(r * 100)}%`;
 
@@ -39,6 +41,8 @@ function Loaded({ head, lg }) {
   const ins = useMemo(() => insights(catalog, lg.stats, { top: Infinity }), [catalog, lg.stats]);
   const { pg, pager } = usePager(ins.mostPlayed, 'cards');
   const repCard = key => catalog.pilesByKey.get(key).cardIds[0];
+  // the picture that stands for a pile: its own pile card (Knights, Castles, split piles) or its first card that has one
+  const pileFace = key => () => { const p = catalog.pilesByKey.get(key); return p && slotFaceId({ key, name: p.id, cards: p.cardIds.map(id => catalog.cardsById.get(id)).filter(Boolean) }); };
 
   return (
     <>
@@ -52,12 +56,12 @@ function Loaded({ head, lg }) {
           <tbody>{pg.items.map(r => {
             const members = catalog.pilesByKey.get(r.key).cardIds.map(id => catalog.cardsById.get(id)).filter(Boolean), first = members[0];
             return (
-            <tr key={r.key}>
+            <tr key={r.key} {...hoverHandlers(pileFace(r.key))}>
               <td className="l name"><span className="dn-namecost">{first && <CostIcons coins={first.coins} debt={first.debt} overpay={first.overpay} size={22} />}<a href={cardHref(repCard(r.key))}>{r.name}</a></span></td>
               <td className="l dn-hide-sm"><TypePills types={[...new Set(members.flatMap(c => c.types))]} /></td>
               <td className="l"><ExpansionBadge name={r.expansion} size={16} /></td>
               <td className="edge">{r.games}</td>
-              <td className="l dn-hide-sm"><a href={lg.hashFor('games', lg.gid, r.last.line)} title="Open that game">{r.last.date}</a></td>
+              <td className="l dn-hide-sm"><a href={lg.hashFor('games', lg.gid) + '?game=' + r.last.line} title="Show that game in the Games page">{r.last.date}</a></td>
             </tr>
             );
           })}</tbody>
@@ -89,7 +93,7 @@ function Loaded({ head, lg }) {
               <caption className="dn-sr">Your win rate in games that had each card</caption>
               <thead><tr><th className="l" scope="col">Card</th><th scope="col">Games</th><th scope="col">Wins</th><th scope="col">Win rate</th></tr></thead>
               <tbody>{ins.mine.map(r => (
-                <tr key={r.key}><td className="l name"><a href={cardHref(repCard(r.key))}>{r.name}</a></td><td>{r.games}</td><td>{r.wins}</td><td>{pct(r.rate)}</td></tr>
+                <tr key={r.key} {...hoverHandlers(pileFace(r.key))}><td className="l name"><a href={cardHref(repCard(r.key))}>{r.name}</a></td><td>{r.games}</td><td>{r.wins}</td><td>{pct(r.rate)}</td></tr>
               ))}</tbody>
             </table></div>
             <p className="note">Your results in logged games that had the card in the kingdom, for cards you’ve seen at least {MIN_GAMES_FOR_RECORD} times. A card being in the kingdom doesn’t mean you bought it, so read this as “how I do when it’s out”, not “how good it is”.</p>

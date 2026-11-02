@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { DominionData } from './CatalogContext.jsx';
 import { VIEWS, parseDominionArg, tabFor } from './links.js';
 import { EmptyState } from './components/States.jsx';
@@ -10,11 +11,18 @@ import Randomizer from './views/Randomizer.jsx';
 import Insights from './views/Insights.jsx';
 import ArtifactDetail from './views/ArtifactDetail.jsx';
 
+/* The Collection's five sections as a real tab bar, not chips: big enough to find, unlike the filter chips below it, a line saying what each one is (on a wide screen), and the open one
+   underlined. It stays in view while a long list scrolls. On a phone it is one row that scrolls sideways, with the open tab brought into view. */
 export function DominionNav({ active }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const on = ref.current && ref.current.querySelector('[aria-current=true]');
+    if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, [active]);
   return (
     // a landmark div, not <nav>: the site's header styles are keyed on the nav TAG and would restyle these links
-    <div className="pills dn-tabs" role="navigation" aria-label="Collection sections">
-      {VIEWS.map(v => <a key={v.view} href={v.href} aria-current={v.view === active ? 'true' : undefined}>{v.label}</a>)}
+    <div className="dn-tabbar" role="navigation" aria-label="Collection sections" ref={ref}>
+      {VIEWS.map(v => <a key={v.view} href={v.href} aria-current={v.view === active ? 'true' : undefined}><b>{v.label}</b><small>{v.hint}</small></a>)}
     </div>
   );
 }

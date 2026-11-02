@@ -3,8 +3,9 @@
 export const TARGETS = {
   catalog: ['supabase/dominion/01_schema_and_rls.sql', 'supabase/dominion/02_seed_data.sql'],
   league: ['supabase/schema.sql'],
+  images: ['supabase/dominion/03_card_images_bucket.sql'],   // the private bucket for the card pictures; the pictures themselves go up with `npm run cards:upload`
 };
-TARGETS.all = [...TARGETS.catalog, ...TARGETS.league];
+TARGETS.all = [...TARGETS.catalog, ...TARGETS.league];   // the card-picture bucket is its own step: `all` never creates it
 
 export function planFor(target) {
   const files = TARGETS[target];

@@ -23,3 +23,20 @@ describe('npm run db:apply', () => {
     expect(spawnSync('node', ['scripts/db-apply.mjs'], { cwd: ROOT, encoding: 'utf8' }).status).toBe(2);
   });
 });
+
+import { readFileSync } from 'node:fs';
+describe('the private bucket for the card pictures', () => {
+  const sql = readFileSync(path.join(ROOT, 'supabase/dominion/03_card_images_bucket.sql'), 'utf8').replace(/--.*$/gm, '');
+  it('is its own db:apply step, never part of `all`', () => {
+    expect(planFor('images').map(p => p.file)).toEqual(['supabase/dominion/03_card_images_bucket.sql']);
+    expect(planFor('all').map(p => p.file)).not.toContain('supabase/dominion/03_card_images_bucket.sql');
+  });
+  it('makes a private bucket that signed-in members can read and nobody can write to from a browser', () => {
+    expect(sql).toMatch(/'card-images', 'card-images', false/);                       // public = false
+    expect(sql).toMatch(/drop policy if exists "card_images_read" on storage\.objects/);
+    expect(sql).toMatch(/for select to authenticated\s+using \(bucket_id = 'card-images'\)/);
+    expect(sql).not.toMatch(/for (insert|update|delete|all)/i);                         // only the owner's tools write
+    expect(sql).not.toMatch(/\bto (anon|public)\b/i);
+    expect(sql).toMatch(/on conflict \(id\) do update/);                                // safe to run again
+  });
+});
