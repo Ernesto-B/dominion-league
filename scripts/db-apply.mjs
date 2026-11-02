@@ -2,7 +2,8 @@
 /* Applies the SQL files to the LINKED Supabase project, with a confirmation first — this changes the live database.
      npm run db:apply -- catalog          # Collection schema + seed
      npm run db:apply -- league           # the league schema (game kingdoms, RPCs)
-     npm run db:apply -- all              # both, Collection first
+     npm run db:apply -- images           # the private bucket for the card pictures (then `npm run cards:upload`)
+     npm run db:apply -- all              # both, Collection first (not the bucket)
    Add --dry-run to see what would run, --yes to skip the prompt (needed when there is no terminal).
    Afterwards it runs the read-only live check. Uses the Supabase CLI's own login — no keys are read or stored here. */
 import { spawnSync } from 'node:child_process';

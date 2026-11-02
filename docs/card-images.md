@@ -1,4 +1,4 @@
-# Card images (planned, not built yet)
+# Card images (first version built on branch `image-rework`; the private bucket is not yet)
 
 The owner has an image of every card and wants the site to show them: the randomizer, snake draft and hand-picking show the card itself instead of its name, and card
 pages, the game report's Kingdom tab and the Collection get the picture too. Nothing here is built; this is the agreed plan and the constraints.
@@ -31,3 +31,30 @@ pages, the game report's Kingdom tab and the Collection get the picture too. Not
 ## Open questions for the owner
 - Do the other folders follow the same naming? Are landscapes (Events, Projects, Ways, Landmarks, Traits) included, and in which folders?
 - Do the card faces replace the text tiles entirely, or sit beside the name and cost?
+
+## What exists (branch `image-rework`)
+- **Build:** `npm run cards:build -- <folder>` (scripts/dominion/build-card-images.mjs, `sharp`) matches every file to the catalog by NAME (the folder does not matter; a card's previous name and a trailing `Old` are
+  accepted, pile cards match a multi-name pile such as Knights, Artifacts match too), picks the sharpest file when a card is in several folders, and writes three WebP sizes per card into `public/cards/`
+  (gitignored): `x@t.webp` thumbnail (96 px wide, ~3.5 KB), `x.webp` small (300 px, ~22 KB) and `x@big.webp` for the enlarge view (800 px on the long side, ~52 KB, only when the source has the detail), plus
+  `manifest.json` (`{ v: 2, items: { id: { w, h, bw?, bh?, k } } }`, `k` = a hash of that card's pictures). It reports catalog entries with no image and files that match nothing (Loot, Prizes' Rewards, basic cards, Ruins,
+  Shelters, Colony / Platinum are not in the catalog). All 467 entries are covered: about 34 MB in all.
+- **Private bucket:** `supabase/dominion/03_card_images_bucket.sql` makes the private bucket `card-images` (public = false, 2 MB per file, webp + json only) with ONE policy: `select` for `authenticated`.
+  There is no write policy: pictures go up with `npm run cards:upload` (the Supabase CLI's own login; folders first, manifest last, confirmation prompt, `--dry-run`). Apply the bucket with `npm run db:apply -- images`
+  (its own target: `all` never creates it).
+- **Site:** `src/dominion/cardImages.js` is the ONLY place that knows where pictures come from. In production: the bucket first, then the local folder; in `npm run dev`: the local folder first. A private file cannot be
+  an `<img src>`, so each picture is downloaded with the member's session (6 at a time, and only when it is near the screen), kept in Cache Storage (`dl-cards-v1`, key = path + hash) and shown as an object URL: one
+  download per picture per device, ever, until its hash changes. The manifest is kept in localStorage (`dl.cards.manifest`) and refreshed in the background every 6 hours. Signing out clears both.
+  `components/CardFace.jsx` draws a picture (space reserved from its size, nothing jumps) or nothing, so every screen keeps its text fallback.
+- **Where pictures show:** the Randomizer and Game night's Kingdom step (Card faces / List switch, `dl.cardview`), the snake draft pool, the enlarge dialog (CardPeek), the card, landscape and Artifact pages, the Kingdom
+  cards and Landscapes lists (a small cropped window on each card), the Game night hand-picker (chips and search results), and the game report's Kingdom tab (Card faces / List).
+- **Cost on a free plan:** about 34 MB stored (1 GB allowed); a roll costs ~230 KB the first time and nothing after; a device that views everything downloads ~34 MB once (5 GB egress a month).
+
+## Putting it live (the owner's steps; both change the live project)
+1. `npm run db:apply -- images`   (type `apply`)
+2. `npm run cards:upload`         (type `upload`)
+3. Check: signed out, `curl -I <project>/storage/v1/object/card-images/manifest.json` is refused; signed in, a page shows pictures.
+Until step 2, a production build shows no pictures (the old text tiles), because the images are not in the repo or on GitHub Pages.
+
+## Not done / ideas
+- A larger source for the few 200 / 320 px pictures (Nobles, Cardinal, Livery, Way of the Goat) would sharpen their enlarge view.
+- The Loot cards, Rewards, Ruins, Shelters, Colony / Platinum and the basic cards have pictures but no catalog entries, so nothing shows them yet.

@@ -180,3 +180,18 @@ describe('the report with grace states', () => {
     expect(kinds.size).toBeGreaterThan(0);
   });
 });
+
+describe('the Kingdom tab with pictures', () => {
+  it('draws the cards as pictures that open on a click, and keeps a chip for a card without one', async () => {
+    const { _setManifest } = await import('../src/dominion/cardImages.js');
+    line = 0;
+    const D = run([row('Ann > Bob > Cy > Dee', { cards: K1, minutes: 40 })]);
+    const page = { D, gid: 'a', hashFor: () => '#', me: null, catalog, allGroups: [{ id: 'a' }] };
+    const draw = el => renderToString(createElement(PageContext.Provider, { value: page }, el));
+    const rep = gameReport(D, D.games[0], { catalog });
+    _setManifest({ v: 2, items: { [id('Village')]: { w: 300, h: 480, k: 'a' } } });
+    const html = draw(createElement(Kingdom, { rep, game: D.games[0], loaded: true }));
+    expect(html).toContain('gr-face'); expect(html).toContain('Card faces'); expect(html).toContain('dn-kchip');   // Village is a picture, the other nine stay chips
+    _setManifest(null);
+  });
+});

@@ -679,3 +679,18 @@ describe('nav icons', () => {
     expect(statSync(path.join(ROOT, 'public/icons/nav/collection.png')).size).toBeLessThan(60_000);
   });
 });
+
+describe('the related-cards table on a card page', () => {
+  it('is always there; a card nothing else shares two mechanics with gets a line that says so', () => {
+    const html = render(`cards/${encodeURIComponent('menagerie:displace')}`);
+    expect(html).toContain('Cards recorded with the same mechanics');
+    expect(html).toContain('No other card shares 2 or more recorded mechanics with Displace.');
+    expect(html).not.toContain('Page 1 of');   // nothing to page through
+  });
+  it('lists the matching cards, each with at least two mechanics in common, otherwise', () => {
+    const html = render(`cards/${encodeURIComponent('dominion-base-game:village')}`);
+    expect(html).toContain('Cards recorded with the same mechanics');
+    expect(html).not.toContain('No other card shares 2 or more');
+    expect(html).toMatch(/<span class="meta">\([2-9]\)<\/span>/);
+  });
+});

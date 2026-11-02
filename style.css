@@ -1029,7 +1029,10 @@ html{overscroll-behavior-y:contain}   /* the browser's own pull-to-refresh would
 .dn-peek-box{width:min(420px,100%);max-height:80vh;overflow:auto;padding:16px 18px;background:var(--panel);border:1px solid var(--frame,var(--line));border-radius:14px}
 .dn-peek-box h3{margin:0 0 8px;font-size:20px}
 .dn-peek-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 8px}
-.dn-peek-box>button{margin-top:12px;width:100%;min-height:44px}
+.dn-peek-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+.dn-peek-foot>button{min-height:44px;padding:0 22px}
+.dn-peek-pic{display:block;cursor:pointer}
+.dn-peek-box.pictured{padding:12px 14px}
 .dn-draft-seats{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px;max-width:320px}
 .dn-draft-seats li{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:8px}
 .dn-draft-seats li span{flex:1;font-weight:600}
@@ -1495,7 +1498,10 @@ main h2::before{content:'';display:inline-block;width:8px;height:8px;margin:0 10
 .gr-xp{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
 .gr-xp-h{display:flex;align-items:baseline;gap:12px;margin:0 0 8px}.gr-xp-h span{font-weight:800;color:var(--brass)}.gr-xp-h small{margin-left:auto;color:var(--muted)}
 .gr-xp ul{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13.5px}
-.gr-new{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+
+.gr-new{position:absolute;z-index:2;top:8px;right:-17px;width:56px;padding:1px 0;text-align:center;transform:rotate(45deg);background:var(--brass);color:#140d02;font:800 12px var(--text);letter-spacing:.06em;text-transform:uppercase;box-shadow:0 2px 6px rgba(0,0,0,.55);pointer-events:none}
+@media (max-width:720px){.gr-new{top:7px;right:-15px;width:50px;font-size:11px}}
+.dn-kchips:has(>a.gr-face){gap:12px 14px}
 @media (max-width:720px){
   /* the highlights become one swipeable row, so they don't push the report a screen down */
   .gr-hl{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;margin:0 -14px 14px;padding:0 14px 4px;scrollbar-width:none}
@@ -1584,3 +1590,75 @@ html.is-scrolling .pill.hot,html.is-scrolling .staticon.hot{animation-play-state
   .admin-pair thead tr{height:38px}
   .admin-pair tbody tr{height:42px}}
 .admin-pair>section{min-width:0}
+
+/* ---------- Card pictures (components/CardFace.jsx; the preference and the manifest are in dominion/cardImages.js) ---------- */
+.dn-face{display:block;position:relative;width:100%;padding:0;border:0;background:transparent;border-radius:6%/3.8%;overflow:hidden;line-height:0}
+.dn-face.wide{border-radius:3.8%/6%}
+button.dn-face{cursor:zoom-in}
+.dn-face-img{display:block;width:100%;height:auto;background:var(--panel);user-select:none;-webkit-user-drag:none}
+.dn-face.big{max-width:min(300px,72vw);margin:0 auto 12px}
+.dn-face.big.wide{max-width:min(440px,92vw)}
+.dn-rzgrid.faces{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px 12px}
+.dn-rzgrid.faces.land{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.dn-rzgrid.faces>.dn-rztile{grid-column:span 2}
+@media (max-width:600px){.dn-rzgrid.faces{grid-template-columns:repeat(2,minmax(0,1fr))}.dn-rzgrid.faces.land{grid-template-columns:1fr}}
+.dn-rzface{display:flex;flex-direction:column;gap:8px;min-width:0}
+.dn-rzface .dn-rztile-btns{gap:6px}
+.dn-rzface .dn-rztile-btns button{flex:1;padding:5px 6px}
+.dn-rzface.locked .dn-face{box-shadow:0 0 0 2px var(--ink)}
+.dn-rzface.fresh .dn-face{animation:dn-fresh 1.6s ease-out}
+@media (prefers-reduced-motion:reduce){.dn-rzface.fresh .dn-face{animation:none;box-shadow:0 0 0 2px rgb(var(--t-treasure))}}
+.dn-rzface-cap{margin:-2px 0 0;font-size:12px;text-align:center}
+.dn-hero{display:grid;grid-template-columns:minmax(0,1fr);gap:0 24px;align-items:start}
+.dn-hero>.head{grid-area:head}.dn-hero>.stats,.dn-hero>.dn-hero-side{grid-area:stats}.dn-hero>.dn-face.hero{grid-area:face;width:min(260px,70vw);margin:0 auto 18px}
+.dn-hero>.dn-face.hero.wide{width:min(340px,90vw)}
+.dn-hero{grid-template-areas:"head" "face" "stats"}
+@media (min-width:900px){
+  .dn-hero:has(>.dn-face.hero){grid-template-columns:minmax(0,1fr) 250px;grid-template-areas:"head face" "stats face"}
+  .dn-hero:has(>.dn-face.hero.wide){grid-template-columns:minmax(0,1fr) 330px}
+  .dn-hero>.dn-face.hero{width:100%;margin:6px 0 0}
+}
+/* the snake draft's pool as cards: tap a card to take it, ⤢ to see it larger; a taken card is dimmed and says who took it (in that player's colour) */
+.dn-draftface{position:relative;list-style:none;min-width:0}
+.dn-draftface-take{all:unset;display:block;position:relative;width:100%;cursor:pointer;border-radius:6%/3.8%}
+.dn-draftface-take:focus-visible{outline:3px solid var(--focus)}
+.dn-draftface:not(.taken):not(.static) .dn-draftface-take:hover .dn-face{box-shadow:0 0 0 3px var(--brass)}
+.dn-draftface.taken .dn-draftface-take{cursor:default}
+.dn-draftface.taken .dn-face{opacity:.35;filter:grayscale(.7)}
+.dn-draftface.banned .dn-face{opacity:.25;filter:grayscale(1)}
+.dn-draftface .dn-draft-by{position:absolute;left:8px;right:8px;bottom:10px;margin:0;padding:5px 8px;border:2px solid var(--seat,var(--brass));border-radius:999px;background:rgba(10,12,16,.82);color:#fff;text-align:center;white-space:normal}
+.dn-draftface-zoom{position:absolute;top:6px;right:6px;z-index:2;width:34px;height:34px;min-height:0;padding:0;border:0;border-radius:50%;background:rgba(10,12,16,.7);color:#fff;font-size:17px;line-height:1;cursor:pointer}
+.dn-draftface-zoom:hover{background:rgba(10,12,16,.9)}
+@media (pointer:coarse){.dn-draftface-zoom{width:44px;height:44px}}
+/* the enlarge dialog never grows taller than the screen: the card is sized to what is left after the title, link and Close button */
+.dn-peek-box .dn-face.big:not(.wide){max-width:min(300px,72vw,calc((80vh - 110px) * .625))}
+.dn-peek-box .dn-face.big.wide{max-width:min(440px,92vw,calc((80vh - 110px) * 1.6))}
+.dn-peek-members{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:0 0 12px}
+.dn-peek-members .dn-face.big{max-width:none;margin:0}
+.dn-face-wait{display:block;width:100%;background:color-mix(in srgb,var(--ink) 8%,var(--panel))}
+/* card pictures in lists, chips and the game report */
+.gr-cardshead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
+.gr-cardshead .gr-h{margin:0}
+a.gr-face{display:block;width:96px;border-radius:6%/3.8%;transition:transform .12s ease}
+a.gr-face.wide{width:150px}
+a.gr-face:hover{transform:translateY(-2px)}
+a.gr-face.dim{opacity:.28;filter:grayscale(1)}
+@media (min-width:721px){a.gr-face{width:132px;cursor:zoom-in}a.gr-face.wide{width:210px}}
+@media (max-width:720px){a.gr-face{width:calc((100vw - 60px) / 3)}a.gr-face.wide{width:calc((100vw - 60px) / 2)}}
+@media (prefers-reduced-motion:reduce){a.gr-face{transition:none}}
+
+/* a card's text on its page, folded away when the card's picture is on screen (it would only repeat it) */
+.dn-textfold>summary{cursor:pointer;color:var(--muted);font-size:14px}
+.dn-textfold[open]>summary{margin-bottom:8px}
+
+/* beside the card on its page: the play history in a line or two and the card text one click away, no boxes */
+.dn-hero-side{display:grid;gap:14px;align-content:start;margin-bottom:18px;font-size:15px}
+.dn-side-h{margin:0 0 8px;font-size:15px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.dn-hero-side .dn-mech-detail{margin:0}
+/* a card that was new to the group: a sash across its top-right corner that overhangs the edge, clear of the card's name; the "New to the group" button above picks those out */
+a.gr-face{position:relative}
+/* the card beside the mouse (components/CardHover.jsx): above everything, never takes the mouse */
+.dn-hoverpic{position:fixed;z-index:300;pointer-events:none;border-radius:6%/3.8%;box-shadow:0 10px 36px rgba(0,0,0,.6)}
+.dn-hoverpic .dn-face{border-radius:6%/3.8%}
+@media (prefers-reduced-motion:no-preference){.dn-hoverpic{animation:dn-hoverin .12s ease-out}@keyframes dn-hoverin{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}}
+.dn-emptyrow td{padding:18px 16px;color:var(--muted);font-style:italic}

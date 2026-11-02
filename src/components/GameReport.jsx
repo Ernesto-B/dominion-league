@@ -11,6 +11,11 @@ import { BadgeReward, LevelReward } from './RewardCard.jsx';
 import { setIconPath } from '../lib/sets.js';
 import { expansionMeta } from '../dominion/constants.js';
 import { KingdomChip, ShelfGroups } from '../dominion/components/KingdomChips.jsx';
+import CardFace from '../dominion/components/CardFace.jsx';
+import { Chip } from '../dominion/components/bits.jsx';
+import { useCardImages, useCardView } from '../dominion/cardImages.js';
+import { cardHref, landscapeHref } from '../dominion/links.js';
+import { openPeek } from '../dominion/components/CardPeek.jsx';
 import { REQUIRE_RULES } from '../dominion/randomizer.js';
 
 /* One game, in depth: the Games page's view of a single game (#/games/<group>/<id>). The numbers come from lib/gameReport.js; this file only lays them out.
@@ -24,11 +29,20 @@ const tone = (d, eps = 0.5) => (d > eps ? 'up-t' : d < -eps ? 'down-t' : '');
 const clock = iso => { const d = new Date(iso); return Number.isNaN(+d) ? null : d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
 const one = x => (Math.round(x * 10) / 10).toString();
 
+// The open tab is part of the address (`#/games/<group>/<id>?tab=kingdom`), written with replaceState so switching tabs adds no history entries. Going Back from a
+// card's page lands on this same address, so the report comes back on the tab you left it on (and `?tab=` is also what makes such a link shareable).
+const tabFromHash = hash => { const t = /[?&]tab=(\w+)/.exec(hash || '')?.[1]; return TABS.some(x => x[0] === t) ? t : null; };
+const withTab = (hash, t) => hash.split('?')[0] + (t === 'players' ? '' : `?tab=${t}`);
+
 export default function GameReport({ game }) {
-  const { D, gid, hashFor, me, catalog } = usePage();
+  const { D, gid, hashFor, me, catalog, arg } = usePage();
   const rep = useMemo(() => gameReport(D, game, { catalog }), [D, game, catalog]);
-  const [tab, setTabState] = useState(() => current);
-  const setTab = t => { current = t; setTabState(t); };
+  const [tab, setTabState] = useState(() => tabFromHash(arg) || current);
+  const setTab = t => {
+    current = t; setTabState(t);
+    try { history.replaceState(history.state, '', withTab(location.hash, t)); } catch { /* the tab still switches; it is just not in the address */ }
+  };
+  useEffect(() => { if (tab !== 'players' && !tabFromHash(location.hash)) { try { history.replaceState(history.state, '', withTab(location.hash, tab)); } catch { /* as above */ } } }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { clearTimeout(forget); return () => { forget = setTimeout(() => { current = 'players'; }, 0); }; }, []);
   const season = D.seasons.find(s => s.number === game.season);
   const older = D.games[game.idx - 1], newer = D.games[game.idx + 1];
@@ -159,13 +173,20 @@ function Compare({ c }) {
 export function Kingdom({ rep, game, loaded }) {
   const k = rep.kingdom;
   const [focus, setFocus] = useState(null);   // { kind: 'type' | 'tool', key, label } or null
+  const { catalog } = usePage();
+  const { get: picture, any: anyPictures } = useCardImages();
+  const [cardView, setCardView] = useCardView();
+  const faces = anyPictures && cardView === 'faces';
+  // On a phone a tap on a card goes to its page. With a mouse there is room to read the card, so a click enlarges it (its dialog links to the page): the cards are small in a row.
+  const enlarge = (e, peek) => { if (catalog && typeof matchMedia !== 'undefined' && matchMedia('(min-width: 721px) and (hover: hover)').matches) { e.preventDefault(); openPeek(catalog, peek); } };
   if (!game.kingdom || !game.kingdom.length) return <p className="empty">No kingdom was logged for this game. Games started from Game night record one.</p>;
   if (!loaded) return <p className="meta">Loading the card list…</p>;
   if (!k) return <p className="empty">The logged cards could not be found in the Collection.</p>;
   const vs = k.vs, maxB = Math.max(1, ...k.costBuckets);
   // tapping a card type or a tool picks it out: every card below that is not one of those greys out (tap it again to see them all)
   const level = c => Math.min(6, Math.max(2, c.coins)) - 2;   // the same cost levels as the bars above ($2 or less, $3, $4, $5, $6+); a Debt card has none
-  const hit = c => (!focus ? true : focus.kind === 'type' ? c.types.includes(focus.key) : focus.kind === 'cost' ? c.debt === 0 && level(c) === focus.key : (c.mechanicIds || []).some(t => REQUIRE_RULES[focus.key].tags.includes(t)));
+  const fresh = new Set(((k.history && k.history.firstInGroup) || []).map(c => c.id));   // cards this group had never played before this game
+  const hit = c => (!focus ? true : focus.kind === 'new' ? fresh.has(c.id) : focus.kind === 'type' ? c.types.includes(focus.key) : focus.kind === 'cost' ? c.debt === 0 && level(c) === focus.key : (c.mechanicIds || []).some(t => REQUIRE_RULES[focus.key].tags.includes(t)));
   const pickCost = i => setFocus(focus && focus.kind === 'cost' && focus.key === i ? null : { kind: 'cost', key: i });
   const cards = k.cards.map(c => ({ r: { kind: 'card', id: c.id, obj: c }, c })), lands = k.landscapes.map(l => ({ r: { kind: 'landscape', id: l.id, obj: l } }));
   // a percentile of a handful of kingdoms says nothing, so it needs a few to compare with
@@ -190,9 +211,22 @@ export function Kingdom({ rep, game, loaded }) {
       ))}</ol>
       {k.debtCards > 0 && <p className="meta">{k.debtCards} Debt card{k.debtCards === 1 ? '' : 's'} not counted in the average.</p>}
       <KingdomFacts k={k} focus={focus} setFocus={setFocus} />
-      <h4 className="gr-h">The cards, by expansion</h4>
-      <ShelfGroups entries={cards.map(({ r, c }) => ({ r, node: <KingdomChip key={r.id} r={r} compact dim={!hit(c)} /> }))} />
-      {lands.length > 0 && <><h4 className="gr-h">Landscapes</h4><ShelfGroups entries={lands.map(({ r }) => ({ r, node: <KingdomChip key={r.id} r={r} compact dim={!!focus} /> }))} /></>}
+      <div className="gr-cardshead">
+        <h4 className="gr-h">The cards, by expansion</h4>
+        {anyPictures && (
+          <div className="dn-mode" role="group" aria-label="How to show the cards">
+            <Chip pressed={cardView === 'faces'} onClick={() => setCardView('faces')}>Card faces</Chip>
+            <Chip pressed={cardView === 'list'} onClick={() => setCardView('list')}>List</Chip>
+          </div>
+        )}
+      </div>
+      {/* a card with a picture is the card itself (tap for its page); one without keeps its chip, so the shelf is never missing anything */}
+      <ShelfGroups entries={cards.map(({ r, c }) => ({ r, node: faces && picture(c.id)
+        ? <a key={r.id} className={'gr-face' + (hit(c) ? '' : ' dim')} href={cardHref(c.id)} title={c.name} onClick={e => enlarge(e, { kind: 'card', s: { key: c.pileKey, name: c.name, expansion: c.expansion, cards: [c] } })}><CardFace id={c.id} name={c.name} />{fresh.has(c.id) && <span className="gr-new">New</span>}</a>
+        : <KingdomChip key={r.id} r={r} compact dim={!hit(c)} /> }))} />
+      {lands.length > 0 && <><h4 className="gr-h">Landscapes</h4><ShelfGroups entries={lands.map(({ r }) => ({ r, node: faces && picture(r.id)
+        ? <a key={r.id} className={'gr-face wide' + (focus ? ' dim' : '')} href={landscapeHref(r.id)} title={r.obj.name} onClick={e => enlarge(e, { kind: 'landscape', l: { landscape: r.obj } })}><CardFace id={r.id} name={r.obj.name} /></a>
+        : <KingdomChip key={r.id} r={r} compact dim={!!focus} /> }))} /></>}
       {(game.landscapes || []).length > 0 && !lands.length && <p className="note">Landscapes in play: <LandscapePills game={game} /></p>}
     </>
   );
@@ -207,7 +241,9 @@ function KingdomFacts({ k, focus, setFocus }) {
   const rows = [
     ['Card types', k.types.length ? <span className="gr-pills">{k.types.map(t => <button key={t.name} type="button" className={'dn-chip t-' + t.name.toLowerCase()} aria-pressed={same('type', t.name)} onClick={() => pick('type', t.name, t.name)}>{t.name}<span className="n">{t.n}</span></button>)}</span> : null],
     ['Tools', k.tools.length ? <><span className="gr-pills">{k.tools.map(t => <button key={t.key} type="button" className="dn-chip" aria-pressed={same('tool', t.key)} onClick={() => pick('tool', t.key, t.label)}>{t.label}<span className="n">{t.n}</span></button>)}</span><small className="gr-fine">From the recorded card mechanics; a card can do more than is listed.</small></> : null],
-    ['In this group', h ? <span>{h.firstInGroup.length ? <>First time played here: <b>{names(h.firstInGroup)}</b>.</> : <>Every card has been played here before.</>}{h.mostPlayed ? <><br />Most played: <b>{h.mostPlayed.card.name}</b>, {h.mostPlayed.before} time{h.mostPlayed.before === 1 ? '' : 's'} before this.</> : null}</span> : null],
+    ['In this group', h ? <span>{h.firstInGroup.length
+      ? <button type="button" className="dn-chip gr-newchip" aria-pressed={same('new', 'new')} title={`First time played here: ${names(h.firstInGroup)}`} onClick={() => pick('new', 'new', 'New to the group')}>New to the group<span className="n">{h.firstInGroup.length}</span></button>
+      : <>Every card has been played here before.</>}{h.mostPlayed ? <><br />Most played: <b>{h.mostPlayed.card.name}</b>, {h.mostPlayed.before} time{h.mostPlayed.before === 1 ? '' : 's'} before this.</> : null}</span> : null],
   ].filter(([, v]) => v);
   return (
     <>

@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { displayName, primaryType } from '../kingdom.js';
 import { DEFAULT_OPTIONS, formatSeed, newSeed, parseSeed, playsFor, rerollLandscape, rerollSlot, rollSeeded, withAvoid } from '../randomizer.js';
 import { cardHref, landscapeHref } from '../links.js';
-import { CardText, ExpansionBadge, LandscapePill, ShowTextButton, TypePills } from './bits.jsx';
+import { CardText, Chip, ExpansionBadge, LandscapePill, ShowTextButton, TypePills } from './bits.jsx';
 import CostIcons from './Cost.jsx';
 import RandomizerOptions from './RandomizerOptions.jsx';
 import { KingdomChip } from './KingdomChips.jsx';
 import { openPeek } from './CardPeek.jsx';
+import CardFace from './CardFace.jsx';
+import { slotFaceId, useCardImages, useCardView } from '../cardImages.js';
 
 /* The Kingdom randomizer's working part: the options, the roll, the tiles with Lock and Re-roll, the landscapes and the setup notes.
    It is CONTROLLED, so the same panel serves two homes:
@@ -25,6 +27,10 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
   const [message, setMessage] = useState('');
   const [seedText, setSeedText] = useState(kept?.seed || '');                // a seed typed in to repeat a roll; empty = a new random one
   const [showText, setShowText] = useState(false);
+  const { get: picture, any: anyPictures } = useCardImages();
+  const [cardView, setCardView] = useCardView();
+  const faces = anyPictures && cardView === 'faces';   // the cards drawn as the cards themselves (a card with no picture keeps its text tile)
+  const faceOf = s => { const id = slotFaceId(s); return id ? { id } : null; };
   const [fresh, setFresh] = useState(null);                     // the tile that just changed, briefly highlighted
   const resultRef = useRef(null);
   const canFavor = !!plays && plays.size > 0;
@@ -83,14 +89,23 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
         <section aria-label="Your kingdom" ref={resultRef} className="dn-rz-result">
           <div className="dn-rz-bar">
             <div className="dn-rz-actions">
-              <ShowTextButton on={showText} onClick={() => setShowText(t => !t)} />
+              {anyPictures && (
+                <div className="dn-mode" role="group" aria-label="How to show the kingdom">
+                  <Chip pressed={cardView === 'faces'} onClick={() => setCardView('faces')}>Card faces</Chip>
+                  <Chip pressed={cardView === 'list'} onClick={() => setCardView('list')}>List</Chip>
+                </div>
+              )}
+              {!(faces && state.slots.every(faceOf) && state.landscapes.every(l => picture(l.landscape.id))) && <ShowTextButton on={showText} onClick={() => setShowText(t => !t)} />}
               {state.seed != null && <span className="dn-seed" title="Roll again with this seed and the same options to get this exact kingdom">Seed <b>{formatSeed(state.seed)}</b></span>}
             </div>
             {actions && <div className="dn-rz-actions">{actions}</div>}
           </div>
 
-          <ul className="dn-rzgrid" aria-label="Kingdom cards">
-            {state.slots.map((s, i) => (
+          <ul className={'dn-rzgrid' + (faces ? ' faces' : '')} aria-label="Kingdom cards">
+            {state.slots.map((s, i) => (faces && faceOf(s) ? (
+              <FaceTile key={s.key} id={faceOf(s).id} name={s.name} caption={s.cards.length > 1 ? s.name : null} fresh={fresh === s.key} locked={locked.has(s.key)}
+                onLock={() => setLocked(l => { const n = new Set(l); n.has(s.key) ? n.delete(s.key) : n.add(s.key); return n; })} onReroll={() => swapSlot(i)} onPeek={() => openPeek(catalog, { kind: 'card', s, face: faceOf(s).id })} />
+            ) : (
               <Tile key={s.key} fresh={fresh === s.key} tone={primaryType(s.cards.find(c => primaryType(c) === 'Attack') || s.cards[0])}
                 locked={locked.has(s.key)} onLock={() => setLocked(l => { const n = new Set(l); n.has(s.key) ? n.delete(s.key) : n.add(s.key); return n; })} onReroll={() => swapSlot(i)} onPeek={() => openPeek(catalog, { kind: 'card', s })} what={s.name}>
                 <div className="dn-rz-cost"><CostIcons coins={s.cards[0].coins} debt={s.cards[0].debt} overpay={s.cards[0].overpay} size={30} /></div>
@@ -102,14 +117,17 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
                   {showText && s.cards.map(c => <div key={c.id} className="dn-rz-text">{s.cards.length > 1 && <p className="meta dn-rz-textname">{c.name}</p>}<CardText text={c.text} hasAnyText={catalog.meta.textRecordCount > 0} /></div>)}
                 </div>
               </Tile>
-            ))}
+            )))}
           </ul>
 
           {state.landscapes.length > 0 && (
             <>
               <h3 className="dn-rz-sub">Landscapes</h3>
-              <ul className="dn-rzgrid" aria-label="Landscapes">
-                {state.landscapes.map((l, i) => (
+              <ul className={'dn-rzgrid' + (faces ? ' faces land' : '')} aria-label="Landscapes">
+                {state.landscapes.map((l, i) => (faces && picture(l.landscape.id) ? (
+                  <FaceTile key={l.landscape.id} id={l.landscape.id} name={l.landscape.name} caption={l.on ? `on ${displayName(catalog.cardsById.get(l.on) || { name: l.on })}` : null} fresh={fresh === l.landscape.id} locked={lockedL.has(l.landscape.id)}
+                    onLock={() => setLockedL(s => { const n = new Set(s); n.has(l.landscape.id) ? n.delete(l.landscape.id) : n.add(l.landscape.id); return n; })} onReroll={() => swapLandscape(i)} onPeek={() => openPeek(catalog, { kind: 'landscape', l, face: l.landscape.id })} />
+                ) : (
                   <Tile key={l.landscape.id} fresh={fresh === l.landscape.id} tone={l.landscape.type} locked={lockedL.has(l.landscape.id)} what={l.landscape.name}
                     onLock={() => setLockedL(s => { const n = new Set(s); n.has(l.landscape.id) ? n.delete(l.landscape.id) : n.add(l.landscape.id); return n; })} onReroll={() => swapLandscape(i)} onPeek={() => openPeek(catalog, { kind: 'landscape', l })}>
                     <div className="dn-rz-main">
@@ -119,7 +137,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
                       {showText && <div className="dn-rz-text"><CardText text={l.landscape.text} hasAnyText={catalog.meta.textRecordCount > 0} /></div>}
                     </div>
                   </Tile>
-                ))}
+                )))}
               </ul>
             </>
           )}
@@ -130,6 +148,20 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
         emptyHint ? <p className="dn-rz-empty">Nothing rolled yet. Choose your options above, then <b>Roll a kingdom</b>.</p> : null
       )}
     </>
+  );
+}
+
+// a card or landscape drawn as itself: the picture (tap to enlarge), with Lock and Re-roll under it
+function FaceTile({ id, name, caption, fresh, locked, onLock, onReroll, onPeek }) {
+  return (
+    <li className={'dn-rzface' + (fresh ? ' fresh' : '') + (locked ? ' locked' : '')}>
+      <CardFace id={id} name={name} onOpen={onPeek} />
+      {caption && <p className="dn-rzface-cap meta">{caption}</p>}
+      <div className="dn-rztile-btns">
+        <button type="button" className="ghost" aria-pressed={locked} onClick={onLock} title={locked ? `Unlock ${name}` : `Keep ${name} when you roll again`}>{locked ? 'Locked' : 'Lock'}</button>
+        <button type="button" className="ghost" onClick={onReroll} disabled={locked} title={locked ? 'Unlock it to re-roll' : `Swap ${name} for another card`}>Re-roll</button>
+      </div>
+    </li>
   );
 }
 

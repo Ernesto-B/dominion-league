@@ -1,6 +1,7 @@
 import { cardHref, landscapeHref } from '../links.js';
 import { displayName, primaryType, shelfOrder } from '../kingdom.js';
 import { expansionMeta } from '../constants.js';
+import { hoverHandlers } from './CardHover.jsx';
 import CostIcons from './Cost.jsx';
 import { ExpansionBadge } from './bits.jsx';
 
@@ -21,11 +22,12 @@ export function KingdomChip({ r, onRemove, onPeek, plain = false, expansion = fa
       {r.onObj && <span className="meta dn-kchip-on">on {displayName(r.onObj)}</span>}
     </>
   );
-  if (plain) return <span className={cls}>{inner}</span>;   // text only: for places where a tap must not leave the page (the Game night flow)
+  const hover = hoverHandlers(obj.id);   // the card's picture beside the mouse, on a desktop (components/CardHover.jsx)
+  if (plain) return <span className={cls} {...hover}>{inner}</span>;   // text only: for places where a tap must not leave the page (the Game night flow)
   if (onRemove) return (
-    <span className={cls}>{inner}{onPeek && <button type="button" className="dn-kchip-more" aria-label={`Show the text of ${displayName(obj)}`} onClick={onPeek}>⌄</button>}<button type="button" className="dn-kchip-x" aria-label={`Remove ${displayName(obj)}`} title={`Remove ${displayName(obj)}`} onClick={onRemove}>×</button></span>
+    <span className={cls} {...hover}>{inner}{onPeek && <button type="button" className="dn-kchip-more" aria-label={`Show the text of ${displayName(obj)}`} onClick={onPeek}>⌄</button>}<button type="button" className="dn-kchip-x" aria-label={`Remove ${displayName(obj)}`} title={`Remove ${displayName(obj)}`} onClick={onRemove}>×</button></span>
   );
-  return <a className={cls} href={r.kind === 'card' ? cardHref(obj.id) : landscapeHref(obj.id)} title={r.kind === 'card' ? displayName(obj) : `${obj.type}: ${obj.name}`}>{inner}</a>;
+  return <a className={cls} {...hover} href={r.kind === 'card' ? cardHref(obj.id) : landscapeHref(obj.id)} title={r.kind === 'card' ? displayName(obj) : `${obj.type}: ${obj.name}`}>{inner}</a>;
 }
 
 /* A kingdom laid out like the boxes it came from: one row per expansion (its icon and name), the expansion's cards A to Z beside it, the expansions in the

@@ -15,6 +15,7 @@ import ScrollTopButton from './components/ScrollTopButton.jsx';
 import PopLayer from './components/PopLayer.jsx';
 import { useScrollCalm } from './useScrollCalm.js';
 import PeekLayer from './dominion/components/CardPeek.jsx';
+import HoverLayer from './dominion/components/CardHover.jsx';
 import { popup } from './components/popup.js';
 import BottomNav from './components/BottomNav.jsx';
 import OfflineBar from './components/OfflineBar.jsx';
@@ -76,6 +77,7 @@ function Shell() {
       <UpdateBar />
       <PopLayer />
       <PeekLayer />
+      <HoverLayer />
     </>
   );
 }

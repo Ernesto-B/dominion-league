@@ -319,6 +319,15 @@ technique is the best way to prove any refactor *doesn't* change what users see:
 - Popup/portal content has no PageContext, and these views read `CatalogContext` — keep that in mind if you
   ever render catalog content outside `DominionData`/`CatalogProvider`.
 
+## Card pictures
+
+The owner's card images are shown on the Collection, Game night and the game report (plan, numbers and the owner's go-live steps: `docs/card-images.md`). Rules that matter when touching it:
+- The pictures are **never committed** (`public/cards/` is gitignored): `npm run cards:build -- <folder>` makes them, `npm run cards:upload` puts them in the PRIVATE Supabase bucket `card-images`
+  (`supabase/dominion/03_card_images_bucket.sql`, applied with `npm run db:apply -- images`). Never make the bucket public or add a write policy.
+- `src/dominion/cardImages.js` is the only file that knows where a picture comes from; screens ask for a card id and draw `<CardFace id size|className="crop|big">`, which draws nothing when there is no picture, so
+  keep the text version as the fallback everywhere. Pictures load only near the screen; a private one is downloaded once per device and kept in Cache Storage.
+- A pile with several names (Knights, Castles, the split piles) can have a picture of its own (`<expansion id>:pile:<slug>`, `slotFaceId`).
+
 ## Gotchas already paid for — don't rediscover these
 
 - **Write `backdrop-filter` once, unprefixed — never also `-webkit-backdrop-filter`.** Vite's CSS
