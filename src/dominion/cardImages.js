@@ -31,14 +31,16 @@ async function fromBucket() {
 async function fromLocal(fetcher) {
   try { const r = await fetcher('cards/manifest.json'); return r.ok ? parse(await r.text()) : null; } catch { return null; }
 }
-const order = () => (import.meta.env && import.meta.env.DEV ? [['local', fromLocal], ['bucket', fromBucket]] : [['bucket', fromBucket], ['local', fromLocal]]);
+// `npm run dev` looks in the local folder first (a developer's own copy wins, then the bucket). A production build uses ONLY the bucket: a build made on a machine that has public/cards would otherwise
+// fall back to those files in the moment before sign-in (the bucket refuses a signed-out visitor) and never ask the bucket again.
+const order = () => (import.meta.env && import.meta.env.DEV ? [['local', fromLocal], ['bucket', fromBucket]] : [['bucket', fromBucket]]);
 
 export function loadManifest(fetcher = (...a) => fetch(...a)) {
   if (loading && !failed) return loading;   // a load that found nothing (not signed in yet, offline) is tried again the next time it is asked for
   failed = false;
   const saved = (() => { try { const s = JSON.parse(localStorage.getItem(MANIFEST_KEY) || 'null'); return s && s.m && s.m.items ? s : null; } catch { return null; } })();
   if (saved) { manifest = saved.m; mode = saved.mode || 'local'; }   // shown at once; refreshed below when it is old
-  const fresh = !!saved && Date.now() - saved.at < REFRESH_MS;
+  const fresh = !!saved && saved.mode === order()[0][0] && Date.now() - saved.at < REFRESH_MS;   // a list saved from another source than this build prefers is out of date at once
   const fetchIt = async () => {
     for (const [name, get] of order()) {
       const m = await get(fetcher);

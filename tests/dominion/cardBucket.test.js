@@ -61,3 +61,14 @@ describe('a load before sign-in', () => {
     expect(second.items['plunder:crew']).toBeTruthy();
   });
 });
+
+describe('a list saved from another source', () => {
+  it('is replaced at once, not kept for hours, when this build prefers a different source', async () => {
+    const m = await import('../../src/dominion/cardImages.js');
+    m._setManifest(null);
+    store['dl.cards.manifest'] = JSON.stringify({ m: JSON.parse(MANIFEST), mode: 'bucket', at: Date.now() });   // saved just now, but by the bucket: this (dev) build prefers the local folder
+    bucketFiles['manifest.json'] = JSON.stringify({ v: 2, items: { 'a:new': { w: 1, h: 1, k: 'z' } } });
+    const out = await m.loadManifest(() => Promise.resolve({ ok: false }));
+    expect(out.items['a:new']).toBeTruthy();   // fetched again
+  });
+});
