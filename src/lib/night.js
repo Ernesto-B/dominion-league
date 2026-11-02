@@ -142,3 +142,16 @@ export function tableLabel(info, now = Date.now()) {
   const s = STEPS.find(x => x.id === info.step);
   return info.step === 'players' && !info.picked.length ? 'new' : s ? s.label : '';
 }
+
+/* "Use for a game" on the Randomizer: the night as it becomes when a rolled kingdom is handed to Game night. The kingdom is set at once (so it is there whatever the options say), the Random way is
+   open with the roll's own options and, when the roll came from a seed, that seed in the seed box; players already picked are kept. `step` is the Kingdom step when two or more players
+   are seated, else the Players step (the kingdom is waiting for them). A clock that was running is dropped, as Back from Play would. */
+export function withRolledKingdom(st, { options, items, rolledQ, sets, landscapes, seed = null }) {
+  return {
+    ...st, step: st.picked.length >= 2 ? 'kingdom' : 'players', kingdomMode: 'random', randomDone: false, randomOriginal: null, handEdited: false, handBane: null, handOpen: false, draftSave: null,
+    rollOpts: options, kept: seed ? { cards: [], lands: [], seed: String(seed) } : null,
+    kingdom: items, kingdomTouched: true, rolled: null, rolledQ, sets, landscapes, startedAt: null, endedAt: null, minutesEdit: null,
+  };
+}
+// a game is under way (past the Kingdom step with a clock or scores): handing it a new kingdom would replace what was played
+export const nightInProgress = st => !['players', 'kingdom'].includes(st.step);

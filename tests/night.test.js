@@ -152,3 +152,21 @@ describe('a second table', () => {
     expect(tableLabel({ picked: ['A'], step: 'play', startedAt: 0 }, 23 * 60000)).toBe('Play · 23 min'); expect(tableLabel({ picked: [], step: 'play', done: true })).toBe('saved');
   });
 });
+
+import { withRolledKingdom, nightInProgress } from '../src/lib/night.js';
+describe('handing a rolled kingdom to Game night', () => {
+  const given = { options: { cards: 10, maxAttacks: 1 }, items: [{ kind: 'card', id: 'a:b' }], rolledQ: 'c=a%3Ab&seed=329945', sets: ['Base'], landscapes: [], seed: '329945' };
+  it('opens the Kingdom step on the Random way with the seed in the box when players are seated, else waits on the Players step', () => {
+    const seated = withRolledKingdom({ ...blankNight(), picked: ['Ann', 'Bob'] }, given);
+    expect(seated).toMatchObject({ step: 'kingdom', kingdomMode: 'random', rollOpts: given.options, kept: { cards: [], lands: [], seed: '329945' }, kingdom: given.items, rolledQ: given.rolledQ, startedAt: null });
+    expect(seated.picked).toEqual(['Ann', 'Bob']);
+    const empty = withRolledKingdom(blankNight(), given);
+    expect(empty.step).toBe('players'); expect(empty.kingdomMode).toBe('random');   // Next from the players lands on the kingdom already chosen
+    expect(withRolledKingdom(blankNight(), { ...given, seed: null }).kept).toBeNull();   // a locked or re-rolled kingdom has no seed to type
+  });
+  it('survives being saved and read back, and knows when a game is under way', () => {
+    const m = memory(); saveNight(m, 'g', withRolledKingdom({ ...blankNight(), picked: ['Ann', 'Bob'] }, given));
+    const back = loadNight(m, 'g'); expect(back.kept.seed).toBe('329945'); expect(back.kingdomMode).toBe('random'); expect(back.kingdom).toEqual(given.items);
+    expect(nightInProgress({ step: 'play' })).toBe(true); expect(nightInProgress({ step: 'kingdom' })).toBe(false); expect(nightInProgress({ step: 'players' })).toBe(false);
+  });
+});

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useCatalog } from '../CatalogContext.jsx';
 import { usePage } from '../../PageContext.js';
 import { writeQuery } from '../urlState.js';
-import { setKingdomDraft } from '../kingdomDraft.js';
+import { loadNight, nightInProgress, saveNight, withRolledKingdom } from '../../lib/night.js';
 import { impliedSets, resolveKingdom } from '../kingdom.js';
 import { pilesPlayed } from '../playStats.js';
 import { useLeagueGames } from '../useLeagueGames.js';
@@ -48,17 +48,23 @@ export default function Randomizer({ query = '' }) {
     } catch { setCopied('The picture couldn’t be made on this device.'); }
     setTimeout(() => setCopied(''), 3500);
   };
-  const logIt = () => {
-    const items = toGameItems(state), implied = impliedSets(resolveKingdom(catalog, items));
-    setKingdomDraft({ items, sets: implied.sets, landscapes: implied.landscapes });
-    window.location.hash = page.hashFor('games', page.gid);
+  // "Use for a game": copy the roll's seed, put the kingdom (with its options and seed) into Game night's Random way and go there
+  const logIt = async () => {
+    const items = toGameItems(state), implied = impliedSets(resolveKingdom(catalog, items)), seed = state.seed != null ? formatSeed(state.seed) : null;
+    if (seed) { try { await navigator.clipboard.writeText(seed); } catch { /* no clipboard here: the seed is still put in Game night's box */ } }
+    let ls = null; try { ls = window.localStorage; } catch { /* storage blocked */ }
+    if (!ls) { window.location.hash = page.hashFor('night', page.gid); return; }
+    const cur = loadNight(ls, page.gid);
+    if (nightInProgress(cur) && !window.confirm('A game is already under way on Game night. Replace its kingdom with this one?')) return;
+    saveNight(ls, page.gid, withRolledKingdom(cur, { options: opts, items, rolledQ: kingdomToParams(state).toString(), sets: implied.sets, landscapes: implied.landscapes, seed }));
+    window.location.hash = page.hashFor('night', page.gid);
   };
 
   const actions = (
     <>
       <button type="button" className="ghost" onClick={copy}>Copy link</button>
       <button type="button" className="ghost" onClick={shareImage}>Share image</button>
-      {canLog && <button type="button" className="ghost" onClick={logIt} title="Open Add a game with this kingdom filled in">Use for a game →</button>}
+      {canLog && <button type="button" className="ghost" onClick={logIt} title="Copy the seed and open Game night with this kingdom">Use for a game →</button>}
       <span className="meta" role="status" aria-live="polite">{copied}</span>
     </>
   );
