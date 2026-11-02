@@ -14,7 +14,7 @@ export const todayISO = (d = new Date()) => `${d.getFullYear()}-${String(d.getMo
 
 export const blankNight = (today = todayISO()) => ({
   step: 'players', picked: [], tie: {}, vp: {}, kingdomMode: null, randomDone: false, randomOriginal: null, handEdited: false, handBane: null, rollOpts: null, kept: null, handOpen: false, draftSave: null, kingdom: [], kingdomTouched: false, rolled: null, rolledQ: null, sets: [], landscapes: [],
-  date: today, type: '', notes: '', startedAt: null, endedAt: null, editId: null,
+  date: today, type: '', notes: '', startedAt: null, endedAt: null, minutesEdit: null, editId: null,
 });
 
 // Can the viewer leave this step? Only the first has a rule: a game needs at least two players.
@@ -31,10 +31,16 @@ export function advance(st, now = Date.now()) {
   const step = st.step === 'kingdom' && st.kingdom.length === 0 ? 'scores' : nextStep(st.step);
   return { ...st, step, startedAt: st.startedAt ?? (step === 'play' ? now : null), endedAt: st.step === 'play' ? st.endedAt ?? now : st.endedAt ?? null };
 }
+/* Back from Play means the game has not really started (a wrong kingdom, a missing player): the clock is thrown away, and "Start Game & Timer" begins a fresh one.
+   Back from the scores to Play only puts the same clock back on (see `advance`), and Back from the Save step to the scores keeps it. */
 export function back(st) {
   const step = st.step === 'scores' && st.kingdom.length === 0 ? 'kingdom' : prevStep(st.step);
+  if (st.step === 'play') return { ...st, step, startedAt: null, endedAt: null, minutesEdit: null };
   return { ...st, step, endedAt: step === 'play' ? null : st.endedAt ?? null };
 }
+
+// the minutes typed into the Save step (a break in the middle, a clock left running): a whole number of minutes from 1 to a day, else null (use the clock)
+export const cleanMinutes = v => { const n = Math.round(Number(v)); return v !== '' && v != null && Number.isFinite(n) && n >= 1 && n <= 1440 ? n : null; };
 
 /* The minutes to save with a game: the whole minutes since the clock started. A game with no clock (the Play step was skipped) has no
    length, and neither does a clock left running overnight (more than 12 hours is a forgotten night, not a game). */
@@ -79,7 +85,7 @@ const FIELDS = {
   randomOriginal: orNull(isStrs), handEdited: v => typeof v === 'boolean', handBane: orNull(v => typeof v === 'string'), rollOpts: orNull(isObj), kept: orNull(isObj),
   handOpen: v => typeof v === 'boolean', draftSave: orNull(isDraft), kingdom: isItems, kingdomTouched: v => typeof v === 'boolean', rolledQ: orNull(v => typeof v === 'string'),
   sets: isStrs, landscapes: isStrs, date: v => typeof v === 'string', type: v => typeof v === 'string', notes: v => typeof v === 'string',
-  startedAt: orNull(isNum), endedAt: orNull(isNum), editId: orNull(isNum),
+  startedAt: orNull(isNum), endedAt: orNull(isNum), minutesEdit: orNull(isNum), editId: orNull(isNum),
 };
 export function cleanNight(saved, today = todayISO()) {
   const blank = blankNight(today), out = { ...blank };

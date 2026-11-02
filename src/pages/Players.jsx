@@ -5,13 +5,14 @@ import Banner from '../components/Banner.jsx';
 import PlayerLink from '../components/PlayerLink.jsx';
 import NameIcon from '../components/NameIcon.jsx';
 import TierIcon from '../components/TierIcon.jsx';
-import StatTile, { SetStatTile, SetBreakdown, PopText } from '../components/StatTile.jsx';
+import StatTile, { SetStatTile, SetBreakdown, VpRateBreakdown, PopText } from '../components/StatTile.jsx';
 import TierProgressBar from '../components/TierProgressBar.jsx';
 import GameCards from '../components/GameCards.jsx';
 import H2HMatrix from '../components/H2HMatrix.jsx';
 import Badges from '../components/Badges.jsx';
 import XpPanel from '../components/XpPanel.jsx';
 import { rivalries } from '../lib/achievements.js';
+import { vpPerMin } from '../lib/vpRate.js';
 import PlayerPicker from '../components/PlayerPicker.jsx';
 import PinnedBadges from '../components/PinnedBadges.jsx';
 import RatingChart from '../components/RatingChart.jsx';
@@ -60,6 +61,7 @@ export default function Players() {
   const ratioTxt = p.wins ? (losses ? `${(p.wins / losses).toFixed(2)}:1` : 'no losses yet') : '—';
   const peakGap = p.peak - p.elo;
   const setsPop = <SetBreakdown setCounts={setCounts} enabledSets={enabledSets} />;
+  const pace = vpPerMin(D, p.name);
 
   // Best/worst landscape type by win %, only counting types with enough games to mean something.
   let landscapeTiles = null;
@@ -91,8 +93,8 @@ export default function Players() {
           popup={<PopText text={`Games that count toward Elo — everything except Friendly games. Your first ${D.E.provisionalGames} are Provisional, with bigger rating swings while the system is still learning your skill.`} />} />
         <StatTile icon="icons/stats/wins.png" big={p.wins} label={`wins (${pc(p.winPct)})`}
           popup={<PopText text="Tables you've won outright — sole 1st place, no ties." extra={`W/L ratio ${ratioTxt}`} />} />
-        <StatTile icon="icons/stats/average-points.png" big={f2(p.avgPts)} label="avg points, 0 to 1"
-          popup={<PopText text="Your average share of the points on offer at your tables, from 0 (always last) to 1 (always first). 0.5 is what an evenly matched table averages." />} />
+        <StatTile icon="icons/stats/average-points.png" big={pace.rate != null ? f2(pace.rate) : '—'} label="avg VP/min"
+          popup={pace.rate != null ? <VpRateBreakdown bySet={pace.bySet} enabledSets={enabledSets} /> : <PopText text="Your victory points per minute of play. It needs games that were timed on Game night and had everyone's VP entered, and there are none for you yet." />} />
         <StatTile icon="icons/stats/win-streak.png" iconClass={p.streak >= 3 ? 'hot' : undefined} big={p.streak} label={`win streak (best ${p.bestStreak})`}
           popup={<PopText text="Wins in a row right now — resets the moment you don't finish 1st." extra={`Best ever: ${p.bestStreak}`} />} />
         <StatTile icon="icons/champion.png" big={p.titles} label={'season title' + (p.titles === 1 ? '' : 's')}

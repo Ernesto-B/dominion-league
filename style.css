@@ -398,6 +398,7 @@ td.dn-cost-cell{white-space:nowrap}
 .dn-kchip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:2px 10px 2px 6px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);font:500 14px var(--text);text-decoration:none}
 a.dn-kchip:hover{border-color:var(--muted)}
 .dn-kchip-name{min-width:0}
+.dn-kchip.compact{gap:5px;padding:1px 10px 1px 5px;font-size:13px}
 .dn-kchip-on{font-size:12px}
 .dn-kchip-missing{padding-left:10px;opacity:.7;font-style:italic}
 .dn-kchip-x{min-height:0;border:0;background:transparent;color:var(--muted);font-size:18px;line-height:1;padding:0 2px 1px 4px;cursor:pointer}

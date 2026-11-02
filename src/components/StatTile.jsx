@@ -38,3 +38,16 @@ export function SetBreakdown({ setCounts, enabledSets }) {
     return <div className="poprow" key={nm}><SetIcon name={nm} size={20} /><b>{nm}</b><span>{`${n} game${n === 1 ? '' : 's'}`}</span></div>;
   });
 }
+
+// The popup of the "avg VP/min" tile: the same rate for the games that used each expansion (those with no timed game show a dash). Props only, like SetBreakdown.
+export function VpRateBreakdown({ bySet, enabledSets }) {
+  return (
+    <>
+      <div className="popdesc">Your victory points divided by the minutes of the timed games you played, by expansion in play.</div>
+      {SET_NAMES.filter(nm => enabledSets.has(nm)).map(nm => {
+        const e = bySet[nm];
+        return <div className="poprow" key={nm}><SetIcon name={nm} size={20} /><b>{nm}</b><span>{e && e.rate != null ? `${e.rate.toFixed(2)} · ${e.games} game${e.games === 1 ? '' : 's'}` : '—'}</span></div>;
+      })}
+    </>
+  );
+}

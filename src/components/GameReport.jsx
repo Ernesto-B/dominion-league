@@ -191,8 +191,8 @@ export function Kingdom({ rep, game, loaded }) {
       {k.debtCards > 0 && <p className="meta">{k.debtCards} Debt card{k.debtCards === 1 ? '' : 's'} not counted in the average.</p>}
       <KingdomFacts k={k} focus={focus} setFocus={setFocus} />
       <h4 className="gr-h">The cards, by expansion</h4>
-      <ShelfGroups entries={cards.map(({ r, c }) => ({ r, node: <KingdomChip key={r.id} r={r} expansion dim={!hit(c)} /> }))} />
-      {lands.length > 0 && <><h4 className="gr-h">Landscapes</h4><ShelfGroups entries={lands.map(({ r }) => ({ r, node: <KingdomChip key={r.id} r={r} expansion dim={!!focus} /> }))} /></>}
+      <ShelfGroups entries={cards.map(({ r, c }) => ({ r, node: <KingdomChip key={r.id} r={r} compact dim={!hit(c)} /> }))} />
+      {lands.length > 0 && <><h4 className="gr-h">Landscapes</h4><ShelfGroups entries={lands.map(({ r }) => ({ r, node: <KingdomChip key={r.id} r={r} compact dim={!!focus} /> }))} /></>}
       {(game.landscapes || []).length > 0 && !lands.length && <p className="note">Landscapes in play: <LandscapePills game={game} /></p>}
     </>
   );
