@@ -222,9 +222,9 @@ describe('Card detail', () => {
     expect(t).toMatch(/Part of the Catapult \/ Rocks pile.*2 card names sharing 10 physical cards/);
     expect(render(`cards/${encodeURIComponent('empires:catapult')}`)).toContain(`href="${cardHref('empires:rocks')}"`);
   });
-  it('shows a previous name and the Second Edition flag when the data has them', () => {
+  it('shows a previous name, and never an edition (Second Edition, New in Second Edition, Only edition)', () => {
     expect(text(render(`cards/${encodeURIComponent(catalog.cards.find(c => c.name === 'Farm').id)}`))).toMatch(/Formerly called Harem/);
-    expect(text(render(`cards/${encodeURIComponent('intrigue:lurker')}`))).toMatch(/New in Second Edition/);
+    for (const id of ['intrigue:lurker', 'intrigue:farm', 'dominion-base-game:village', 'plunder:crew']) expect(text(render(`cards/${encodeURIComponent(id)}`))).not.toMatch(/Second Edition|First Edition|Only edition|New in/);
   });
   it('words an untagged card as "none recorded", never "has none"', () => {
     const bare = { ...catalog.cards[0], id: 'zz:bare', mechanicIds: [], mechanics: [] };

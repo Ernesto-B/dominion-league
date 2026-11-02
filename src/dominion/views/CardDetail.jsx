@@ -67,8 +67,6 @@ export default function CardDetail({ id, query = '' }) {
           <h1>{card.name}</h1>
           <p className="lede dn-line">
             <ExpansionBadge name={card.expansion} />
-            <span className="dn-sep" aria-hidden="true">·</span><span>{card.edition === 'Original (only edition)' ? 'Only edition' : card.edition}</span>
-            {card.addedInEdition === true && <><span className="dn-sep" aria-hidden="true">·</span><span>New in Second Edition</span></>}
             {card.previousName && <><span className="dn-sep" aria-hidden="true">·</span><span>Formerly called <b>{card.previousName}</b></span></>}
           </p>
         </div>
