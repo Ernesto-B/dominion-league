@@ -59,8 +59,10 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
         <div className="dn-chips">
           <Chip pressed={attacksOn} onClick={() => setOpts({ maxAttacks: attacksOn ? 0 : DEFAULT_MAX_ATTACKS })}>{attacksOn ? 'Allowed' : 'None'}</Chip>
           {attacksOn && <>
+            <label className="dn-atk">at least <input type="number" min="0" max="12" inputMode="numeric" className="dn-num" placeholder="0" aria-label="Fewest Attacks" value={opts.minAttacks || ''}
+              onChange={e => { const n = e.target.value === '' ? 0 : Math.max(0, Math.min(12, Math.round(Number(e.target.value)) || 0)); setOpts({ minAttacks: n, ...(n > 0 && opts.maxAttacks != null && opts.maxAttacks < n ? { maxAttacks: n } : {}) }); }} /></label>
             <label className="dn-atk">at most <input type="number" min="1" max="12" inputMode="numeric" className="dn-num" placeholder="any" aria-label="Most Attacks" value={opts.maxAttacks ?? ''}
-              onChange={e => setOpts({ maxAttacks: e.target.value === '' ? null : Math.max(1, Math.min(12, Math.round(Number(e.target.value)) || 1)) })} /></label>
+              onChange={e => { const n = e.target.value === '' ? null : Math.max(1, Math.min(12, Math.round(Number(e.target.value)) || 1)); setOpts({ maxAttacks: n, ...(n != null && (opts.minAttacks || 0) > n ? { minAttacks: n } : {}) }); }} /></label>
             <Chip pressed={opts.reaction} onClick={() => setOpts({ reaction: !opts.reaction })}>Reaction</Chip>
             <Chip pressed={opts.junkTrash} onClick={() => setOpts({ junkTrash: !opts.junkTrash })}>Trasher if junk</Chip>
           </>}
@@ -70,6 +72,9 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
         <div className="dn-chips" role="radiogroup" aria-label="Cost spread">
           <Chip pressed={!opts.costSpread} onClick={() => setOpts({ costSpread: null })}>Off</Chip>
           {Object.entries(COST_SPREADS).map(([k, c]) => <Chip key={k} pressed={opts.costSpread === k} onClick={() => setOpts({ costSpread: k })}>{c.label}</Chip>)}
+          <label className="dn-atk">none above <select className="dn-num" aria-label="Highest card cost" value={opts.maxCost ?? ''} onChange={e => setOpts({ maxCost: e.target.value === '' ? null : Number(e.target.value) })}>
+            <option value="">any</option>{[3, 4, 5, 6].map(c => <option key={c} value={c}>${c}</option>)}
+          </select></label>
         </div>
 
         <p className="dn-rz-lab">Prioritize</p>

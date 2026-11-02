@@ -717,3 +717,13 @@ describe('the Landscapes charts on the Overview', () => {
     expect(html).toContain('href="#/dominion/landscapes?exp=');   // the expansions bar's legend links to that expansion's landscapes
   });
 });
+
+describe('the randomizer\'s Attacks and Cost rows', () => {
+  it('has at-least and at-most Attack boxes, a Barbell spread and a cost cap, all in their existing rows', () => {
+    const html = render('randomizer');
+    expect(html).toContain('aria-label="Fewest Attacks"'); expect(html).toContain('aria-label="Most Attacks"');
+    expect(html).toContain('>Barbell<'); expect(html).toContain('aria-label="Highest card cost"');
+    const on = render('randomizer?atkmin=3&maxc=4');
+    expect(on).toMatch(/aria-label="Fewest Attacks"[^>]*value="3"/); expect(on).toMatch(/<option value="4" selected="">\$4<\/option>/);
+  });
+});

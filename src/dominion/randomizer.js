@@ -36,8 +36,9 @@ export const ruleIsExact = rule => REQUIRE_RULES[rule].coins != null || REQUIRE_
    out instead of piling up on one level. 'standard' is an even spread, 'high' leans to $5 and up, 'low' to $3 and under. */
 export const COST_SPREADS = {
   standard: { label: 'Standard', share: [0.20, 0.25, 0.25, 0.20, 0.10] },
-  high: { label: 'High average', share: [0.10, 0.15, 0.25, 0.30, 0.20] },
-  low: { label: 'Low average', share: [0.30, 0.35, 0.20, 0.10, 0.05] },
+  high: { label: 'High', share: [0.10, 0.15, 0.25, 0.30, 0.20] },
+  low: { label: 'Low', share: [0.30, 0.35, 0.20, 0.10, 0.05] },
+  barbell: { label: 'Barbell', share: [0.40, 0.04, 0.08, 0.13, 0.40] },   // cheap and pricey, little in between (it also guarantees a few of each end: see quotasFor)
 };
 const costLevel = info => Math.min(6, Math.max(2, (info.cards[0].coins || 0) + (info.cards[0].debt || 0))) - 2;   // 0 ($2 or less) .. 4 ($6 or more)
 
@@ -48,6 +49,8 @@ export const DEFAULT_OPTIONS = Object.freeze({
   landscapes: 0,           // how many Events/Landmarks/Projects/Ways/Traits (from ANY expansion — independent of `expansions`)
   landscapeTypes: [],      // empty = all five types
   maxAttacks: null,        // null = any number of Attack piles
+  minAttacks: 0,           // at least this many Attack piles
+  maxCost: null,           // null = any, else no card costs more than this many coins (and none costs Debt)
   reaction: false,         // if there is an Attack, make sure there is a Reaction too
   require: [],             // keys of REQUIRE_RULES
   include: [],             // card ids that must be in (their pile is)
@@ -103,13 +106,27 @@ export function themeRole(info, key) {
 // the same, for a slot of a roll (for the screens and the tests)
 export const slotThemeRole = (catalog, slot, key) => { const info = pileInfos(catalog).byKey.get(slot.key); return info ? themeRole(info, key) : null; };
 const THEME_SHARE = [0, 0.4, 0.3, 0.2, 0.2];
-// how many core cards each chosen theme needs, from what the pool can actually offer: { key: { n, total } } (n never more than the pool has)
-function themeNeeds(pool, o) {
-  const out = {};
+/* The minimums a roll must meet, from what the pool can actually offer: [{ label, test(info), n, total, strict?, none? }].
+   A theme needs a few of its core cards (n never more than the pool has); "at least N Attacks" needs exactly N (strict: fewer in the pool is an error, not a lower number);
+   the Barbell cost spread needs a few cards at each end ($2 or less, and $6 or more with no Debt). Checked while drawing and again by breaks(), so a re-roll can't undo them. */
+const FOLLOW = 0.3;   // the share of the kingdom the two ends of a Barbell take, each
+export function quotasFor(pool, o) {
+  const out = [];
+  const count = test => pool.filter(test).length;
   const share = THEME_SHARE[Math.min(o.themes.length, 4)];
-  o.themes.forEach(t => { const total = pool.filter(i => themeRole(i, t) === 'core').length; out[t] = { total, n: Math.min(total, Math.max(2, Math.round(o.cards * share))) }; });
+  o.themes.forEach(t => {
+    const test = i => themeRole(i, t) === 'core', total = count(test);
+    out.push({ label: THEMES[t].label, test, total, n: Math.min(total, Math.max(2, Math.round(o.cards * share))), none: `None of the chosen expansions has ${THEMES[t].label} to build the kingdom around.` });
+  });
+  if (o.minAttacks > 0) { const test = i => i.attack, total = count(test); out.push({ label: 'Attack cards', test, total, n: o.minAttacks, strict: true }); }
+  if (o.costSpread === 'barbell') {
+    const n = Math.max(2, Math.round(o.cards * FOLLOW));
+    [['cards costing $2 or less', i => i.cards[0].debt === 0 && i.cards[0].coins <= 2], ['cards costing $6 or more', i => i.cards[0].debt === 0 && i.cards[0].coins >= 6]]   // by the pile's first card: the one a logged game records
+      .forEach(([label, test]) => { const total = count(test); if (total) out.push({ label, test, total, n: Math.min(total, n) }); });
+  }
   return out;
 }
+const overCost = (info, o) => o.maxCost != null && info.cards.some(c => c.debt > 0 || c.coins > o.maxCost);
 
 // mulberry32: a tiny seeded generator, for tests
 export function seededRng(seed) {
@@ -187,17 +204,20 @@ const normalize = opts => {
   o.cards = Math.max(1, Math.min(12, Number(o.cards) || 10));
   o.landscapes = Math.max(0, Math.min(6, Number(o.landscapes) || 0));
   o.themes = [...new Set((o.themes || []).filter(t => THEMES[t]))];
+  o.minAttacks = Math.max(0, Math.min(12, Math.round(Number(o.minAttacks) || 0)));
+  o.maxCost = o.maxCost != null && Number(o.maxCost) >= 2 ? Math.min(10, Math.round(Number(o.maxCost))) : null;
   return o;
 };
 const attackCount = infos => infos.filter(i => i.attack).length;
 
 /* Does a chosen set of piles obey every rule? Returns null when it does, otherwise a short sentence for the first rule broken. */
-function breaks(chosen, o, wanted, needs = {}) {
+function breaks(chosen, o, wanted, quotas = []) {
   if (o.maxAttacks != null && attackCount(chosen) > o.maxAttacks) return o.maxAttacks === 0 ? 'No Attacks was asked for' : `At most ${o.maxAttacks} Attack${o.maxAttacks === 1 ? '' : 's'} was asked for`;
   if (o.reaction && attackCount(chosen) > 0 && !chosen.some(i => i.reaction)) return 'A Reaction is required when there is an Attack';
   if (o.junkTrash && chosen.some(i => i.junking) && !chosen.some(i => satisfies(i, 'trash'))) return 'A trashing card is required when an Attack gives opponents junk';
   for (const r of o.require) if (!chosen.some(i => satisfies(i, r))) return `The kingdom needs ${REQUIRE_RULES[r].label}`;
-  for (const t of o.themes) if (needs[t] && chosen.filter(i => themeRole(i, t) === 'core').length < needs[t].n) return `The kingdom needs more ${THEMES[t].label}`;
+  if (o.maxCost != null && chosen.some(i => overCost(i, o))) return `No card above $${o.maxCost} was asked for`;
+  for (const q of quotas) if (chosen.filter(q.test).length < q.n) return q.strict ? `At least ${q.n} Attack${q.n === 1 ? '' : 's'} was asked for` : `The kingdom needs more ${q.label}`;
   for (const w of wanted) if (!chosen.includes(w)) return 'A card you asked to include is missing';
   return null;
 }
@@ -206,7 +226,7 @@ function breaks(chosen, o, wanted, needs = {}) {
 function poolFor(catalog, o) {
   const { list, byCardId } = pileInfos(catalog);
   const banned = new Set(o.exclude.map(id => byCardId.get(id)?.key).filter(Boolean));
-  return list.filter(i => (!o.expansions.length || o.expansions.includes(i.expansion)) && !banned.has(i.key) && !(o.maxAttacks === 0 && i.attack));
+  return list.filter(i => (!o.expansions.length || o.expansions.includes(i.expansion)) && !banned.has(i.key) && !(o.maxAttacks === 0 && i.attack) && !overCost(i, o));
 }
 
 // the played-count weighting: plays is Map(pile key -> games). Piles played less get more chance ('favor'), or those played more ('favorPlayed').
@@ -251,9 +271,11 @@ export function generate(catalog, options = {}, { rng = Math.random, keep = [], 
   if (fixedBreak) return { ok: false, message: `The cards you included or locked already have more Attacks than your limit (${o.maxAttacks}).` };
 
   const eligible = chosen => pool.filter(i => !chosen.includes(i) && !(o.maxAttacks != null && i.attack && attackCount(chosen) >= o.maxAttacks));
-  const needs = themeNeeds(pool, o);
-  const emptyTheme = o.themes.find(t => needs[t].total === 0);
-  if (emptyTheme) return { ok: false, message: `None of the chosen expansions has ${THEMES[emptyTheme].label} to build the kingdom around.` };
+  if (o.minAttacks > 0 && o.maxAttacks != null && o.minAttacks > o.maxAttacks) return { ok: false, message: `At least ${o.minAttacks} Attacks but at most ${o.maxAttacks}: the limits don’t fit.` };
+  if (fixed.some(i => overCost(i, o))) return { ok: false, message: `A card you included or locked costs more than your limit ($${o.maxCost}).` };
+  const quotas = quotasFor(pool, o);
+  const dead = quotas.find(q => (q.strict ? q.total < q.n : q.total === 0 && q.none));
+  if (dead) return { ok: false, message: dead.strict ? `Only ${dead.total} ${dead.label} in the chosen expansions, not ${dead.n}.` : dead.none };
   let last = 'Couldn’t satisfy these rules together — try relaxing one.';
   for (let attempt = 0; attempt < 300; attempt++) {
     const chosen = fixed.slice(), locked = fixed.slice();
@@ -266,11 +288,11 @@ export function generate(catalog, options = {}, { rng = Math.random, keep = [], 
       const p = pick(cands, o, plays, rng, chosen); chosen.push(p); locked.push(p);
     }
     if (failed) return { ok: false, message: failed };
-    // build around each chosen theme: enough of its core cards first (locked and included cards count), the weighted draw below does the rest
-    for (const t of o.themes) {
-      while (chosen.filter(i => themeRole(i, t) === 'core').length < needs[t].n) {
-        const cands = eligible(chosen).filter(i => themeRole(i, t) === 'core');
-        if (!cands.length || chosen.length >= o.cards) { failed = `There isn’t room for enough ${THEMES[t].label} — the kingdom is already full.`; break; }
+    // the minimums (a theme's core cards, at least N Attacks, the ends of a Barbell): locked and included cards count; the weighted draw below does the rest
+    for (const q of quotas) {
+      while (chosen.filter(q.test).length < q.n) {
+        const cands = eligible(chosen).filter(q.test);
+        if (!cands.length || chosen.length >= o.cards) { failed = `There isn’t room for enough ${q.label} — the kingdom is already full.`; break; }
         const p = pick(cands, o, plays, rng, chosen); chosen.push(p); locked.push(p);
       }
       if (failed) break;
@@ -291,7 +313,7 @@ export function generate(catalog, options = {}, { rng = Math.random, keep = [], 
       const swappable = chosen.filter(i => !locked.includes(i) && !i.junking), tr = eligible(chosen).filter(i => satisfies(i, 'trash'));
       if (swappable.length && tr.length) chosen[chosen.indexOf(swappable[Math.floor(rng() * swappable.length)])] = pick(tr, o, plays, rng, chosen);
     }
-    const why = breaks(chosen, o, wanted, needs);
+    const why = breaks(chosen, o, wanted, quotas);
     if (!why) return finish(catalog, o, chosen, keepLandscapes, plays, rng, null, { lockedAt, lockedLandscapeAt });
     last = `${why}, and no kingdom was found that meets all of the rules together — try relaxing one.`;
   }
@@ -397,14 +419,14 @@ export function setupForHand(catalog, cardIds, baneId = null) {
 export function rerollSlot(catalog, options, state, index, { rng = Math.random, plays = null } = {}) {
   const o = normalize(options);
   const current = state.slots.map(s => infoOfSlot(catalog, s)), wanted = o.include.map(id => pileInfos(catalog).byCardId.get(id)).filter(Boolean);
-  const needs = themeNeeds(poolFor(catalog, o), o);   // the theme's core cards stay at their minimum: a swap of one for a non-core card is refused
+  const quotas = quotasFor(poolFor(catalog, o), o);   // the minimums hold: a swap that would break one is refused
   const pool = poolFor(catalog, o).filter(i => !current.includes(i));
   const order = []; const left = pool.slice();
   const others = current.filter((_, k) => k !== index);
   while (left.length) { const p = pick(left, o, plays, rng, others); order.push(p); left.splice(left.indexOf(p), 1); }   // a weighted shuffle
   for (const cand of order) {
     const next = current.slice(); next[index] = cand;
-    if (!breaks(next, o, wanted, needs)) {
+    if (!breaks(next, o, wanted, quotas)) {
       const replaced = state.slots[index];
       const res = finish(catalog, { ...o, landscapes: state.landscapes.length }, next, state.landscapes.map(l => l.landscape.id), plays, rng, {
         landscapes: state.landscapes.map(l => (l.on && replaced.cards.some(c => c.id === l.on) ? { ...l, on: null } : l)), setup: state.setup,
@@ -437,6 +459,8 @@ export function optionsToParams(opts, p = new URLSearchParams()) {
   if (o.landscapes !== d.landscapes) p.set('nl', String(o.landscapes));
   o.landscapeTypes.forEach(v => p.append('lt', v));
   if (o.maxAttacks != null) p.set('atk', String(o.maxAttacks));
+  if (o.minAttacks) p.set('atkmin', String(o.minAttacks));
+  if (o.maxCost != null) p.set('maxc', String(o.maxCost));
   if (o.reaction) p.set('rx', '1');
   o.require.forEach(v => p.append('req', v));
   o.include.forEach(v => p.append('inc', v));
@@ -455,7 +479,7 @@ export function optionsFromParams(p) {
   return {
     expansions: many(p, 'exp'), cards: intIn(p.get('n'), 1, 12, d.cards), landscapes: intIn(p.get('nl'), 0, 6, d.landscapes),
     landscapeTypes: many(p, 'lt').filter(t => LANDSCAPE_TYPES.includes(t)),
-    maxAttacks: intIn(p.get('atk'), 0, 12, null), reaction: p.get('rx') === '1',
+    maxAttacks: intIn(p.get('atk'), 0, 12, null), minAttacks: intIn(p.get('atkmin'), 0, 12, 0), maxCost: intIn(p.get('maxc'), 2, 10, null), reaction: p.get('rx') === '1',
     require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: many(p, 'inc'), exclude: many(p, 'exc'), excludeLandscapes: [], favor: p.get('fav') === '1',
     favorPlayed: p.get('fp') === '1', junkTrash: p.get('jt') === '1', costSpread: COST_SPREADS[p.get('cs')] ? p.get('cs') : null,
     themes: [...new Set(many(p, 'th').filter(t => THEMES[t]))],

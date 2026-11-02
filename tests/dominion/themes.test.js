@@ -40,7 +40,7 @@ describe('building a kingdom around a theme', () => {
     expect(r.slots.some(s => s.cards.some(c => c.id === wharf.id))).toBe(true);
   });
   it('says so, plainly, when the chosen expansions have nothing to build around', () => {
-    const r = roll({ themes: ['duration'], expansions: ['Base Game'] }, 1);   // Base Game has no Duration cards
+    const r = roll({ themes: ['duration'], expansions: ['Dominion Base Game'] }, 1);   // Base Game has no Duration cards
     expect(r.ok).toBe(false); expect(r.message).toMatch(/Duration cards/);
   });
   it('a single re-roll keeps the theme at its minimum', () => {

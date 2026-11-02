@@ -899,6 +899,9 @@ details.how>h2:first-of-type{margin-top:8px}
 .night-hand{margin:12px 0 0;padding:12px;border:1px solid var(--line);border-radius:12px}
 @media (max-width:720px){.dn-rz-grid{grid-template-columns:1fr;gap:6px}.dn-rz-lab{margin-top:6px}}
 .dn-num{width:4.5em}
+input.dn-num[type=number]{appearance:textfield;-moz-appearance:textfield}   /* a number box without the up / down arrows (typing still works, and a phone still shows its number pad) */
+input.dn-num[type=number]::-webkit-inner-spin-button,input.dn-num[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+select.dn-num{width:auto}
 @media (max-width:720px){.night-choices{grid-template-columns:1fr}.night-choice{min-height:0}}
 .night-card .order li{grid-template-areas:"nm up dn" "vp tie tie"}
 .night-card .order label.tie{justify-self:start}
@@ -1689,6 +1692,7 @@ a.gr-face{position:relative}
 .dn-themes{list-style:none;margin:6px 0 4px;padding:0;display:grid;gap:10px}
 .dn-themes li{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .dn-themes li>.meta{flex:1 1 260px;font-size:13.5px}
+@media (max-width:720px){.dn-themes{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dn-themes li>.meta{display:none}.dn-themes .dn-chip{width:100%;justify-content:center}}   /* a phone: just the four chips, two across; the one-line descriptions are for a wide screen */
 
 /* Waffle and Segments on hover (components/charts.jsx useHot): the kind you point at lights up, the rest step back, its legend row is highlighted and a line above names it */
 .dn-chart-read{display:flex;align-items:center;gap:8px;min-height:1.5em;margin:0;font-size:14px;color:var(--muted)}
