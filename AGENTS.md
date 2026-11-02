@@ -437,6 +437,18 @@ see the end of this list):
 - `scripts/migrate.mjs` is a one-time bootstrap script (service-role key via env var,
   never committed, never pasted in chat) — not part of the regular deploy flow.
 
+## Keyboard shortcuts, the kingdom wall, "Play again"
+
+- **Shortcuts** (`lib/shortcuts.js`, `components/Shortcuts.jsx`, computers only, never while typing or over a dialog): `g` then a letter goes to a page (the same hrefs as the nav), `/` focuses the page's search, `?` lists them. A page registers its own with
+  `<PageShortcuts bindings={[{ key, shift?, label, run }]}/>` (a card page's arrows, R, Shift+R; a report's tabs; the Collection's 1-5). Add a binding there, never a raw `keydown` listener.
+- **Games > Kingdoms** (`components/KingdomWall.jsx`): the third view beside Cards and Table, drawn from the filtered list; a phone has Cards and Kingdoms (no table). A past game's kingdom goes back to Game night with
+  `dominion/playAgain.js` (admin-only `PlayAgain` button, also on the report's Kingdom tab); the Randomizer's "Use for a game" uses `withRolledKingdom` in `lib/night.js`.
+- **First run** (`components/Welcome.jsx`): a four-step walkthrough on Rankings, remembered per player per device (`lib/welcome.js`).
+
+## Backups
+
+`npm run backup` (read-only) writes the league's tables to `backups/<date>/` (gitignored: names and emails); `npm run restore -- <folder>` only inserts what is missing; `npm run backup:test-db` proves a restore on a throwaway local Postgres. Details: `docs/backup.md`. If a table is added to `supabase/schema.sql`, add it to `TABLES` / `KEYS` in `scripts/lib/backup.mjs` (parents first), or it will not be backed up.
+
 ## Secrets
 
 - Service-role key: local env var only, for `migrate.mjs` and nothing else. Never in a

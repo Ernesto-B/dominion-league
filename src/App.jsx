@@ -11,6 +11,7 @@ import Login from './components/Login.jsx';
 import PasswordChange from './components/PasswordChange.jsx';
 import PageBoundary from './components/PageBoundary.jsx';
 import PlayerHud from './components/PlayerHud.jsx';
+import Shortcuts from './components/Shortcuts.jsx';
 import ScrollTopButton from './components/ScrollTopButton.jsx';
 import PopLayer from './components/PopLayer.jsx';
 import { useScrollCalm } from './useScrollCalm.js';
@@ -85,6 +86,7 @@ function Shell() {
       {ready && <PullToRefresh onRefresh={boot} />}
       {ready && <BottomNav ready={{ ...state, route }} hash={hash} />}
       {ready && (['home', 'season', 'games', 'players', 'records', 'night', 'dominion'].includes(route.route)) && <ScrollTopButton lift={route.route === 'night'} />}
+      {ready && <Shortcuts ready={{ ...state, route }} />}
       <UpdateBar />
       <PopLayer />
       <PeekLayer />

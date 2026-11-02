@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { DominionData } from './CatalogContext.jsx';
 import { VIEWS, parseDominionArg, tabFor } from './links.js';
+import { PageShortcuts } from '../components/Shortcuts.jsx';
 import { EmptyState } from './components/States.jsx';
 import Overview from './views/Overview.jsx';
 import Cards from './views/Cards.jsx';
@@ -22,6 +23,7 @@ export function DominionNav({ active }) {
   return (
     // a landmark div, not <nav>: the site's header styles are keyed on the nav TAG and would restyle these links
     <div className="dn-tabbar" role="navigation" aria-label="Collection sections" ref={ref}>
+      <PageShortcuts bindings={VIEWS.map((v, k) => ({ key: String(k + 1), label: v.label, run: () => { window.location.hash = v.href; } }))} />
       {VIEWS.map(v => <a key={v.view} href={v.href} aria-current={v.view === active ? 'true' : undefined}><b>{v.label}</b><small>{v.hint}</small></a>)}
     </div>
   );

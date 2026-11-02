@@ -9,5 +9,8 @@ dist-fake/
 # Card pictures are the owner's files: built locally by `npm run cards:build`, uploaded to the private Supabase bucket, never committed
 public/cards/
 
+# Backups hold players' names and sign-in emails: they stay on this computer (npm run backup)
+backups/
+
 # Personal notes
 todo.md

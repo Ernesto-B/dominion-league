@@ -9,6 +9,7 @@ import { EmptyState } from '../components/States.jsx';
 import { hoverHandlers } from '../components/CardHover.jsx';
 import FilterSummary from '../components/FilterSummary.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
+import { PageShortcuts } from '../../components/Shortcuts.jsx';
 import CostIcons, { CoinIcon, DebtIcon, PlainDebtIcon } from '../components/Cost.jsx';
 import { Chip, ExpansionBadge, FilterFold, ModeRow, Section, ExternalLink, LandscapePill, statusLabel, rowLink } from '../components/bits.jsx';
 
@@ -53,6 +54,7 @@ export default function Landscapes({ query = '' }) {
 
   return (
     <>
+      <PageShortcuts bindings={rows.length ? [{ key: 'r', label: 'Open a random landscape', run: random }] : []} />
       <div className="head"><div><h1>Landscapes</h1><p className="lede">Events, Landmarks, Projects, Ways and Traits. They sit beside the Kingdom and aren’t Kingdom cards.</p></div></div>
 
       <form className="builder dn-filters" role="search" aria-label="Filter landscapes" onSubmit={e => e.preventDefault()}>

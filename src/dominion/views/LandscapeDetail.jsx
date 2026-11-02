@@ -2,6 +2,9 @@ import { useCatalog } from '../CatalogContext.jsx';
 import { dominionHref, landscapeHref, landscapesFilterHref } from '../links.js';
 import { DEFAULT_LANDSCAPE_FILTERS, browseLandscapes, landscapeFiltersFromQuery, landscapeFiltersToQuery, neighbors, pickRandom } from '../filters.js';
 import ItemNav, { ItemSteps } from '../components/ItemNav.jsx';
+import { PageShortcuts } from '../../components/Shortcuts.jsx';
+import { keepScrollOnce } from '../../lib/navMemory.js';
+import { hasTrail, popTrail, pushTrail } from '../../lib/randomTrail.js';
 import PlayHistory from '../components/PlayHistory.jsx';
 import { useLeagueGames } from '../useLeagueGames.js';
 import { PLURAL, humanize } from '../constants.js';
@@ -29,7 +32,7 @@ export default function LandscapeDetail({ id, query = '' }) {
   let list = browseLandscapes(catalog.landscapes, filters), qs = landscapeFiltersToQuery(filters);
   if (!list.some(o => o.id === l.id)) { list = browseLandscapes(catalog.landscapes, DEFAULT_LANDSCAPE_FILTERS); qs = ''; }
   const nav = neighbors(list, l.id);
-  const random = () => { const o = pickRandom(list, l.id); if (o) window.location.hash = landscapeHref(o.id, qs); };
+  const random = () => { const o = pickRandom(list, l.id); if (o) { pushTrail('landscape', l.id); window.location.hash = landscapeHref(o.id, qs); } };
   const mine = new Set(l.mechanicIds);
   const related = catalog.landscapes.filter(o => o.id !== l.id).map(o => ({ o, shared: o.mechanicIds.filter(t => mine.has(t)) }))
     .filter(x => x.shared.length).sort((a, b) => b.shared.length - a.shared.length || a.o.name.localeCompare(b.o.name)).slice(0, 8);
@@ -52,6 +55,13 @@ export default function LandscapeDetail({ id, query = '' }) {
   );
   return (
     <>
+      <PageShortcuts bindings={[
+        ...(nav.prev ? [{ key: 'ArrowLeft', label: 'Previous landscape', run: () => { keepScrollOnce(); window.location.hash = landscapeHref(nav.prev.id, qs); } }] : []),
+        ...(nav.next ? [{ key: 'ArrowRight', label: 'Next landscape', run: () => { keepScrollOnce(); window.location.hash = landscapeHref(nav.next.id, qs); } }] : []),
+        { key: 'r', label: 'Random landscape', run: () => { keepScrollOnce(); random(); } },
+        ...(hasTrail('landscape', l.id) ? [{ key: 'r', shift: true, label: 'Back to the last random landscape', run: () => { const id = popTrail('landscape', l.id); if (id) { keepScrollOnce(); window.location.hash = landscapeHref(id, qs); } } }] : []),
+        { key: 'b', label: 'Back to the list', run: () => { window.location.hash = dominionHref('landscapes', null, qs); } },
+      ]} />
       <ItemNav backHref={dominionHref('landscapes', null, qs)} backLabel="← All landscapes" nav={nav} hrefFor={o => landscapeHref(o.id, qs)} onRandom={random} randomLabel="Random landscape" />
       <div className="dn-hero">
       <div className="head">

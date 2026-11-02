@@ -170,3 +170,28 @@ describe('handing a rolled kingdom to Game night', () => {
     expect(nightInProgress({ step: 'play' })).toBe(true); expect(nightInProgress({ step: 'kingdom' })).toBe(false); expect(nightInProgress({ step: 'players' })).toBe(false);
   });
 });
+
+import { withGameKingdom } from '../src/lib/night.js';
+import { kingdomItemsOf, playAgain } from '../src/dominion/playAgain.js';
+describe('"Play this kingdom again"', () => {
+  const catalog = { cardsById: new Map([['a:one', {}], ['a:two', {}]]), landscapesById: new Map([['a:way', {}]]) };
+  const game = { kingdom: [{ kind: 'card', id: 'a:one' }, { kind: 'card', id: 'a:gone' }, { kind: 'landscape', id: 'a:way', on_id: 'a:two' }] };
+  it('carries over only what the Collection still has, with a Trait\'s host', () => {
+    expect(kingdomItemsOf(game, catalog)).toEqual([{ kind: 'card', id: 'a:one' }, { kind: 'landscape', id: 'a:way', on: 'a:two' }]);
+    expect(kingdomItemsOf({}, catalog)).toEqual([]);
+  });
+  it('opens the Kingdom step with the cards placed by hand when players are seated, else the Players step', () => {
+    const items = [{ kind: 'card', id: 'a:one' }];
+    const a = withGameKingdom({ ...blankNight(), picked: ['Ann', 'Bob'], startedAt: 5 }, { items, sets: ['Base'], landscapes: [] });
+    expect(a).toMatchObject({ step: 'kingdom', kingdomMode: 'manual', handEdited: true, kingdom: items, rolledQ: null, startedAt: null });
+    expect(withGameKingdom(blankNight(), { items, sets: [], landscapes: [] }).step).toBe('players');
+  });
+  it('asks before replacing a game that is under way, and says whether it went ahead', () => {
+    const m = memory(); const ok = { ...blankNight(), step: 'play', picked: ['Ann', 'Bob'] }; saveNight(m, 'g', ok);
+    expect(playAgain({ game, catalog, gid: 'g', storage: m, confirmFn: () => false })).toBe(false);
+    expect(loadNight(m, 'g').step).toBe('play');                                  // refused: untouched
+    expect(playAgain({ game, catalog, gid: 'g', storage: m, confirmFn: () => true })).toBe(true);
+    expect(loadNight(m, 'g')).toMatchObject({ step: 'kingdom', kingdomMode: 'manual' });
+    expect(playAgain({ game: {}, catalog, gid: 'g', storage: m })).toBe(false);   // nothing logged: nothing to play
+  });
+});

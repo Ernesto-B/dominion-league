@@ -155,3 +155,12 @@ export function withRolledKingdom(st, { options, items, rolledQ, sets, landscape
 }
 // a game is under way (past the Kingdom step with a clock or scores): handing it a new kingdom would replace what was played
 export const nightInProgress = st => !['players', 'kingdom'].includes(st.step);
+
+/* "Play this kingdom again": the night as it becomes when a past game's kingdom is handed to Game night. The cards and landscapes are placed as if picked by hand (so the setup notes, Bane,
+   Platinum / Colony, Shelters, are worked out from the cards), players already seated stay, and the Kingdom step is open, or the Players step when fewer than two are seated yet. */
+export function withGameKingdom(st, { items, sets, landscapes }) {
+  return {
+    ...st, step: st.picked.length >= 2 ? 'kingdom' : 'players', kingdomMode: 'manual', randomDone: false, randomOriginal: null, handEdited: true, handBane: null, handOpen: false, draftSave: null,
+    kept: null, kingdom: items, kingdomTouched: true, rolled: null, rolledQ: null, sets, landscapes, startedAt: null, endedAt: null, minutesEdit: null,
+  };
+}

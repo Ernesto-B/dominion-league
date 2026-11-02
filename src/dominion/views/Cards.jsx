@@ -9,6 +9,7 @@ import { EmptyState } from '../components/States.jsx';
 import { hoverHandlers } from '../components/CardHover.jsx';
 import FilterSummary from '../components/FilterSummary.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
+import { PageShortcuts } from '../../components/Shortcuts.jsx';
 import { Chip, ExpansionBadge, FilterFold, ModeRow, TypePills, rowLink } from '../components/bits.jsx';
 import CostIcons, { CoinIcon, DebtIcon, PlainDebtIcon } from '../components/Cost.jsx';
 
@@ -50,6 +51,7 @@ export default function Cards({ query = '' }) {
 
   return (
     <>
+      <PageShortcuts bindings={rows.length ? [{ key: 'r', label: 'Open a random card', run: random }] : []} />
       <div className="head"><div><h1>Kingdom cards</h1><p className="lede">Every Kingdom card name in the collection. Search, then narrow by expansion, printed type, cost or recorded mechanic.</p></div></div>
 
       <form className="builder dn-filters" role="search" aria-label="Filter Kingdom cards" onSubmit={e => e.preventDefault()}>

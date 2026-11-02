@@ -2,6 +2,9 @@ import { useCatalog } from '../CatalogContext.jsx';
 import { cardHref, dominionHref, cardsFilterHref } from '../links.js';
 import { DEFAULT_CARD_FILTERS, browseCards, cardFiltersFromQuery, cardFiltersToQuery, neighbors, pickRandom } from '../filters.js';
 import ItemNav, { ItemSteps } from '../components/ItemNav.jsx';
+import { PageShortcuts } from '../../components/Shortcuts.jsx';
+import { keepScrollOnce } from '../../lib/navMemory.js';
+import { hasTrail, popTrail, pushTrail } from '../../lib/randomTrail.js';
 import PlayHistory from '../components/PlayHistory.jsx';
 import { useLeagueGames } from '../useLeagueGames.js';
 import { useState } from 'react';
@@ -38,7 +41,7 @@ export default function CardDetail({ id, query = '' }) {
   if (!list.some(c => c.id === card.id)) { list = browseCards(catalog.cards, DEFAULT_CARD_FILTERS, ctx); qs = ''; }
   const plays = lg?.stats ? lg.stats.piles.get(card.pileKey) : undefined;
   const nav = neighbors(list, card.id);
-  const random = () => { const c = pickRandom(list, card.id); if (c) window.location.hash = cardHref(c.id, qs); };
+  const random = () => { const c = pickRandom(list, card.id); if (c) { pushTrail('card', card.id); window.location.hash = cardHref(c.id, qs); } };
 
   // the recorded mechanics, as a list (beside the card's picture when it has one, else in a section of its own below)
   const mechList = (
@@ -60,6 +63,13 @@ export default function CardDetail({ id, query = '' }) {
   );
   return (
     <>
+      <PageShortcuts bindings={[
+        ...(nav.prev ? [{ key: 'ArrowLeft', label: 'Previous card', run: () => { keepScrollOnce(); window.location.hash = cardHref(nav.prev.id, qs); } }] : []),
+        ...(nav.next ? [{ key: 'ArrowRight', label: 'Next card', run: () => { keepScrollOnce(); window.location.hash = cardHref(nav.next.id, qs); } }] : []),
+        { key: 'r', label: 'Random card', run: () => { keepScrollOnce(); random(); } },
+        ...(hasTrail('card', card.id) ? [{ key: 'r', shift: true, label: 'Back to the last random card', run: () => { const id = popTrail('card', card.id); if (id) { keepScrollOnce(); window.location.hash = cardHref(id, qs); } } }] : []),
+        { key: 'b', label: 'Back to the list', run: () => { window.location.hash = dominionHref('cards', null, qs); } },
+      ]} />
       <ItemNav backHref={dominionHref('cards', null, qs)} backLabel="← All Kingdom cards" nav={nav} hrefFor={c => cardHref(c.id, qs)} onRandom={random} randomLabel="Random card" />
       <div className="dn-hero">
       <div className="head">

@@ -16,6 +16,8 @@ import { Chip } from '../dominion/components/bits.jsx';
 import { useCardImages, useCardView } from '../dominion/cardImages.js';
 import { cardHref, landscapeHref } from '../dominion/links.js';
 import { openPeek } from '../dominion/components/CardPeek.jsx';
+import PlayAgain from '../dominion/components/PlayAgain.jsx';
+import { PageShortcuts } from './Shortcuts.jsx';
 import { REQUIRE_RULES } from '../dominion/randomizer.js';
 
 /* One game, in depth: the Games page's view of a single game (#/games/<group>/<id>). The numbers come from lib/gameReport.js; this file only lays them out.
@@ -50,6 +52,12 @@ export default function GameReport({ game }) {
   const w = rep.when;
   return (
     <div className="gr">
+      <PageShortcuts bindings={[
+        ...(older ? [{ key: 'ArrowLeft', label: 'Older game', run: () => { window.location.hash = hashFor('games', gid, older.line); } }] : []),
+        ...(newer ? [{ key: 'ArrowRight', label: 'Newer game', run: () => { window.location.hash = hashFor('games', gid, newer.line); } }] : []),
+        ...TABS.map(([id, label], k) => ({ key: String(k + 1), label: `${label} tab`, run: () => setTab(id) })),
+        { key: 'b', label: 'All games', run: () => { window.location.hash = hashFor('games', gid); } },
+      ]} />
       <div className="gr-top">
         <a className="gr-back" href={hashFor('games', gid)}>← All games</a>
         <span className="gr-nav">
@@ -213,12 +221,15 @@ export function Kingdom({ rep, game, loaded }) {
       <KingdomFacts k={k} focus={focus} setFocus={setFocus} />
       <div className="gr-cardshead">
         <h4 className="gr-h">The cards, by expansion</h4>
-        {anyPictures && (
-          <div className="dn-mode" role="group" aria-label="How to show the cards">
-            <Chip pressed={cardView === 'faces'} onClick={() => setCardView('faces')}>Card faces</Chip>
-            <Chip pressed={cardView === 'list'} onClick={() => setCardView('list')}>List</Chip>
-          </div>
-        )}
+        <div className="gr-cardsacts">
+          {anyPictures && (
+            <div className="dn-mode" role="group" aria-label="How to show the cards">
+              <Chip pressed={cardView === 'faces'} onClick={() => setCardView('faces')}>Card faces</Chip>
+              <Chip pressed={cardView === 'list'} onClick={() => setCardView('list')}>List</Chip>
+            </div>
+          )}
+          <PlayAgain game={game} />
+        </div>
       </div>
       {/* a card with a picture is the card itself (tap for its page); one without keeps its chip, so the shelf is never missing anything */}
       <ShelfGroups entries={cards.map(({ r, c }) => ({ r, node: faces && picture(c.id)

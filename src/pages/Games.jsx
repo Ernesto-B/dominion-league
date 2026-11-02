@@ -8,21 +8,26 @@ import FilterFold from '../components/FilterFold.jsx';
 import GamesTable from '../components/GamesTable.jsx';
 import SetSelect from '../components/SetSelect.jsx';
 import { takeKingdomDraft } from '../dominion/kingdomDraft.js';
+import KingdomWall from '../components/KingdomWall.jsx';
+import { useWide } from '../useMedia.js';
 
 // the Add/Edit dialog (with the kingdom picker and its catalog code) is only needed once someone opens it
 const GameModal = lazy(() => import('../components/GameModal.jsx'));
 // the report on one game (a link to #/games/<group>/<id>): deeper than anything the list can show, so it loads on its own
 const GameReport = lazy(() => import('../components/GameReport.jsx'));
 
-const readView = () => { try { return localStorage.getItem('dl.gamesview') === 'table' ? 'table' : 'cards'; } catch { return 'cards'; } };
+const readView = () => { try { const v = localStorage.getItem('dl.gamesview'); return v === 'table' || v === 'kingdoms' ? v : 'cards'; } catch { return 'cards'; } };
 
 // Filters live at module level so they survive navigating away and back, as they always have.
 let saved = { season: 'all', type: 'all', player: 'all', set: 'all' };
 
 export default function Games() {
   const { D, me, enabledSets, arg, gid, hashFor } = usePage();
+  const hlGame = () => /^\?game=\d+$/.test(arg || '');
   const [gf, setGf] = useState(saved);
-  const [view, setViewState] = useState(readView);   // 'cards' | 'table' on a wide screen (ux 'redesign'); a phone always gets cards
+  const [view, setViewState] = useState(readView);   // 'cards' | 'table' | 'kingdoms'; a phone has no table, so it shows cards instead
+  const wide = useWide();
+  const shownView = (view === 'table' && !wide) || (view === 'kingdoms' && hlGame()) ? 'cards' : view;   // a link to one game (?game=) shows the list it is highlighted in
   const setView = v => { setViewState(v); try { localStorage.setItem('dl.gamesview', v); } catch { /* not remembered */ } };
   // null, or { editId, draft? } (editId null = a new game). Arriving from the Randomizer's "Use this kingdom" opens a new game already filled in.
   const [modal, setModal] = useState(() => { const d = me && me.is_admin ? takeKingdomDraft() : null; return d ? { editId: null, draft: d } : null; });
@@ -76,14 +81,15 @@ export default function Games() {
         <div className="controls" style={{ marginTop: 8 }}>{selects}</div>
       </FilterFold>
       <div className="gview-bar">
-        <p className="meta" role="status">{list.length} table{list.length === 1 ? '' : 's'}</p>
+        <p className="meta" role="status">{shownView === 'kingdoms' ? `${list.filter(g => g.kingdom && g.kingdom.length && g.n >= 2).length} kingdom${list.filter(g => g.kingdom && g.kingdom.length && g.n >= 2).length === 1 ? '' : 's'} logged in ` : ''}{list.length} table{list.length === 1 ? '' : 's'}</p>
         <div className="gview-switch" role="group" aria-label="Show games as">
-          <button type="button" aria-pressed={view === 'cards'} onClick={() => setView('cards')}>Cards</button>
-          <button type="button" aria-pressed={view === 'table'} onClick={() => setView('table')}>Table</button>
+          <button type="button" aria-pressed={shownView === 'cards'} onClick={() => setView('cards')}>Cards</button>
+          <button type="button" className="only-wide" aria-pressed={shownView === 'table'} onClick={() => setView('table')}>Table</button>
+          <button type="button" aria-pressed={shownView === 'kingdoms'} onClick={() => setView('kingdoms')}>Kingdoms</button>
         </div>
       </div>
       {modal && <Suspense fallback={null}><GameModal key={String(modal.editId)} editId={modal.editId} draft={modal.draft} onClose={() => setModal(null)} /></Suspense>}
-      {list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} stateKey={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} games={list} highlight={hl ? hl.line : undefined} mark={gf.player !== 'all' ? gf.player : null} view={view} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
+      {list.length && shownView === 'kingdoms' ? <KingdomWall key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}`} games={list} /> : list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} stateKey={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} games={list} highlight={hl ? hl.line : undefined} mark={gf.player !== 'all' ? gf.player : null} view={shownView === 'table' ? 'table' : 'cards'} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
     </>
   );
 }
