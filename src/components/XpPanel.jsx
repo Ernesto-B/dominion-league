@@ -17,7 +17,7 @@ export default function XpPanel({ name }) {
         <span className="xp-bar mecard-bar" role="img" aria-label={`${pct}% of the way to level ${x.level + 1}`}><i style={{ width: pct + '%' }}></i></span>
         <span className="xp-txt"><b>{x.total.toLocaleString()} XP</b> · {x.need.toLocaleString()} to level {x.level + 1}</span>
       </div>
-      <p className="meta xp-last">Last game <a href={hashFor('games', gid, last.line)}>{short(last.date)}</a>: <b>+{last.xp} XP</b> — {lastParts.map(([k, v]) => `${partLabel(k)} ${v}`).join(', ')}.</p>
+      <p className="meta xp-last">Last game <a href={hashFor('games', gid) + '?game=' + last.line} title="Show that game in the Games page">{short(last.date)}</a>: <b>+{last.xp} XP</b> — {lastParts.map(([k, v]) => `${partLabel(k)} ${v}`).join(', ')}.</p>
       <details className="xp-more">
         <summary>Where your XP comes from</summary>
         <ul>{rows.map(([k, v]) => <li key={k} className={v ? undefined : 'none'}><span>{partLabel(k)}</span><b>{v.toLocaleString()}</b></li>)}</ul>

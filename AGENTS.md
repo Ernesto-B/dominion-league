@@ -99,9 +99,9 @@ the change is genuinely about the math/model itself.
   **unconditional** even when the stat is 0 (a tile that hides its icon at zero looks broken, not
   clean — this was a real bug, fixed once already).
 - **Every game has a permanent id** — `games.id` in the database, exposed as `game.line` everywhere
-  in the model. A link to one game is `hashFor('games', gid, game.line)` → `#/games/<group>/<id>`,
-  which opens that game's report (see the game report note below). Records and Players link their dates this way; do the same for any
-  new "this game" mention. Engine records that point at a game must carry `line` (Elo gain/drop do).
+  in the model. A link to one game's REPORT is `hashFor('games', gid, game.line)` → `#/games/<group>/<id>` (see the game report note below), used by the
+  "Full game report" buttons and the report's Older / Newer. A DATE that mentions a game (Records, Players, badges, the Insights and card pages' play history) opens the Games list with that game
+  highlighted instead: `hashFor('games', gid) + '?game=' + game.line`. Do the same for any new "this game" mention. Engine records that point at a game must carry `line` (Elo gain/drop do).
 - **Group scoping: each group is a fully separate league, not a filtered view of one
   shared dataset.** `buildLeague()` in `src/lib/league.js` calls `Eng.compute()` once per group the
   viewer belongs to, each time with only that group's players/games/seasons —

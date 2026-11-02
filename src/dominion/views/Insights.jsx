@@ -61,7 +61,7 @@ function Loaded({ head, lg }) {
               <td className="l dn-hide-sm"><TypePills types={[...new Set(members.flatMap(c => c.types))]} /></td>
               <td className="l"><ExpansionBadge name={r.expansion} size={16} /></td>
               <td className="edge">{r.games}</td>
-              <td className="l dn-hide-sm"><a href={lg.hashFor('games', lg.gid, r.last.line)} title="Open that game">{r.last.date}</a></td>
+              <td className="l dn-hide-sm"><a href={lg.hashFor('games', lg.gid) + '?game=' + r.last.line} title="Show that game in the Games page">{r.last.date}</a></td>
             </tr>
             );
           })}</tbody>

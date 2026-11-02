@@ -99,3 +99,17 @@ describe('hovering a table row', () => {
     expect(typeof hoverHandlers('a:b').onMouseEnter).toBe('function');
   });
 });
+
+import { renderToStaticMarkup } from 'react-dom/server';
+import { KingdomChip } from '../../src/dominion/components/KingdomChips.jsx';
+import { realCatalog } from './fixtures.js';
+describe('a plain chip (Game night)', () => {
+  const cat = realCatalog(), village = cat.cardsById.get('dominion-base-game:village');
+  const r = { kind: 'card', id: village.id, obj: village };
+  it('opens the enlarged card when it has a catalog to open it with, and stays plain text otherwise', () => {
+    const tap = renderToStaticMarkup(<KingdomChip r={r} plain expansion catalog={cat} />);
+    expect(tap).toContain('role="button"'); expect(tap).toContain('show the card larger'); expect(tap).toContain('tap');
+    const plain = renderToStaticMarkup(<KingdomChip r={r} plain expansion />);
+    expect(plain).not.toContain('role="button"');
+  });
+});

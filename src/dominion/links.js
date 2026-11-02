@@ -12,11 +12,11 @@ export const cardsFilterHref = patch => dominionHref('cards', null, cardFiltersT
 export const landscapesFilterHref = patch => dominionHref('landscapes', null, landscapeFiltersToQuery({ ...DEFAULT_LANDSCAPE_FILTERS, ...patch }));
 
 export const VIEWS = [
-  { view: 'overview', label: 'Overview', href: dominionHref() },
-  { view: 'cards', label: 'Kingdom cards', href: dominionHref('cards') },
-  { view: 'landscapes', label: 'Landscapes', href: dominionHref('landscapes') },
-  { view: 'randomizer', label: 'Randomizer', href: dominionHref('randomizer') },
-  { view: 'insights', label: 'Insights', href: dominionHref('insights') },
+  { view: 'overview', label: 'Overview', hint: 'The collection at a glance', href: dominionHref() },
+  { view: 'cards', label: 'Kingdom cards', hint: 'Browse and filter every card', href: dominionHref('cards') },
+  { view: 'landscapes', label: 'Landscapes', hint: 'Events, Projects, Ways and more', href: dominionHref('landscapes') },
+  { view: 'randomizer', label: 'Randomizer', hint: 'Roll a kingdom', href: dominionHref('randomizer') },
+  { view: 'insights', label: 'Insights', hint: 'What our group plays', href: dominionHref('insights') },
 ];
 
 // `arg` is everything after "dominion/" in the hash: '' | 'cards' | 'cards/<id>' | 'landscapes' | 'landscapes/<id>' (old: 'stats' → Overview)

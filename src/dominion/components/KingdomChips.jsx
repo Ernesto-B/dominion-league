@@ -2,6 +2,7 @@ import { cardHref, landscapeHref } from '../links.js';
 import { displayName, primaryType, shelfOrder } from '../kingdom.js';
 import { expansionMeta } from '../constants.js';
 import { hoverHandlers } from './CardHover.jsx';
+import { openPeek } from './CardPeek.jsx';
 import CostIcons from './Cost.jsx';
 import { ExpansionBadge } from './bits.jsx';
 
@@ -9,7 +10,8 @@ import { ExpansionBadge } from './bits.jsx';
    type), or a landscape's name (edged in its landscape colour). A link to its Collection page, unless `onRemove` is given
    (the Add Game dialog), where it is plain text with a remove button (and, on a phone, a ⌄ that opens the card's text when `onPeek` is given). `expansion` puts the expansion's icon first, for a table finding the card in its boxes. `dim` greys it out (a filter that does not pick it). `r` is a resolveKingdom() entry. */
 // `compact`: a smaller chip (the game report's Kingdom tab, where the shelf row already names the expansion), about the size of a card-type pill
-export function KingdomChip({ r, onRemove, onPeek, plain = false, expansion = false, dim = false, compact = false }) {
+// `catalog` (with `plain`): a tap or click enlarges the card instead of nothing (a plain chip never leaves the page; the enlarge dialog has the link to the card's page)
+export function KingdomChip({ r, onRemove, onPeek, plain = false, expansion = false, dim = false, compact = false, catalog = null }) {
   if (r.missing) return <span className="dn-kchip dn-kchip-missing" title="No longer in the collection">{r.id}</span>;
   const { obj } = r;
   const tone = r.kind === 'card' ? primaryType(obj) : obj.type;
@@ -23,6 +25,12 @@ export function KingdomChip({ r, onRemove, onPeek, plain = false, expansion = fa
     </>
   );
   const hover = hoverHandlers(obj.id);   // the card's picture beside the mouse, on a desktop (components/CardHover.jsx)
+  if (plain && catalog) {
+    const show = () => openPeek(catalog, r.kind === 'card'
+      ? { kind: 'card', s: { key: obj.pileKey, name: displayName(obj), expansion: obj.expansion, cards: [obj] } }
+      : { kind: 'landscape', l: { landscape: obj } });
+    return <span className={cls + ' tap'} role="button" tabIndex={0} aria-label={`${displayName(obj)}: show the card larger`} onClick={show} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(); } }} {...hover}>{inner}</span>;
+  }
   if (plain) return <span className={cls} {...hover}>{inner}</span>;   // text only: for places where a tap must not leave the page (the Game night flow)
   if (onRemove) return (
     <span className={cls} {...hover}>{inner}{onPeek && <button type="button" className="dn-kchip-more" aria-label={`Show the text of ${displayName(obj)}`} onClick={onPeek}>⌄</button>}<button type="button" className="dn-kchip-x" aria-label={`Remove ${displayName(obj)}`} title={`Remove ${displayName(obj)}`} onClick={onRemove}>×</button></span>

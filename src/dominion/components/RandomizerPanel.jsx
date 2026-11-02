@@ -103,7 +103,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
 
           <ul className={'dn-rzgrid' + (faces ? ' faces' : '')} aria-label="Kingdom cards">
             {state.slots.map((s, i) => (faces && faceOf(s) ? (
-              <FaceTile key={s.key} id={faceOf(s).id} name={s.name} caption={s.cards.length > 1 ? s.name : null} fresh={fresh === s.key} locked={locked.has(s.key)}
+              <FaceTile key={s.key} id={faceOf(s).id} name={s.name} caption={null} fresh={fresh === s.key} locked={locked.has(s.key)}
                 onLock={() => setLocked(l => { const n = new Set(l); n.has(s.key) ? n.delete(s.key) : n.add(s.key); return n; })} onReroll={() => swapSlot(i)} onPeek={() => openPeek(catalog, { kind: 'card', s, face: faceOf(s).id })} />
             ) : (
               <Tile key={s.key} fresh={fresh === s.key} tone={primaryType(s.cards.find(c => primaryType(c) === 'Attack') || s.cards[0])}
@@ -156,11 +156,11 @@ function FaceTile({ id, name, caption, fresh, locked, onLock, onReroll, onPeek }
   return (
     <li className={'dn-rzface' + (fresh ? ' fresh' : '') + (locked ? ' locked' : '')}>
       <CardFace id={id} name={name} onOpen={onPeek} />
-      {caption && <p className="dn-rzface-cap meta">{caption}</p>}
       <div className="dn-rztile-btns">
         <button type="button" className="ghost" aria-pressed={locked} onClick={onLock} title={locked ? `Unlock ${name}` : `Keep ${name} when you roll again`}>{locked ? 'Locked' : 'Lock'}</button>
         <button type="button" className="ghost" onClick={onReroll} disabled={locked} title={locked ? 'Unlock it to re-roll' : `Swap ${name} for another card`}>Re-roll</button>
       </div>
+      {caption && <p className="dn-rzface-cap meta">{caption}</p>}   {/* under the buttons, so every card's buttons line up (only a Trait's "on <card>" has one) */}
     </li>
   );
 }

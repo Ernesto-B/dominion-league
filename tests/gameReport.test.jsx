@@ -195,3 +195,14 @@ describe('the Kingdom tab with pictures', () => {
     _setManifest(null);
   });
 });
+
+describe('class names in the report', () => {
+  it('the corner sash on a new card does not share a class with the Rewards list (a shared name once rotated the whole Rewards tab)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+    const rules = [...css.matchAll(/(?:^|\})\s*([^{}@]*\.gr-new\b(?!tag|chip)[^{}]*)\{([^}]*)\}/g)].map(m => m[2]);
+    expect(rules.length).toBeGreaterThan(0);
+    rules.forEach(r => { expect(r).not.toMatch(/rotate|position:\s*absolute/); });   // the Rewards list is a plain grid
+    expect(css).toMatch(/\.gr-newtag\{[^}]*rotate\(45deg\)/);
+  });
+});

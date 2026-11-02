@@ -109,9 +109,9 @@ export default function Overview({ query = '' }) {
         <Section title="Landscapes" id="st-land">
           <div className="builder">
             <p className="meta" style={{ marginTop: 0 }}>By type</p>
-            <Waffle label="Landscape designs per type" items={s.landscapeByType.map(t => ({ key: t.key, label: PLURAL[t.key] || t.key, value: t.count, href: landscapesFilterHref({ types: [t.key] }) }))} />
+            <Waffle label="Landscape designs per type" unit="landscapes" items={s.landscapeByType.map(t => ({ key: t.key, label: PLURAL[t.key] || t.key, value: t.count, href: landscapesFilterHref({ types: [t.key] }) }))} />
             <p className="meta">By expansion</p>
-            <Segments label="Landscape designs per expansion" items={s.landscapeByExpansion.map(x => { const e = s.byExpansion.find(b => b.name === x.key); return { key: x.key, label: e ? e.label : x.key, value: x.count, icon: e?.icon && <SetIcon name={e.icon} size={18} /> }; })} />
+            <Segments label="Landscape designs per expansion" unit="landscapes" items={s.landscapeByExpansion.map(x => { const e = s.byExpansion.find(b => b.name === x.key); return { key: x.key, label: e ? e.label : x.key, value: x.count, icon: e?.icon && <SetIcon name={e.icon} size={18} />, href: landscapesFilterHref({ expansions: [x.key] }) }; })} />
           </div>
           <p className="note">{s.landscapes} landscape designs, one card each. Not Kingdom cards.</p>
         </Section>

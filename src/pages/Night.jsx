@@ -266,8 +266,8 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
             {items.length ? (
               <>
                 <p className="meta" style={{ margin: '0 0 6px' }}>Tonight’s kingdom</p>
-                <div className="dn-kchips">{kingdomCards.map(r => <KingdomChip key={r.id} r={r} plain expansion />)}</div>
-                {kingdomLands.length > 0 && <div className="dn-kchips">{kingdomLands.map(r => <KingdomChip key={r.id} r={r} plain expansion />)}</div>}
+                <div className="dn-kchips">{kingdomCards.map(r => <KingdomChip key={r.id} r={r} plain expansion catalog={catalog} />)}</div>
+                {kingdomLands.length > 0 && <div className="dn-kchips">{kingdomLands.map(r => <KingdomChip key={r.id} r={r} plain expansion catalog={catalog} />)}</div>}
                 {setupNow && <RolledNotes setup={setupNow} />}
                 <KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />
               </>

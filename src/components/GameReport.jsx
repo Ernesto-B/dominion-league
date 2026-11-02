@@ -222,7 +222,7 @@ export function Kingdom({ rep, game, loaded }) {
       </div>
       {/* a card with a picture is the card itself (tap for its page); one without keeps its chip, so the shelf is never missing anything */}
       <ShelfGroups entries={cards.map(({ r, c }) => ({ r, node: faces && picture(c.id)
-        ? <a key={r.id} className={'gr-face' + (hit(c) ? '' : ' dim')} href={cardHref(c.id)} title={c.name} onClick={e => enlarge(e, { kind: 'card', s: { key: c.pileKey, name: c.name, expansion: c.expansion, cards: [c] } })}><CardFace id={c.id} name={c.name} />{fresh.has(c.id) && <span className="gr-new">New</span>}</a>
+        ? <a key={r.id} className={'gr-face' + (hit(c) ? '' : ' dim')} href={cardHref(c.id)} title={c.name} onClick={e => enlarge(e, { kind: 'card', s: { key: c.pileKey, name: c.name, expansion: c.expansion, cards: [c] } })}><CardFace id={c.id} name={c.name} />{fresh.has(c.id) && <span className="gr-newtag">New</span>}</a>
         : <KingdomChip key={r.id} r={r} compact dim={!hit(c)} /> }))} />
       {lands.length > 0 && <><h4 className="gr-h">Landscapes</h4><ShelfGroups entries={lands.map(({ r }) => ({ r, node: faces && picture(r.id)
         ? <a key={r.id} className={'gr-face wide' + (focus ? ' dim' : '')} href={landscapeHref(r.id)} title={r.obj.name} onClick={e => enlarge(e, { kind: 'landscape', l: { landscape: r.obj } })}><CardFace id={r.id} name={r.obj.name} /></a>
@@ -308,7 +308,7 @@ function XpParts({ p }) {
 }
 
 export function Rewards({ rep, me, loaded }) {
-  const { gid, hashFor } = usePage();
+  const { gid, hashFor, catalog } = usePage();
   const withXp = rep.players.filter(p => p.xp);
   const levels = withXp.filter(p => p.xp.levelUp), many = new Set([...levels.map(p => p.name), ...rep.players.filter(p => p.badges.length).map(p => p.name)]).size > 1;
   const anyNew = rep.players.some(p => p.newCards.length || p.newLandscapes.length);
@@ -340,7 +340,7 @@ export function Rewards({ rep, me, loaded }) {
             {rep.players.filter(p => p.newCards.length || p.newLandscapes.length).map(p => (
               <li key={p.name}>
                 <b>{p.name}</b> <span className="meta">{p.newCards.length} card{p.newCards.length === 1 ? '' : 's'}{p.newLandscapes.length ? `, ${p.newLandscapes.length} landscape${p.newLandscapes.length === 1 ? '' : 's'}` : ''}</span>
-                <div className="dn-kchips">{[...p.newCards.map(c => ({ kind: 'card', id: c.id, obj: c })), ...p.newLandscapes.map(l => ({ kind: 'landscape', id: l.id, obj: l }))].map(r => <KingdomChip key={r.kind + r.id} r={r} expansion plain />)}</div>
+                <div className="dn-kchips">{[...p.newCards.map(c => ({ kind: 'card', id: c.id, obj: c })), ...p.newLandscapes.map(l => ({ kind: 'landscape', id: l.id, obj: l }))].map(r => <KingdomChip key={r.kind + r.id} r={r} expansion plain catalog={catalog} />)}</div>
               </li>
             ))}
           </ul>

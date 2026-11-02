@@ -8,6 +8,7 @@ import { displayName, primaryType } from '../kingdom.js';
 import { Setup } from './RandomizerPanel.jsx';
 import { openPeek } from './CardPeek.jsx';
 import CardFace from './CardFace.jsx';
+import { hoverHandlers } from './CardHover.jsx';
 import { slotFaceId, useCardImages, useCardView } from '../cardImages.js';
 
 /* Pick the kingdom in turns. One device is enough: pass it round, or let one person tap each player's choice.
@@ -98,6 +99,8 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
 
   // after a finished draft, cards taken out by hand are struck through where they were drafted, with the card typed in beside them
   const swaps = value.finished && value.original ? handSwaps(value.original, items.filter(i => i.kind === 'card').map(i => i.id)) : null;
+  // a tap or click on a pick or a ban enlarges that card (its dialog links to the card's page)
+  const tapToEnlarge = slot => ({ role: 'button', tabIndex: 0, 'aria-label': `${slot.name}: show the card larger`, onClick: () => openPeek(catalog, { kind: 'card', s: slot }), onKeyDown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPeek(catalog, { kind: 'card', s: slot }); } } });
   const nameOf = id => { const c = catalog.cardsById.get(id); return c ? displayName(c) : id; };
   const seatsSummary = (
     <ul className="dn-draft-picks">{seats.map((n, si) => {
@@ -107,12 +110,12 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
       return (
         <li key={n} className={'dn-draft-seat' + (!value.finished && n === turn ? ' now' : '')} style={{ '--seat': seatColor(si) }}>
           <p className="dn-draft-seat-head"><b>{n}</b><span className="meta">{!value.finished && n === turn ? `${phase === 'ban' ? 'banning' : 'picking'} now · ` : ''}{mine.length} picked{value.finished ? '' : left ? `, ${left} to go` : ', done'}</span></p>
-          {bans.map(b => (b.skipped ? <p key={b.key} className="dn-draft-ban skipped"><span className="n">Ban</span><em>skipped</em></p> : <p key={b.key} className="dn-draft-ban"><span className="n">Ban</span><ExpansionBadge name={b.expansion} size={16} iconOnly />{b.name}</p>))}
+          {bans.map(b => (b.skipped ? <p key={b.key} className="dn-draft-ban skipped"><span className="n">Ban</span><em>skipped</em></p> : <p key={b.key} className="dn-draft-ban tap" {...hoverHandlers(() => slotFaceId(b))} {...tapToEnlarge(b)}><span className="n">Ban</span><ExpansionBadge name={b.expansion} size={16} iconOnly />{b.name}</p>))}
           {mine.length ? (
             <ol className="dn-draft-mine">{mine.map(m => (
               swaps && swaps.removed.includes(m.slot.cards[0].id)
-                ? <li key={m.key} className="replaced"><span className="n">#{m.n}</span><ExpansionBadge name={m.slot.expansion} size={16} iconOnly /><s>{m.slot.name}</s>{swaps.replacedBy.has(m.slot.cards[0].id) ? <b className="dn-swap-in" title="Picked by hand instead">→ {nameOf(swaps.replacedBy.get(m.slot.cards[0].id))}</b> : <em className="meta"> removed</em>}</li>
-                : <li key={m.key} className={'t-' + primaryType(m.slot.cards.find(c => primaryType(c) === 'Attack') || m.slot.cards[0]).toLowerCase()}><span className="n">#{m.n}</span><ExpansionBadge name={m.slot.expansion} size={16} iconOnly />{m.slot.name}</li>
+                ? <li key={m.key} className="replaced" {...hoverHandlers(() => slotFaceId(m.slot))} {...tapToEnlarge(m.slot)}><span className="n">#{m.n}</span><ExpansionBadge name={m.slot.expansion} size={16} iconOnly /><s>{m.slot.name}</s>{swaps.replacedBy.has(m.slot.cards[0].id) ? <b className="dn-swap-in" title="Picked by hand instead">→ {nameOf(swaps.replacedBy.get(m.slot.cards[0].id))}</b> : <em className="meta"> removed</em>}</li>
+                : <li key={m.key} className={'tap t-' + primaryType(m.slot.cards.find(c => primaryType(c) === 'Attack') || m.slot.cards[0]).toLowerCase()} {...hoverHandlers(() => slotFaceId(m.slot))} {...tapToEnlarge(m.slot)}><span className="n">#{m.n}</span><ExpansionBadge name={m.slot.expansion} size={16} iconOnly />{m.slot.name}</li>
             ))}</ol>
           ) : <p className="meta" style={{ margin: 0 }}>Nothing yet</p>}
         </li>

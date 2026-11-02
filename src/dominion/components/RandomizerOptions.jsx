@@ -1,4 +1,4 @@
-import { CARD_COUNTS, COST_SPREADS, REQUIRE_RULES, ruleIsExact } from '../randomizer.js';
+import { CARD_COUNTS, COST_SPREADS, REQUIRE_RULES, THEMES, THEME_KEYS, ruleIsExact } from '../randomizer.js';
 import { toggle } from '../filters.js';
 import { PLURAL } from '../constants.js';
 import { resolveKingdom } from '../kingdom.js';
@@ -16,6 +16,7 @@ const itemsOf = ids => ids.map(id => ({ kind: 'card', id }));
    `opts` is a full options object (see DEFAULT_OPTIONS) and `setOpts(patch)` merges a change into it. */
 export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = false, foldExpansions = false, cardCount = null }) {
   const attacksOn = opts.maxAttacks !== 0;
+  const themes = opts.themes || [];   // a night saved before themes existed has none
   const listsOn = opts.include.length + opts.exclude.length;
   const tagRules = Object.entries(REQUIRE_RULES).filter(([k]) => !ruleIsExact(k)), costRules = Object.entries(REQUIRE_RULES).filter(([k]) => ruleIsExact(k));
   const ruleChip = ([k, r]) => <Chip key={k} pressed={opts.require.includes(k)} label={r.coins != null ? `A card costing ${r.coins} coins` : r.atLeast != null ? `A card costing ${r.atLeast} coins or more` : undefined} onClick={() => setOpts({ require: toggle(opts.require, k) })}>{r.coins != null ? <CoinIcon coins={r.coins} size={24} /> : r.atLeast != null ? <><CoinIcon coins={r.atLeast} size={24} />+</> : r.chip || r.box || r.label}</Chip>;
@@ -93,6 +94,19 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
             <ItemSearch catalog={catalog} kind="card" taken={[...itemsOf(opts.include), ...itemsOf(opts.exclude)]} label="Add a card" onAdd={x => setOpts({ exclude: [...opts.exclude, x.obj.id] })} />
           </div>
         </div>
+      </details>
+
+      <details className="dn-mech dn-rz-details">
+        <summary>Advanced{themes.length ? <span className="meta"> · {themes.length} on</span> : null}</summary>
+        <p className="meta dn-rz-listh" style={{ marginTop: 8 }}>Build the kingdom around (pick any)</p>
+        <ul className="dn-themes">
+          {THEME_KEYS.map(k => (
+            <li key={k}>
+              <Chip pressed={themes.includes(k)} onClick={() => setOpts({ themes: toggle(themes, k) })}>{THEMES[k].chip}</Chip>
+              <span className="meta">{THEMES[k].hint}</span>
+            </li>
+          ))}
+        </ul>
       </details>
     </>
   );

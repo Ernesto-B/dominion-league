@@ -321,7 +321,6 @@ a.pl{vertical-align:middle}
 
 /* ---------- Dominion collection (src/dominion). All rules are dn- prefixed. Panels reuse .builder / .tablewrap /
    .stats, so they pick up the frosted-glass treatment below like every other page. ---------- */
-.dn-tabs{margin:0 0 22px}
 .dn-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .dn-chips{display:flex;flex-wrap:wrap;gap:6px}
 .dn-chip{font:500 14px var(--text);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:4px 12px;min-height:0;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
@@ -557,10 +556,10 @@ a.dn-kchip:hover{border-color:var(--muted)}
 .dn-lol-stem i{position:absolute;right:-7px;top:-6px;width:14px;height:14px;border-radius:50%;background:var(--felt)}
 .dn-seg{display:grid;gap:12px}
 .dn-seg-bar{display:flex;height:22px;border-radius:6px;overflow:hidden;gap:2px}
-.dn-seg-bar span{display:block;min-width:3px}
+.dn-seg-bar span{display:block;min-width:3px;transition:opacity .15s ease,transform .15s ease;transform-origin:center}
 .dn-waffle-wrap{display:grid;gap:14px}
 .dn-waffle{display:grid;grid-template-columns:repeat(auto-fill,minmax(13px,1fr));gap:3px;max-width:100%}
-.dn-waffle span{aspect-ratio:1;border-radius:2px}
+.dn-waffle span{aspect-ratio:1;border-radius:2px;transition:opacity .15s ease,filter .15s ease}
 .dn-cols{list-style:none;margin:0;padding:0;display:flex;align-items:stretch;gap:6px;height:230px}
 .dn-cols li{flex:1;min-width:0;display:grid;grid-template-rows:auto 1fr auto;justify-items:center;gap:6px;font-size:13px}
 .dn-col-n{font-size:12px;font-variant-numeric:tabular-nums}
@@ -1499,8 +1498,9 @@ main h2::before{content:'';display:inline-block;width:8px;height:8px;margin:0 10
 .gr-xp-h{display:flex;align-items:baseline;gap:12px;margin:0 0 8px}.gr-xp-h span{font-weight:800;color:var(--brass)}.gr-xp-h small{margin-left:auto;color:var(--muted)}
 .gr-xp ul{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13.5px}
 
-.gr-new{position:absolute;z-index:2;top:8px;right:-17px;width:56px;padding:1px 0;text-align:center;transform:rotate(45deg);background:var(--brass);color:#140d02;font:800 12px var(--text);letter-spacing:.06em;text-transform:uppercase;box-shadow:0 2px 6px rgba(0,0,0,.55);pointer-events:none}
-@media (max-width:720px){.gr-new{top:7px;right:-15px;width:50px;font-size:11px}}
+.gr-new{list-style:none;margin:0;padding:0;display:grid;gap:10px}   /* the Rewards tab's list of a player's new cards and landscapes */
+.gr-newtag{position:absolute;z-index:2;top:8px;right:-17px;width:56px;padding:1px 0;text-align:center;transform:rotate(45deg);background:var(--brass);color:#140d02;font:800 12px var(--text);letter-spacing:.06em;text-transform:uppercase;box-shadow:0 2px 6px rgba(0,0,0,.55);pointer-events:none}
+@media (max-width:720px){.gr-newtag{top:7px;right:-15px;width:50px;font-size:11px}}
 .dn-kchips:has(>a.gr-face){gap:12px 14px}
 @media (max-width:720px){
   /* the highlights become one swipeable row, so they don't push the report a screen down */
@@ -1662,3 +1662,45 @@ a.gr-face{position:relative}
 .dn-hoverpic .dn-face{border-radius:6%/3.8%}
 @media (prefers-reduced-motion:no-preference){.dn-hoverpic{animation:dn-hoverin .12s ease-out}@keyframes dn-hoverin{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}}
 .dn-emptyrow td{padding:18px 16px;color:var(--muted);font-style:italic}
+
+/* ---------- The Collection's tab bar (components in dominion/DominionPage.jsx) ---------- */
+.dn-tabbar{display:flex;gap:2px;margin:0 0 24px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px)}
+.dn-tabbar::-webkit-scrollbar{display:none}
+.dn-tabbar a{flex:none;display:flex;flex-direction:column;gap:3px;padding:12px 20px 10px;border-bottom:3px solid transparent;margin-bottom:-1px;text-decoration:none;color:var(--muted);white-space:nowrap;transition:color .15s ease,border-color .15s ease}
+.dn-tabbar a b{font:700 17px var(--display,var(--text));letter-spacing:.01em}
+.dn-tabbar a small{font-size:12.5px;opacity:.85}
+.dn-tabbar a:hover{color:var(--ink)}
+.dn-tabbar a[aria-current=true]{color:var(--ink);border-bottom-color:var(--brass)}
+.dn-tabbar a[aria-current=true] small{color:var(--brass);opacity:1}
+@media (min-width:721px){.dn-tabbar{top:68px}}   /* under the sticky site header */
+/* a phone: no sideways scrolling, all five at once: a block of two rows (three across, then two wider), each a big tap target; the open one is filled and underlined */
+@media (max-width:720px){
+  .dn-tabbar{display:grid;grid-template-columns:repeat(6,1fr);gap:0;overflow:visible;position:static;border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:20px}
+  .dn-tabbar a{grid-column:span 2;align-items:center;justify-content:center;min-height:52px;padding:10px 6px 8px;margin:0;text-align:center;white-space:normal;border-bottom:3px solid transparent;border-right:1px solid var(--line)}
+  .dn-tabbar a:nth-child(n+4){grid-column:span 3;border-top:1px solid var(--line)}
+  .dn-tabbar a:nth-child(3),.dn-tabbar a:nth-child(5){border-right:0}
+  .dn-tabbar a[aria-current=true]{background:color-mix(in srgb,var(--brass) 14%,transparent)}
+  .dn-tabbar a small{display:none}
+  .dn-tabbar a b{font-size:15px;line-height:1.15}
+}
+@media (prefers-reduced-motion:reduce){.dn-tabbar a{transition:none}}
+
+/* Randomizer > Advanced: each theme is a chip with one line saying what it does (there is no hover on a phone) */
+.dn-themes{list-style:none;margin:6px 0 4px;padding:0;display:grid;gap:10px}
+.dn-themes li{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dn-themes li>.meta{flex:1 1 260px;font-size:13.5px}
+
+/* Waffle and Segments on hover (components/charts.jsx useHot): the kind you point at lights up, the rest step back, its legend row is highlighted and a line above names it */
+.dn-chart-read{display:flex;align-items:center;gap:8px;min-height:1.5em;margin:0;font-size:14px;color:var(--muted)}
+.dn-chart-read i{width:12px;height:12px;border-radius:3px;flex:none}
+.dn-chart-read b{color:var(--ink)}
+.dn-waffle.hot span:not(.on),.dn-seg-bar.hot span:not(.on){opacity:.18}
+.dn-waffle span.on{filter:brightness(1.18)}   /* lit by brightness, never by growing: the squares are only 3px apart and a bigger one runs into its neighbours */
+.dn-seg-bar span.on{transform:scaleY(1.35)}
+.dn-waffle-wrap .dn-legend li,.dn-seg .dn-legend li{padding:3px 6px;margin:0 -6px;border-radius:6px;transition:background .15s}
+.dn-waffle-wrap .dn-legend li.on,.dn-seg .dn-legend li.on{background:color-mix(in srgb,var(--ink) 10%,transparent)}
+@media (prefers-reduced-motion:reduce){.dn-waffle span,.dn-seg-bar span,.dn-waffle-wrap .dn-legend li,.dn-seg .dn-legend li{transition:none}.dn-seg-bar span.on{transform:none}}
+/* chips and rows that open the enlarged card on a tap or click */
+.dn-kchip.tap,.dn-draft-mine li.tap,.dn-draft-ban.tap{cursor:pointer}
+.dn-kchip.tap:focus-visible,.dn-draft-mine li.tap:focus-visible,.dn-draft-ban.tap:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.dn-draft-mine li.tap:active,.dn-kchip.tap:active{opacity:.75}

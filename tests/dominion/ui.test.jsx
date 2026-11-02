@@ -579,8 +579,10 @@ describe('routing inside the section', () => {
   it('an unknown path renders a not-found page, not an error', () => { expect(text(render('bogus'))).toMatch(/Not found/); });
   it('the section nav marks the right tab, including for a card\'s detail page', () => {
     const h = renderToStaticMarkup(<DominionPage arg="cards/intrigue%3Acourtyard" />);
-    expect(h).toContain('role="navigation"'); expect(h).toMatch(/aria-current="true"[^>]*>Kingdom cards</);
-    for (const l of ['Overview', 'Kingdom cards', 'Landscapes']) expect(h).toContain(`>${l}<`);
+    expect(h).toContain('role="navigation"'); expect(h).toMatch(/aria-current="true"[^>]*><b>Kingdom cards<\/b>/);   // the open tab is the Kingdom cards one
+    expect(h.match(/aria-current="true"/g).length).toBe(1);                      // and only that one
+    for (const l of ['Overview', 'Kingdom cards', 'Landscapes', 'Randomizer', 'Insights']) expect(h).toContain(`<b>${l}</b>`);
+    expect(h).toContain('Roll a kingdom');   // each tab says what it is
     expect(h).not.toContain('>Statistics<');
   });
   it('shows a loading state while the catalog loads (the nav is already there)', () => {
@@ -692,5 +694,26 @@ describe('the related-cards table on a card page', () => {
     expect(html).toContain('Cards recorded with the same mechanics');
     expect(html).not.toContain('No other card shares 2 or more');
     expect(html).toMatch(/<span class="meta">\([2-9]\)<\/span>/);
+  });
+});
+
+describe('the randomizer\'s Advanced options', () => {
+  it('offers the four themes, each with a line saying what it does, and counts the chosen ones', () => {
+    const html = render('randomizer');
+    expect(html).toContain('Advanced');
+    for (const name of ['Treasure-focused', 'VP-focused', 'Duration-focused', 'Trashing-focused']) expect(html).toContain(name);
+    expect(html).toContain('Lots of Duration cards, plus cards that replay them.');
+    const on = render('randomizer?th=duration&th=trash');
+    expect(on).toContain('2 on');
+    expect(on).toMatch(/aria-pressed="true"[^>]*>Duration-focused/);
+  });
+});
+
+describe('the Landscapes charts on the Overview', () => {
+  it('say what they count when nothing is pointed at, and every part carries its list', () => {
+    const html = render('');
+    expect(html).toContain('dn-chart-read'); expect(html).toContain('124 landscapes');
+    expect(html).toContain('dn-waffle'); expect(html).toContain('dn-seg-bar');
+    expect(html).toContain('href="#/dominion/landscapes?exp=');   // the expansions bar's legend links to that expansion's landscapes
   });
 });

@@ -12,7 +12,7 @@ export default function PlayHistory({ entry, lg }) {
       <p style={{ margin: '0 0 8px' }}>In <b>{entry.games}</b> logged {entry.games === 1 ? 'game' : 'games'}{lg.groupName ? ` for ${lg.groupName}` : ''}.</p>
       <ul className="dn-plain-list">
         {recent.map(g => (
-          <li key={g.line}><a href={lg.hashFor('games', lg.gid, g.line)}>{g.date}</a> <span className="meta">· won by {winners(g).join(' & ')}</span></li>
+          <li key={g.line}><a href={lg.hashFor('games', lg.gid) + '?game=' + g.line} title="Show that game in the Games page">{g.date}</a> <span className="meta">· won by {winners(g).join(' & ')}</span></li>
         ))}
       </ul>
       {older > 0 && <p className="meta" style={{ margin: '8px 0 0' }}>…and {older} earlier {older === 1 ? 'game' : 'games'}.</p>}
