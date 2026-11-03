@@ -1,35 +1,40 @@
+import { useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { compare } from '../lib/compare.js';
 import TierIcon from './TierIcon.jsx';
 import RatingChart from './RatingChart.jsx';
 import SetIcon from './SetIcon.jsx';
+import ComparePicker from './ComparePicker.jsx';
 import HoverPopup from './HoverPopup.jsx';
+import BadgePop from './BadgePop.jsx';
 import { badgeIcon } from './badgeIcon.jsx';
-import { viewHint, TIERS } from '../lib/achievements.js';
-import { ord, short } from '../lib/format.js';
+import { viewHint } from '../lib/achievements.js';
+import { ord } from '../lib/format.js';
 
-const LABEL = { ...Object.fromEntries(TIERS.map(t => [t.id, t.label])), secret: 'Secret' };
+const PER = 3;   // games together shown at a time
 
 /* Two players side by side (#/players/<group>/<A>?vs=<B>). Built as a rivalry: what they have played together first, then the same numbers for both with no winner marked and no gap drawn, their
    rating on one chart, the badges they share, and the expansions they play most. The numbers come from lib/compare.js. */
 export default function Compare({ a, b, names = [] }) {
   const { D, gid, hashFor, catalog, me } = usePage();
+  const [page, setPage] = useState(0);   // which three of their games together are showing (0 = the latest)
   const c = compare(D, a, b, catalog);
   if (!c) return <p className="empty">Pick two different players to compare.</p>;
   const { together: t, rows, sets, badges } = c;
+  // the whole block is one link to that player's page
   const side = (p, hue) => (
-    <div className={'cmp-who ' + hue}>
+    <a className={'cmp-who ' + hue} href={hashFor('players', gid, encodeURIComponent(p.name))}>
       {p.tier && <TierIcon id={p.tier.icon} size={64} alt={p.tier.name + ' tier'} />}
-      <p className="cmp-name"><a href={hashFor('players', gid, encodeURIComponent(p.name))}>{p.name}</a></p>
-      {p.tier && <p className="meta">{p.tier.name}{p.rated ? ` · ${Math.round(p.elo)} Elo` : ''}</p>}
-    </div>
+      <span className="cmp-name">{p.name}</span>
+      {p.tier && <span className="meta">{p.tier.name}{p.rated ? ` · ${Math.round(p.elo)} Elo` : ''}</span>}
+    </a>
   );
   const chip = (x, owner) => {
     const mine = !!me && (owner ? me.name === owner : me.name === a || me.name === b);
     const hint = viewHint(x, mine);
     return (
       <li key={x.id}>
-        <HoverPopup className="pin-wrap" content={<div className="popdesc"><b>{x.name}</b>{LABEL[x.tier] ? ` · ${LABEL[x.tier]}` : ''}<br />{hint}{x.earned && x.earned.date ? <><br />Earned {short(x.earned.date)}</> : null}</div>}>
+        <HoverPopup className="pin-wrap" content={<BadgePop badge={x} hint={hint} />}>
           <span className={'pin-chip cmp-chip td-' + x.tier}>
             <span className="pin-ico" aria-hidden="true">{badgeIcon(x, 18)}</span><span className="pin-name">{x.name}</span>
           </span>
@@ -41,11 +46,7 @@ export default function Compare({ a, b, names = [] }) {
     <div className="cmp">
       <div className="cmp-top">
         <a href={hashFor('players', gid, encodeURIComponent(a))}>← {a}’s page</a>
-        <label className="cmp-launch">Compare with
-          <select value={b} onChange={e => { window.location.hash = hashFor('players', gid, encodeURIComponent(a)) + `?vs=${encodeURIComponent(e.target.value)}`; }}>
-            {names.filter(n => n !== a).map(n => <option key={n} value={n}>{n}</option>)}
-          </select>
-        </label>
+        <ComparePicker current={b} names={names.filter(n => n !== a)} hrefFor={n => hashFor('players', gid, encodeURIComponent(a)) + `?vs=${encodeURIComponent(n)}`} />
       </div>
       <div className="cmp-hero">{side(c.a, 'a')}<span className="cmp-vs" aria-hidden="true">vs</span>{side(c.b, 'b')}</div>
 
@@ -81,13 +82,31 @@ export default function Compare({ a, b, names = [] }) {
                 <div className="mid"><b>{t.games}</b><span>game{t.games === 1 ? '' : 's'}</span></div>
                 <div><b>{t.aheadB}</b><span className="b">{b} ahead</span></div>
               </div>
-              <ul className="cmp-recent">{t.recent.map(r => (
+              <ul className="cmp-recent">{t.recent.slice(page * PER, page * PER + PER).map(r => (
                 <li key={r.line}>
                   <a className="cmp-when" href={hashFor('games', gid) + '?game=' + r.line}><b>{r.date}</b><small>{r.time ? r.time + ' · ' : ''}{r.n} players</small></a>
                   <span className={'cmp-medal p' + Math.min(r.placeA, 4)} title={a}><b>{ord(r.placeA)}</b><i className="a"></i></span>
                   <span className={'cmp-medal p' + Math.min(r.placeB, 4)} title={b}><b>{ord(r.placeB)}</b><i className="b"></i></span>
                 </li>
               ))}</ul>
+              {t.recent.length > PER && (
+                <div className="cmp-pager">
+                  <span></span>
+                  <span className="cmp-pager-mid">
+                  <button type="button" className="ghost" aria-label="Newer games" disabled={page === 0} onClick={() => setPage(page - 1)}>‹</button>
+                  <span>{page * PER + 1}–{Math.min(t.recent.length, page * PER + PER)} of {t.recent.length}</span>
+                  <button type="button" className="ghost" aria-label="Older games" disabled={(page + 1) * PER >= t.recent.length} onClick={() => setPage(page + 1)}>›</button>
+                  </span>
+                  <button type="button" className="ghost cmp-latest" style={{ visibility: page > 0 ? 'visible' : 'hidden' }} tabIndex={page > 0 ? 0 : -1} aria-hidden={page === 0} onClick={() => setPage(0)}>Latest</button>
+                </div>
+              )}
+              {t.closest && <p className="cmp-closest">Closest game: <a href={hashFor('games', gid) + '?game=' + t.closest.line}>{t.closest.date}</a> <span className="a">{a} {t.closest.vpA}</span> – <span className="b">{t.closest.vpB} {b}</span></p>}
+              {t.bySet.length > 0 && <>
+                <h3 className="cmp-h">Record by expansion</h3>
+                <ul className="cmp-bysets">{t.bySet.map(e => (
+                  <li key={e.set}><SetIcon name={e.set} size={18} /><span className="nm">{e.set}</span><b><span className="a">{e.aheadA}</span> – <span className="b">{e.aheadB}</span></b></li>
+                ))}</ul>
+              </>}
             </>
           ) : <p className="meta">They haven’t sat at the same rated table yet.</p>}
           <h3 className="cmp-h">Most played expansions</h3>

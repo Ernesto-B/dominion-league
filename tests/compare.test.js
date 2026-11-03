@@ -19,7 +19,7 @@ describe('comparing two players', () => {
   });
   it('lists the same stats for both, as plain values with no winner', () => {
     const c = compare(D, 'Ann', 'Cy');
-    expect(c.rows.map(r => r.key)).toEqual(['elo', 'peak', 'tier', 'level', 'games', 'wins', 'winpct', 'tophalf', 'streak', 'titles', 'vpm', 'lasts', 'dry', 'badges']);
+    expect(c.rows.map(r => r.key)).toEqual(['elo', 'peak', 'tier', 'level', 'games', 'wins', 'winpct', 'tophalf', 'avgplace', 'avgvp', 'streak', 'titles', 'vpm', 'lasts', 'dry', 'badges']);
     c.rows.forEach(r => { expect(r).not.toHaveProperty('winner'); expect(r).not.toHaveProperty('diff'); });
     expect(c.rows.find(r => r.key === 'wins').a).toBeGreaterThan(c.rows.find(r => r.key === 'wins').b);
     expect(c.rows.find(r => r.key === 'badges').a).toBe('—');   // no catalog loaded yet: shown as a dash, not as zero
@@ -29,5 +29,25 @@ describe('comparing two players', () => {
   });
   it('is null for the same player twice or someone who is not there', () => {
     expect(compare(D, 'Ann', 'Ann')).toBeNull(); expect(compare(D, 'Ann', 'Nobody')).toBeNull();
+  });
+});
+
+describe('rivalry extras', () => {
+  it('reports the pair\'s record by expansion (two games or more) and their closest game by VP', () => {
+    const c = compare(D, 'Ann', 'Bob');
+    c.together.bySet.forEach(e => { expect(e.games).toBeGreaterThanOrEqual(2); expect(e.aheadA + e.aheadB).toBeLessThanOrEqual(e.games); });
+    if (c.together.closest) expect(c.together.closest.gap).toBe(Math.abs(c.together.closest.vpA - c.together.closest.vpB));
+  });
+  it('shows the average finish with one decimal', () => {
+    const r = compare(D, 'Ann', 'Bob').rows.find(x => x.key === 'avgplace');
+    expect(r.a).toMatch(/^\d\.\d$/);
+  });
+});
+
+describe('games together list', () => {
+  it('carries every game together, newest first, for the page to show three at a time', () => {
+    const c = compare(D, 'Ann', 'Bob');
+    expect(c.together.recent).toHaveLength(c.together.games);
+    const d = c.together.recent.map(r => r.date); expect([...d].sort().reverse()).toEqual(d);
   });
 });

@@ -14,6 +14,7 @@ import { rivalries } from '../lib/achievements.js';
 import { vpPerMin } from '../lib/vpRate.js';
 import PlayerPicker from '../components/PlayerPicker.jsx';
 import Compare from '../components/Compare.jsx';
+import ComparePicker from '../components/ComparePicker.jsx';
 import PinnedBadges from '../components/PinnedBadges.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import { useState } from 'react';
@@ -45,12 +46,7 @@ export default function Players() {
         <div className="head-tools">
           <PlayerPicker names={all.map(x => x.name)} current={p.name} hrefFor={n => hashFor('players', gid, encodeURIComponent(n))} />
           {all.length > 1 && (
-            <label className="cmp-launch">Compare with
-              <select value={vsName && vsName !== p.name ? vsName : ''} onChange={e => { window.location.hash = hashFor('players', gid, encodeURIComponent(p.name)) + (e.target.value ? `?vs=${encodeURIComponent(e.target.value)}` : ''); }}>
-                <option value="">…</option>
-                {all.filter(x => x.name !== p.name).map(x => <option key={x.name} value={x.name}>{x.name}</option>)}
-              </select>
-            </label>
+            <ComparePicker current="" names={all.filter(x => x.name !== p.name).map(x => x.name)} hrefFor={n => hashFor('players', gid, encodeURIComponent(p.name)) + `?vs=${encodeURIComponent(n)}`} />
           )}
         </div>
       </div>
