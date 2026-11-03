@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { usePage } from '../PageContext.js';
 import { badgesFor } from '../lib/xp.js';
 import { nextUp } from '../lib/hub.js';
+import { chaseHref } from '../lib/chase.js';
 import { TIERS } from '../lib/achievements.js';
 
 const LABEL = Object.fromEntries(TIERS.map(t => [t.id, t.label]));
@@ -27,6 +28,7 @@ export default function Hub() {
                 <span className="nu-n">{x.value} of {x.target}</span>
               </> : <span className="nu-n">Not started</span>}
             </a>
+            {chaseHref(x.id, x) && <a className="nu-chase" href={chaseHref(x.id, x)} title="Open the Randomizer with settings that aim at this badge">Roll a kingdom →</a>}
           </li>
         ))}
       </ul>

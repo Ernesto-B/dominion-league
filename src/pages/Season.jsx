@@ -1,5 +1,4 @@
 import { usePage } from '../PageContext.js';
-import GroupSwitcher from '../components/GroupSwitcher.jsx';
 import Banner from '../components/Banner.jsx';
 import DateAnchor from '../components/DateAnchor.jsx';
 import SeasonRecap from '../components/SeasonRecap.jsx';
@@ -11,7 +10,7 @@ export default function Season() {
   const admin = !!(me && me.is_admin);
   if (!D.seasons.length) {
     return <>
-      <h1>Season</h1><GroupSwitcher route="season" />
+      <h1>Season</h1>
       <p className="empty">No seasons are set up yet.{admin && <> Add one from the <a href="#/admin">Admin page</a>.</>}</p>
     </>;
   }
@@ -34,7 +33,6 @@ export default function Season() {
           {D.seasons.map(x => <a key={x.number} href={hashFor('season', gid, x.number)} aria-current={x.number === num ? 'true' : undefined}>{x.name}</a>)}
         </div>
       </div>
-      <GroupSwitcher route="season" />
       <Banner />
       <SeasonRecap standings={st} />
       <div className="stats">

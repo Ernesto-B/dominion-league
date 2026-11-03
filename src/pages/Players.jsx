@@ -1,6 +1,5 @@
 import { usePage } from '../PageContext.js';
 import { f0, f2, pc, sgn } from '../lib/format.js';
-import GroupSwitcher from '../components/GroupSwitcher.jsx';
 import Banner from '../components/Banner.jsx';
 import PlayerLink from '../components/PlayerLink.jsx';
 import NameIcon from '../components/NameIcon.jsx';
@@ -14,6 +13,7 @@ import XpPanel from '../components/XpPanel.jsx';
 import { rivalries } from '../lib/achievements.js';
 import { vpPerMin } from '../lib/vpRate.js';
 import PlayerPicker from '../components/PlayerPicker.jsx';
+import Compare from '../components/Compare.jsx';
 import PinnedBadges from '../components/PinnedBadges.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import { useState } from 'react';
@@ -22,18 +22,18 @@ export default function Players() {
   const { D, gid, arg, hashFor, enabledSets } = usePage();
   const [hover, setHover] = useState({ of: null, name: null });
   const all = D.players.filter(p => p.allGames > 0);
-  if (!all.length) return <><h1>Players</h1><GroupSwitcher route="players" /><p className="empty">No games yet.</p></>;
+  if (!all.length) return <><h1>Players</h1><p className="empty">No games yet.</p></>;
   const rankedHere = D.ranked;
   // the arg is the player's name, plus an optional ?badge=<id> that points at one badge (from the front page's Next up)
   const [argName, argQuery] = (arg || '').split('?');
   const focusBadge = new URLSearchParams(argQuery || '').get('badge');
+  const vsName = new URLSearchParams(argQuery || '').get('vs');   // ?vs=<player>: the two side by side (components/Compare.jsx)
   const name = argName ? decodeURIComponent(argName) : (rankedHere[0] || all[0]).name;
   const p = D.players.find(x => x.name === name) || all[0];
   // Hovering a chart label lights up that line; switching players starts fresh, like a re-render did.
   const highlight = hover.of === p.name ? hover.name : null;
 
-  const header = (
-    <>
+  const headTop = (
       <div className="head headc">
         <div className="who">
           {p.tier && <TierIcon id={p.tier.icon} size={72} alt={p.tier.name + ' tier'} />}
@@ -42,14 +42,22 @@ export default function Players() {
             {p.tier && <p className="lede">{p.tier.name} tier{p.nextTier ? `, ${p.nextTier.need} Elo to ${p.nextTier.tier.name}` : ', top tier'}{p.peakTier && p.peakTier.id !== p.tier.id ? `. Best ever: ${p.peakTier.name}.` : ''}</p>}
           </div>
         </div>
-        <PlayerPicker names={all.map(x => x.name)} current={p.name} hrefFor={n => hashFor('players', gid, encodeURIComponent(n))} />
+        <div className="head-tools">
+          <PlayerPicker names={all.map(x => x.name)} current={p.name} hrefFor={n => hashFor('players', gid, encodeURIComponent(n))} />
+          {all.length > 1 && (
+            <label className="cmp-launch">Compare with
+              <select value={vsName && vsName !== p.name ? vsName : ''} onChange={e => { window.location.hash = hashFor('players', gid, encodeURIComponent(p.name)) + (e.target.value ? `?vs=${encodeURIComponent(e.target.value)}` : ''); }}>
+                <option value="">…</option>
+                {all.filter(x => x.name !== p.name).map(x => <option key={x.name} value={x.name}>{x.name}</option>)}
+              </select>
+            </label>
+          )}
+        </div>
       </div>
-      <GroupSwitcher route="players" />
-      <TierProgressBar p={p} />
-      <Banner />
-    </>
   );
+  const header = <>{headTop}<TierProgressBar p={p} /><Banner /></>;
   if (!p.rated) return <>{header}<p className="empty">No rated games yet.</p></>;
+  if (vsName && vsName !== p.name && all.some(x => x.name === vsName)) return <Compare a={p.name} b={vsName} names={all.map(x => x.name)} />;
 
   const hh = D.h2h(null);
   const setCounts = {};

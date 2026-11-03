@@ -19,7 +19,7 @@ const landId = name => T('landscapes').find(l => l.name === name).object_id;
 
 const ME = 'u-ann';
 const NAMES = ['Ann', 'Bob', 'Cy', 'Dee', 'Eli', 'Fay', 'Gus'];
-const players = NAMES.map((n, i) => ({ id: 'u-' + n.toLowerCase(), name: n, group_ids: ['g1'], is_admin: i === 0, must_change_password: false }));
+const players = NAMES.map((n, i) => ({ id: 'u-' + n.toLowerCase(), name: n, group_ids: i < 2 ? ['g1', 'g2'] : ['g1'], is_admin: i === 0, must_change_password: false }));
 const SETS = ['Base', 'Base; Intrigue', 'Seaside; Prosperity', 'Dark Ages; Empires', 'Renaissance; Menagerie; Plunder', 'Hinterlands'];
 const games = Array.from({ length: 16 }, (_, i) => ({ id: i + 1, date: `2026-0${1 + Math.floor(i / 6)}-${String(1 + (i % 6) * 4).padStart(2, '0')}`, type: i === 15 ? 'Playoff' : '', sets: SETS[i % SETS.length], landscapes: i % 3 ? null : 'Ways; Events', group_id: 'g1', notes: i % 4 === 0 ? 'Long game with a lot of attacks' : '' }));
 let rid = 1;
@@ -36,7 +36,7 @@ const kingdom = KINGS.flatMap((k, j) => k.map((n, position) => ({ game_id: j + 1
   .concat([{ game_id: 1, kind: 'landscape', item_id: landId('Way of the Mole'), position: 10, on_id: null }]);
 
 const tables = {
-  players, groups: [{ id: 'g1', name: 'Friends' }], settings: [],
+  players, groups: [{ id: 'g1', name: 'Friends' }, { id: 'g2', name: 'Weekend' }], settings: [],
   seasons: [{ id: 1, group_id: 'g1', name: 'Season 1', start_date: '2026-01-01', weeks: 12, target_games: 8, qualify_pct: 0.6, playoff_spots: 4, champion_player_id: null, notes: '' }],
   games, game_results: results, game_kingdom: kingdom,
   dominion_card_catalog: cards.map(c => {

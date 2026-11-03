@@ -3,7 +3,6 @@ import { usePage } from '../PageContext.js';
 import * as Eng from '../lib/engine.js';
 import { f0, f1, f2, pc, sgn } from '../lib/format.js';
 import { LANDSCAPES } from '../lib/sets.js';
-import GroupSwitcher from '../components/GroupSwitcher.jsx';
 import Banner from '../components/Banner.jsx';
 import PlayerLink from '../components/PlayerLink.jsx';
 import SetIcon from '../components/SetIcon.jsx';
@@ -68,7 +67,6 @@ export default function Records() {
       <div className="head">
         <div><h1>Records</h1><p className="lede">Everything the league has produced so far.</p></div>
       </div>
-      <GroupSwitcher route="records" />
       <Banner />
       <div className="stats">
         <div className="stat"><b>{O.tables}</b><span>tables logged</span></div>

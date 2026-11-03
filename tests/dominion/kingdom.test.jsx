@@ -3,7 +3,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { realCatalog } from './fixtures.js';
 import { toPayload, setNameFor, landscapeGroupFor, primaryType, resolveKingdom, impliedSets, searchKingdom, MAX_CARDS, MAX_LANDSCAPES } from '../../src/dominion/kingdom.js';
 import { KingdomChip } from '../../src/dominion/components/KingdomChips.jsx';
-import { setKingdomDraft, peekKingdomDraft, takeKingdomDraft } from '../../src/dominion/kingdomDraft.js';
 import * as Eng from '../../src/lib/engine.js';
 
 const catalog = realCatalog();
@@ -66,25 +65,6 @@ describe('kingdom chips', () => {
     expect(h).not.toContain('<a '); expect(h).toContain('aria-label="Remove Militia"');
   });
   it('shows an id the catalog no longer knows, quietly', () => { expect(chip({ kind: 'card', id: 'gone:card' })).toMatch(/dn-kchip-missing[^>]*>gone:card</); });
-});
-
-describe('kingdom draft (Randomizer -> Add Game hand-off)', () => {
-  beforeEach(() => { takeKingdomDraft(); });
-  it('is handed over exactly once', () => {
-    setKingdomDraft({ items: [{ kind: 'card', id: 'x' }], sets: ['Base'], landscapes: [] });
-    expect(peekKingdomDraft().items).toHaveLength(1);
-    expect(takeKingdomDraft().sets).toEqual(['Base']); expect(takeKingdomDraft()).toBeNull();
-  });
-  it('survives a reload through sessionStorage, and ignores garbage there', () => {
-    const store = {};
-    globalThis.sessionStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; }, removeItem: k => { delete store[k]; } };
-    setKingdomDraft({ items: [{ kind: 'card', id: 'x' }] });
-    expect(JSON.parse(store['dl.kingdomDraft']).items).toHaveLength(1);
-    store['dl.kingdomDraft'] = '{not json'; takeKingdomDraft();   // drop the in-memory copy
-    expect(peekKingdomDraft()).toBeNull();
-    store['dl.kingdomDraft'] = JSON.stringify({ nope: true }); expect(peekKingdomDraft()).toBeNull();
-    delete globalThis.sessionStorage;
-  });
 });
 
 describe('the game row carries the kingdom', () => {

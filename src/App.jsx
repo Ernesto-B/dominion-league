@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { LeagueProvider, useLeague } from './League.jsx';
 import { useHash } from './useHash.js';
 import { useLeagueCatalog } from './useLeagueCatalog.js';
@@ -32,7 +32,9 @@ function Shell() {
   const ready = state.status === 'ready';
   useEffect(() => { if (ready) loadManifest(); }, [ready]);
   const lastGid = useRef((() => { try { return localStorage.getItem('dl.group'); } catch { return null; } })());
-  const route = useMemo(() => ready ? parseHash(hash, state.allGroups, lastGid.current) : null, [ready, hash, state.allGroups]);
+  const [groupTick, setGroupTick] = useState(0);   // bumped when the top-bar pill picks a group for a page that has none in its address
+  const pickGroup = id => { lastGid.current = id; try { localStorage.setItem('dl.group', id); } catch { /* per-session only */ } setGroupTick(t => t + 1); };
+  const route = useMemo(() => ready ? parseHash(hash, state.allGroups, lastGid.current) : null, [ready, hash, state.allGroups, groupTick]);
   // once the league is in, quietly fetch the pictures of the last few games' kingdoms (about 30 small files, once per device) so the report and Last night open with them already there
   const lastGames = route ? pickD(state, route.gid).games : null;   // after `route`: it is created above this line, and an earlier use crashed the whole app
   useEffect(() => {
@@ -80,7 +82,7 @@ function Shell() {
   return (
     <>
       <a className="skip" href="#main" onClick={skip}>Skip to content</a>
-      <Header ready={ready ? { ...state, route } : null} hash={hash} hud={page ? <PageContext.Provider value={page}><PlayerHud /></PageContext.Provider> : null} />
+      <Header ready={ready ? { ...state, route } : null} hash={hash} onPickGroup={pickGroup} hud={page ? <PageContext.Provider value={page}><PlayerHud /></PageContext.Provider> : null} />
       {ready && state.offlineAt && <OfflineBar at={state.offlineAt} onRetry={boot} />}
       {body}
       {ready && <PullToRefresh onRefresh={boot} />}

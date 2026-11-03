@@ -2,6 +2,7 @@ import { f0, pc, sgn } from '../lib/format.js';
 import PlayerLink from './PlayerLink.jsx';
 import TierIcon from './TierIcon.jsx';
 import SetIcon from './SetIcon.jsx';
+import { seasonAwards } from '../lib/seasonAwards.js';
 
 // "Hall of Fame" for a completed season: champion plus a handful of superlatives.
 export default function SeasonRecap({ standings: st }) {
@@ -31,6 +32,7 @@ export default function SeasonRecap({ standings: st }) {
   st.games.forEach(g => g.sets.forEach(nm => { setCounts[nm] = (setCounts[nm] || 0) + 1; }));
   const setEntries = Object.entries(setCounts);
   const topSet = setEntries.length ? setEntries.reduce((a, b) => b[1] > a[1] ? b : a) : null;
+  const extra = seasonAwards(st);
   const tone = x => x > 0.5 ? 'up-t' : x < -0.5 ? 'down-t' : '';
 
   return (
@@ -45,6 +47,9 @@ export default function SeasonRecap({ standings: st }) {
           {upset && <div className="stat"><b>{f0(upset.deficit)}</b><span>biggest upset: {upset.winner} over {upset.loser}</span></div>}
           {topVP && <div className="stat"><b>{topVP.value} VP</b><span>highest score: {topVP.who}</span></div>}
           {topSet && <div className="stat seticon-stat"><SetIcon name={topSet[0]} size={24} /><span>most played: {topSet[0]}</span></div>}
+          {extra.streak && <div className="stat"><b>{extra.streak.value}</b><span>longest win streak: {extra.streak.name}</span></div>}
+          {extra.mostWins && <div className="stat"><b>{extra.mostWins.value}</b><span>most wins: {extra.mostWins.name}</span></div>}
+          {extra.bigGain && <div className="stat"><b className="up-t">{sgn(extra.bigGain.value)}</b><span>biggest single gain: {extra.bigGain.name}</span></div>}
           {ironman && ironman.attendance != null && <div className="stat"><b>{pc(ironman.attendance)}</b><span>best attendance: {ironman.name}</span></div>}
         </div>
       </div>
