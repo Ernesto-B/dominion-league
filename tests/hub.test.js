@@ -21,3 +21,13 @@ describe('nextUp', () => {
   });
   it('returns nothing when everything is earned', () => { expect(nextUp([b('a', 'common', { earned: {} })])).toEqual([]); });
 });
+
+import { nextUp as nextUpExp } from '../src/lib/hub.js';
+import { chaseHref as chaseExp } from '../src/lib/chase.js';
+describe('Next up keeps what a kingdom chase needs', () => {
+  it('an expansion step arrives with its expansion, so it gets a Randomizer link', () => {
+    const [x] = nextUpExp([{ id: 'exp-base-half', name: 'Village Elder', tier: 'uncommon', target: 14, value: 10, expansion: 'Base Game', earned: null }], 1);
+    expect(x.expansion).toBe('Base Game');
+    expect(chaseExp(x.id, x)).toMatch(/^#\/dominion\/randomizer\?/);
+  });
+});

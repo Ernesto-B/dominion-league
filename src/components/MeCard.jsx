@@ -1,3 +1,4 @@
+import { nightGroup } from '../lib/groups.js';
 import { usePage } from '../PageContext.js';
 import { meSummary } from '../lib/meSummary.js';
 import { ord, short, sgn } from '../lib/format.js';
@@ -15,7 +16,8 @@ import { earnedIds, loadBadgesSeen, newBadges, rivalries, saveBadgesSeen } from 
 /* The Rankings page opens with the signed-in player, not the whole ladder — where they stand, how far to the next spot, and how the
    last few games went. The Elo counts up from the start rating when the card appears. */
 export default function MeCard({ ranked }) {
-  const { me, D, gid, hashFor, catalog } = usePage();
+  const { me, D, gid, hashFor, catalog, allGroups } = usePage();
+  const ngid = nightGroup(allGroups, gid);   // Game night opens in the group a game was last logged for
   const store = () => { try { return window.localStorage; } catch { return null; } };
   // badges the viewer hasn't been told about: a first look records what is already earned and says nothing; "Nice" marks the rest as seen
   const mineP = me && D.players.find(x => x.name === me.name);
@@ -69,7 +71,7 @@ export default function MeCard({ ranked }) {
             {mineP && <PinnedBadges p={mineP} list={list} fit />}
           </div>
         </div>
-        <p className="mecard-go"><a className="btn ghost" href={mine}>Your page</a>{me.is_admin && <a className="btn gamenight" href={hashFor('night', gid)}><img src="icons/nav/add-a-game.png" alt="" />Game night</a>}</p>
+        <p className="mecard-go"><a className="btn ghost" href={mine}>Your page</a>{me.is_admin && <a className="btn gamenight" href={hashFor('night', ngid)}><img src="icons/nav/add-a-game.png" alt="" />Game night</a>}</p>
       </div>
 
       <div className="mc-tiles">

@@ -2,15 +2,14 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { usePins } from '../usePins.js';
 import HoverPopup from './HoverPopup.jsx';
+import BadgePop from './BadgePop.jsx';
 import { badgeIcon } from './badgeIcon.jsx';
 import { badgesFor } from '../lib/xp.js';
-import { pinnedBadges, viewHint, TIERS } from '../lib/achievements.js';
-import { short } from '../lib/format.js';
+import { pinnedBadges, viewHint } from '../lib/achievements.js';
 
 // the tiers that carry an effect (the two empty layers a chip draws it with, see the .pin-chip rules in style.css): a glint, a glowing glitter, a ring of light
 const FX = new Set(['rare', 'epic', 'legendary']);
 
-const LABEL = { ...Object.fromEntries(TIERS.map(t => [t.id, t.label])), secret: 'Secret' };
 
 /* The badges a player chose to show off (`max` of them), as chips beside their name (the tier colours the edge; epic and legendary glow). Hovering or focusing
    a chip says what it is and when it was earned. Nothing at all when they haven't pinned any. The popup is plain markup: it has no page context.
@@ -52,7 +51,7 @@ export default function PinnedBadges({ p, max = 3, list: given, fit = false }) {
     <div className={'pinned' + (fit ? ' fit' : '')} role="list" aria-label="Pinned badges" ref={row}>
       {pins.map((b, i) => (
         <HoverPopup key={b.id} className={'pin-wrap' + (fit && i >= k ? ' pin-off' : '')} content={
-          <div className="popdesc"><b>{b.name}</b>{LABEL[b.tier] ? ` · ${LABEL[b.tier]}` : ''}<br />{viewHint(b, mine)}{b.earned && b.earned.date ? <><br />Earned {short(b.earned.date)}</> : null}</div>
+          <BadgePop badge={b} hint={viewHint(b, mine)} />
         }>
           <span role="listitem" className={'pin-chip td-' + b.tier}>
             {FX.has(b.tier) && <><i className="fx fx-a" aria-hidden="true" /><i className="fx fx-b" aria-hidden="true" /></>}

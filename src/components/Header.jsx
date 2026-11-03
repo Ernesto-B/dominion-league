@@ -1,5 +1,7 @@
 import { hashFor, ROUTES, GLOBAL_ROUTES } from '../lib/route.js';
 import { pickD } from '../lib/league.js';
+import GroupPill from './GroupPill.jsx';
+import { nightGroup } from '../lib/groups.js';
 
 const NAV = [
   ['home', 'Rankings', 'rankings'], ['season', 'Season', 'season'], ['players', 'Players', 'players'],
@@ -12,7 +14,7 @@ const NAV = [
 /* Where a nav link goes. "Players" opens the signed-in player's own page when they have played in the group being viewed (the
    page otherwise opens on whoever is top of the ladder); everyone else, and every other link, goes to the section's front page. */
 export function navHref(route, ready) {
-  const gid = GLOBAL_ROUTES.includes(route) ? null : ready.route.gid;
+  const gid = GLOBAL_ROUTES.includes(route) ? null : route === 'night' ? nightGroup(ready.allGroups, ready.route.gid) : ready.route.gid;   // Game night opens in the group a game was last logged for
   let rest;
   if (route === 'players' && ready.me && ready.computedByGroup) {
     const D = pickD(ready, ready.route.gid), mine = D && D.players.find(p => p.name === ready.me.name);
@@ -23,7 +25,7 @@ export function navHref(route, ready) {
 
 // `ready` is null until a league is loaded: the nav is hidden on the loading,
 // sign-in and set-password screens.
-export default function Header({ ready, hash, hud }) {
+export default function Header({ ready, hash, hud, onPickGroup = () => {} }) {
   const show = !!ready;
   const active = ready && ROUTES.includes(ready.route.route) ? ready.route.route : 'home';
   return (
@@ -39,6 +41,7 @@ export default function Header({ ready, hash, hud }) {
           ))}
         </nav>
         <span id="navuser">
+          {show && <GroupPill ready={ready} onPick={onPickGroup} />}
           {show && (hud || <span>{ready.me.name}</span>)}
         </span>
       </div>

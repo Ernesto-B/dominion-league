@@ -28,11 +28,10 @@ function fromGame(D, editId) {
 }
 
 // Add / edit a game (admin only; the server re-checks via the add_game / edit_game / delete_game RPCs).
-// `draft` ({ items, sets, landscapes }) pre-fills a NEW game, e.g. with a kingdom from the Randomizer.
-export default function GameModal({ editId, draft, onClose }) {
+export default function GameModal({ editId, onClose }) {
   const { D, gid, allGroups, enabledSets, playerIdByName, reload } = usePage();
   const [bs, setBs] = useState(() => editId != null ? fromGame(D, editId)
-    : draft ? { ...blank(), kingdom: draft.items, kingdomTouched: true, sets: draft.sets || [], landscapes: draft.landscapes || [] } : blank());
+    : blank());
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
   const boxRef = useRef(null);

@@ -2,14 +2,13 @@
 import { Suspense, lazy, useLayoutEffect, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { SET_NAMES } from '../lib/sets.js';
-import GroupSwitcher from '../components/GroupSwitcher.jsx';
 import Banner from '../components/Banner.jsx';
 import FilterFold from '../components/FilterFold.jsx';
 import GamesTable from '../components/GamesTable.jsx';
 import SetSelect from '../components/SetSelect.jsx';
-import { takeKingdomDraft } from '../dominion/kingdomDraft.js';
 import KingdomWall from '../components/KingdomWall.jsx';
 import { useWide } from '../useMedia.js';
+import { nightGroup } from '../lib/groups.js';
 
 // the Add/Edit dialog (with the kingdom picker and its catalog code) is only needed once someone opens it
 const GameModal = lazy(() => import('../components/GameModal.jsx'));
@@ -22,15 +21,16 @@ const readView = () => { try { const v = localStorage.getItem('dl.gamesview'); r
 let saved = { season: 'all', type: 'all', player: 'all', set: 'all' };
 
 export default function Games() {
-  const { D, me, enabledSets, arg, gid, hashFor } = usePage();
+  const { D, me, enabledSets, arg, gid, hashFor, allGroups } = usePage();
+  const ngid = nightGroup(allGroups, gid);   // the group Game night will open in
   const hlGame = () => /^\?game=\d+$/.test(arg || '');
   const [gf, setGf] = useState(saved);
   const [view, setViewState] = useState(readView);   // 'cards' | 'table' | 'kingdoms'; a phone has no table, so it shows cards instead
   const wide = useWide();
   const shownView = (view === 'table' && !wide) || (view === 'kingdoms' && hlGame()) ? 'cards' : view;   // a link to one game (?game=) shows the list it is highlighted in
   const setView = v => { setViewState(v); try { localStorage.setItem('dl.gamesview', v); } catch { /* not remembered */ } };
-  // null, or { editId, draft? } (editId null = a new game). Arriving from the Randomizer's "Use this kingdom" opens a new game already filled in.
-  const [modal, setModal] = useState(() => { const d = me && me.is_admin ? takeKingdomDraft() : null; return d ? { editId: null, draft: d } : null; });
+  // null, or { editId } (editId null = a new game)
+  const [modal, setModal] = useState(null);
   // Changing a filter resets the sort and collapses expanded rows, as the old full re-render did
   // (the table is re-keyed on the filters below).
   const set = k => e => { saved = { ...gf, [k]: e.target.value }; setGf(saved); };
@@ -50,7 +50,7 @@ export default function Games() {
   }, [arg]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const list = D.games.filter(g => matches(g, gf)).slice().reverse();
-  if (target) return <><GroupSwitcher route="games" /><Suspense fallback={<p className="loading">Loading the game…</p>}><GameReport key={target.line} game={target} /></Suspense></>;
+  if (target) return <><Suspense fallback={<p className="loading">Loading the game…</p>}><GameReport key={target.line} game={target} /></Suspense></>;
 
   const selects = (
     <>
@@ -73,9 +73,8 @@ export default function Games() {
     <>
       <div className="head">
         <div><h1>Games</h1><p className="lede">Every table we've logged, newest first. Winners in bold.</p></div>
-        {canEdit && <a className="btn gamenight" href={hashFor('night', gid)}><img src="icons/nav/add-a-game.png" alt="" />Game night</a>}
+        {canEdit && <a className="btn gamenight" href={hashFor('night', ngid)}><img src="icons/nav/add-a-game.png" alt="" />Game night</a>}
       </div>
-      <GroupSwitcher route="games" />
       <Banner />
       <FilterFold active={['season', 'type', 'player', 'set'].filter(k => gf[k] !== 'all').length}>
         <div className="controls" style={{ marginTop: 8 }}>{selects}</div>
@@ -88,7 +87,7 @@ export default function Games() {
           <button type="button" aria-pressed={shownView === 'kingdoms'} onClick={() => setView('kingdoms')}>Kingdoms</button>
         </div>
       </div>
-      {modal && <Suspense fallback={null}><GameModal key={String(modal.editId)} editId={modal.editId} draft={modal.draft} onClose={() => setModal(null)} /></Suspense>}
+      {modal && <Suspense fallback={null}><GameModal key={String(modal.editId)} editId={modal.editId} onClose={() => setModal(null)} /></Suspense>}
       {list.length && shownView === 'kingdoms' ? <KingdomWall key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}`} games={list} /> : list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} stateKey={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} games={list} highlight={hl ? hl.line : undefined} mark={gf.player !== 'all' ? gf.player : null} view={shownView === 'table' ? 'table' : 'cards'} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
     </>
   );

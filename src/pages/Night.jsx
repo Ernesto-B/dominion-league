@@ -1,3 +1,4 @@
+import { groupHue, groupName as nameOfGroup, rememberNightGroup } from '../lib/groups.js';
 import { Component, useEffect, useMemo, useRef, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { sb } from '../lib/supabase.js';
@@ -39,7 +40,7 @@ export default function Night() {
    other one just hidden, so a game's clock, kingdom and unsaved scores are exactly as they were when switching back. The only thing the tables share is who is
    sitting where: a player can't be at both, so whoever is at one table is greyed out at the other. */
 function Tables() {
-  const { gid, me } = usePage();
+  const { gid, me, allGroups } = usePage();
   const [open, setOpen] = useState(() => (storage() && hasNight(storage(), gid, 1) ? 2 : 1));   // how many tables are running
   const [active, setActive] = useState(0);
   const [info, setInfo] = useState({});                          // slot -> { picked, step, startedAt, done }, reported by each table
@@ -64,7 +65,7 @@ function Tables() {
             <>
               {[0, 1].map(i => (
                 <button key={i} type="button" aria-pressed={active === i} className={'night-tab' + (active === i ? ' on' : '')} onClick={() => setActive(i)}>
-                  <b>Table {i + 1}</b><span>{tableLabel(info[i], now)}</span>
+                  <b>Table {i + 1}{allGroups.length > 1 ? ` · ${nameOfGroup(allGroups, gid)}` : ''}</b><span>{tableLabel(info[i], now)}</span>
                 </button>
               ))}
               <button type="button" className="ghost night-tab-x" onClick={closeTable} aria-label="Close table 2">✕</button>
@@ -175,6 +176,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
     setSaving(false);
     if (error) { setMsg(error.message); return; }
     if (storage()) clearNight(storage(), gid, slot);
+    rememberNightGroup(gid);   // the next Game night opens in this group
     setMsg(''); setDone({ id: data });
     await reload();
   };
@@ -228,7 +230,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
 
   return (
     <>
-      <div className="head"><div><h1>Game night</h1><p className="lede">{groupName ? `${groupName} — ` : ''}a step-by-step way to log a game.</p></div></div>
+      <div className="head"><div><h1>Game night{allGroups.length > 1 && <span className="night-group" style={{ '--gh': groupHue(allGroups, gid) }}><i aria-hidden="true" />{groupName}</span>}</h1><p className="lede">A step-by-step way to log a game{groupName ? ` for ${groupName}` : ''}.</p></div></div>
       <ol className="night-steps" aria-label="Steps">
         {STEPS.map(s => <li key={s.id} className={s.id === st.step ? 'now' : stepNumber(s.id) < stepNumber(st.step) ? 'done' : ''} aria-current={s.id === st.step ? 'step' : undefined}><span>{stepNumber(s.id)}</span><em>{s.label}</em></li>)}
       </ol>
@@ -238,6 +240,12 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
 
         {st.step === 'players' && (
           <>
+            {allGroups.length > 1 && (
+              <div className="night-groupsel" role="group" aria-label="Which group is this game for?">
+                <span className="meta">This game is for</span>
+                <div className="pills">{allGroups.map(g => <a key={g.id} href={hashFor('night', g.id)} aria-current={g.id === gid ? 'true' : undefined} style={{ '--gh': groupHue(allGroups, g.id) }}><i aria-hidden="true" />{g.name}</a>)}</div>
+              </div>
+            )}
             <p className="meta">Tap everyone at the table.{busy.length ? ' Anyone already at the other table is greyed out.' : ''}</p>
             <div className="pills" id="bpick">
               {roster.map(n => {
@@ -285,6 +293,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
 
         {st.step === 'review' && (
           <>
+            {allGroups.length > 1 && <p className="night-savingto" style={{ '--gh': groupHue(allGroups, gid) }}><i aria-hidden="true" />Saving to <b>{groupName}</b></p>}
             <div className="controls">
               <label className="f">Date <input type="date" value={st.date} onChange={e => patch({ date: e.target.value })} /></label>
               <label className="f">Type <select value={st.type} onChange={e => patch({ type: e.target.value })}>{['', 'Playoff', 'Friendly'].map(t => <option key={t} value={t}>{t || 'Regular'}</option>)}</select></label>

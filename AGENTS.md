@@ -265,6 +265,14 @@ technique is the best way to prove any refactor *doesn't* change what users see:
 - Shared pieces extracted so the dialog and the Game night flow can't drift: `src/lib/gameForm.js` (VP sort, results, RPC arguments),
   `components/FinishOrder.jsx`, `components/EloPreview.jsx`. Flow state: `src/lib/night.js`.
 
+## Group choice, Compare, and small helpers (branch `group-and-compare`)
+
+- **One group chooser for the whole site**: `components/GroupPill.jsx` in the top bar (hidden with one group). The per-page `GroupSwitcher` is gone; do not add a new one. On address-based pages it links to the same route in the other group; on global routes (Collection, Admin) it keeps the hash and calls `onPickGroup` (`App.jsx` `pickGroup`, which rewrites `dl.group`).
+- **Game night names its group** (`lib/groups.js`: `groupHue`, `groupName`, `nightGroup`, `rememberNightGroup`): the header has a chip, the Players step has a "This game is for" switcher, the review says "Saving to <group>". The group Game night opens on is the last one a game was SAVED to (`dl.nightgroup`), falling back to the viewed group.
+- **Compare** is `#/players/<group>/<name>?vs=<other>`: pure `lib/compare.js` behind `components/Compare.jsx`. Deliberately neutral (no winner marking, no gap, shared badges first, friendlies excluded); keep it that way.
+- `lib/chase.js` maps a badge id to randomizer options ("Roll a kingdom for it" on Next-up); `lib/winChance.js` is the Win chance column on Game night (Elo odds, 10^(Elo/400) weights); `lib/seasonAwards.js` adds streak / most wins / biggest gain to the Season Hall of Fame.
+- The old Randomizer -> Add Game hand-off (`kingdomDraft.js`, the `draft` prop of `GameModal`) was removed; "Use for a game" goes through Game night (`withRolledKingdom`).
+
 ## Game kingdoms (the Collection <-> the league)
 
 - A game's kingdom lives in `game_kingdom` (`supabase/schema.sql`): one row per card/landscape, `item_id` a Dominion catalog

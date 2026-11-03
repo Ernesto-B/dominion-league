@@ -359,7 +359,7 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
     for (const n of owned) {
       const names = EXPANSION_NAMES[n]; if (!names) continue;
       const total = totals.get(n), label = expansionMeta(n).label, size = perExp.get(n).size, set = expansionMeta(n).icon;
-      const step = (id, name, hint, target, bonus, tier, k) => extra.push({ id: `exp-${slug(n)}-${id}`, group: 'Expansions', track: 'exp-' + slug(n), trackName: label, set, tier, name, hint, target, bonus, value: size, earned: gat(k) });
+      const step = (id, name, hint, target, bonus, tier, k) => extra.push({ id: `exp-${slug(n)}-${id}`, group: 'Expansions', track: 'exp-' + slug(n), trackName: label, set, expansion: n, tier, name, hint, target, bonus, value: size, earned: gat(k) });
       step('half', names[0], `Play with more than half of ${label}'s cards.`, Math.floor(total / 2) + 1, 40, 'uncommon', firstAt.has(n + ':half') ? firstAt.get(n + ':half') : -1);
       step('full', names[1], `Play with every one of ${label}'s cards.`, total, 200, 'epic', firstAt.has(n + ':full') ? firstAt.get(n + ':full') : -1);
     }

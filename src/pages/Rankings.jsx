@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { f0, ord, short, sgn } from '../lib/format.js';
 import SeasonChip from '../components/SeasonChip.jsx';
-import GroupSwitcher from '../components/GroupSwitcher.jsx';
 import Banner from '../components/Banner.jsx';
 import StoryCards from '../components/StoryCards.jsx';
 import TierIcon from '../components/TierIcon.jsx';
@@ -105,7 +104,6 @@ export default function Rankings() {
   // the front door: you, what changed, the ladder; the explanations are folded away at the bottom
   return (
     <>
-      <GroupSwitcher route="" />
       <h1 className="dn-sr">Rankings</h1>
       <Welcome />
       <MeCard ranked={rk} />
