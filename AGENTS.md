@@ -293,6 +293,15 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   to the top when the *path* changes). Anything new on the Collection that has state worth sharing should follow suit.
 - Play counts/insights are for the group the viewer last picked (`page.gid`); the Collection itself has no group in its URL.
 
+## Switching sets on and off, adding an expansion
+
+- **`settings.enabled_sets` (Admin > Sets) is the one "which expansions do we own" switch.** An unticked set is left out of the catalog every screen reads (`scopeCatalog()` in `dominion/model.js`, applied by `catalogStore.setScope()`,
+  which `League.jsx` calls whenever the league state is set), so the Collection, Randomizer, Game night and Insights drop it; badges and XP read `catalog.strict`, which also forgets the switched-off ids, so they stop counting it. The plain catalog keeps
+  knowing every id so old games still show their cards. Nothing is stored or deleted: badges and XP are recomputed on load, so ticking the set again restores everything. `MeCard`'s "seen" lists only ever grow, so a returning badge is not announced.
+- **`EXPANSIONS` in `dominion/constants.js` is the one expansion registry** (label, set key = `icon`, order, optional badge names); `lib/sets.js` (`SET_NAMES`, icons) is derived from it. Adding an expansion is catalog rows + an icon + one registry line: see
+  `docs/adding-an-expansion.md`. A catalog expansion with no registry entry is always on (it cannot be ticked), and a test fails for it.
+- Dev: `?sets_off=Seaside,Plunder` on the fake site's address switches those sets off.
+
 ## Dominion collection conventions
 
 - **Never conflate the counts.** Card *names* (one per `dominion_kingdom_cards` row), supply *piles* (a split
@@ -316,7 +325,7 @@ technique is the best way to prove any refactor *doesn't* change what users see:
 - **Never invent card text, artwork, descriptions or strategy.** Card text comes only from `dominion_card_text`
   (a hand transcription, flagged as such on the page); the dataset has no artwork or strategy, so the UI omits those
   and says so. The landscape `notes` are a classification summary and are labelled as not official text.
-- **Ownership isn't hardcoded.** The owned expansions are whatever the catalog contains; `constants.js` only
+- **Ownership isn't hardcoded.** The owned expansions are whatever the catalog contains, minus the sets switched off in Admin; `constants.js` is the registry that
   labels and orders the known ones. The schema forbids First Edition rows.
 - The data package is authoritative. Row counts live in `supabase/dominion/expected_counts.json`; if a test fails
   on a count, investigate the data — don't edit the reference to fit.

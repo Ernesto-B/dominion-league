@@ -133,7 +133,7 @@ function PasswordResets({ status, say }) {
   );
 }
 
-// ---- Sets: which expansions the group owns (hidden from the Add Game picker when unticked) ----
+// ---- Sets: which expansions the group owns (an unticked set is left out of the pickers, the Collection, the Randomizer, badges and XP) ----
 function Sets({ status, say }) {
   const { enabledSets, reload } = usePage();
   const [local, setLocal] = useState(enabledSets);
@@ -150,7 +150,7 @@ function Sets({ status, say }) {
   };
   return (
     <div className="builder">
-      <p className="note" style={{ marginTop: 0 }}>Untick a set you don't currently own — it disappears from the Add A Game picker. Games already logged with it are unaffected.</p>
+      <p className="note" style={{ marginTop: 0 }}>Untick a set you don't currently own. It disappears from the game pickers, the Collection (cards, landscapes and Insights), the Randomizer and Game night, and its badges and XP are hidden and stop counting. Nothing is deleted: games already logged keep their kingdoms, players keep what they earned, and ticking the set again brings it all back.</p>
       <div className="controls" id="setsToggle">
         {SET_NAMES.map(n => <label className="f" key={n}><input type="checkbox" data-set={n} checked={local.has(n)} onChange={() => change(n)} /> <SetIcon name={n} size={18} />{n}</label>)}
       </div>

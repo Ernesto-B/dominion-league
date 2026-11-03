@@ -199,8 +199,10 @@ export function withAvoid(options, items) {
   const o = { ...DEFAULT_OPTIONS, ...options };
   return { ...o, exclude: [...new Set([...o.exclude, ...cards])], include: o.include.filter(id => !cards.includes(id)), excludeLandscapes: [...new Set([...(o.excludeLandscapes || []), ...lands])] };
 }
-const normalize = opts => {
+const normalize = (opts, catalog = null) => {
   const o = { ...DEFAULT_OPTIONS, ...opts };
+  // an expansion that is not in the catalog (switched off in Admin, or an old shared link) is dropped; none left means every owned one
+  if (catalog && catalog.ownedExpansions) o.expansions = (o.expansions || []).filter(e => catalog.ownedExpansions.some(x => x.name === e));
   o.cards = Math.max(1, Math.min(12, Number(o.cards) || 10));
   o.landscapes = Math.max(0, Math.min(6, Number(o.landscapes) || 0));
   o.themes = [...new Set((o.themes || []).filter(t => THEMES[t]))];
@@ -259,7 +261,7 @@ function pick(candidates, o, plays, rng, chosen = []) {
      plays           Map(pile key -> games played, see playStats.js pilesPlayed), used when options.favor is on
    Returns { ok: true, slots, landscapes: [{ landscape, on }], setup } or { ok: false, message }. */
 export function generate(catalog, options = {}, { rng = Math.random, keep = [], keepLandscapes = [], plays = null, lockedAt = null, lockedLandscapeAt = null } = {}) {
-  const o = normalize(options);
+  const o = normalize(options, catalog);
   const { byKey, byCardId } = pileInfos(catalog);
   const pool = poolFor(catalog, o);
   const wanted = [...new Set(o.include.map(id => byCardId.get(id)).filter(Boolean))];
@@ -417,7 +419,7 @@ export function setupForHand(catalog, cardIds, baneId = null) {
 // ---------------------------------------------------------------- re-rolling one thing
 /* Swap one slot for another card that keeps every rule true. */
 export function rerollSlot(catalog, options, state, index, { rng = Math.random, plays = null } = {}) {
-  const o = normalize(options);
+  const o = normalize(options, catalog);
   const current = state.slots.map(s => infoOfSlot(catalog, s)), wanted = o.include.map(id => pileInfos(catalog).byCardId.get(id)).filter(Boolean);
   const quotas = quotasFor(poolFor(catalog, o), o);   // the minimums hold: a swap that would break one is refused
   const pool = poolFor(catalog, o).filter(i => !current.includes(i));
@@ -438,7 +440,7 @@ export function rerollSlot(catalog, options, state, index, { rng = Math.random, 
 }
 
 export function rerollLandscape(catalog, options, state, index, { rng = Math.random } = {}) {
-  const o = normalize(options);
+  const o = normalize(options, catalog);
   const types = o.landscapeTypes.length ? o.landscapeTypes : LANDSCAPE_TYPES;
   const have = new Set(state.landscapes.map(l => l.landscape.id));
   const cands = catalog.landscapes.filter(l => types.includes(l.type) && !have.has(l.id) && !o.excludeLandscapes.includes(l.id));

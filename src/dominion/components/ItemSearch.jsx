@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import SearchInput from '../../components/SearchInput.jsx';
 import { displayName, searchKingdom } from '../kingdom.js';
 import CostIcons from './Cost.jsx';
 import { ExpansionBadge, LandscapePill } from './bits.jsx';
@@ -19,7 +20,7 @@ export default function ItemSearch({ catalog, taken = [], kind = null, label, pl
   return (
     <>
       <label className="f dn-kpicker-search">{label}
-        <input type="search" value={q} onChange={e => { setQ(e.target.value); setNote(''); }} onKeyDown={onKey} placeholder={placeholder} autoComplete="off" />
+        <SearchInput value={q} onChange={v => { setQ(v); setNote(''); }} onKeyDown={onKey} placeholder={placeholder} autoComplete="off" />
       </label>
       {note && <p className="meta dn-kpicker-note" role="alert">{note}</p>}
       {q.trim() && (results.length ? (

@@ -126,13 +126,9 @@ const SECRET_HINT = 'A secret badge. Keep playing to find out what it asks.';
 export const viewHint = (b, mine) => (b.secret && b.earned && !mine ? b.quote || 'A hidden legend.' : b.hint);
 export const maskSecrets = list => list.map(b => (b.secret && !b.earned ? { id: b.id, group: b.group, secret: true, tier: 'secret', name: '???', hint: SECRET_HINT, earned: null } : b));
 
-// the 50% and 100% steps of each expansion (by the catalog's expansion name): more than half of its supply piles, then all of them
-const EXPANSION_NAMES = {
-  'Dominion Base Game': ['Village Elder', 'Lord of Dominion'], Intrigue: ['Court Intriguer', 'Master of Whispers'], Seaside: ['Wanted Pirate', 'Seafaring Legend'],
-  Prosperity: ['Vault Keeper', 'Grand Treasurer'], Hinterlands: ['Border Wanderer', 'Warden of the Marches'], 'Dark Ages': ['Grave Robber', 'Plaguebringer'],
-  'Cornucopia & Guilds': ['Guild Apprentice', 'Guildmaster'], Empires: ['Imperial Envoy', 'Grand Consul'], Renaissance: ['Patron of the Arts', 'Enlightened'],
-  Menagerie: ['Horse Whisperer', 'Master of the Menagerie'], Plunder: ['Treasure Hunter', 'Pirate King'],
-};
+// the 50% and 100% steps of each expansion (by the catalog's expansion name): more than half of its supply piles, then all of them. Their names come from the
+// expansion registry (dominion/constants.js); an expansion that has none there yet gets stand-ins, so a new expansion needs no change in this file.
+const stepNames = n => { const m = expansionMeta(n); return m.badges || [`${m.label} Explorer`, `${m.label} Master`]; };
 const LEVEL_NAMES = { 5: 'Apprentice', 10: 'Adept', 20: 'Sage', 50: 'Grandmaster', 100: 'Paragon', 200: 'Dominion Incarnate' };
 const LEVEL_TIERS = { 5: 'common', 10: 'common', 20: 'uncommon', 50: 'rare', 100: 'epic', 200: 'legendary' };
 const RANK_TIERS = ['common', 'uncommon', 'rare', 'epic'];   // Knight, Lord, Duke, Emperor (the tiers above the first)
@@ -357,7 +353,7 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
     cart('sets-5', 'Journeyman', 'Play with cards from 5 expansions.', 5, 20, 'common', seenSets.size >= 5 ? sets5[4] : -1);
     cart('sets-all', 'Master Cartographer', `Play with cards from all ${owned.length} expansions.`, owned.length, 120, 'epic', seenSets.size >= owned.length ? sets5[owned.length - 1] : -1);
     for (const n of owned) {
-      const names = EXPANSION_NAMES[n]; if (!names) continue;
+      const names = stepNames(n);
       const total = totals.get(n), label = expansionMeta(n).label, size = perExp.get(n).size, set = expansionMeta(n).icon;
       const step = (id, name, hint, target, bonus, tier, k) => extra.push({ id: `exp-${slug(n)}-${id}`, group: 'Expansions', track: 'exp-' + slug(n), trackName: label, set, expansion: n, tier, name, hint, target, bonus, value: size, earned: gat(k) });
       step('half', names[0], `Play with more than half of ${label}'s cards.`, Math.floor(total / 2) + 1, 40, 'uncommon', firstAt.has(n + ':half') ? firstAt.get(n + ':half') : -1);

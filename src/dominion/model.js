@@ -7,7 +7,7 @@
      PHYSICAL cards the copies in the box: the sum of piles' physical_copies (3,132)
      LANDSCAPES     Events/Landmarks/Projects/Ways/Traits — NOT Kingdom cards
      ARTIFACTS      Renaissance tokens — neither Kingdom cards nor landscapes                                   */
-import { expansionMeta, list, LANDSCAPE_TYPES } from './constants.js';
+import { EXPANSIONS, expansionMeta, list, LANDSCAPE_TYPES } from './constants.js';
 
 const num = v => (v === null || v === undefined || v === '' ? null : Number(v));
 
@@ -91,6 +91,38 @@ export function buildCatalog(raw) {
     landscapeTypes: LANDSCAPE_TYPES.filter(t => landscapes.some(l => l.type === t)),
     meta: { mechanicRelationshipCount: raw.mechanicRelationshipCount ?? null, textRecordCount: textRecords.size },
   };
+}
+
+/* The expansions the admin has switched off (Admin > Sets) are taken OUT of the catalog everything reads: the Collection, the Randomizer, Game night's picker, the
+   Insights numbers, and the badges and XP. Nothing is deleted anywhere: a game keeps its kingdom, a player keeps what they earned, and ticking the set again brings
+   it all back, because every badge and XP total is worked out from the games on each load.
+   `enabled` is the league's set of enabled set KEYS (settings.enabled_sets). An expansion with no entry in the registry (dominion/constants.js) is always on.
+   The result has two faces, both with the lists filtered:
+     the catalog itself   id lookups (cardsById ...) still know EVERY item, so a past game's kingdom, a game report or a card link still shows names and pictures
+     catalog.strict       id lookups know only what is enabled: badges, XP and the game report's reward counts read this one, so a card from a switched-off set counts for nothing */
+export const setKeyOf = expansionName => expansionMeta(expansionName).icon || expansionName;
+const REGISTERED = new Set(Object.values(EXPANSIONS).map(e => e.icon));
+const scoped = new WeakMap();   // full catalog -> { key -> scoped catalog }, so the same inputs give the same object (components compare catalogs by identity)
+export function scopeCatalog(full, enabled) {
+  if (!full || !enabled) return full;
+  const on = name => { const k = setKeyOf(name); return !REGISTERED.has(k) || enabled.has(k); };
+  if (full.expansions.every(e => on(e.name))) return full;   // nothing switched off: the very same object
+  const key = [...enabled].sort().join('|');
+  const byKey = scoped.get(full) || scoped.set(full, new Map()).get(full);
+  if (byKey.has(key)) return byKey.get(key);
+  const keep = list => list.filter(x => on(x.expansion));
+  const cards = keep(full.cards), piles = keep(full.piles), landscapes = keep(full.landscapes), artifacts = keep(full.artifacts);
+  const expansions = full.expansions.filter(e => on(e.name));
+  const own = new Set(cards.map(c => c.expansion));
+  const lists = { cards, piles, landscapes, artifacts, expansions, ownedExpansions: expansions.filter(e => own.has(e.name)), landscapeTypes: LANDSCAPE_TYPES.filter(t => landscapes.some(l => l.type === t)) };
+  const strict = {
+    ...full, ...lists, full,
+    cardsById: new Map(cards.map(c => [c.id, c])), pilesByKey: new Map(piles.map(p => [p.key, p])),
+    landscapesById: new Map(landscapes.map(l => [l.id, l])), artifactsById: new Map(artifacts.map(a => [a.id, a])),
+  };
+  const view = { ...full, ...lists, full, strict };
+  byKey.set(key, view);
+  return view;
 }
 
 export const pileOf = (catalog, card) => catalog.pilesByKey.get(card.pileKey) || null;

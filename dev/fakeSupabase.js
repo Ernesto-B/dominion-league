@@ -4,6 +4,7 @@
    16 games, a season, a few logged kingdoms). add_game / edit_game / delete_game really change it, so logging a game shows up in
    the standings until you reload the page — and nothing ever leaves your machine. Swapped in for src/lib/supabase.js by
    vite.fake.config.js; it is never part of the real build. */
+import { SET_NAMES } from '../src/lib/sets.js';
 import { parseCsv } from '../scripts/dominion/lib/csv.mjs';
 
 const csv = import.meta.glob('../supabase/dominion/seed_csv/*.csv', { query: '?raw', import: 'default', eager: true });
@@ -36,7 +37,9 @@ const kingdom = KINGS.flatMap((k, j) => k.map((n, position) => ({ game_id: j + 1
   .concat([{ game_id: 1, kind: 'landscape', item_id: landId('Way of the Mole'), position: 10, on_id: null }]);
 
 const tables = {
-  players, groups: [{ id: 'g1', name: 'Friends' }, { id: 'g2', name: 'Weekend' }], settings: [],
+  players, groups: [{ id: 'g1', name: 'Friends' }, { id: 'g2', name: 'Weekend' }],
+  // `?sets_off=Seaside,Plunder` in the address switches those sets off, as the Admin Sets list would
+  settings: (() => { const off = (typeof location !== 'undefined' && new URLSearchParams(location.search).get('sets_off')) || ''; return off ? [{ id: true, enabled_sets: SET_NAMES.filter(n => !off.split(',').includes(n)) }] : []; })(),
   seasons: [{ id: 1, group_id: 'g1', name: 'Season 1', start_date: '2026-01-01', weeks: 12, target_games: 8, qualify_pct: 0.6, playoff_spots: 4, champion_player_id: null, notes: '' }],
   games, game_results: results, game_kingdom: kingdom,
   dominion_card_catalog: cards.map(c => {

@@ -9,7 +9,7 @@
    is rebuilt from them on every visit, which takes under a millisecond. Storage being blocked, full or corrupt is never an
    error — the site just behaves as if there were no cache. Pure of React so every path is tested in Node. */
 import { fetchRawCatalog } from './api.js';
-import { buildCatalog } from './model.js';
+import { buildCatalog, scopeCatalog } from './model.js';
 
 export const CACHE_KEY = 'dl.catalog.v2';   // bump when the shape of the raw rows changes, so an old copy is never misread
 export const MAX_AGE_MS = 14 * 24 * 3600 * 1000;
@@ -39,7 +39,7 @@ export function writeCache(storage, raw, now = Date.now()) {
 
 export function createCatalogStore({ client, storage = defaultStorage(), now = Date.now, fetchRaw = fetchRawCatalog } = {}) {
   let state = { status: 'loading', catalog: null, error: null };
-  let started = false, fp = null;
+  let started = false, fp = null, full = null, scope = null;   // `full` is the catalog as built; `scope` the league's enabled sets (null = all), see scopeCatalog
   const listeners = new Set();
   const set = next => { state = next; listeners.forEach(l => l()); };
 
@@ -47,7 +47,7 @@ export function createCatalogStore({ client, storage = defaultStorage(), now = D
     try {
       const raw = await fetchRaw(client);
       const next = fingerprint(raw);
-      if (next !== fp) { fp = next; set({ status: 'ready', catalog: buildCatalog(raw), error: null }); }
+      if (next !== fp) { fp = next; full = buildCatalog(raw); set({ status: 'ready', catalog: scopeCatalog(full, scope), error: null }); }
       if (storage) writeCache(storage, raw, now());   // also refreshes the saved-at time, so a copy that keeps being confirmed never expires
     } catch (error) {
       if (background) { console.warn('Dominion catalog refresh failed (showing the saved copy):', error); return; }
@@ -58,12 +58,19 @@ export function createCatalogStore({ client, storage = defaultStorage(), now = D
 
   return {
     getState: () => state,
+    // the league's enabled sets: from now on the catalog everyone reads leaves the other expansions out (null = no filtering)
+    setScope(enabled) {
+      const next = enabled || null;
+      if (next === scope || (next && scope && next.size === scope.size && [...next].every(k => scope.has(k)))) return;
+      scope = next;
+      if (full) set({ status: 'ready', catalog: scopeCatalog(full, scope), error: null });
+    },
     subscribe: l => { listeners.add(l); return () => listeners.delete(l); },
     // starts loading once, however many components ask
     load() {
       if (started) return; started = true;
       const raw = storage ? readCache(storage, now()) : null;
-      if (raw) { fp = fingerprint(raw); set({ status: 'ready', catalog: buildCatalog(raw), error: null }); fetchFresh({ background: true }); }
+      if (raw) { fp = fingerprint(raw); full = buildCatalog(raw); set({ status: 'ready', catalog: scopeCatalog(full, scope), error: null }); fetchFresh({ background: true }); }
       else fetchFresh({ background: false });
     },
     retry() { started = true; set({ status: 'loading', catalog: null, error: null }); return fetchFresh({ background: false }); },

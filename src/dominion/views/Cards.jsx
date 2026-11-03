@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import SearchInput from '../../components/SearchInput.jsx';
 import { useCatalog } from '../CatalogContext.jsx';
 import { browseCards, filterCards, facetCount, cardMatchOf, cardMatchPatch, activeCardFilters, DEFAULT_CARD_FILTERS, cardFiltersFromQuery, cardFiltersToQuery, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
 import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
@@ -56,7 +57,7 @@ export default function Cards({ query = '' }) {
 
       <form className="builder dn-filters" role="search" aria-label="Filter Kingdom cards" onSubmit={e => e.preventDefault()}>
         <div className="controls">
-          <label className="f">Search <input type="search" value={qText} onChange={e => onQ(e.target.value)} placeholder="e.g. Village" autoComplete="off" /></label>
+          <label className="f">Search <SearchInput value={qText} onChange={onQ} placeholder="e.g. Village" autoComplete="off" /></label>
           <label className="f dn-check"><input type="checkbox" checked={f.text} onChange={e => update({ text: e.target.checked })} /> Include card text</label>
           <label className="f">Sort by <select value={f.sort} onChange={e => update({ sort: e.target.value })}>{(plays ? [...SORTS, PLAYED_SORT] : SORTS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
           <button type="button" className="ghost" onClick={() => update({ dir: f.dir === 'asc' ? 'desc' : 'asc' })} aria-label={`Sort direction: ${f.dir === 'asc' ? 'ascending' : 'descending'}. Activate to reverse.`}>{f.dir === 'asc' ? '↑ Ascending' : '↓ Descending'}</button>
@@ -109,7 +110,7 @@ export default function Cards({ query = '' }) {
         <fieldset className="dn-fieldset"><legend>Recorded mechanics</legend>
           <details className="dn-mech" open={f.mechanics.length > 0 || undefined}>
             <summary>{f.mechanics.length ? `${f.mechanics.length} selected` : 'Choose mechanics'} · {s.mechanics.distinct} tags recorded</summary>
-            <label className="f" style={{ margin: '8px 0' }}>Find a mechanic <input type="search" value={mq} onChange={e => setMq(e.target.value)} placeholder="e.g. trashing" autoComplete="off" /></label>
+            <label className="f" style={{ margin: '8px 0' }}>Find a mechanic <SearchInput value={mq} onChange={setMq} placeholder="e.g. trashing" autoComplete="off" /></label>
             <ul className="dn-mech-list">
               {mechs.map(m => (
                 <li key={m.id}><label title={m.definition || undefined}>

@@ -38,6 +38,7 @@ function histories(D) {
 // the kingdom of a game as the catalog knows it, with the numbers a report wants (worked out once per game and catalog: the comparisons ask for every game's)
 const ksCache = new WeakMap();
 export function kingdomStats(g, catalog) {
+  catalog = (catalog && catalog.strict) || catalog;   // a card from a switched-off set does not count (see scopeCatalog)
   if (!catalog || !(g.kingdom || []).length) return null;
   const hit = ksCache.get(g); if (hit && hit.catalog === catalog) return hit.v;
   const v = kingdomStatsOf(g, catalog);
@@ -162,6 +163,7 @@ function tierMove(e, E) {
 }
 
 export function gameReport(D, g, { catalog = null } = {}) {
+  catalog = (catalog && catalog.strict) || catalog;
   const xpMap = leagueXp(D, catalog), hist = histories(D), base = baselines(D, catalog), scale = D.E.scale;
   const order = inOrder(g), idxOf = new Map(D.games.map(x => [x.line, x.idx]));
   const k = kingdomStats(g, catalog);

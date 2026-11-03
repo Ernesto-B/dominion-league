@@ -27,8 +27,8 @@ export default function MeCard({ ranked }) {
   const [seen, setSeen] = useState(() => { const s = store(); return s ? loadBadgesSeen(s, gid) : null; });
   useEffect(() => {
     if (!catalog || seen || !list.length) return;
-    const s = store(); if (s) saveBadgesSeen(s, gid, earnedIds(list));
-    setSeen(earnedIds(list));
+    const s = store(), ids = earnedIds(list); if (s) saveBadgesSeen(s, gid, ids);
+    setSeen(ids);
   }, [catalog, seen, list, gid]);
   const fresh = seen && catalog ? newBadges(list, seen) : [];
   const xp = me ? xpOf(D, me.name, catalog) : null;
@@ -44,8 +44,10 @@ export default function MeCard({ ranked }) {
   const lvlUp = level != null && lvSeen != null && catalog && level > lvSeen ? level : null;
   if (!me) return null;
   const gotIt = () => {
-    const s = store(); if (s) { saveBadgesSeen(s, gid, earnedIds(list)); try { if (level != null) s.setItem(lvKey, String(level)); } catch { /* not remembered */ } }
-    setSeen(earnedIds(list)); if (level != null) setLvSeen(level);
+    // what was seen is only ever added to: a badge hidden for now (its set is switched off in Admin) must not be announced as new when the set comes back
+    const ids = [...new Set([...(seen || []), ...earnedIds(list)])], top = level != null ? Math.max(level, lvSeen || 0) : null;
+    const s = store(); if (s) { saveBadgesSeen(s, gid, ids); try { if (top != null) s.setItem(lvKey, String(top)); } catch { /* not remembered */ } }
+    setSeen(ids); if (top != null) setLvSeen(top);
   };
   const s = meSummary(ranked, me.name, D.E.start, steadyPayout(4, D.E)[0]);
   const mine = hashFor('players', gid, encodeURIComponent(me.name));

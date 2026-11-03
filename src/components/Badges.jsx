@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import SearchInput from './SearchInput.jsx';
 import { usePage } from '../PageContext.js';
 import TierIcon from './TierIcon.jsx';
 import { TIERS, MAX_PINS, pinKey, pinnedBadges, grouped, viewHint } from '../lib/achievements.js';
@@ -54,7 +55,7 @@ export default function Badges({ p, focus = null }) {
       ))}</p>
       <div className="badge-tools">
         <label><input type="checkbox" checked={owned} onChange={e => setOwned(e.target.checked)} /> Only owned</label>
-        <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search badges" aria-label="Search badges by name or description" />
+        <SearchInput value={q} onChange={setQ} placeholder="Search badges" aria-label="Search badges by name or description" />
         {pins.mine && !picking && <button type="button" className="ghost" onClick={() => setPicking(pinnedBadges(pins.ids, list).map(pinKey))}>Pin badges</button>}
         {pick && <><button type="button" className="badge-save" disabled={pins.busy} onClick={savePicks}>Save pins · {picking.length} of {MAX_PINS}</button><button type="button" className="ghost" onClick={() => setPicking(null)}>Cancel</button></>}
         <button type="button" className="ghost dn-hide-sm" disabled={!filtering} onClick={() => { setQ(''); setOwned(false); setTiers([]); }}>Clear</button>

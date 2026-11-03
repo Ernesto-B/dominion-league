@@ -4,6 +4,7 @@ import { fetchConfig, loadData } from './lib/data.js';
 import { buildLeague } from './lib/league.js';
 import { saveSnapshot, loadSnapshot, clearSnapshot } from './lib/snapshot.js';
 import { clearCardCache } from './dominion/cardImages.js';
+import { storeFor } from './dominion/catalogStore.js';
 
 /* The session/data state machine, ported from the old boot():
      loading -> login | pwchange | ready | error
@@ -17,7 +18,8 @@ export function LeagueProvider({ children }) {
   const cfgRef = useRef(null);
   const statusRef = useRef('loading');
 
-  const set = next => { statusRef.current = next.status; setState(next); };
+  // the sets the admin switched off are left out of the Collection's catalog (set before the page is shown, so it never flashes with them)
+  const set = next => { statusRef.current = next.status; if (next.enabledSets) storeFor(sb).setScope(next.enabledSets); setState(next); };
 
   const boot = useCallback(async () => {
     try {

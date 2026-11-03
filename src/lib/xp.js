@@ -178,9 +178,11 @@ export function baseGameXp(D) {
 // computed once per loaded league (D is rebuilt on every reload) and catalog, shared by the ladder, the me card and the Player page
 const cache = new WeakMap(), baseCache = new WeakMap();
 const baseOf = D => baseCache.get(D) || (baseCache.set(D, baseGameXp(D)), baseCache.get(D));
+// badges and XP read the STRICT catalog: a card or landscape from a set the admin switched off is not in it, so it earns and counts for nothing (see scopeCatalog)
+const strictOf = c => (c && c.strict) || c || null;
 const ctxFor = (D, name, catalog) => ({ games: D.games, catalog: catalog || null, baseXp: baseOf(D).get(name) });
 export function leagueXp(D, catalog = null) {
-  catalog = catalog || null;
+  catalog = strictOf(catalog);
   const hit = cache.get(D);
   if (hit && hit.catalog === catalog) return hit.map;
   const everyone = D.ranked.map(x => x.name);
@@ -194,7 +196,7 @@ export const xpOf = (D, name, catalog = null) => leagueXp(D, catalog).get(name) 
 // the search used to redo every rule on each keystroke). The lists are shared, so callers must treat them as read-only.
 const badgeCache = new WeakMap();
 export function badgesFor(D, p, catalog = null) {
-  catalog = catalog || null;
+  catalog = strictOf(catalog);
   const mine = badgeCache.get(D) || (badgeCache.set(D, new Map()), badgeCache.get(D));
   const hit = mine.get(p.name);
   if (hit && hit.catalog === catalog) return hit.list;

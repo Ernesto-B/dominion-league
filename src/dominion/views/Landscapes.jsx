@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import SearchInput from '../../components/SearchInput.jsx';
 import { useCatalog } from '../CatalogContext.jsx';
 import { browseLandscapes, filterLandscapes, facetCount, landscapeMatchOf, landscapeMatchPatch, activeLandscapeFilters, DEFAULT_LANDSCAPE_FILTERS, landscapeFiltersFromQuery, landscapeFiltersToQuery, landscapeCostKey, NO_COST, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
 import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
@@ -59,7 +60,7 @@ export default function Landscapes({ query = '' }) {
 
       <form className="builder dn-filters" role="search" aria-label="Filter landscapes" onSubmit={e => e.preventDefault()}>
         <div className="controls">
-          <label className="f">Search <input type="search" value={qText} onChange={e => onQ(e.target.value)} placeholder="e.g. Way of the" autoComplete="off" /></label>
+          <label className="f">Search <SearchInput value={qText} onChange={onQ} placeholder="e.g. Way of the" autoComplete="off" /></label>
           <label className="f dn-check"><input type="checkbox" checked={f.text} onChange={e => update({ text: e.target.checked })} /> Include card text</label>
           <label className="f">Sort by <select value={f.sort} onChange={e => update({ sort: e.target.value })}>{SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
           <button type="button" className="ghost" onClick={() => update({ dir: f.dir === 'asc' ? 'desc' : 'asc' })} aria-label={`Sort direction: ${f.dir === 'asc' ? 'ascending' : 'descending'}. Activate to reverse.`}>{f.dir === 'asc' ? '↑ Ascending' : '↓ Descending'}</button>
@@ -106,7 +107,7 @@ export default function Landscapes({ query = '' }) {
         <fieldset className="dn-fieldset"><legend>Recorded tags</legend>
           <details className="dn-mech" open={f.mechanics.length > 0 || undefined}>
             <summary>{f.mechanics.length ? `${f.mechanics.length} selected` : 'Choose tags'} · {tagCounts.length} tags recorded</summary>
-            <label className="f" style={{ margin: '8px 0' }}>Find a tag <input type="search" value={mq} onChange={e => setMq(e.target.value)} placeholder="e.g. draw" autoComplete="off" /></label>
+            <label className="f" style={{ margin: '8px 0' }}>Find a tag <SearchInput value={mq} onChange={setMq} placeholder="e.g. draw" autoComplete="off" /></label>
             <ul className="dn-mech-list">
               {tags.map(t => (
                 <li key={t.id}><label><input type="checkbox" checked={f.mechanics.includes(t.id)} onChange={() => update({ mechanics: toggle(f.mechanics, t.id) })} />{humanize(t.id)} <span className="meta">{fc.tag[t.id]}</span></label></li>
