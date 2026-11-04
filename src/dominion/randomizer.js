@@ -416,6 +416,30 @@ export function setupForHand(catalog, cardIds, baneId = null) {
   };
 }
 
+/* A kingdom state (what the Randomizer page shows and keeps in its link) built from the items the hand-picker edits: the cards and landscapes in the order given, a card named twice
+   or in a pile already taken counted once, at most 12 cards. A hand-picked kingdom has no seed. Its setup notes come from setupForHand (the Bane the kingdom already had is
+   kept while Young Witch and that card are still in it). Null when no usable card is left: a kingdom is its cards, so landscapes alone are not kept. */
+export function stateFromItems(catalog, items, baneId = null) {
+  const cardIds = items.filter(i => i.kind === 'card').map(i => i.id);
+  const setup = setupForHand(catalog, cardIds, baneId);
+  const { byCardId } = pileInfos(catalog);
+  const baneKey = setup.bane ? setup.bane.key : null, seen = new Set(), slots = [];
+  for (const id of cardIds) {
+    const i = byCardId.get(id);
+    if (i && !seen.has(i.key) && i.key !== baneKey) { seen.add(i.key); slots.push(toSlot(i)); }
+  }
+  if (!slots.length) return null;
+  const landscapes = [], taken = new Set();
+  for (const it of items) {
+    const l = it.kind === 'landscape' ? catalog.landscapesById.get(it.id) : null;
+    if (!l || taken.has(l.id)) continue;
+    taken.add(l.id);
+    const host = it.on && byCardId.get(it.on);
+    landscapes.push({ landscape: l, on: l.type === 'Trait' && host && seen.has(host.key) ? it.on : null });
+  }
+  return { slots: slots.slice(0, 12), landscapes, seed: null, setup: { bane: setup.bane, platinumColony: setup.platinumColony, shelters: setup.shelters, ruins: setup.ruins, needsBane: setup.needsBane, hand: setup.hand } };
+}
+
 // ---------------------------------------------------------------- re-rolling one thing
 /* Swap one slot for another card that keeps every rule true. */
 export function rerollSlot(catalog, options, state, index, { rng = Math.random, plays = null } = {}) {

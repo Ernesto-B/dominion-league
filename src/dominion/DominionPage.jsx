@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { DominionData } from './CatalogContext.jsx';
 import { VIEWS, parseDominionArg, tabFor } from './links.js';
+import { useKingdomPick } from './kingdomPick.js';
 import { PageShortcuts } from '../components/Shortcuts.jsx';
 import { EmptyState } from './components/States.jsx';
 import Overview from './views/Overview.jsx';
@@ -50,9 +51,11 @@ export function DominionView({ arg }) {
 // Navigation always shows (even while loading or after an error); the data loads once and is shared by every view.
 export default function DominionPage({ arg, client }) {
   const r = parseDominionArg(arg);
+  const kp = useKingdomPick();
+  const choosing = !!kp && (r.view === 'cards' || r.view === 'landscapes') && r.view === (kp.kind === 'card' ? 'cards' : 'landscapes');   // while choosing for a kingdom the section tabs would only invite wandering off
   return (
     <>
-      <DominionNav active={tabFor(r.view)} />
+      {!choosing && <DominionNav active={tabFor(r.view)} />}
       <DominionData client={client}><DominionView arg={arg} /></DominionData>
     </>
   );

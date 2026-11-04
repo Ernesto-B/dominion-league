@@ -5,6 +5,8 @@ import { browseCards, filterCards, facetCount, cardMatchOf, cardMatchPatch, acti
 import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
 import { useLeagueGames } from '../useLeagueGames.js';
 import { cardHref, MAX_COMPARE, compareHref } from '../links.js';
+import KingdomPickBar from '../components/KingdomPickBar.jsx';
+import { choosePick, useKingdomPick } from '../kingdomPick.js';
 import { useCompareBasket, startPicking, stopPicking, togglePick, removePick } from '../compareBasket.js';
 import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
@@ -27,6 +29,7 @@ export default function Cards({ query = '' }) {
   useListScroll();
   const lg = useLeagueGames();
   const basket = useCompareBasket();
+  const kp = useKingdomPick(), choosing = !!kp && kp.kind === 'card';   // choosing a card FOR a kingdom (the Randomizer's Add / Replace), not browsing
   const picking = basket.picking, picked = new Set(basket.ids);
   const plays = lg && lg.stats ? lg.stats.piles : null;   // pile key -> { games, ... }; null until a kingdom has been logged
   const [mq, setMq] = useState('');
@@ -36,7 +39,8 @@ export default function Cards({ query = '' }) {
   const clear = () => { clearFilters(); setMq(''); };
   const random = () => { const c = pickRandom(rows); if (c) window.location.hash = cardHref(c.id, qs); };
 
-  const rows = useMemo(() => browseCards(catalog.cards, f, { plays }), [catalog, f, plays]);
+  const taken = useMemo(() => new Set(choosing ? kp.taken.map(id => catalog.cardsById.get(id)?.pileKey).filter(Boolean) : []), [catalog, choosing, kp]);
+  const rows = useMemo(() => browseCards(catalog.cards, f, { plays }).filter(c => !taken.has(c.pileKey)), [catalog, f, plays, taken]);   // a pile already in the kingdom is not offered
   const active = activeCardFilters(f);
   const debts = [...new Set(catalog.cards.map(c => c.debt).filter(d => d > 0))].sort((a, b) => a - b);
   // the small number on every chip follows the other filters (see facetCount): "how many would show if I picked this"
@@ -56,7 +60,8 @@ export default function Cards({ query = '' }) {
   return (
     <>
       <PageShortcuts bindings={rows.length ? [{ key: 'r', label: 'Open a random card', run: random }] : []} />
-      <div className="head"><div><h1>Kingdom cards</h1><p className="lede">Every Kingdom card name in the collection. Search, then narrow by expansion, printed type, cost or recorded mechanic.</p></div></div>
+      {choosing && <KingdomPickBar target={kp} plays={plays} />}
+      <div className="head"><div>{choosing ? <><h1>{kp.label ? 'Replace a card' : 'Add a card'}</h1></> : <><h1>Kingdom cards</h1><p className="lede">Every Kingdom card name in the collection. Search, then narrow by expansion, printed type, cost or recorded mechanic.</p></>}</div></div>
       {picking && <p className="dn-pickhint" role="status">Pick up to {MAX_COMPARE} cards to compare: tap a row to add or remove it.</p>}
 
       <form className="builder dn-filters" role="search" aria-label="Filter Kingdom cards" onSubmit={e => e.preventDefault()}>
@@ -131,21 +136,21 @@ export default function Cards({ query = '' }) {
         <FilterSummary f={f} update={update} />
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>
           <button type="button" className="ghost" onClick={clear} disabled={!active}>Clear filters{active ? ` (${active})` : ''}</button>
-          <button type="button" className="ghost" onClick={random} disabled={!rows.length}>Random card</button>
-          <button type="button" className={'ghost' + (picking ? ' dn-cmp-on' : '')} aria-pressed={picking} onClick={() => (picking ? stopPicking() : startPicking())}>{picking ? 'Cancel comparing' : 'Compare cards'}</button>
+          {!choosing && <button type="button" className="ghost" onClick={random} disabled={!rows.length}>Random card</button>}
+          {!choosing && <button type="button" className={'ghost' + (picking ? ' dn-cmp-on' : '')} aria-pressed={picking} onClick={() => (picking ? stopPicking() : startPicking())}>{picking ? 'Cancel comparing' : 'Compare cards'}</button>}
           <span className="meta" role="status" aria-live="polite">Showing <b>{rows.length}</b> of {catalog.cards.length} card names{active ? ' (filtered)' : ''}</span>
         </div>
       </form>
 
       {rows.length ? (
         <div className="tablewrap">
-          <table className="plain dn-table dn-browse">
+          <table className={'plain dn-table dn-browse' + (choosing ? ' dn-aligned' : '')}>
             <caption className="dn-sr">Kingdom cards matching the current filters</caption>
             <SortHeaders columns={plays ? [...COLUMNS, PLAYED_COLUMN] : COLUMNS} sort={f.sort} dir={f.dir} onSort={sortBy} />
             <tbody>{rows.map(c => {
               return (
-                <tr key={c.id} {...(picking ? pickRow(c.id, picked) : rowLink(cardHref(c.id, qs)))} {...hoverHandlers(c.id)}>
-                  <td className="l">{picking && <span className={'dn-pickbox' + (picked.has(c.id) ? ' on' : '')} aria-hidden="true">{picked.has(c.id) ? '✓' : ''}</span>}<ExpansionBadge name={c.expansion} size={18} /></td>
+                <tr key={c.id} {...(choosing ? chooseRow(c.id) : picking ? pickRow(c.id, picked) : rowLink(cardHref(c.id, qs)))} {...hoverHandlers(c.id)}>
+                  <td className="l">{choosing && <button type="button" className="dn-addpill" onClick={e => choosePick(c.id, e.currentTarget)} aria-label={kp.label ? `Use ${c.name} instead` : `Add ${c.name} to your kingdom`} title={kp.label ? 'Use this one instead' : 'Add to your kingdom'}>{kp.label ? '✓' : '+'}</button>}{!choosing && picking && <span className={'dn-pickbox' + (picked.has(c.id) ? ' on' : '')} aria-hidden="true">{picked.has(c.id) ? '✓' : ''}</span>}<ExpansionBadge name={c.expansion} size={18} /></td>
                   <td className="l name"><a href={cardHref(c.id, qs)}>{c.name}</a>{c.previousName && <small className="meta"> (was {c.previousName})</small>}{f.text && f.q.trim() && !nameMatches(c, f.q) && <small className="meta dn-snippet">{textSnippet(c.text, f.q)}</small>}</td>
                   <td className="l"><TypePills types={c.types} /></td>
                   <td className="dn-cost-cell"><CostIcons coins={c.coins} debt={c.debt} overpay={c.overpay} size={26} /></td>
@@ -159,10 +164,16 @@ export default function Cards({ query = '' }) {
       ) : (
         <EmptyState>No cards match these filters. {active ? <button type="button" className="ghost" onClick={clear}>Clear filters</button> : null}</EmptyState>
       )}
-      {picking && <CompareTray ids={basket.ids} catalog={catalog} />}
+      {picking && !choosing && <CompareTray ids={basket.ids} catalog={catalog} />}
     </>
   );
 }
+
+// choosing for a kingdom: a click anywhere on the row picks it (the name stays a real link, for a look at the card first)
+const chooseRow = id => ({
+  className: 'dn-rowlink dn-pickrow',
+  onClick: e => { if (e.target.closest('a, button, input, select, textarea')) return; choosePick(id, e.currentTarget); },
+});
 
 // in pick mode a row toggles instead of opening the card (its name stays a real link); a fifth card is refused by the store
 const pickRow = (id, picked) => ({

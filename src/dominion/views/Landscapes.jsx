@@ -4,6 +4,8 @@ import { useCatalog } from '../CatalogContext.jsx';
 import { browseLandscapes, filterLandscapes, facetCount, landscapeMatchOf, landscapeMatchPatch, activeLandscapeFilters, DEFAULT_LANDSCAPE_FILTERS, landscapeFiltersFromQuery, landscapeFiltersToQuery, landscapeCostKey, NO_COST, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
 import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
 import { useLeagueGames } from '../useLeagueGames.js';
+import KingdomPickBar from '../components/KingdomPickBar.jsx';
+import { choosePick, useKingdomPick } from '../kingdomPick.js';
 import { artifactHref, landscapeHref } from '../links.js';
 import { PLURAL, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
@@ -31,7 +33,8 @@ export default function Landscapes({ query = '' }) {
   const clear = () => { clearFilters(); setMq(''); };
   const random = () => { const l = pickRandom(rows); if (l) window.location.hash = landscapeHref(l.id, qs); };
 
-  const rows = useMemo(() => browseLandscapes(catalog.landscapes, f, { plays }), [catalog, f, plays]);
+  const kp = useKingdomPick(), choosing = !!kp && kp.kind === 'landscape';   // choosing a landscape FOR a kingdom, not browsing
+  const rows = useMemo(() => browseLandscapes(catalog.landscapes, f, { plays }).filter(l => !(choosing && kp.taken.includes(l.id))), [catalog, f, plays, choosing, kp]);
   const active = activeLandscapeFilters(f);
   const expansions = catalog.ownedExpansions.filter(e => catalog.landscapes.some(l => l.expansion === e.name));
   // tags are the landscapes' OWN vocabulary (most are not Kingdom taxonomy ids), so they get no Kingdom definitions
@@ -56,7 +59,8 @@ export default function Landscapes({ query = '' }) {
   return (
     <>
       <PageShortcuts bindings={rows.length ? [{ key: 'r', label: 'Open a random landscape', run: random }] : []} />
-      <div className="head"><div><h1>Landscapes</h1><p className="lede">Events, Landmarks, Projects, Ways and Traits. They sit beside the Kingdom and aren’t Kingdom cards.</p></div></div>
+      {choosing && <KingdomPickBar target={kp} />}
+      <div className="head"><div>{choosing ? <h1>{kp.label ? 'Replace a landscape' : 'Add a landscape'}</h1> : <><h1>Landscapes</h1><p className="lede">Events, Landmarks, Projects, Ways and Traits. They sit beside the Kingdom and aren’t Kingdom cards.</p></>}</div></div>
 
       <form className="builder dn-filters" role="search" aria-label="Filter landscapes" onSubmit={e => e.preventDefault()}>
         <div className="controls">
@@ -120,19 +124,19 @@ export default function Landscapes({ query = '' }) {
         <FilterSummary f={f} update={update} />
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>
           <button type="button" className="ghost" onClick={clear} disabled={!active}>Clear filters{active ? ` (${active})` : ''}</button>
-          <button type="button" className="ghost" onClick={random} disabled={!rows.length}>Random landscape</button>
+          {!choosing && <button type="button" className="ghost" onClick={random} disabled={!rows.length}>Random landscape</button>}
           <span className="meta" role="status" aria-live="polite">Showing <b>{rows.length}</b> of {catalog.landscapes.length} landscapes{active ? ' (filtered)' : ''}</span>
         </div>
       </form>
 
       {rows.length ? (
         <div className="tablewrap">
-          <table className="plain dn-table dn-browse">
+          <table className={'plain dn-table dn-browse' + (choosing ? ' dn-aligned' : '')}>
             <caption className="dn-sr">Landscapes matching the current filters</caption>
             <SortHeaders columns={COLUMNS} sort={f.sort} dir={f.dir} onSort={sortBy} />
             <tbody>{rows.map(l => (
-              <tr key={l.id} {...rowLink(landscapeHref(l.id, qs))} {...hoverHandlers(l.id)}>
-                <td className="l"><ExpansionBadge name={l.expansion} size={18} /></td>
+              <tr key={l.id} {...(choosing ? { className: 'dn-rowlink dn-pickrow', onClick: e => { if (!e.target.closest('a, button, input, select, textarea')) choosePick(l.id, e.currentTarget); } } : rowLink(landscapeHref(l.id, qs)))} {...hoverHandlers(l.id)}>
+                <td className="l">{choosing && <button type="button" className="dn-addpill" onClick={e => choosePick(l.id, e.currentTarget)} aria-label={kp.label ? `Use ${l.name} instead` : `Add ${l.name} to your kingdom`} title={kp.label ? 'Use this one instead' : 'Add to your kingdom'}>{kp.label ? '✓' : '+'}</button>}<ExpansionBadge name={l.expansion} size={18} /></td>
                 <td className="l name"><a href={landscapeHref(l.id, qs)}>{l.name}</a>{f.text && f.q.trim() && !nameMatches(l, f.q) && <small className="meta dn-snippet">{textSnippet(l.text, f.q)}</small>}</td>
                 <td className="l"><LandscapePill type={l.type} /></td>
                 <td className="dn-cost-cell">{l.coins != null ? <CostIcons coins={l.coins} debt={l.debt} size={26} /> : <span className="dn-nocost" role="img" aria-label="No cost" title={`${PLURAL[l.type] || l.type} have no cost`} />}</td>

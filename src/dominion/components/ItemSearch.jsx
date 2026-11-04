@@ -8,7 +8,7 @@ import { ExpansionBadge, LandscapePill } from './bits.jsx';
    viewer builds a list by name: a game's kingdom in the Add Game dialog, Game night's hand-picking, and the Randomizer's "always / never include". Each match leads with its expansion's icon (the box it lives in).
    `onAdd(match)` may return a string to say why it wasn't added (it is shown, and the search kept). Enter adds the top
    match; Escape clears the search first (and stops there, so it doesn't also close a dialog around it). */
-export default function ItemSearch({ catalog, taken = [], kind = null, label, placeholder = 'Start typing a name…', onAdd }) {
+export default function ItemSearch({ catalog, taken = [], kind = null, label, placeholder = 'Start typing a name…', onAdd, autoFocus = false }) {
   const [q, setQ] = useState('');
   const [note, setNote] = useState('');
   const results = searchKingdom(catalog, q, taken, 8, kind);
@@ -20,7 +20,7 @@ export default function ItemSearch({ catalog, taken = [], kind = null, label, pl
   return (
     <>
       <label className="f dn-kpicker-search">{label}
-        <SearchInput value={q} onChange={v => { setQ(v); setNote(''); }} onKeyDown={onKey} placeholder={placeholder} autoComplete="off" />
+        <SearchInput value={q} onChange={v => { setQ(v); setNote(''); }} onKeyDown={onKey} placeholder={placeholder} autoComplete="off" autoFocus={autoFocus} />
       </label>
       {note && <p className="meta dn-kpicker-note" role="alert">{note}</p>}
       {q.trim() && (results.length ? (

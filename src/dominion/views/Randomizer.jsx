@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { clearResumeEditing, peekResumeEditing } from '../kingdomPick.js';
 import { useCatalog } from '../CatalogContext.jsx';
 import { usePage } from '../../PageContext.js';
 import { writeQuery } from '../urlState.js';
@@ -6,13 +7,10 @@ import { loadNight, nightInProgress, saveNight, withRolledKingdom } from '../../
 import { impliedSets, resolveKingdom } from '../kingdom.js';
 import { pilesPlayed } from '../playStats.js';
 import { useLeagueGames } from '../useLeagueGames.js';
-import { DEFAULT_OPTIONS, formatSeed, kingdomFromParams, kingdomToParams, optionsFromParams, optionsToParams, toGameItems } from '../randomizer.js';
-import { expansionMeta } from '../constants.js';
+import { DEFAULT_OPTIONS, formatSeed, kingdomFromParams, stateFromItems, kingdomToParams, optionsFromParams, optionsToParams, toGameItems } from '../randomizer.js';
 import RandomizerPanel from '../components/RandomizerPanel.jsx';
+import FlashButton from '../../components/FlashButton.jsx';
 import { PageShortcuts } from '../../components/Shortcuts.jsx';
-import { kingdomCode, renderKingdomImage, shareKingdomImage } from '../kingdomImage.js';
-
-const expansionName = e => expansionMeta(e).label;
 
 /* The Kingdom randomizer page. Everything — the options AND the kingdom that was rolled — lives in the URL
    (#/dominion/randomizer?exp=Seaside&c=...), so a kingdom can be shared, reopened, and left for a card page and come back
@@ -24,8 +22,11 @@ export default function Randomizer({ query = '' }) {
   const params = useMemo(() => new URLSearchParams(query.replace(/^\?/, '')), [query]);
   const opts = useMemo(() => optionsFromParams(params), [params]);
   const state = useMemo(() => kingdomFromParams(catalog, params), [catalog, params]);
-  const [copied, setCopied] = useState('');
+  const [flash, setFlash] = useState({});   // which button just confirmed itself: { link | seed: 'ok' | 'fail' }
+  const flashFor = (key, status) => { setFlash({ [key]: status }); setTimeout(() => setFlash(f => (f[key] === status ? {} : f)), status === 'ok' ? 1800 : 3500); };
+  const [hand, setHand] = useState(peekResumeEditing);   // back from choosing a card in the full list: still editing   // hand-editing: the tiles get Replace / Remove and an Add tile (the same editing Game night's Random way has)
 
+  useEffect(() => { clearResumeEditing(); }, []);
   const lg = useLeagueGames();
   const plays = useMemo(() => (lg && lg.stats ? pilesPlayed(lg.stats) : null), [lg]);
   const canLog = !!(page && page.me && page.me.is_admin);
@@ -36,24 +37,12 @@ export default function Randomizer({ query = '' }) {
   };
 
   const copy = async () => {
-    try { await navigator.clipboard.writeText(location.href); setCopied('Link copied'); } catch { setCopied('Couldn’t copy — copy the address from your browser’s address bar.'); }
-    setTimeout(() => setCopied(''), 3500);
+    try { await navigator.clipboard.writeText(location.href); flashFor('link', 'ok'); } catch { flashFor('link', 'fail'); }
   };
   // for everyone who can't log a game: the roll's seed to the clipboard, to send to whoever will set the game up (they type it into Game night's seed box)
   const shareSeed = async () => {
     const seed = formatSeed(state.seed);
-    try { await navigator.clipboard.writeText(seed); setCopied(`Seed ${seed} copied`); } catch { setCopied(`Seed: ${seed}`); }   // no clipboard here: show it to copy by hand
-    setTimeout(() => setCopied(''), 3500);
-  };
-  const shareImage = async () => {
-    setCopied('Making the picture…');
-    try {
-      const code = state.seed != null ? formatSeed(state.seed) : kingdomCode(state);   // the roll's seed when it has one, else a fingerprint of the kingdom
-      const blob = await renderKingdomImage(state, { title: 'Kingdom', code, subtitle: `${[...new Set(state.slots.map(s => s.expansion))].map(e => expansionName(e)).join(' · ')}` });
-      const how = await shareKingdomImage(blob, { name: `kingdom-${code}.png`, title: 'Dominion kingdom' });
-      setCopied(how === 'shared' ? '' : how === 'downloaded' ? 'Picture saved to your downloads' : '');
-    } catch { setCopied('The picture couldn’t be made on this device.'); }
-    setTimeout(() => setCopied(''), 3500);
+    try { await navigator.clipboard.writeText(seed); flashFor('seed', 'ok'); } catch { flashFor('seed', 'fail'); }   // no clipboard here: the button shows the seed to copy by hand
   };
   // "Use for a game": copy the roll's seed, put the kingdom (with its options and seed) into Game night's Random way and go there
   const logIt = async () => {
@@ -67,13 +56,13 @@ export default function Randomizer({ query = '' }) {
     window.location.hash = page.hashFor('night', page.gid);
   };
 
+  // an edit hands back the kingdom as a list of items; it is written to the link like any roll
+  const edit = (items, _implied, baneId) => write(opts, stateFromItems(catalog, items, baneId));
   const actions = (
     <>
-      <button type="button" className="ghost" onClick={copy}>Copy link</button>
-      <button type="button" className="ghost" onClick={shareImage}>Share image</button>
-      {!canLog && state && state.seed != null && <button type="button" className="ghost" onClick={shareSeed} title="Copy this roll's seed">Share seed</button>}
+      <FlashButton flash={flash.link} okLabel="Copied" failLabel="Copy the address bar" onClick={copy}>Copy link</FlashButton>
+      {!canLog && state && state.seed != null && <FlashButton flash={flash.seed} okLabel="Copied" failLabel={`Seed ${formatSeed(state.seed)}`} onClick={shareSeed} title="Copy this roll's seed">Share seed</FlashButton>}
       {canLog && <button type="button" className="ghost" onClick={logIt} title="Copy the seed and open Game night with this kingdom">Use for a game →</button>}
-      <span className="meta" role="status" aria-live="polite">{copied}</span>
     </>
   );
 
@@ -82,7 +71,9 @@ export default function Randomizer({ query = '' }) {
       <div className="head"><div><h1>Kingdom randomizer</h1><p className="lede">Roll a Kingdom for your next game. Choose the expansions and any rules, roll, then lock the cards you like and re-roll the rest.</p></div></div>
       <PageShortcuts bindings={[{ key: 'r', label: 'Roll a kingdom', run: () => { const b = document.querySelector('.dn-rz-go button[type=submit]'); if (b) b.click(); } }]} />
       <RandomizerPanel catalog={catalog} opts={opts} setOpts={patch => write({ ...opts, ...patch }, state)} state={state}
-        onState={next => write(opts, next)} onReset={() => write(DEFAULT_OPTIONS, state)} plays={plays} actions={actions} />
+        onState={next => write(opts, next)} onReset={() => write(DEFAULT_OPTIONS, state)} plays={plays} actions={actions}
+        editing={hand} onEdit={edit}
+        extraControls={<button type="button" className="ghost" aria-pressed={hand} onClick={() => setHand(h => !h)}>{hand ? 'Done editing' : 'Pick cards by hand'}</button>} />
     </>
   );
 }

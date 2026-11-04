@@ -544,9 +544,10 @@ a.dn-kchip:hover{border-color:var(--muted)}
 .dn-donut .dn-legend li{padding:3px 6px;margin:0 -6px;border-radius:6px;transition:background .15s}
 .dn-donut .dn-legend li.on{background:color-mix(in srgb, var(--ink) 10%, transparent)}
 .dn-donut .dn-legend-name{white-space:nowrap}
-.dn-seed{color:var(--muted);font-size:14px;white-space:nowrap}
+.dn-seed{white-space:nowrap;min-height:0;padding:0;border:0;background:none;box-shadow:none;border-radius:0;color:var(--muted);font:inherit;font-size:14px;cursor:pointer}.dn-seed:hover{background:none;box-shadow:none}.dn-copyglyph{display:inline-block;vertical-align:-.125em;margin-left:.4em}
+.dn-rz-actions .dn-mode{margin-top:0}   /* the Card faces / List chips sit on the same line as the buttons */
 .dn-seed b{color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:.02em}
-.dn-seed-in input{width:9ch}
+.dn-seed-in input{width:13ch}
 .dn-rz-seedhelp{margin:6px 0 0}
 .dn-col-link{text-decoration:none;cursor:pointer;transition:filter .15s}
 .dn-col-link:hover,.dn-col-link:focus-visible{filter:brightness(1.3)}
@@ -1900,3 +1901,55 @@ a.gr-face{position:relative}
 .dn-tray-go.off{opacity:.4;cursor:not-allowed}
 @media (max-width:720px){.dn-tray{bottom:calc(66px + env(safe-area-inset-bottom))}}
 @media (pointer:coarse){.dn-tray-chip{min-height:44px}.dn-tray-go{min-height:44px;display:inline-grid;place-items:center}}
+
+/* Editing a kingdom by hand: Replace / Remove on each tile, a dashed Add tile ending each grid, and the search dialog */
+.dn-rzadd{list-style:none;display:block;min-width:0;align-self:start}   /* start: the row's tallest tile (picture plus buttons) must not stretch it */
+.dn-rzadd>button{display:grid;place-content:center;gap:6px;width:100%;box-sizing:border-box;min-height:120px;padding:10px;border:2px dashed color-mix(in srgb,var(--ink) 28%,transparent);border-radius:14px;background:transparent;color:var(--muted);font:600 14px var(--text);cursor:pointer}
+.dn-rzadd>button span{font-size:28px;line-height:1}.dn-rzadd>button:hover{border-color:var(--muted);color:var(--ink)}
+.dn-rzadd.faces>button{aspect-ratio:5/8;min-height:0}.dn-rzadd.faces.land>button{aspect-ratio:8/5}   /* a card picture's own proportions */
+.dn-sheet-back{position:fixed;inset:0;z-index:80;display:grid;justify-items:center;align-items:start;padding:12vh 12px 12px;background:rgba(0,0,0,.55)}
+.dn-sheet{width:min(520px,100%);max-height:76vh;overflow:auto;padding:14px 16px;border:1px solid var(--frame,var(--line));border-radius:14px;background:var(--panel);box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.dn-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+
+/* Choosing a card for a kingdom from the full list: a loud banner, an Add button on every row, no section tabs */
+.dn-kpbar{position:sticky;top:0;z-index:35;margin:0 0 14px;padding:0;overflow:hidden;border:2px solid var(--brass,var(--ink));border-radius:12px;background:var(--sheen,none),var(--panel);box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.dn-kpbar-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;margin:0;padding:12px 16px}.dn-kpbar-t{font-size:17px}
+.dn-kpbar-table{margin:0;border-top:1px solid var(--line)}.dn-kpbar-table td{border-bottom:0}
+@media (min-width:721px){.dn-aligned{table-layout:fixed}.dn-aligned :is(th,td){overflow-wrap:anywhere}
+  .dn-aligned :is(th,td):nth-child(1){width:19%}.dn-aligned :is(th,td):nth-child(2){width:22%}.dn-aligned :is(th,td):nth-child(3){width:21%}.dn-aligned :is(th,td):nth-child(4){width:9%}.dn-aligned :is(th,td):nth-child(5){width:19%}.dn-aligned :is(th,td):nth-child(6){width:10%}.dn-aligned td{white-space:normal}   /* a long shared pile wraps inside its own column */}
+/* a round brass button: + adds a card, ✓ takes this one in place of the card being replaced */
+.dn-addpill{display:inline-grid;place-items:center;width:28px;height:28px;min-height:0;margin-right:8px;padding:0;border-radius:50%;font:700 17px/1 var(--text);vertical-align:middle;background:var(--brass,var(--ink));color:#1a1405;border:0;cursor:pointer}
+@media (pointer:coarse){.dn-addpill{width:44px;height:44px}}
+@media (min-width:721px){.dn-kpbar{top:76px}}   /* under the sticky site header (it was sliding beneath it) */
+/* a long expansion name ("Cornucopia & Guilds") is cut with an ellipsis in its own column instead of running under the next one */
+@media (min-width:721px){.dn-aligned td:nth-child(1){white-space:nowrap;overflow:hidden}
+  .dn-aligned td:nth-child(1) .dn-exp{max-width:calc(100% - 44px);vertical-align:middle;min-width:0}
+  .dn-aligned td:nth-child(1) .dn-exp svg,.dn-aligned td:nth-child(1) .dn-exp img{flex:none}
+  .dn-aligned td:nth-child(1) .dn-exp-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dn-aligned td:nth-child(1) .dn-addpill{vertical-align:middle}}
+
+/* the + / ✓ button: it grows under the pointer, presses in, and on a pick pops with a ring while its row lights up (transform and opacity only; nothing if motion is reduced) */
+.dn-addpill{position:relative}
+.dn-addpill::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid var(--brass,var(--ink));opacity:0;pointer-events:none}
+.dn-table tr.chosen td{background:color-mix(in srgb,var(--brass,var(--ink)) 22%,transparent)}
+@media (prefers-reduced-motion:no-preference){
+  .dn-addpill{transition:transform .12s ease}
+  .dn-addpill:hover,.dn-addpill:focus-visible{transform:scale(1.18)}
+  .dn-addpill:active{transform:scale(.9)}
+  .dn-addpill::after{transition:transform .2s ease,opacity .2s ease}
+  .dn-addpill:hover::after,.dn-addpill:focus-visible::after{opacity:.65;transform:scale(1.5)}
+  .dn-addpill.popped{animation:dn-pop .28s ease-out both}
+  .dn-addpill.popped::after{animation:dn-ring .28s ease-out both}
+  @keyframes dn-pop{0%{transform:scale(1)}45%{transform:scale(1.4)}100%{transform:scale(1.2)}}
+  @keyframes dn-ring{from{opacity:.9;transform:scale(1)}to{opacity:0;transform:scale(2.3)}}
+}
+
+/* Remove turns a little red under the pointer (or keyboard focus), so it reads as the destructive one next to Replace */
+.dn-rztile-btns .dn-remove:hover,.dn-rztile-btns .dn-remove:focus-visible{color:#ff8a80;border-color:rgba(255,107,95,.7);background:rgba(255,80,70,.14);opacity:1}
+@media (prefers-reduced-motion:no-preference){.dn-rztile-btns .dn-remove{transition:background-color .15s ease,border-color .15s ease,color .15s ease}}
+
+/* a button that confirms itself in place (components/FlashButton.jsx): a green tint and a check, the button's width unchanged */
+.dn-flash-grid{display:inline-grid}.dn-flash-grid>*{grid-area:1/1;text-align:center}
+.dn-flash.ok{color:#8fd6a0;border-color:rgba(120,200,140,.75);background:rgba(90,180,120,.14)}
+.dn-flash.fail{color:#ffb36b;border-color:rgba(255,179,107,.7)}
+@media (prefers-reduced-motion:no-preference){.dn-flash{transition:background-color .2s ease,border-color .2s ease,color .2s ease}}
