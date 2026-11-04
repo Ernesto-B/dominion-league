@@ -1,6 +1,5 @@
 import { startLabel } from './gameTime.js';
 import { badgesFor, xpOf } from './xp.js';
-import { vpPerMin } from './vpRate.js';
 
 /* Two players side by side, from the same data their own pages use. It is built as a rivalry, not a scoreboard: what they have played TOGETHER comes first, the numbers are shown without a
    winner or a gap, and badges are shown as what they share. Pure (no DOM), so it is tested on its own.
@@ -11,7 +10,6 @@ import { vpPerMin } from './vpRate.js';
      badges    { shared: [badge], onlyA: [badge], onlyB: [badge] }   earned ones only, by badge */
 const pct = v => (v == null ? '—' : `${Math.round(v * 100)}%`);
 const one1 = v => (v == null ? '—' : (Math.round(v * 10) / 10).toFixed(1));
-const one = v => (v == null ? '—' : (Math.round(v * 100) / 100).toFixed(2));
 
 export function compare(D, a, b, catalog = null) {
   const pa = D.players.find(p => p.name === a), pb = D.players.find(p => p.name === b);
@@ -38,8 +36,7 @@ export function compare(D, a, b, catalog = null) {
   const apa = avgPlace(pa), apb = avgPlace(pb), vpa = avgVP(a), vpb = avgVP(b);
   const xa = xpOf(D, a, catalog), xb = xpOf(D, b, catalog), ba = catalog ? badgesFor(D, pa, catalog) : [], bb = catalog ? badgesFor(D, pb, catalog) : [];
   const ea = new Map(ba.filter(x => x.earned).map(x => [x.id, x])), eb = new Map(bb.filter(x => x.earned).map(x => [x.id, x]));
-  const va = vpPerMin(D, a), vb = vpPerMin(D, b);
-  const rows = [
+    const rows = [
     { key: 'elo', icon: 'icons/stats/elo.png', label: 'Elo', a: pa.rated ? Math.round(pa.elo) : '—', b: pb.rated ? Math.round(pb.elo) : '—', na: pa.rated ? pa.elo : null, nb: pb.rated ? pb.elo : null, lo: D.E.start - 300 },
     { key: 'peak', icon: 'icons/stats/peak-elo.png', label: 'Peak Elo', a: pa.rated ? Math.round(pa.peak) : '—', b: pb.rated ? Math.round(pb.peak) : '—', na: pa.rated ? pa.peak : null, nb: pb.rated ? pb.peak : null, lo: D.E.start - 300 },
     { key: 'tier', label: 'Tier', a: pa.tier ? pa.tier.name : '—', b: pb.tier ? pb.tier.name : '—' },
@@ -52,7 +49,6 @@ export function compare(D, a, b, catalog = null) {
     { key: 'avgvp', label: 'Average VP', a: vpa == null ? '—' : Math.round(vpa), b: vpb == null ? '—' : Math.round(vpb), na: vpa, nb: vpb },
     { key: 'streak', icon: 'icons/stats/win-streak.png', label: 'Best win streak', a: pa.bestStreak, b: pb.bestStreak, na: pa.bestStreak, nb: pb.bestStreak },
     { key: 'titles', icon: 'icons/champion.png', label: 'Season titles', a: pa.titles || 0, b: pb.titles || 0, na: pa.titles || 0, nb: pb.titles || 0 },
-    { key: 'vpm', icon: 'icons/stats/average-points.png', label: 'VP per minute', a: one(va.rate), b: one(vb.rate), na: va.rate, nb: vb.rate },
     { key: 'lasts', icon: 'icons/stats/last-place-finishes.png', label: 'Last places', a: pa.lasts, b: pb.lasts, na: pa.lasts, nb: pb.lasts },
     { key: 'dry', icon: 'icons/stats/longest-without-win.png', label: 'Longest dry spell', a: pa.bestDry, b: pb.bestDry, na: pa.bestDry, nb: pb.bestDry },
     { key: 'badges', label: 'Badges earned', a: catalog ? ea.size : '—', b: catalog ? eb.size : '—', na: catalog ? ea.size : null, nb: catalog ? eb.size : null },

@@ -13,3 +13,14 @@ export function vpPerMin(D, name) {
   const rate = e => (e.min > 0 ? e.vp / e.min : null);
   return { rate: rate(total), games: total.games, bySet: Object.fromEntries(Object.entries(by).map(([s, e]) => [s, { rate: rate(e), games: e.games }])) };
 }
+
+// Total and average victory points over a player's rated games (not Friendly, at least two at the table) where their VP was entered. Same filter as Compare's "Average VP".
+export function lifetimeVP(D, name) {
+  let total = 0, games = 0;
+  D.games.forEach(g => {
+    if (g.n < 2 || g.type === 'Friendly' || g.places[name] == null) return;
+    const v = g.playerVP && g.playerVP[name] != null && g.playerVP[name] !== '' ? Number(g.playerVP[name]) : NaN;
+    if (Number.isFinite(v)) { total += v; games++; }
+  });
+  return { total, games, avg: games ? total / games : null };
+}

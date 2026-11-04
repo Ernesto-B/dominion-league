@@ -11,7 +11,6 @@ import { badgesFor } from '../lib/xp.js';
 import { badgeRecords } from '../lib/achievements.js';
 import SortableTable from '../components/SortableTable.jsx';
 
-const winnerOf = g => g.names.filter(n => g.places[n] === 1).join(' & ');
 const L = 'l';
 
 export default function Records() {
@@ -54,11 +53,38 @@ export default function Records() {
 
   // [label, who, when (a link to that game), value]
   const when = (date, line) => line == null ? date : <a className="gamelink" href={hashFor('games', gid) + '?game=' + line} title="Open this game in the Games page">{date}</a>;
+  // a player's name with the tier they held right after that game, so the icon is the rank at the time the record was set
+  const link = (g, n) => <PlayerLink name={n} tier={g && D.tierAt(g, n)} />;
+  const folks = (g, list, tail, sep = ' & ') => <>{list.map((n, i) => <span key={n}>{i > 0 && sep}{link(g, n)}</span>)}{tail}</>;
+  const winnerOf = g => folks(g, g.names.filter(n => g.places[n] === 1));
+  const gameOf = line => D.games.find(g => g.line === line);
   const single = [];
-  if (R.gain) single.push(['Biggest Elo gain in one game', <PlayerLink name={R.gain.name} />, when(R.gain.date, R.gain.line), sgn(R.gain.value)]);
-  if (R.loss) single.push(['Biggest Elo drop in one game', <PlayerLink name={R.loss.name} />, when(R.loss.date, R.loss.line), sgn(R.loss.value)]);
+  if (R.gain) single.push(['Biggest Elo gain in one game', link(gameOf(R.gain.line), R.gain.name), when(R.gain.date, R.gain.line), sgn(R.gain.value)]);
+  if (R.loss) single.push(['Biggest Elo drop in one game', link(gameOf(R.loss.line), R.loss.name), when(R.loss.date, R.loss.line), sgn(R.loss.value)]);
   if (R.topVP) single.push(['Highest winning score', winnerOf(R.topVP.game), when(R.topVP.game.date, R.topVP.game.line), R.topVP.value + ' VP']);
-  if (R.mostLandscapes) single.push(['Most landscape types in one game', winnerOf(R.mostLandscapes.game) + ' won', when(R.mostLandscapes.game.date, R.mostLandscapes.game.line), R.mostLandscapes.value + ' of ' + LANDSCAPES.length]);
+  if (R.mostLandscapes) single.push(['Most landscape types in one game', folks(R.mostLandscapes.game, R.mostLandscapes.game.names.filter(n => R.mostLandscapes.game.places[n] === 1), ' won'), when(R.mostLandscapes.game.date, R.mostLandscapes.game.line), R.mostLandscapes.value + ' of ' + LANDSCAPES.length]);
+
+  // more single-game records, worked out here from the games (a game needs every VP entered to have a margin)
+  const rated = D.games.filter(g => g.n >= 2 && g.type !== 'Friendly');
+  const vps = g => g.names.map(n => ({ n, v: g.playerVP && g.playerVP[n] !== '' && g.playerVP[n] != null ? Number(g.playerVP[n]) : NaN }));
+  const best = (list, score, high = true) => list.reduce((a, g) => { const s = score(g); return s == null ? a : !a || (high ? s > a.s : s < a.s) ? { g, s } : a; }, null);
+  const margin = g => { const v = vps(g); if (v.length < 2 || v.some(x => !Number.isFinite(x.v))) return null; const t = v.map(x => x.v).sort((x, y) => y - x); return t[0] - t[1]; };
+  const total = g => { const v = vps(g); return v.length && v.every(x => Number.isFinite(x.v)) ? v.reduce((t, x) => t + x.v, 0) : null; };
+  const loser = g => { const v = vps(g).filter(x => Number.isFinite(x.v) && g.places[x.n] > 1); return v.length ? Math.max(...v.map(x => x.v)) : null; };
+  const lowWin = g => { const v = vps(g).filter(x => Number.isFinite(x.v) && g.places[x.n] === 1); return v.length ? Math.max(...v.map(x => x.v)) : null; };
+  const add = (label, hit, val, who) => { if (hit) single.push([label, who ? who(hit.g) : winnerOf(hit.g), when(hit.g.date, hit.g.line), val(hit.s)]); };
+  add('Biggest winning margin', best(rated, margin), s => s + ' VP');
+  add('Closest game', best(rated.filter(g => margin(g) != null && margin(g) > 0), margin, false), s => s + ' VP');
+  add('Highest score in a loss', best(rated, loser), s => s + ' VP', g => folks(g, g.names.filter(n => g.places[n] > 1 && Number(g.playerVP[n]) === loser(g))));
+  add('Lowest winning score', best(rated, lowWin, false), s => s + ' VP');
+
+  // records that belong to a table, not to one player: the "Table" column lists everyone who sat there
+  const extremes = [];
+  const addTable = (label, hit, val) => { if (hit) extremes.push([label, folks(hit.g, hit.g.names, null, ', '), when(hit.g.date, hit.g.line), val(hit.s)]); };
+  addTable('Most total VP at one table', best(rated, total), s => s + ' VP');
+  const timed = rated.filter(g => g.minutes > 0), longest = best(timed, g => g.minutes), shortest = best(timed, g => g.minutes, false);
+  addTable('Longest game', longest, s => s + ' min');
+  if (shortest && longest && shortest.g !== longest.g) addTable('Shortest game', shortest, s => s + ' min');   // one timed game is both, so say it once
 
   const setRows = Object.entries(R.sets).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 
@@ -99,6 +125,16 @@ export default function Records() {
           ))}</tbody>
         </table></div>
       </>}
+      {extremes.length > 0 && <>
+        <h2>Game extremes</h2>
+        <div className="tablewrap"><table className="plain">
+          <thead><tr><th className="l">Record</th><th className="l">Table</th><th className="l">When</th><th>Value</th></tr></thead>
+          <tbody>{extremes.map(([label, who, when, val]) => (
+            <tr key={label}><td className="l">{label}</td><td className="l">{who}</td><td className="l">{when}</td><td><b>{val}</b></td></tr>
+          ))}</tbody>
+        </table></div>
+      </>}
+
 
       <h2>Sets in play</h2>
       {R.setsLogged ? <>

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import NameIcon from './NameIcon.jsx';
 
 /* "Compare with <player>": a small dropdown that always opens DOWNWARD. A native <select> lets the browser place its list (on a Mac it centres the chosen
-   name over the control, which covered the nav bar), so this draws its own, in the same look as the group pill. */
+   name over the control, which covered the nav bar), so this draws its own, in the same look as the PlayerPicker (the `pp-*` styles). */
 export default function ComparePicker({ current, names, hrefFor }) {
   const [open, setOpen] = useState(false);
   const box = useRef(null);
@@ -13,17 +14,15 @@ export default function ComparePicker({ current, names, hrefFor }) {
     return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', key); };
   }, [open]);
   return (
-    <span className="grouppill cmp-pick" ref={box}>
+    <span className="pp cmp-pick" ref={box}>
       <span className="cmp-pick-label">Compare with</span>
-      <button type="button" className="grouppill-btn" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(o => !o)}>
-        {current || 'Choose…'}<span aria-hidden="true" className="grouppill-chev">▾</span>
+      <button type="button" className="pp-btn" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+        {current && <NameIcon name={current} size={18} />}<span>{current || 'Choose…'}</span><span className="pp-chev" aria-hidden="true">▾</span>
       </button>
       {open && (
-        <ul className="grouppill-menu cmp-pick-menu" role="listbox" aria-label="Compare with">
-          {names.map(n => (
-            <li key={n} role="option" aria-selected={n === current}><a href={hrefFor(n)} onClick={() => setOpen(false)}>{n}</a></li>
-          ))}
-        </ul>
+        <nav className="pp-menu" aria-label="Compare with">
+          {names.map(n => <a key={n} href={hrefFor(n)} aria-current={n === current ? 'true' : undefined} onClick={() => setOpen(false)}><NameIcon name={n} size={18} />{n}</a>)}
+        </nav>
       )}
     </span>
   );

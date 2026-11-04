@@ -19,7 +19,7 @@ describe('comparing two players', () => {
   });
   it('lists the same stats for both, as plain values with no winner', () => {
     const c = compare(D, 'Ann', 'Cy');
-    expect(c.rows.map(r => r.key)).toEqual(['elo', 'peak', 'tier', 'level', 'games', 'wins', 'winpct', 'tophalf', 'avgplace', 'avgvp', 'streak', 'titles', 'vpm', 'lasts', 'dry', 'badges']);
+    expect(c.rows.map(r => r.key)).toEqual(['elo', 'peak', 'tier', 'level', 'games', 'wins', 'winpct', 'tophalf', 'avgplace', 'avgvp', 'streak', 'titles', 'lasts', 'dry', 'badges']);
     c.rows.forEach(r => { expect(r).not.toHaveProperty('winner'); expect(r).not.toHaveProperty('diff'); });
     expect(c.rows.find(r => r.key === 'wins').a).toBeGreaterThan(c.rows.find(r => r.key === 'wins').b);
     expect(c.rows.find(r => r.key === 'badges').a).toBe('—');   // no catalog loaded yet: shown as a dash, not as zero
