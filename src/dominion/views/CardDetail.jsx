@@ -1,5 +1,5 @@
 import { useCatalog } from '../CatalogContext.jsx';
-import { cardHref, dominionHref, cardsFilterHref } from '../links.js';
+import { cardHref, dominionHref, cardsFilterHref, compareHref } from '../links.js';
 import { DEFAULT_CARD_FILTERS, browseCards, cardFiltersFromQuery, cardFiltersToQuery, neighbors, pickRandom } from '../filters.js';
 import ItemNav, { ItemSteps } from '../components/ItemNav.jsx';
 import { PageShortcuts } from '../../components/Shortcuts.jsx';
@@ -70,7 +70,7 @@ export default function CardDetail({ id, query = '' }) {
         ...(hasTrail('card', card.id) ? [{ key: 'r', shift: true, label: 'Back to the last random card', run: () => { const id = popTrail('card', card.id); if (id) { keepScrollOnce(); window.location.hash = cardHref(id, qs); } } }] : []),
         { key: 'b', label: 'Back to the list', run: () => { window.location.hash = dominionHref('cards', null, qs); } },
       ]} />
-      <ItemNav backHref={dominionHref('cards', null, qs)} backLabel="← All Kingdom cards" nav={nav} hrefFor={c => cardHref(c.id, qs)} onRandom={random} randomLabel="Random card" />
+      <ItemNav backHref={dominionHref('cards', null, qs)} backLabel="← All Kingdom cards" nav={nav} hrefFor={c => cardHref(c.id, qs)} onRandom={random} randomLabel="Random card" compareHref={compareHref([card.id])} />
       <div className="dn-hero">
       <div className="head">
         <div>
@@ -82,7 +82,7 @@ export default function CardDetail({ id, query = '' }) {
         </div>
       </div>
       <CardFace id={card.id} name={card.name} className="hero" />
-      <ItemSteps below nav={nav} hrefFor={c => cardHref(c.id, qs)} onRandom={random} randomLabel="Random card" />   {/* phone only: under the picture, where a thumb reaches */}
+      <ItemSteps below nav={nav} hrefFor={c => cardHref(c.id, qs)} onRandom={random} randomLabel="Random card" compareHref={compareHref([card.id])} />   {/* phone only: under the picture, where a thumb reaches */}
 
       {pictured && (
         <div className="dn-hero-side">

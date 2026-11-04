@@ -4,7 +4,8 @@ import { useCatalog } from '../CatalogContext.jsx';
 import { browseCards, filterCards, facetCount, cardMatchOf, cardMatchPatch, activeCardFilters, DEFAULT_CARD_FILTERS, cardFiltersFromQuery, cardFiltersToQuery, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
 import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
 import { useLeagueGames } from '../useLeagueGames.js';
-import { cardHref } from '../links.js';
+import { cardHref, MAX_COMPARE, compareHref } from '../links.js';
+import { useCompareBasket, startPicking, stopPicking, togglePick, removePick } from '../compareBasket.js';
 import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import { hoverHandlers } from '../components/CardHover.jsx';
@@ -25,6 +26,8 @@ export default function Cards({ query = '' }) {
   const { f, update, qText, onQ, clear: clearFilters } = useUrlFilters(query, { fromQuery: cardFiltersFromQuery, toQuery: cardFiltersToQuery, defaults: DEFAULT_CARD_FILTERS });
   useListScroll();
   const lg = useLeagueGames();
+  const basket = useCompareBasket();
+  const picking = basket.picking, picked = new Set(basket.ids);
   const plays = lg && lg.stats ? lg.stats.piles : null;   // pile key -> { games, ... }; null until a kingdom has been logged
   const [mq, setMq] = useState('');
   const qs = cardFiltersToQuery(f);   // carried into each card's page, so Previous/Next and "back to the list" keep the filters
@@ -54,6 +57,7 @@ export default function Cards({ query = '' }) {
     <>
       <PageShortcuts bindings={rows.length ? [{ key: 'r', label: 'Open a random card', run: random }] : []} />
       <div className="head"><div><h1>Kingdom cards</h1><p className="lede">Every Kingdom card name in the collection. Search, then narrow by expansion, printed type, cost or recorded mechanic.</p></div></div>
+      {picking && <p className="dn-pickhint" role="status">Pick up to {MAX_COMPARE} cards to compare: tap a row to add or remove it.</p>}
 
       <form className="builder dn-filters" role="search" aria-label="Filter Kingdom cards" onSubmit={e => e.preventDefault()}>
         <div className="controls">
@@ -128,6 +132,7 @@ export default function Cards({ query = '' }) {
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>
           <button type="button" className="ghost" onClick={clear} disabled={!active}>Clear filters{active ? ` (${active})` : ''}</button>
           <button type="button" className="ghost" onClick={random} disabled={!rows.length}>Random card</button>
+          <button type="button" className={'ghost' + (picking ? ' dn-cmp-on' : '')} aria-pressed={picking} onClick={() => (picking ? stopPicking() : startPicking())}>{picking ? 'Cancel comparing' : 'Compare cards'}</button>
           <span className="meta" role="status" aria-live="polite">Showing <b>{rows.length}</b> of {catalog.cards.length} card names{active ? ' (filtered)' : ''}</span>
         </div>
       </form>
@@ -139,8 +144,8 @@ export default function Cards({ query = '' }) {
             <SortHeaders columns={plays ? [...COLUMNS, PLAYED_COLUMN] : COLUMNS} sort={f.sort} dir={f.dir} onSort={sortBy} />
             <tbody>{rows.map(c => {
               return (
-                <tr key={c.id} {...rowLink(cardHref(c.id, qs))} {...hoverHandlers(c.id)}>
-                  <td className="l"><ExpansionBadge name={c.expansion} size={18} /></td>
+                <tr key={c.id} {...(picking ? pickRow(c.id, picked) : rowLink(cardHref(c.id, qs)))} {...hoverHandlers(c.id)}>
+                  <td className="l">{picking && <span className={'dn-pickbox' + (picked.has(c.id) ? ' on' : '')} aria-hidden="true">{picked.has(c.id) ? '✓' : ''}</span>}<ExpansionBadge name={c.expansion} size={18} /></td>
                   <td className="l name"><a href={cardHref(c.id, qs)}>{c.name}</a>{c.previousName && <small className="meta"> (was {c.previousName})</small>}{f.text && f.q.trim() && !nameMatches(c, f.q) && <small className="meta dn-snippet">{textSnippet(c.text, f.q)}</small>}</td>
                   <td className="l"><TypePills types={c.types} /></td>
                   <td className="dn-cost-cell"><CostIcons coins={c.coins} debt={c.debt} overpay={c.overpay} size={26} /></td>
@@ -154,6 +159,31 @@ export default function Cards({ query = '' }) {
       ) : (
         <EmptyState>No cards match these filters. {active ? <button type="button" className="ghost" onClick={clear}>Clear filters</button> : null}</EmptyState>
       )}
+      {picking && <CompareTray ids={basket.ids} catalog={catalog} />}
     </>
   );
 }
+
+// in pick mode a row toggles instead of opening the card (its name stays a real link); a fifth card is refused by the store
+const pickRow = (id, picked) => ({
+  className: 'dn-rowlink dn-pickrow' + (picked.has(id) ? ' picked' : picked.size >= MAX_COMPARE ? ' full' : ''),
+  'aria-selected': picked.has(id),
+  onClick: e => { if (e.target.closest('a, button, input, select, textarea')) return; togglePick(id); },
+});
+
+/* The picks so far, always in reach at the bottom of the list: each card with a ✕, and the button that opens the comparison once there are two. */
+function CompareTray({ ids, catalog }) {
+  const cards = ids.map(id => catalog.cardsById.get(id)).filter(Boolean);
+  const ready = cards.length >= 2;
+  return (
+    <div className="dn-tray" role="region" aria-label="Cards to compare">
+      <span className="dn-tray-n">{cards.length} of {MAX_COMPARE}</span>
+      <span className="dn-tray-cards">{cards.length ? cards.map(c => (
+        <button type="button" key={c.id} className="dn-tray-chip" onClick={() => removePick(c.id)} aria-label={`Remove ${c.name}`} title="Remove">{c.name} <span aria-hidden="true">✕</span></button>
+      )) : <span className="meta">None picked yet</span>}</span>
+      <a className={'dn-tray-go' + (ready ? '' : ' off')} href={ready ? compareHref(ids) : undefined} aria-disabled={!ready}
+        onClick={e => { if (!ready) e.preventDefault(); else stopPicking(); }}>{ready ? `Compare ${cards.length}` : 'Pick 2 or more'}</a>
+    </div>
+  );
+}
+

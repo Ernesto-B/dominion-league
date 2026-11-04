@@ -4,6 +4,7 @@ import { VIEWS, parseDominionArg, tabFor } from './links.js';
 import { PageShortcuts } from '../components/Shortcuts.jsx';
 import { EmptyState } from './components/States.jsx';
 import Overview from './views/Overview.jsx';
+import CardCompare from './views/CardCompare.jsx';
 import Cards from './views/Cards.jsx';
 import CardDetail from './views/CardDetail.jsx';
 import Landscapes from './views/Landscapes.jsx';
@@ -35,6 +36,7 @@ export function DominionView({ arg }) {
   switch (r.view) {
     case 'overview': return <Overview query={r.query} />;
     case 'cards': return <Cards query={r.query} />;
+    case 'compare': return <CardCompare query={r.query} />;
     case 'card': return <CardDetail id={r.id} query={r.query} />;
     case 'landscapes': return <Landscapes query={r.query} />;
     case 'landscape': return <LandscapeDetail id={r.id} query={r.query} />;

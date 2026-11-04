@@ -6,6 +6,19 @@ import { DEFAULT_CARD_FILTERS, DEFAULT_LANDSCAPE_FILTERS, cardFiltersToQuery, la
 export const dominionHref = (view = '', id = null, query = '') => '#/dominion' + (view ? '/' + view : '') + (id != null ? '/' + encodeURIComponent(id) : '') + query;
 export const cardHref = (id, query = '') => dominionHref('cards', id, query);
 export const landscapeHref = (id, query = '') => dominionHref('landscapes', id, query);
+// the card comparison: #/dominion/compare?cards=<id>,<id>… (at most MAX_COMPARE; ids are encoded, so a ',' only ever separates)
+export const MAX_COMPARE = 4;
+export const compareHref = (ids = []) => dominionHref('compare') + (ids.length ? '?cards=' + ids.map(encodeURIComponent).join(',') : '');
+export function compareIdsFromQuery(query = '') {
+  const m = /[?&]cards=([^&]*)/.exec(query);
+  if (!m || !m[1]) return [];
+  const out = [];
+  for (const part of m[1].split(',')) {
+    let id; try { id = decodeURIComponent(part); } catch { continue; }
+    if (id && !out.includes(id)) out.push(id);
+  }
+  return out.slice(0, MAX_COMPARE);
+}
 export const artifactHref = id => dominionHref('artifacts', id);
 // the browser, already filtered: cardsFilterHref({ types: ['Attack'] })
 export const cardsFilterHref = patch => dominionHref('cards', null, cardFiltersToQuery({ ...DEFAULT_CARD_FILTERS, ...patch }));
@@ -37,9 +50,10 @@ function parsePath(path) {
   if (view === 'cards') return id == null ? { view: 'cards', id: null } : { view: 'card', id };
   if (view === 'landscapes') return id == null ? { view: 'landscapes', id: null } : { view: 'landscape', id };
   if (view === 'artifacts') return id == null ? { view: 'notfound', id: null } : { view: 'artifact', id };   // there is no list of Artifacts: they sit on the Landscapes page
+  if (view === 'compare') return id == null ? { view: 'compare', id: null } : { view: 'notfound', id: null };
   if (view === 'insights') return id == null ? { view: 'insights', id: null } : { view: 'notfound', id: null };
   if (view === 'randomizer') return id == null ? { view: 'randomizer', id: null } : { view: 'notfound', id: null };
   return { view: 'notfound', id: null };
 }
 // which top-level tab a view belongs to (a card's detail page lives under "Kingdom cards")
-export const tabFor = view => ({ card: 'cards', landscape: 'landscapes', artifact: 'landscapes' }[view] || view);
+export const tabFor = view => ({ compare: 'cards', card: 'cards', landscape: 'landscapes', artifact: 'landscapes' }[view] || view);
