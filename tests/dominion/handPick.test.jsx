@@ -112,3 +112,11 @@ describe('the banner while replacing a card', () => {
     cancelKingdomPick();
   });
 });
+
+describe('the bare tiles used after a snake draft', () => {
+  it('show only the tiles with Replace / Remove / Add: no options form, no bar, no setup notes', () => {
+    const st2 = stateFromItems(catalog, ['Village', 'Smithy'].map(n => ({ kind: 'card', id: card(n) })));
+    const h = renderToStaticMarkup(<CatalogProvider catalog={catalog}><RandomizerPanel bare editing catalog={catalog} opts={DEFAULT_OPTIONS} setOpts={() => {}} state={st2} onState={() => {}} onReset={() => {}} onEdit={() => {}} /></CatalogProvider>);
+    expect(h).toContain('Replace'); expect(h).toContain('dn-rzadd'); expect(h).not.toContain('dn-rz-opts'); expect(h).not.toContain('dn-rz-bar'); expect(h).not.toContain('dn-rz-setup');
+  });
+});

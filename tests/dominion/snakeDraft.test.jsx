@@ -25,4 +25,12 @@ describe('the snake draft screen', () => {
     const html = draw(value({ picks: pool.pool.slice(0, 2).map(s => s.key) }));
     expect(html).toContain('dn-draftface'); expect(html).toContain('dn-draft-mine');
   });
+  it('after the draft lists every card to get out, by expansion, from the kingdom as it is now', () => {
+    const slots = pool.pool.slice(0, 10), keys = slots.map(x => x.key);
+    const items = slots.map(x => ({ kind: 'card', id: x.cards[0].id }));
+    const html = renderToStaticMarkup(<SnakeDraft catalog={catalog} players={players} opts={DEFAULT_OPTIONS} setOpts={() => {}} value={value({ picks: keys, finished: true, original: items.map(i => i.id) })}
+      onChange={() => {}} onDone={() => {}} onRestart={() => {}} onReset={() => {}} items={items} />);
+    expect(html).toContain('Cards to get out'); expect(html).toContain('dn-shelf'); expect(html).toContain('10 Kingdom cards');
+    for (const x of slots) expect(html).toContain(x.name.replace(/'/g, '&#x27;'));
+  });
 });

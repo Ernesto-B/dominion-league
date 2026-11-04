@@ -132,14 +132,6 @@ export function useCardImages() {
   return { get: cardImage, any: anyCardImages(), ready: !!manifest };
 }
 
-// "Card faces" or "List": how a rolled kingdom is drawn when there are pictures. Remembered on this device (default: faces).
-const PREF = 'dl.cardview';
-export function useCardView() {
-  const [view, set] = useState(() => { try { return localStorage.getItem(PREF) === 'list' ? 'list' : 'faces'; } catch { return 'faces'; } });
-  const setView = v => { set(v); try { localStorage.setItem(PREF, v); } catch { /* private mode: it just is not remembered */ } };
-  return [view, setView];
-}
-
 // A supply pile that holds several names (Knights, Castles, the split piles) can have a picture of its own: the pile card. Its id is `<expansion id>:pile:<pile name, slugged>`
 // (dark-ages:pile:knights), the same one scripts/dominion/build-card-images.mjs writes. Without a pile picture the slot shows its first card that has one.
 export const slugOf = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

@@ -4,13 +4,13 @@ import { decodeKingdom, encodeKingdom, looksLikeCode } from '../kingdomCode.js';
 import { startKingdomPick, takeKingdomPick } from '../kingdomPick.js';
 import { DEFAULT_OPTIONS, formatSeed, newSeed, parseSeed, playsFor, rerollLandscape, rerollSlot, rollSeeded, slotCardId, toGameItems, withAvoid } from '../randomizer.js';
 import { cardHref, dominionHref, landscapeHref } from '../links.js';
-import { CardText, Chip, ExpansionBadge, LandscapePill, ShowTextButton, TypePills } from './bits.jsx';
+import { CardText, ExpansionBadge, LandscapePill, ShowTextButton, TypePills } from './bits.jsx';
 import CostIcons from './Cost.jsx';
 import RandomizerOptions from './RandomizerOptions.jsx';
 import { KingdomChip } from './KingdomChips.jsx';
 import { openPeek } from './CardPeek.jsx';
 import CardFace from './CardFace.jsx';
-import { slotFaceId, useCardImages, useCardView } from '../cardImages.js';
+import { slotFaceId, useCardImages } from '../cardImages.js';
 
 /* The Kingdom randomizer's working part: the options, the roll, the tiles with Lock and Re-roll, the landscapes and the setup notes.
    It is CONTROLLED, so the same panel serves two homes:
@@ -23,21 +23,27 @@ import { slotFaceId, useCardImages, useCardView } from '../cardImages.js';
    kept / onKeep           the locked cards and the typed seed ({ cards, lands, seed }) to start from, and a callback for every change (the page keeps them in its own state)
    extraControls / below   a button for the Roll / Reset row, and what that button opens (kept outside the form, so typing in it never rolls)
    editing / onEdit(items, implied, baneId)   hand-editing: every tile gets Replace and Remove, and an Add tile ends each grid. The caller turns the edited list of items back into a kingdom (stateFromItems)
+   bare                    just the tiles (no options, no bar, no setup notes): the finished snake draft's hand-editing, where those are already on the screen around it
    plays                   Map(pile key -> games played), for "favor cards we've played less"; null when there are no logged games */
-export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, state, onState, onReset, plays = null, actions = null, emptyHint = true, foldExpansions = false, extraControls = null, below = null, kept = null, onKeep = null, avoid = null, editing = false, onEdit = null }) {
+export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, state, onState, onReset, plays = null, actions = null, emptyHint = true, foldExpansions = false, extraControls = null, below = null, kept = null, onKeep = null, avoid = null, editing = false, onEdit = null, bare = false }) {
   const [locked, setLocked] = useState(() => new Set(kept?.cards));        // pile keys kept on a re-roll
   const [lockedL, setLockedL] = useState(() => new Set(kept?.lands));      // landscape ids kept on a re-roll
   const [message, setMessage] = useState('');
   const [seedText, setSeedText] = useState(kept?.seed || '');                // a seed typed in to repeat a roll; empty = a new random one
   const [showText, setShowText] = useState(false);
   const { get: picture, any: anyPictures } = useCardImages();
-  const [cardView, setCardView] = useCardView();
-  const faces = anyPictures && cardView === 'faces';   // the cards drawn as the cards themselves (a card with no picture keeps its text tile)
+  const faces = anyPictures;   // the cards drawn as the cards themselves (a card with no picture keeps its text tile)
   const faceOf = s => { const id = slotFaceId(s); return id ? { id } : null; };
   const [fresh, setFresh] = useState(null);                     // the tile that just changed, briefly highlighted
   const resultRef = useRef(null);
   const editable = editing && !!onEdit;
   const shown = state || (editable ? { slots: [], landscapes: [], seed: null, setup: {} } : null);   // hand-editing can start from nothing
+  // turning hand-editing on scrolls down to the tiles, as a roll does (not when the page simply comes back already editing: the scroll is restored there)
+  const wasEditing = useRef(editable);
+  useEffect(() => {
+    if (editable && !wasEditing.current) requestAnimationFrame(() => resultRef.current?.scrollIntoView?.({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+    wasEditing.current = editable;
+  }, [editable]);
   const items = () => (state ? toGameItems(state) : []);
   const baneId = state && state.setup.bane ? slotCardId(state.setup.bane) : null;
   const none = { sets: [], landscapes: [] };
@@ -105,7 +111,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
 
   return (
     <>
-      <form className="builder dn-filters dn-rz-opts" aria-label="Randomizer options" onSubmit={e => { e.preventDefault(); roll(); }}>
+      {!bare && <form className="builder dn-filters dn-rz-opts" aria-label="Randomizer options" onSubmit={e => { e.preventDefault(); roll(); }}>
         <RandomizerOptions catalog={catalog} opts={opts} setOpts={setOpts} canFavor={canFavor} foldExpansions={foldExpansions} />
 
         <div className="controls dn-rz-go">
@@ -116,24 +122,18 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
           {(locked.size > 0 || lockedL.size > 0) && state && <span className="meta">Locked cards stay when you roll again.</span>}
         </div>
         {message && <p className="dn-rz-msg" role="alert">{message}</p>}
-      </form>
+      </form>}
       {below}
 
       {shown ? (
         <section aria-label="Your kingdom" ref={resultRef} className="dn-rz-result">
-          <div className="dn-rz-bar">
+          {!bare && <div className="dn-rz-bar">
             <div className="dn-rz-actions">
-              {anyPictures && (
-                <div className="dn-mode" role="group" aria-label="How to show the kingdom">
-                  <Chip pressed={cardView === 'faces'} onClick={() => setCardView('faces')}>Card faces</Chip>
-                  <Chip pressed={cardView === 'list'} onClick={() => setCardView('list')}>List</Chip>
-                </div>
-              )}
               {!(faces && shown.slots.every(faceOf) && shown.landscapes.every(l => picture(l.landscape.id))) && <ShowTextButton on={showText} onClick={() => setShowText(t => !t)} />}
               {shown.seed != null ? <SeedButton text={formatSeed(shown.seed)} /> : shown.slots.length > 0 && <SeedButton code text={encodeKingdom(catalog, shown)} />}
             </div>
             {actions && <div className="dn-rz-actions">{actions}</div>}
-          </div>
+          </div>}
 
           <ul className={'dn-rzgrid' + (faces ? ' faces' : '')} aria-label="Kingdom cards">
             {shown.slots.map((s, i) => (faces && faceOf(s) ? (
@@ -178,7 +178,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
             </>
           )}
 
-          <Setup catalog={catalog} setup={shown.setup} />
+          {!bare && <Setup catalog={catalog} setup={shown.setup} />}
         </section>
       ) : (
         emptyHint ? <p className="dn-rz-empty">Nothing rolled yet. Choose your options above, then <b>Roll a kingdom</b>.</p> : null

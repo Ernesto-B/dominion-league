@@ -39,7 +39,7 @@ export default function KingdomStep({ catalog, mode, setMode, players, roll, set
     <>
       <SnakeDraft catalog={catalog} players={players} opts={roll} setOpts={setRollOpts} plays={plays} value={draftState(draftSave, players)} onChange={onDraft}
         onDone={res => applyKingdom(toGameItems(res), res)} onRestart={onRestartDraft} onReset={resetRoll} items={items} setup={setupNow}
-        hand={hand} setHand={setHand} handPanel={<div className="night-hand"><KingdomPicker items={items} onChange={onPick} avoid={avoid} /></div>} />
+        hand={hand} setHand={setHand} handPanel={<RandomizerPanel bare editing catalog={catalog} opts={roll} setOpts={setRollOpts} state={stateFromItems(catalog, items, handBane)} onState={() => {}} onReset={() => {}} onEdit={(next, implied) => onPick(next, implied)} avoid={avoid} />} />
     </>
   );
   if (mode === 'manual') return (
@@ -77,12 +77,6 @@ function RandomRoll({ catalog, roll, setRollOpts, resetRoll, kept, onKeep, hand,
         <ShelfGroups entries={entries} />
         {lands.length > 0 && <><p className="meta" style={{ margin: '12px 0 6px' }}>Landscapes</p><ShelfGroups entries={lands.map(r => ({ r, node: <KingdomChip key={r.id} r={r} plain expansion catalog={catalog} /> }))} /></>}
         {setupNow && <Setup catalog={catalog} setup={setupNow} />}
-        <div className="controls dn-rz-go">
-          <button type="button" className="ghost" onClick={() => setRandomDone(false)}>Back to the roll</button>
-          <button type="button" className="ghost" aria-expanded={hand} onClick={() => setHand(!hand)}>{hand ? 'Hide hand-picking' : 'Pick cards by hand'}</button>
-        </div>
-        {hand && <div className="night-hand"><KingdomPicker items={items} onChange={onPick} avoid={avoid} /></div>}
-        {text}
       </section>
     );
   }

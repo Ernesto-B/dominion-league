@@ -4,12 +4,13 @@ import { toGameItems } from '../randomizer.js';
 import { CardText, ExpansionBadge, LandscapePill, ShowTextButton, TypePills } from './bits.jsx';
 import CostIcons from './Cost.jsx';
 import RandomizerOptions from './RandomizerOptions.jsx';
-import { displayName, primaryType } from '../kingdom.js';
+import { displayName, primaryType, resolveKingdom, shelfOrder } from '../kingdom.js';
+import { KingdomChip, ShelfGroups } from './KingdomChips.jsx';
 import { Setup } from './RandomizerPanel.jsx';
 import { openPeek } from './CardPeek.jsx';
 import CardFace from './CardFace.jsx';
 import { hoverHandlers } from './CardHover.jsx';
-import { slotFaceId, useCardImages, useCardView } from '../cardImages.js';
+import { slotFaceId, useCardImages } from '../cardImages.js';
 
 /* Pick the kingdom in turns. One device is enough: pass it round, or let one person tap each player's choice.
    The draft is CONTROLLED: its whole state (`value`, see draftState in draft.js) lives in the saved Game night, so leaving the page, or the
@@ -28,12 +29,15 @@ const seatColor = i => `hsl(${(i * 67 + 24) % 360} 68% 62%)`;
 
 export default function SnakeDraft({ catalog, players, opts, setOpts, plays = null, value, onChange, onDone, onRestart, onReset, items = [], setup = null, hand = false, setHand = () => {}, handPanel = null }) {
   const { get: picture, any: anyPictures } = useCardImages();
-  const [cardView] = useCardView();
-  const faces = anyPictures && cardView === 'faces';   // the pool drawn as the cards themselves, when there are pictures (a card without one keeps its text tile)
+  const faces = anyPictures;   // the pool drawn as the cards themselves, when there are pictures (a card without one keeps its text tile)
   const faceOf = s => { const id = slotFaceId(s); return id ? { id } : null; };
   const { seats } = value;
   const set = patch => onChange({ ...value, ...patch });
-  const top = useRef(null);
+  const top = useRef(null), handRef = useRef(null);
+  const toggleHand = () => {   // opening hand-editing scrolls down to the tiles, as a roll does
+    const opening = !hand; setHand(opening);
+    if (opening) requestAnimationFrame(() => handRef.current?.scrollIntoView?.({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+  };
   const canFavor = !!plays && plays.size > 0;
 
   const rolled = useMemo(() => (value.draft ? rollPool(catalog, value.draft.options, value.draft.seed, { plays, n: value.draft.n, size: value.draft.size }) : null), [catalog, value.draft, plays]);
@@ -123,18 +127,34 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
     })}</ul>
   );
 
+  // the whole kingdom as it is now (hand edits included), laid out like the boxes it came from, the way the Random way's summary does: a row per expansion, A to Z, to find the cards on the shelf
+  const kingdomNow = () => {
+    const found = resolveKingdom(catalog, items).filter(r => !r.missing);
+    const cards = found.filter(r => r.kind === 'card').sort(shelfOrder), lands = found.filter(r => r.kind === 'landscape').sort(shelfOrder);
+    const entries = rs => rs.map(r => ({ r, node: <KingdomChip key={`${r.kind}:${r.id}`} r={r} plain expansion catalog={catalog} /> }));
+    return (
+      <section className="dn-draft-all" aria-label="The cards to get out">
+        <h3 className="dn-rz-sub">Cards to get out</h3>
+        <p className="meta" style={{ margin: '0 0 6px' }}>{cards.length} Kingdom card{cards.length === 1 ? '' : 's'}</p>
+        <ShelfGroups entries={entries(cards)} />
+        {lands.length > 0 && <><p className="meta" style={{ margin: '12px 0 6px' }}>Landscapes</p><ShelfGroups entries={entries(lands)} /></>}
+      </section>
+    );
+  };
+
   if (value.finished) return (
     <section className="builder dn-draft" aria-label="Draft finished" ref={top}>
       <p className="dn-draft-done"><b>Draft Completed</b></p>
       {seatsSummary}
+      {items.length > 0 && kingdomNow()}
       {swaps && swaps.extra.length > 0 && <p className="meta">Also added by hand: {swaps.extra.map(nameOf).join(', ')}.</p>}
       {setup && <Setup catalog={catalog} setup={setup} />}
       {draft.landscapes.length > 0 && <p className="meta">Landscapes in this game: {draft.landscapes.map(l => l.landscape.name).join(', ')}.</p>}
       <div className="controls dn-rz-go">
         <button type="button" className="ghost" onClick={onRestart}>Restart draft</button>
-        <button type="button" className="ghost" aria-expanded={hand} onClick={() => setHand(!hand)}>{hand ? 'Hide hand-picking' : 'Pick cards by hand'}</button>
+        <button type="button" className="ghost" aria-expanded={hand} onClick={toggleHand}>{hand ? 'Done editing' : 'Pick cards by hand'}</button>
       </div>
-      {hand && handPanel}
+      {hand && <div ref={handRef}>{handPanel}</div>}
     </section>
   );
 

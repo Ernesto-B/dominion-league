@@ -1953,3 +1953,9 @@ a.gr-face{position:relative}
 .dn-flash.ok{color:#8fd6a0;border-color:rgba(120,200,140,.75);background:rgba(90,180,120,.14)}
 .dn-flash.fail{color:#ffb36b;border-color:rgba(255,179,107,.7)}
 @media (prefers-reduced-motion:no-preference){.dn-flash{transition:background-color .2s ease,border-color .2s ease,color .2s ease}}
+/* on a phone a long kingdom code is cut with an ellipsis so the button shares the line with Card faces / List (the whole code is still what is copied) */
+@media (max-width:720px){
+  .dn-rz-actions .dn-seed{display:inline-flex;align-items:center;flex:1 1 5em;min-width:0;overflow:hidden;white-space:nowrap}
+  .dn-rz-actions .dn-seed b{min-width:0;overflow:hidden;text-overflow:ellipsis;margin-left:.3em}
+  .dn-rz-actions .dn-seed .dn-copyglyph{flex:none}
+}

@@ -191,7 +191,7 @@ describe('the Kingdom tab with pictures', () => {
     const rep = gameReport(D, D.games[0], { catalog });
     _setManifest({ v: 2, items: { [id('Village')]: { w: 300, h: 480, k: 'a' } } });
     const html = draw(createElement(Kingdom, { rep, game: D.games[0], loaded: true }));
-    expect(html).toContain('gr-face'); expect(html).toContain('Card faces'); expect(html).toContain('dn-kchip');   // Village is a picture, the other nine stay chips
+    expect(html).toContain('gr-face'); expect(html).toContain('dn-kchip');   // Village is a picture, the other nine stay chips
     _setManifest(null);
   });
 });

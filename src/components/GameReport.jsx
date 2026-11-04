@@ -12,8 +12,7 @@ import { setIconPath } from '../lib/sets.js';
 import { expansionMeta } from '../dominion/constants.js';
 import { KingdomChip, ShelfGroups } from '../dominion/components/KingdomChips.jsx';
 import CardFace from '../dominion/components/CardFace.jsx';
-import { Chip } from '../dominion/components/bits.jsx';
-import { useCardImages, useCardView } from '../dominion/cardImages.js';
+import { useCardImages } from '../dominion/cardImages.js';
 import { cardHref, landscapeHref } from '../dominion/links.js';
 import { openPeek } from '../dominion/components/CardPeek.jsx';
 import PlayAgain from '../dominion/components/PlayAgain.jsx';
@@ -183,8 +182,7 @@ export function Kingdom({ rep, game, loaded }) {
   const [focus, setFocus] = useState(null);   // { kind: 'type' | 'tool', key, label } or null
   const { catalog } = usePage();
   const { get: picture, any: anyPictures } = useCardImages();
-  const [cardView, setCardView] = useCardView();
-  const faces = anyPictures && cardView === 'faces';
+  const faces = anyPictures;   // pictures when there are any (a card with none keeps its chip)
   // On a phone a tap on a card goes to its page. With a mouse there is room to read the card, so a click enlarges it (its dialog links to the page): the cards are small in a row.
   const enlarge = (e, peek) => { if (catalog && typeof matchMedia !== 'undefined' && matchMedia('(min-width: 721px) and (hover: hover)').matches) { e.preventDefault(); openPeek(catalog, peek); } };
   if (!game.kingdom || !game.kingdom.length) return <p className="empty">No kingdom was logged for this game. Games started from Game night record one.</p>;
@@ -222,12 +220,6 @@ export function Kingdom({ rep, game, loaded }) {
       <div className="gr-cardshead">
         <h4 className="gr-h">The cards, by expansion</h4>
         <div className="gr-cardsacts">
-          {anyPictures && (
-            <div className="dn-mode" role="group" aria-label="How to show the cards">
-              <Chip pressed={cardView === 'faces'} onClick={() => setCardView('faces')}>Card faces</Chip>
-              <Chip pressed={cardView === 'list'} onClick={() => setCardView('list')}>List</Chip>
-            </div>
-          )}
           <PlayAgain game={game} />
         </div>
       </div>
