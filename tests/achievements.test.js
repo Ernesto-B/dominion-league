@@ -126,6 +126,8 @@ describe('filterSections', () => {
     expect(ids({ q: 'scourge' })).toEqual(['t']);         // a step's name finds its track
     expect(ids({ owned: true })).toEqual(['x']);
     expect(ids({ tiers: ['rare', 'epic'] })).toEqual(['t', 'y']);
+    expect(ids({ locked: true })).toEqual(['t', 'y']);    // Locked: not everything in it is earned
+    expect(ids({ group: 'B' })).toEqual(['y']);           // one group's chip
     expect(filterSections(secs, { q: 'nothing', owned: false, tiers: [] })).toEqual([]);
   });
 });

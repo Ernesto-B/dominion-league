@@ -1973,3 +1973,55 @@ a.gr-face{position:relative}
 .dn-toggle[aria-pressed=true]{background:color-mix(in srgb,var(--brass,#d9b45a) 24%,transparent);border-color:var(--brass,#d9b45a);box-shadow:inset 0 0 0 1px var(--brass,#d9b45a);color:var(--ink)}
 .dn-toggle[aria-pressed=true]::before{content:'✓';margin-right:.5em;color:var(--brass,#d9b45a);font-weight:700}
 @media (prefers-reduced-motion:no-preference){.dn-toggle{transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease}}
+
+/* ---------- the Player page's tabs, the badge shelf and the Badges tab ---------- */
+.gr-tabs a{flex:1;min-height:40px;padding:6px 8px;color:var(--muted);border-radius:8px;font:600 14px var(--text);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.gr-tabs a[aria-current=page]{background:var(--ink);color:var(--bg)}
+.pt-tabs{margin-top:14px}
+.shelf{margin:18px 0 8px;padding:14px 16px;border:1px solid var(--frame,var(--line));border-radius:12px;background:var(--panel)}
+.shelf-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.shelf-head h2{margin:0}.shelf-all{font-size:14px;font-weight:600;text-decoration:none}
+.shelf h3{margin:14px 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;align-items:baseline}.shelf-edit{font-size:12px;text-transform:none;letter-spacing:0;font-weight:600}
+.shelf-bar{height:8px;margin:10px 0 0;border-radius:999px;background:color-mix(in srgb,var(--ink) 12%,transparent);overflow:hidden}.shelf-bar i{display:block;height:100%;border-radius:999px;background:var(--brass,var(--ink))}
+.shelf-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px}@media (max-width:720px){.shelf-cols{grid-template-columns:1fr}}
+.shelf-next,.shelf-recent{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.shelf-next{display:grid;gap:8px}.shelf-next a{display:grid;gap:4px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none}.shelf-next a:hover{border-color:var(--muted)}
+.shelf-next b{display:flex;align-items:center;gap:6px;font-size:14px}.shelf-prog{display:block;height:5px;border-radius:999px;background:color-mix(in srgb,var(--ink) 14%,transparent);overflow:hidden}.shelf-prog i{display:block;height:100%;background:var(--brass,var(--ink))}
+.shelf-recent a{text-decoration:none;color:inherit}
+
+.bt-head{display:grid;gap:0;margin:6px 0 12px}.bt-head h2{margin:0}
+.bt-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 8px}
+.bt-seg{display:inline-flex;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--panel)}
+.bt-seg button{min-height:0;padding:5px 14px;background:transparent;color:var(--muted);border:0;border-radius:999px;font:600 14px var(--text);cursor:pointer}.bt-seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.bt-diff{position:relative}.bt-diff>summary{list-style:none;cursor:pointer;padding:6px 14px;border:1px solid var(--line);border-radius:999px;font:600 14px var(--text);background:var(--panel)}.bt-diff>summary::-webkit-details-marker{display:none}.bt-diff>summary::after{content:' ▾';color:var(--muted)}
+.bt-diff[open]>summary{border-color:var(--muted)}
+.bt-diff-menu{position:absolute;z-index:35;top:calc(100% + 6px);left:0;display:grid;gap:2px;min-width:260px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.bt-diff-menu button{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:0;padding:8px 10px;background:transparent;color:inherit;border:1px solid transparent;border-radius:8px;font:600 14px var(--text);text-align:left;cursor:pointer}.bt-diff-menu button small{flex-basis:100%;padding-left:22px;font-weight:400}
+.bt-diff-menu button[aria-pressed=true]{border-color:var(--brass,var(--muted));background:color-mix(in srgb,var(--brass,var(--ink)) 14%,transparent)}
+.bt-toolbar .sbox{flex:1 1 200px;min-width:160px}
+.bt-pins{margin-left:auto;font-size:14px;white-space:nowrap}.bt-pins b{color:var(--brass,var(--ink))}
+.bt-groups{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 0 6px;padding-bottom:2px}
+.bt-groups button{flex:none;min-height:0;padding:4px 12px;background:transparent;color:inherit;border:1px solid var(--line);border-radius:999px;font:600 13px var(--text);cursor:pointer}.bt-groups button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}.bt-groups button[aria-pressed=true] .meta{color:inherit}
+/* Overview shelf: Edit pins as a real button; Badges tab: Clear always shown (greyed until there is something to clear), and a clearer pin counter */
+.shelf-edit{display:inline-block;padding:3px 12px;border:1px solid var(--brass,var(--muted));border-radius:999px;color:var(--brass,var(--ink));font:700 13px var(--text);letter-spacing:0;text-transform:none;text-decoration:none}
+.shelf-edit:hover{background:color-mix(in srgb,var(--brass,var(--ink)) 16%,transparent)}
+.shelf-recent{margin-top:2px}
+.bt-clear:disabled{opacity:.4;cursor:default}
+.bt-pins{display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px 6px;padding:6px 12px;border:1px solid color-mix(in srgb,var(--brass,var(--ink)) 55%,var(--line));border-radius:999px;background:color-mix(in srgb,var(--brass,var(--ink)) 10%,transparent);white-space:normal}
+/* pinning on the Badges tab: a Pin / Pinned pill on each earned badge (the old corner star is gone); more air between Pinned and Latest earned on the Overview */
+.shelf-cols>div>h3:not(:first-child){margin-top:28px}
+.badge-pin{align-self:flex-start;min-height:0;margin-top:6px;padding:2px 12px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--muted);font:600 12px var(--text);cursor:pointer}
+.badge-pin:hover:not(:disabled){border-color:var(--brass,var(--ink));color:var(--ink)}
+.badge-pin.on{border-color:var(--brass,var(--ink));background:color-mix(in srgb,var(--brass,var(--ink)) 22%,transparent);color:var(--ink)}
+.badge-pin:disabled{opacity:.4;cursor:not-allowed}
+.badge-pinrow{display:flex;padding:0 12px 10px}.badge-pinrow .badge-pin{margin-top:0}
+@media (pointer:coarse){.badge-pin{min-height:36px;padding:0 16px}}
+@media (prefers-reduced-motion:no-preference){.badge-pin{transition:background-color .15s ease,border-color .15s ease,color .15s ease}}
+@media (pointer:coarse){.bt-seg button,.bt-groups button{min-height:40px}}
+
+/* the "+" chip after a player's pinned badges (components/PinAdd.jsx) */
+.pin-add{display:inline-grid;place-items:center;flex:none;width:30px;height:30px;border:2px dashed color-mix(in srgb,var(--ink) 40%,transparent);border-radius:50%;color:var(--muted);font:600 20px/1 var(--text);text-decoration:none}
+.pin-add:hover,.pin-add:focus-visible{border-style:solid;border-color:var(--brass,var(--ink));color:var(--brass,var(--ink));background:color-mix(in srgb,var(--brass,var(--ink)) 14%,transparent)}
+@media (pointer:coarse){.pin-add{width:44px;height:44px}}
+@media (prefers-reduced-motion:no-preference){.pin-add{transition:background-color .15s ease,border-color .15s ease,color .15s ease,transform .12s ease}.pin-add:hover{transform:scale(1.1)}}
+/* on a phone the pager's two rows (count + per page, then Previous / Page / Next) are centred instead of leaning right */
+@media (max-width:720px){.dn-pager{justify-content:center;text-align:center}.dn-pager-nav{margin-left:0;flex-basis:100%;justify-content:center}}
