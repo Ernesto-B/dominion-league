@@ -1671,9 +1671,9 @@ a.gr-face.dim{opacity:.28;filter:grayscale(1)}
 .dn-hero-side{display:grid;gap:14px;align-content:start;margin-bottom:18px;font-size:15px}
 .dn-side-h{margin:0 0 8px;font-size:15px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .dn-hero-side .dn-mech-detail{margin:0}
-/* a card that was new to the group: a sash across its top-right corner that overhangs the edge, clear of the card's name; the "New to the group" button above picks those out */
+/* a card or landscape that was new to the group: a sash across its top corner (the left one, via `.left`: a landscape's type sash holds the right) that overhangs the edge, clear of the card's name; the "New to the group" button above picks those out */
 a.gr-face{position:relative}
-/* a landscape already wears its type's sash on the right, so its New sash sits on the left */
+/* the New sash on the top-left corner, for cards and landscapes alike (a landscape's own type sash holds the top-right) */
 .gr-newtag.left{right:auto;left:-17px;transform:rotate(-45deg)}
 @media (max-width:720px){.gr-newtag.left{right:auto;left:-15px}}
 /* the card beside the mouse (components/CardHover.jsx): above everything, never takes the mouse */
@@ -2075,3 +2075,16 @@ tr.stand1 td:first-child{--m:#E3B84A}tr.stand2 td:first-child{--m:#B7C0CC}tr.sta
 .seating-table{padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
 .seating-table p{margin:6px 0 0}
 .seating-new{margin:8px 0 0}
+/* the game report's compact card wall: two rows of five and the landscapes under them, as on the Games page's Kingdoms view */
+.gr-compact{display:grid;gap:8px;max-width:640px}
+.gr-compact-cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.gr-compact-lands{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+.gr-compact a.gr-face,.gr-compact a.gr-face.wide{width:auto}
+.gr-compact .dn-kchips{display:contents}
+.gr-compact-cards.chips,.gr-compact-lands.chips{display:flex;flex-wrap:wrap}   /* no pictures: the text chips wrap as usual */
+/* in the compact wall the cards are small, so the New sash scales with the card it sits on (container units), not with a fixed size */
+.gr-compact a.gr-face{container-type:inline-size}
+.gr-compact .gr-newtag{width:40cqw;padding:0;font-size:max(7px,8.5cqw);line-height:1.5;top:6cqw;right:-9cqw;letter-spacing:.04em;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.gr-compact .gr-newtag.left{right:auto;left:-9cqw}
+/* the card section's heading row: air above it (the box before it ends right there) and below it (before the first card or expansion icon) */
+.gr-cardshead{margin:28px 0 14px}

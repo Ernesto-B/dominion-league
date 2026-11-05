@@ -180,6 +180,9 @@ function Compare({ c }) {
 export function Kingdom({ rep, game, loaded }) {
   const k = rep.kingdom;
   const [focus, setFocus] = useState(null);   // { kind: 'type' | 'tool', key, label } or null
+  // the cards as a compact wall (two rows of five, like the Games page's Kingdoms view) or filed by expansion; remembered on this device
+  const [layout, setLayoutState] = useState(() => { try { return localStorage.getItem('dl.reportkview') === 'shelf' ? 'shelf' : 'compact'; } catch { return 'compact'; } });
+  const setLayout = v => { setLayoutState(v); try { localStorage.setItem('dl.reportkview', v); } catch { /* not remembered */ } };
   const { catalog } = usePage();
   const { get: picture, any: anyPictures } = useCardImages();
   const faces = anyPictures;   // pictures when there are any (a card with none keeps its chip)
@@ -219,18 +222,35 @@ export function Kingdom({ rep, game, loaded }) {
       {k.debtCards > 0 && <p className="meta">{k.debtCards} Debt card{k.debtCards === 1 ? '' : 's'} not counted in the average.</p>}
       <KingdomFacts k={k} focus={focus} setFocus={setFocus} />
       <div className="gr-cardshead">
-        <h4 className="gr-h">The cards, by expansion</h4>
+        <h4 className="gr-h">The cards</h4>
         <div className="gr-cardsacts">
+          <div className="gview-switch" role="group" aria-label="How to lay out the cards">
+            <button type="button" aria-pressed={layout === 'compact'} onClick={() => setLayout('compact')}>Compact</button>
+            <button type="button" aria-pressed={layout === 'shelf'} onClick={() => setLayout('shelf')}>By expansion</button>
+          </div>
           <PlayAgain game={game} />
         </div>
       </div>
       {/* a card with a picture is the card itself (tap for its page); one without keeps its chip, so the shelf is never missing anything */}
-      <ShelfGroups entries={cards.map(({ r, c }) => ({ r, node: faces && picture(c.id)
-        ? <a key={r.id} className={'gr-face' + (hit(c) ? '' : ' dim')} href={cardHref(c.id)} title={c.name} onClick={e => enlarge(e, { kind: 'card', s: { key: c.pileKey, name: c.name, expansion: c.expansion, cards: [c] } })}><CardFace id={c.id} name={c.name} />{fresh.has(c.id) && <span className="gr-newtag">New</span>}</a>
-        : <KingdomChip key={r.id} r={r} compact dim={!hit(c)} /> }))} />
-      {lands.length > 0 && <><h4 className="gr-h">Landscapes</h4><ShelfGroups entries={lands.map(({ r }) => ({ r, node: faces && picture(r.id)
-        ? <a key={r.id} className={'gr-face wide' + (focus && !(focus.kind === 'new' && freshLands.has(r.id)) ? ' dim' : '')} href={landscapeHref(r.id)} title={r.obj.name} onClick={e => enlarge(e, { kind: 'landscape', l: { landscape: r.obj } })}><CardFace id={r.id} name={r.obj.name} />{freshLands.has(r.id) && <span className="gr-newtag left">New</span>}</a>
-        : <KingdomChip key={r.id} r={r} compact dim={!!focus && !(focus.kind === 'new' && freshLands.has(r.id))} /> }))} /></>}
+      {(() => {
+        const cardEntries = cards.map(({ r, c }) => ({ r, node: faces && picture(c.id)
+          ? <a key={r.id} className={'gr-face' + (hit(c) ? '' : ' dim')} href={cardHref(c.id)} title={c.name} onClick={e => enlarge(e, { kind: 'card', s: { key: c.pileKey, name: c.name, expansion: c.expansion, cards: [c] } })}><CardFace id={c.id} name={c.name} />{fresh.has(c.id) && <span className="gr-newtag left">New</span>}</a>
+          : <KingdomChip key={r.id} r={r} compact dim={!hit(c)} /> }));
+        const landEntries = lands.map(({ r }) => ({ r, node: faces && picture(r.id)
+          ? <a key={r.id} className={'gr-face wide' + (focus && !(focus.kind === 'new' && freshLands.has(r.id)) ? ' dim' : '')} href={landscapeHref(r.id)} title={r.obj.name} onClick={e => enlarge(e, { kind: 'landscape', l: { landscape: r.obj } })}><CardFace id={r.id} name={r.obj.name} />{freshLands.has(r.id) && <span className="gr-newtag left">New</span>}</a>
+          : <KingdomChip key={r.id} r={r} compact dim={!!focus && !(focus.kind === 'new' && freshLands.has(r.id))} /> }));
+        return layout === 'compact' ? (
+          <div className="gr-compact">
+            <div className={'gr-compact-cards' + (faces ? '' : ' chips')}>{cardEntries.map(e => e.node)}</div>
+            {landEntries.length > 0 && <div className={'gr-compact-lands' + (faces ? '' : ' chips')}>{landEntries.map(e => e.node)}</div>}
+          </div>
+        ) : (
+          <>
+            <ShelfGroups entries={cardEntries} />
+            {landEntries.length > 0 && <><h4 className="gr-h">Landscapes</h4><ShelfGroups entries={landEntries} /></>}
+          </>
+        );
+      })()}
       {(game.landscapes || []).length > 0 && !lands.length && <p className="note">Landscapes in play: <LandscapePills game={game} /></p>}
     </>
   );
