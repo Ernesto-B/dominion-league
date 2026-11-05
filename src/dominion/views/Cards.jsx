@@ -137,7 +137,7 @@ export default function Cards({ query = '' }) {
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>
           <button type="button" className="ghost" onClick={clear} disabled={!active}>Clear filters{active ? ` (${active})` : ''}</button>
           {!choosing && <button type="button" className="ghost" onClick={random} disabled={!rows.length}>Random card</button>}
-          {!choosing && <button type="button" className={'ghost' + (picking ? ' dn-cmp-on' : '')} aria-pressed={picking} onClick={() => (picking ? stopPicking() : startPicking())}>{picking ? 'Cancel comparing' : 'Compare cards'}</button>}
+          {!choosing && <button type="button" className="ghost dn-toggle" aria-pressed={picking} onClick={() => (picking ? stopPicking() : startPicking())}>{picking ? 'Cancel comparing' : 'Compare cards'}</button>}
           <span className="meta" role="status" aria-live="polite">Showing <b>{rows.length}</b> of {catalog.cards.length} card names{active ? ' (filtered)' : ''}</span>
         </div>
       </form>

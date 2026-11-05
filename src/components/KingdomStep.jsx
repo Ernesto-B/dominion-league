@@ -118,7 +118,7 @@ function RandomRoll({ catalog, roll, setRollOpts, resetRoll, kept, onKeep, hand,
       <RandomizerPanel catalog={catalog} opts={roll} setOpts={setRollOpts} state={shown} plays={plays} emptyHint={false} avoid={avoid}
         onState={res => applyKingdom(toGameItems(res), res)} onReset={resetRoll} kept={kept} onKeep={onKeep}
         editing={hand} onEdit={(next, implied) => onPick(next, implied)}
-        extraControls={<button type="button" className="ghost" aria-pressed={hand} onClick={() => setHand(!hand)}>{hand ? 'Done editing' : 'Pick cards by hand'}</button>} />
+        extraControls={<button type="button" className="ghost dn-toggle" aria-pressed={hand} onClick={() => setHand(!hand)}>{hand ? 'Done editing' : 'Pick cards by hand'}</button>} />
       {items.length > 0 && !shown && text}
     </>
   );

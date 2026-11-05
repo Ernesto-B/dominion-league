@@ -1862,7 +1862,6 @@ a.gr-face{position:relative}
 .nextup a.nu-chase:hover{text-decoration:underline}
 
 /* Card comparison (#/dominion/compare): one column per card, as many as fit (4 on a wide screen, 2 on a tablet, 1 on a phone) */
-.dn-cmp-on{background:var(--ink);color:var(--bg)}
 .dn-s-cmp{display:inline-flex;align-items:center;padding:6px 14px;border:1px solid var(--line);border-radius:999px;color:inherit;font-size:14px;font-weight:600;text-decoration:none}.dn-s-cmp:hover{border-color:var(--muted)}.dn-cmp-back{font-size:14px}
 .dn-cmp-sum{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 14px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
 .dn-cmp-key{display:inline-flex;align-items:center;gap:6px;margin-left:auto}
@@ -1969,3 +1968,8 @@ a.gr-face{position:relative}
 .dn-confirm{max-width:420px;padding:20px 22px}.dn-confirm h2{margin:0 0 6px;font-size:20px}.dn-confirm p{margin:0 0 16px}
 .dn-confirm-btns{display:flex;justify-content:flex-end;gap:10px}
 .dn-confirm-danger{background:#c8453c;color:#fff}.dn-confirm-danger:hover{opacity:1;background:#d9534a}
+
+/* a button that switches a mode on and off (Compare cards, Pick cards by hand): while it is on it is filled brass-tinted with a brass edge and a check, so it reads as pressed in */
+.dn-toggle[aria-pressed=true]{background:color-mix(in srgb,var(--brass,#d9b45a) 24%,transparent);border-color:var(--brass,#d9b45a);box-shadow:inset 0 0 0 1px var(--brass,#d9b45a);color:var(--ink)}
+.dn-toggle[aria-pressed=true]::before{content:'✓';margin-right:.5em;color:var(--brass,#d9b45a);font-weight:700}
+@media (prefers-reduced-motion:no-preference){.dn-toggle{transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease}}

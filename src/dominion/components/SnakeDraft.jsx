@@ -152,7 +152,7 @@ export default function SnakeDraft({ catalog, players, opts, setOpts, plays = nu
       {draft.landscapes.length > 0 && <p className="meta">Landscapes in this game: {draft.landscapes.map(l => l.landscape.name).join(', ')}.</p>}
       <div className="controls dn-rz-go">
         <button type="button" className="ghost" onClick={onRestart}>Restart draft</button>
-        <button type="button" className="ghost" aria-expanded={hand} onClick={toggleHand}>{hand ? 'Done editing' : 'Pick cards by hand'}</button>
+        <button type="button" className="ghost dn-toggle" aria-pressed={hand} onClick={toggleHand}>{hand ? 'Done editing' : 'Pick cards by hand'}</button>
       </div>
       {hand && <div ref={handRef}>{handPanel}</div>}
     </section>

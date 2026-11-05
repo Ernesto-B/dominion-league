@@ -120,3 +120,11 @@ describe('the bare tiles used after a snake draft', () => {
     expect(h).toContain('Replace'); expect(h).toContain('dn-rzadd'); expect(h).not.toContain('dn-rz-opts'); expect(h).not.toContain('dn-rz-bar'); expect(h).not.toContain('dn-rz-setup');
   });
 });
+
+describe('toggle buttons say when they are on', () => {
+  it('the Randomizer\'s Pick cards by hand button is a pressed-state toggle', () => {
+    clearResumeEditing();   // an earlier test's Cancel leaves "come back editing" set
+    const h = renderToStaticMarkup(<CatalogProvider catalog={catalog}><DominionView arg="randomizer" /></CatalogProvider>);
+    expect(h).toMatch(/dn-toggle[^>]*aria-pressed="false"[^>]*>Pick cards by hand/);
+  });
+});

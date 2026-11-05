@@ -76,7 +76,7 @@ export default function Randomizer({ query = '' }) {
       <RandomizerPanel catalog={catalog} opts={opts} setOpts={patch => write({ ...opts, ...patch }, state)} state={state}
         onState={next => write(opts, next)} onReset={() => write(DEFAULT_OPTIONS, state)} plays={plays} actions={actions}
         editing={hand} onEdit={edit}
-        extraControls={<button type="button" className="ghost" aria-pressed={hand} onClick={() => setHand(h => !h)}>{hand ? 'Done editing' : 'Pick cards by hand'}</button>} />
+        extraControls={<button type="button" className="ghost dn-toggle" aria-pressed={hand} onClick={() => setHand(h => !h)}>{hand ? 'Done editing' : 'Pick cards by hand'}</button>} />
     </>
   );
 }
