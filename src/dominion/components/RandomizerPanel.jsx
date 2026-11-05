@@ -130,7 +130,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
           {!bare && <div className="dn-rz-bar">
             <div className="dn-rz-actions">
               {!(faces && shown.slots.every(faceOf) && shown.landscapes.every(l => picture(l.landscape.id))) && <ShowTextButton on={showText} onClick={() => setShowText(t => !t)} />}
-              {shown.seed != null ? <SeedButton text={formatSeed(shown.seed)} /> : shown.slots.length > 0 && <SeedButton code text={encodeKingdom(catalog, shown)} />}
+              {shown.seed != null ? <SeedButton text={formatSeed(shown.seed)} copy={encodeKingdom(catalog, shown)} /> : shown.slots.length > 0 && <SeedButton code text={encodeKingdom(catalog, shown)} />}
             </div>
             {actions && <div className="dn-rz-actions">{actions}</div>}
           </div>}
@@ -223,13 +223,13 @@ const CopyGlyph = () => (
 );
 
 // the roll's seed (or, for a kingdom no seed describes, its code), as a button in line with the others on the bar: pressing it copies the number
-function SeedButton({ text, code = false }) {
+function SeedButton({ text, copy: toCopy = null, code = false }) {
   const [done, setDone] = useState(null);
   const copy = async () => {
-    try { await navigator.clipboard.writeText(text); setDone('Copied'); } catch { setDone('Press Ctrl/⌘+C'); }
+    try { await navigator.clipboard.writeText(toCopy || text); setDone('Copied'); } catch { setDone('Press Ctrl/⌘+C'); }
     setTimeout(() => setDone(null), 1800);
   };
-  return <button type="button" className="dn-seed" onClick={copy} title={code ? 'Copy this kingdom\'s code. Paste it where a seed goes (here or on Game night) to get exactly this kingdom.' : 'Copy this roll\'s seed. Roll again with this seed and the same options to get this exact kingdom.'}>{code ? 'Code' : 'Seed'} <b>{text}</b><CopyGlyph />{done && <span className="meta" role="status"> · {done}</span>}</button>;
+  return <button type="button" className="dn-seed" onClick={copy} title={code || toCopy ? 'Copy this kingdom\'s code. Paste it where a seed goes (here or on Game night) to get exactly this kingdom, whatever options are set there. The number alone only repeats the roll under the same options.' : 'Copy this roll\'s seed. Roll again with this seed and the same options to get this exact kingdom.'}>{code ? 'Code' : 'Seed'} <b>{text}</b><CopyGlyph />{done && <span className="meta" role="status"> · {done}</span>}</button>;
 }
 
 // while editing by hand a tile's two buttons are Replace (search for another) and Remove

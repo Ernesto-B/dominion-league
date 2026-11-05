@@ -192,6 +192,7 @@ export function Kingdom({ rep, game, loaded }) {
   // tapping a card type or a tool picks it out: every card below that is not one of those greys out (tap it again to see them all)
   const level = c => Math.min(6, Math.max(2, c.coins)) - 2;   // the same cost levels as the bars above ($2 or less, $3, $4, $5, $6+); a Debt card has none
   const fresh = new Set(((k.history && k.history.firstInGroup) || []).map(c => c.id));   // cards this group had never played before this game
+  const freshLands = new Set(((k.history && k.history.firstLandscapes) || []).map(l => l.id));   // landscapes this group had never played with before this game
   const hit = c => (!focus ? true : focus.kind === 'new' ? fresh.has(c.id) : focus.kind === 'type' ? c.types.includes(focus.key) : focus.kind === 'cost' ? c.debt === 0 && level(c) === focus.key : (c.mechanicIds || []).some(t => REQUIRE_RULES[focus.key].tags.includes(t)));
   const pickCost = i => setFocus(focus && focus.kind === 'cost' && focus.key === i ? null : { kind: 'cost', key: i });
   const cards = k.cards.map(c => ({ r: { kind: 'card', id: c.id, obj: c }, c })), lands = k.landscapes.map(l => ({ r: { kind: 'landscape', id: l.id, obj: l } }));
@@ -228,8 +229,8 @@ export function Kingdom({ rep, game, loaded }) {
         ? <a key={r.id} className={'gr-face' + (hit(c) ? '' : ' dim')} href={cardHref(c.id)} title={c.name} onClick={e => enlarge(e, { kind: 'card', s: { key: c.pileKey, name: c.name, expansion: c.expansion, cards: [c] } })}><CardFace id={c.id} name={c.name} />{fresh.has(c.id) && <span className="gr-newtag">New</span>}</a>
         : <KingdomChip key={r.id} r={r} compact dim={!hit(c)} /> }))} />
       {lands.length > 0 && <><h4 className="gr-h">Landscapes</h4><ShelfGroups entries={lands.map(({ r }) => ({ r, node: faces && picture(r.id)
-        ? <a key={r.id} className={'gr-face wide' + (focus ? ' dim' : '')} href={landscapeHref(r.id)} title={r.obj.name} onClick={e => enlarge(e, { kind: 'landscape', l: { landscape: r.obj } })}><CardFace id={r.id} name={r.obj.name} /></a>
-        : <KingdomChip key={r.id} r={r} compact dim={!!focus} /> }))} /></>}
+        ? <a key={r.id} className={'gr-face wide' + (focus && !(focus.kind === 'new' && freshLands.has(r.id)) ? ' dim' : '')} href={landscapeHref(r.id)} title={r.obj.name} onClick={e => enlarge(e, { kind: 'landscape', l: { landscape: r.obj } })}><CardFace id={r.id} name={r.obj.name} />{freshLands.has(r.id) && <span className="gr-newtag left">New</span>}</a>
+        : <KingdomChip key={r.id} r={r} compact dim={!!focus && !(focus.kind === 'new' && freshLands.has(r.id))} /> }))} /></>}
       {(game.landscapes || []).length > 0 && !lands.length && <p className="note">Landscapes in play: <LandscapePills game={game} /></p>}
     </>
   );
@@ -238,15 +239,16 @@ export function Kingdom({ rep, game, loaded }) {
 // what the cards are and how they sit in the group's history: types, tools, price range, and which cards were new to the group
 function KingdomFacts({ k, focus, setFocus }) {
   const h = k.history, names = list => list.map(c => c.name).join(', ');
+  const newItems = h ? [...h.firstInGroup, ...(h.firstLandscapes || [])] : [];   // cards and landscapes the group had never played before this game
   const same = (kind, key) => !!focus && focus.kind === kind && focus.key === key;
   const pick = (kind, key, label) => setFocus(same(kind, key) ? null : { kind, key, label });
   // the chips are the Collection's own (type-coloured edge, count at the right); pressing one filters the cards listed below
   const rows = [
     ['Card types', k.types.length ? <span className="gr-pills">{k.types.map(t => <button key={t.name} type="button" className={'dn-chip t-' + t.name.toLowerCase()} aria-pressed={same('type', t.name)} onClick={() => pick('type', t.name, t.name)}>{t.name}<span className="n">{t.n}</span></button>)}</span> : null],
     ['Tools', k.tools.length ? <><span className="gr-pills">{k.tools.map(t => <button key={t.key} type="button" className="dn-chip" aria-pressed={same('tool', t.key)} onClick={() => pick('tool', t.key, t.label)}>{t.label}<span className="n">{t.n}</span></button>)}</span><small className="gr-fine">From the recorded card mechanics; a card can do more than is listed.</small></> : null],
-    ['In this group', h ? <span>{h.firstInGroup.length
-      ? <button type="button" className="dn-chip gr-newchip" aria-pressed={same('new', 'new')} title={`First time played here: ${names(h.firstInGroup)}`} onClick={() => pick('new', 'new', 'New to the group')}>New to the group<span className="n">{h.firstInGroup.length}</span></button>
-      : <>Every card has been played here before.</>}{h.mostPlayed ? <><br />Most played: <b>{h.mostPlayed.card.name}</b>, {h.mostPlayed.before} time{h.mostPlayed.before === 1 ? '' : 's'} before this.</> : null}</span> : null],
+    ['In this group', h ? <span>{newItems.length
+      ? <button type="button" className="dn-chip gr-newchip" aria-pressed={same('new', 'new')} title={`First time played here: ${names(newItems)}`} onClick={() => pick('new', 'new', 'New to the group')}>New to the group<span className="n">{newItems.length}</span></button>
+      : <>Every card and landscape has been played here before.</>}{h.mostPlayed ? <><br />Most played: <b>{h.mostPlayed.card.name}</b>, {h.mostPlayed.before} time{h.mostPlayed.before === 1 ? '' : 's'} before this.</> : null}</span> : null],
   ].filter(([, v]) => v);
   return (
     <>

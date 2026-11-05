@@ -31,7 +31,7 @@ export default function Landscapes({ query = '' }) {
   // header clicks share state with the "Sort by" menu: the active column flips direction, another column starts ascending
   const sortBy = key => update(f.sort === key ? { dir: f.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: 'asc' });
   const clear = () => { clearFilters(); setMq(''); };
-  const random = () => { const l = pickRandom(rows); if (l) window.location.hash = landscapeHref(l.id, qs); };
+  const random = () => { const l = pickRandom(rows); if (!l) return; if (choosing) choosePick(l.id); else window.location.hash = landscapeHref(l.id, qs); };   // choosing: a random one of the landscapes the filters still show goes straight into the kingdom
 
   const kp = useKingdomPick(), choosing = !!kp && kp.kind === 'landscape';   // choosing a landscape FOR a kingdom, not browsing
   const rows = useMemo(() => browseLandscapes(catalog.landscapes, f, { plays }).filter(l => !(choosing && kp.taken.includes(l.id))), [catalog, f, plays, choosing, kp]);
@@ -124,7 +124,7 @@ export default function Landscapes({ query = '' }) {
         <FilterSummary f={f} update={update} />
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>
           <button type="button" className="ghost" onClick={clear} disabled={!active}>Clear filters{active ? ` (${active})` : ''}</button>
-          {!choosing && <button type="button" className="ghost" onClick={random} disabled={!rows.length}>Random landscape</button>}
+          <button type="button" className="ghost" onClick={random} disabled={!rows.length}>Random landscape</button>
           <span className="meta" role="status" aria-live="polite">Showing <b>{rows.length}</b> of {catalog.landscapes.length} landscapes{active ? ' (filtered)' : ''}</span>
         </div>
       </form>

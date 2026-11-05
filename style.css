@@ -1673,6 +1673,9 @@ a.gr-face.dim{opacity:.28;filter:grayscale(1)}
 .dn-hero-side .dn-mech-detail{margin:0}
 /* a card that was new to the group: a sash across its top-right corner that overhangs the edge, clear of the card's name; the "New to the group" button above picks those out */
 a.gr-face{position:relative}
+/* a landscape already wears its type's sash on the right, so its New sash sits on the left */
+.gr-newtag.left{right:auto;left:-17px;transform:rotate(-45deg)}
+@media (max-width:720px){.gr-newtag.left{right:auto;left:-15px}}
 /* the card beside the mouse (components/CardHover.jsx): above everything, never takes the mouse */
 .dn-hoverpic{position:fixed;z-index:300;pointer-events:none;border-radius:6%/3.8%;box-shadow:0 10px 36px rgba(0,0,0,.6)}
 .dn-hoverpic .dn-face{border-radius:6%/3.8%}

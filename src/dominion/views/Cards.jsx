@@ -37,7 +37,7 @@ export default function Cards({ query = '' }) {
   // a header click uses the same sort state as the "Sort by" menu: the active column flips direction, another column starts ascending
   const sortBy = key => update(f.sort === key ? { dir: f.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: 'asc' });
   const clear = () => { clearFilters(); setMq(''); };
-  const random = () => { const c = pickRandom(rows); if (c) window.location.hash = cardHref(c.id, qs); };
+  const random = () => { const c = pickRandom(rows); if (!c) return; if (choosing) choosePick(c.id); else window.location.hash = cardHref(c.id, qs); };   // choosing: a random one of the cards the filters still show goes straight into the kingdom
 
   const taken = useMemo(() => new Set(choosing ? kp.taken.map(id => catalog.cardsById.get(id)?.pileKey).filter(Boolean) : []), [catalog, choosing, kp]);
   const rows = useMemo(() => browseCards(catalog.cards, f, { plays }).filter(c => !taken.has(c.pileKey)), [catalog, f, plays, taken]);   // a pile already in the kingdom is not offered
@@ -136,7 +136,7 @@ export default function Cards({ query = '' }) {
         <FilterSummary f={f} update={update} />
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>
           <button type="button" className="ghost" onClick={clear} disabled={!active}>Clear filters{active ? ` (${active})` : ''}</button>
-          {!choosing && <button type="button" className="ghost" onClick={random} disabled={!rows.length}>Random card</button>}
+          <button type="button" className="ghost" onClick={random} disabled={!rows.length}>Random card</button>
           {!choosing && <button type="button" className="ghost dn-toggle" aria-pressed={picking} onClick={() => (picking ? stopPicking() : startPicking())}>{picking ? 'Cancel comparing' : 'Compare cards'}</button>}
           <span className="meta" role="status" aria-live="polite">Showing <b>{rows.length}</b> of {catalog.cards.length} card names{active ? ' (filtered)' : ''}</span>
         </div>

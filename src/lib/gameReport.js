@@ -190,11 +190,13 @@ export function gameReport(D, g, { catalog = null } = {}) {
     // how often the group has played these cards before this game (a split pile counts once, by its pile)
     const before = new Map();
     for (const x of D.games) { if (x.idx >= g.idx) break; const kx = x.n >= 2 ? kingdomStats(x, catalog) : null; if (kx) new Set(kx.cards.map(c => c.pileKey)).forEach(key => before.set(key, (before.get(key) || 0) + 1)); }
+    const landBefore = new Set();   // landscapes the group has already played with
+    for (const x of D.games) { if (x.idx >= g.idx) break; if (x.n >= 2) (x.kingdom || []).forEach(it => { if (it.kind === 'landscape') landBefore.add(it.id); }); }
     const played = k.cards.map(c => ({ card: c, before: before.get(c.pileKey) || 0 }));
     const veteran = played.slice().sort((a, b) => b.before - a.before || a.card.name.localeCompare(b.card.name))[0];
     kingdom = {
       ...k, vs: { avgCost: base.avgCost, costPercentile: costRank, avgAttacks: base.avgAttacks, landscapeShare: base.landscapeShare, sample: base.kingdoms },
-      history: { firstInGroup: played.filter(x => x.before === 0).map(x => x.card), mostPlayed: veteran && veteran.before > 0 ? veteran : null, gamesBefore: D.games.filter(x => x.idx < g.idx && x.n >= 2 && kingdomStats(x, catalog)).length },
+      history: { firstInGroup: played.filter(x => x.before === 0).map(x => x.card), firstLandscapes: k.landscapes.filter(l => !landBefore.has(l.id)), mostPlayed: veteran && veteran.before > 0 ? veteran : null, gamesBefore: D.games.filter(x => x.idx < g.idx && x.n >= 2 && kingdomStats(x, catalog)).length },
     };
   }
 
