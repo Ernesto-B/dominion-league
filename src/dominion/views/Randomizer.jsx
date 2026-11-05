@@ -6,6 +6,7 @@ import { writeQuery } from '../urlState.js';
 import { loadNight, nightInProgress, saveNight, withRolledKingdom } from '../../lib/night.js';
 import { impliedSets, resolveKingdom } from '../kingdom.js';
 import { pilesPlayed } from '../playStats.js';
+import { PlaysScopeContext } from '../components/RandomizerOptions.jsx';
 import { useLeagueGames } from '../useLeagueGames.js';
 import { DEFAULT_OPTIONS, formatSeed, kingdomFromParams, stateFromItems, kingdomToParams, optionsFromParams, optionsToParams, toGameItems } from '../randomizer.js';
 import RandomizerPanel from '../components/RandomizerPanel.jsx';
@@ -29,7 +30,7 @@ export default function Randomizer({ query = '' }) {
   const [hand, setHand] = useState(peekResumeEditing);   // back from choosing a card in the full list: still editing   // hand-editing: the tiles get Replace / Remove and an Add tile (the same editing Game night's Random way has)
 
   useEffect(() => { clearResumeEditing(); }, []);
-  const lg = useLeagueGames();
+  const lg = useLeagueGames(opts.favorBy);   // "Prioritize" can count one player's games only (opts.favorBy)
   const plays = useMemo(() => (lg && lg.stats ? pilesPlayed(lg.stats) : null), [lg]);
   const canLog = !!(page && page.me && page.me.is_admin);
 
@@ -73,10 +74,12 @@ export default function Randomizer({ query = '' }) {
       {confirmDialog}
       <div className="head"><div><h1>Kingdom randomizer</h1><p className="lede">Roll a Kingdom for your next game. Choose the expansions and any rules, roll, then lock the cards you like and re-roll the rest.</p></div></div>
       <PageShortcuts bindings={[{ key: 'r', label: 'Roll a kingdom', run: () => { const b = document.querySelector('.dn-rz-go button[type=submit]'); if (b) b.click(); } }]} />
+      <PlaysScopeContext.Provider value={lg && lg.stats ? { players: lg.players } : false}>
       <RandomizerPanel catalog={catalog} opts={opts} setOpts={patch => write({ ...opts, ...patch }, state)} state={state}
         onState={next => write(opts, next)} onReset={() => write(DEFAULT_OPTIONS, state)} plays={plays} actions={actions}
         editing={hand} onEdit={edit}
         extraControls={<button type="button" className="ghost dn-toggle" aria-pressed={hand} onClick={() => setHand(h => !h)}>{hand ? 'Done editing' : 'Pick cards by hand'}</button>} />
+      </PlaysScopeContext.Provider>
     </>
   );
 }

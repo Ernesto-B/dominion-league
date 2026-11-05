@@ -58,6 +58,8 @@ export const DEFAULT_OPTIONS = Object.freeze({
   excludeLandscapes: [],   // landscape ids that must not be (kept out of the link: it is only ever set by withAvoid, for a second table)
   favor: false,            // weight the draw towards piles that have been played less (needs the `plays` option)
   favorPlayed: false,      // ...or towards piles that have been played more (the same `plays` option)
+  favorBy: '',             // ...counting only the games this player sat at (the Collection's Randomizer; empty = the whole group's)
+  favorTable: false,       // count only the games the seated players sat at, not the whole group's (Game night: the caller hands over that table's `plays`)
   junkTrash: false,        // if an Attack that gives opponents junk is in, make sure there is a trashing card too
   costSpread: null,        // null = off, else a key of COST_SPREADS
   themes: [],              // keys of THEMES: build the kingdom around Treasure / VP / Duration / Trashing
@@ -493,6 +495,8 @@ export function optionsToParams(opts, p = new URLSearchParams()) {
   o.exclude.forEach(v => p.append('exc', v));
   if (o.favor) p.set('fav', '1');
   if (o.favorPlayed) p.set('fp', '1');
+  if (o.favorTable) p.set('ft', '1');
+  if (o.favorBy) p.set('fb', o.favorBy);
   if (o.junkTrash) p.set('jt', '1');
   if (o.costSpread) p.set('cs', o.costSpread);
   o.themes.forEach(v => p.append('th', v));
@@ -507,7 +511,7 @@ export function optionsFromParams(p) {
     landscapeTypes: many(p, 'lt').filter(t => LANDSCAPE_TYPES.includes(t)),
     maxAttacks: intIn(p.get('atk'), 0, 12, null), minAttacks: intIn(p.get('atkmin'), 0, 12, 0), maxCost: intIn(p.get('maxc'), 2, 10, null), reaction: p.get('rx') === '1',
     require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: many(p, 'inc'), exclude: many(p, 'exc'), excludeLandscapes: [], favor: p.get('fav') === '1',
-    favorPlayed: p.get('fp') === '1', junkTrash: p.get('jt') === '1', costSpread: COST_SPREADS[p.get('cs')] ? p.get('cs') : null,
+    favorPlayed: p.get('fp') === '1', favorTable: p.get('ft') === '1', favorBy: (p.get('fb') || '').slice(0, 60), junkTrash: p.get('jt') === '1', costSpread: COST_SPREADS[p.get('cs')] ? p.get('cs') : null,
     themes: [...new Set(many(p, 'th').filter(t => THEMES[t]))],
   };
 }

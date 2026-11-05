@@ -17,6 +17,7 @@ import { DRAFT_PICKS, draftState, poolSizeFor, rollPool } from '../dominion/draf
 import { useCatalogLoad } from '../dominion/CatalogContext.jsx';
 import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
 import { CardText, ShowTextButton } from '../dominion/components/bits.jsx';
+import { PlaysScopeContext } from '../dominion/components/RandomizerOptions.jsx';
 import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, newSeed, setupForHand, withAvoid } from '../dominion/randomizer.js';
 import CountUp from '../components/CountUp.jsx';
 import { pilesPlayed, playStats } from '../dominion/playStats.js';
@@ -116,11 +117,14 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
   const roll = st.rollOpts || NIGHT_ROLL;
   const setRollOpts = patch => setSt(s => ({ ...s, rollOpts: { ...(s.rollOpts || NIGHT_ROLL), ...patch } }));
   // how often each pile has been played, for the "favor cards we've played less" rule (null until the catalog is in, or with no kingdoms logged)
+  // "Only this table's games" counts just the games one of the seated players sat at, so a card the whole group has played but nobody here has counts as new
   const plays = useMemo(() => {
     if (cat.status !== 'ready') return null;
     const stats = playStats(cat.catalog, D.games, me ? me.name : null);
-    return stats.withKingdom ? pilesPlayed(stats) : null;
-  }, [cat.status, cat.catalog, D.games, me]);
+    if (!stats.withKingdom) return null;
+    if (!roll.favorTable || !st.picked.length) return pilesPlayed(stats);
+    return pilesPlayed(playStats(cat.catalog, D.games.filter(g => st.picked.some(n => g.places && g.places[n] != null)), null));
+  }, [cat.status, cat.catalog, D.games, me, roll.favorTable, st.picked]);
   // the rolled kingdom: held in memory after a roll, rebuilt from its saved compact form after a reload
   const rolled = useMemo(() => st.rolled || (cat.status === 'ready' && st.rolledQ ? kingdomFromParams(cat.catalog, new URLSearchParams(st.rolledQ)) : null), [st.rolled, st.rolledQ, cat.status, cat.catalog]);
   const [showText, setShowText] = useState(false);
@@ -264,10 +268,10 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
 
         {st.step === 'kingdom' && (
           !catalog ? (cat.status === 'error' ? <p className="meta">The card list isn’t available right now. You can skip the kingdom and still save the game. <button type="button" className="ghost" onClick={cat.retry}>Try again</button> <button type="button" className="linkish" onClick={() => setSt(s => advance({ ...s, kingdom: [] }))}>Skip the kingdom</button></p> : <p className="meta">Loading the card list…</p>) : (
-            <KingdomStep avoid={avoid} catalog={catalog} mode={st.kingdomMode} setMode={setMode} players={st.picked} roll={roll} setRollOpts={setRollOpts} resetRoll={() => setSt(s => ({ ...s, rollOpts: null, kept: null }))} kept={st.kept} onKeep={kept => setSt(s => ({ ...s, kept }))}
+            <PlaysScopeContext.Provider value><KingdomStep avoid={avoid} catalog={catalog} mode={st.kingdomMode} setMode={setMode} players={st.picked} roll={roll} setRollOpts={setRollOpts} resetRoll={() => setSt(s => ({ ...s, rollOpts: null, kept: null }))} kept={st.kept} onKeep={kept => setSt(s => ({ ...s, kept }))}
               hand={st.handOpen} setHand={handOpen => setSt(s => ({ ...s, handOpen }))} draftSave={st.draftSave} onDraft={draftSave => setSt(s => ({ ...s, draftSave }))} onRestartDraft={redoDraft}
               plays={plays} items={items} rolled={rolled} setupNow={setupNow} handEdited={st.handEdited} handBane={st.handBane} resolved={resolved} randomDone={st.randomDone} randomOriginal={st.randomOriginal} setRandomDone={randomDone => setSt(s => ({ ...s, randomDone, handOpen: randomDone ? false : s.handOpen, randomOriginal: randomDone ? s.kingdom.filter(i => i.kind === 'card').map(i => i.id) : null }))} applyKingdom={applyKingdom} onPick={pickByHand} onSkip={() => setSt(s => advance({ ...s, kingdom: [], kingdomMode: null }))}
-              text={<KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />} />
+              text={<KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />} /></PlaysScopeContext.Provider>
           )
         )}
 

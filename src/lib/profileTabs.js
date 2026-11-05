@@ -1,7 +1,7 @@
-/* The Player page's tabs: Overview (the tiles and a shelf of badges), Badges (the whole collection) and History (rating chart, matchups, games).
+/* The Player page's tabs: Overview (the tiles and a shelf of badges), Badges (the whole collection), Cards (the kingdom cards and landscapes they have played) and History (rating chart, matchups, games).
    The tab lives in the address (#/players/<group>/<name>?tab=badges), so Back, a bookmark and a shared link all land on the same tab. A link to one badge
    (?badge=<id>) always opens the Badges tab. Pure. */
-export const PROFILE_TABS = [['overview', 'Overview'], ['badges', 'Badges'], ['history', 'History']];
+export const PROFILE_TABS = [['overview', 'Overview'], ['badges', 'Badges'], ['cards', 'Cards'], ['history', 'History']];
 
 export function tabFromQuery(query) {
   const q = new URLSearchParams(query || '');

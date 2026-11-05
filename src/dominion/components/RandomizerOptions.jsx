@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react';
 import { CARD_COUNTS, COST_SPREADS, REQUIRE_RULES, THEMES, THEME_KEYS, ruleIsExact } from '../randomizer.js';
 import { toggle } from '../filters.js';
 import { PLURAL } from '../constants.js';
@@ -5,7 +6,12 @@ import { resolveKingdom } from '../kingdom.js';
 import { Chip, ExpansionBadge } from './bits.jsx';
 import { CoinIcon } from './Cost.jsx';
 import ItemSearch from './ItemSearch.jsx';
+import ScopePicker from './ScopePicker.jsx';
 import { KingdomChip } from './KingdomChips.jsx';
+
+/* Whose games "Prioritize" can count. Game night provides `true` (the seated players are known: count only the games THIS table has sat at);
+   the Collection's Randomizer provides { players } (count one player's games, chosen from them). Nothing provided: always the whole group's. */
+export const PlaysScopeContext = createContext(false);
 
 const DEFAULT_MAX_ATTACKS = 2;   // what ticking "Allow Attacks" again goes back to
 const itemsOf = ids => ids.map(id => ({ kind: 'card', id }));
@@ -15,6 +21,7 @@ const itemsOf = ids => ids.map(id => ({ kind: 'card', id }));
    `cardCount` replaces the Kingdom cards select (the snake draft has its own idea of how many cards there are).
    `opts` is a full options object (see DEFAULT_OPTIONS) and `setOpts(patch)` merges a change into it. */
 export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = false, foldExpansions = false, cardCount = null }) {
+  const playsScope = useContext(PlaysScopeContext);
   const attacksOn = opts.maxAttacks !== 0;
   const themes = opts.themes || [];   // a night saved before themes existed has none
   const listsOn = opts.include.length + opts.exclude.length;
@@ -83,6 +90,15 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
           <button type="button" className="dn-chip" disabled={!canFavor} aria-pressed={opts.favorPlayed && canFavor} onClick={() => setOpts({ favorPlayed: true, favor: false })}>Played cards</button>
           <button type="button" className="dn-chip" disabled={!canFavor} aria-pressed={opts.favor && canFavor} onClick={() => setOpts({ favor: true, favorPlayed: false })}>New cards</button>
         </div>
+        {playsScope && (opts.favor || opts.favorPlayed) && <>
+          <p className="dn-rz-lab">Count games</p>
+          {playsScope === true ? (
+            <div className="dn-chips" role="radiogroup" aria-label="Whose games count">
+              <Chip pressed={!opts.favorTable} onClick={() => setOpts({ favorTable: false })}>The whole group’s</Chip>
+              <Chip pressed={!!opts.favorTable} onClick={() => setOpts({ favorTable: true })}>Only this table’s</Chip>
+            </div>
+          ) : <ScopePicker label={null} who={opts.favorBy} players={playsScope.players} onPick={n => setOpts({ favorBy: n })} />}
+        </>}
       </div>
 
       <details className="dn-mech dn-rz-details">

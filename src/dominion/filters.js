@@ -9,10 +9,10 @@ import { hasCoin } from './model.js';
 
 export const DEFAULT_CARD_FILTERS = Object.freeze({
   q: '', text: false, expansions: [], expMode: 'any', types: [], typeMode: 'all', mechanics: [], mechanicMode: 'all',
-  costs: [], costMode: 'any', debt: 'any', played: 'any', sort: 'name', dir: 'asc',
+  costs: [], costMode: 'any', debt: 'any', played: 'any', by: '', sort: 'name', dir: 'asc',
 });
 export const DEFAULT_LANDSCAPE_FILTERS = Object.freeze({
-  q: '', text: false, types: [], typeMode: 'any', expansions: [], expMode: 'any', mechanics: [], mechanicMode: 'any', costs: [], costMode: 'any', debt: 'any', played: 'any', sort: 'name', dir: 'asc',
+  q: '', text: false, types: [], typeMode: 'any', expansions: [], expMode: 'any', mechanics: [], mechanicMode: 'any', costs: [], costMode: 'any', debt: 'any', played: 'any', by: '', sort: 'name', dir: 'asc',
 });
 
 export const norm = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -194,6 +194,7 @@ export function cardFiltersToQuery(f) {
   if (f.costMode !== d.costMode) p.set('cmode', f.costMode);
   if (f.debt !== d.debt) p.set('debt', f.debt);
   if (f.played !== d.played) p.set('played', f.played);
+  if (f.by) p.set('by', f.by);   // whose games "played" means: one player's, or (empty) the whole group's
   if (f.sort !== d.sort) p.set('sort', f.sort);
   if (f.dir !== d.dir) p.set('dir', f.dir);
   return wrap(p);
@@ -206,7 +207,7 @@ export function cardFiltersFromQuery(qs) {
     mechanics: many(p, 'mech'), mechanicMode: oneOf(p.get('mmode'), ['all', 'any'], d.mechanicMode),
     costs: many(p, 'cost').filter(v => /^\d{1,2}$/.test(v)).map(Number), costMode: oneOf(p.get('cmode'), ['any', 'none'], d.costMode),
     debt: debt && (['any', 'none', 'has'].includes(debt) || /^\d{1,2}$/.test(debt)) ? debt : d.debt,
-    played: oneOf(p.get('played'), ['yes', 'no'], p.get('unplayed') === '1' ? 'no' : d.played),   // ?unplayed=1 is the older spelling of ?played=no
+    played: oneOf(p.get('played'), ['yes', 'no'], p.get('unplayed') === '1' ? 'no' : d.played), by: (p.get('by') || '').slice(0, 60),   // ?unplayed=1 is the older spelling of ?played=no
     sort: oneOf(p.get('sort'), CARD_SORTS, d.sort), dir: oneOf(p.get('dir'), ['asc', 'desc'], d.dir),
   };
 }
@@ -224,6 +225,7 @@ export function landscapeFiltersToQuery(f) {
   if (f.costMode !== d.costMode) p.set('cmode', f.costMode);
   if (f.debt !== d.debt) p.set('debt', f.debt);
   if (f.played !== d.played) p.set('played', f.played);
+  if (f.by) p.set('by', f.by);   // whose games "played" means: one player's, or (empty) the whole group's
   if (f.sort !== d.sort) p.set('sort', f.sort);
   if (f.dir !== d.dir) p.set('dir', f.dir);
   return wrap(p);
@@ -235,7 +237,7 @@ export function landscapeFiltersFromQuery(qs) {
     types: many(p, 'type'), typeMode: oneOf(p.get('ltmode'), ['any', 'none'], d.typeMode), expansions: many(p, 'exp'), expMode: oneOf(p.get('emode'), ['any', 'none'], d.expMode), mechanics: many(p, 'tag'),
     mechanicMode: oneOf(p.get('tmode'), ['all', 'any'], d.mechanicMode),
     costs: many(p, 'cost').filter(v => v === NO_COST || /^\d{1,2}$/.test(v)).map(v => (v === NO_COST ? v : Number(v))), costMode: oneOf(p.get('cmode'), ['any', 'none'], d.costMode),
-    debt: debt && (['any', 'none', 'has'].includes(debt) || /^\d{1,2}$/.test(debt)) ? debt : d.debt, played: oneOf(p.get('played'), ['yes', 'no'], d.played),
+    debt: debt && (['any', 'none', 'has'].includes(debt) || /^\d{1,2}$/.test(debt)) ? debt : d.debt, played: oneOf(p.get('played'), ['yes', 'no'], d.played), by: (p.get('by') || '').slice(0, 60),
     sort: oneOf(p.get('sort'), LANDSCAPE_SORTS, d.sort), dir: oneOf(p.get('dir'), ['asc', 'desc'], d.dir),
   };
 }

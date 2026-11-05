@@ -42,7 +42,7 @@ export function DominionView({ arg }) {
     case 'landscapes': return <Landscapes query={r.query} />;
     case 'landscape': return <LandscapeDetail id={r.id} query={r.query} />;
     case 'randomizer': return <Randomizer query={r.query} />;
-    case 'insights': return <Insights />;
+    case 'insights': return <Insights query={r.query} />;
     case 'artifact': return <ArtifactDetail id={r.id} />;
     default: return <><h1>Not found</h1><EmptyState>There’s no such page in the collection.</EmptyState></>;
   }

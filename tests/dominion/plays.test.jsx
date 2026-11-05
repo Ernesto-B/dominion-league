@@ -139,20 +139,39 @@ describe('the Collection pages with play data', () => {
 });
 
 describe('the Insights page', () => {
-  it('shows the most played, what has not been played, and the viewer\'s record', () => {
+  it('shows the most played, what has not been played, and who\'s games to read', () => {
     const h = view('insights'), t = text(h);
     expect(t).toMatch(/Based on 4 of 5 games in Friends/); expect(t).toMatch(/Most played cards/); expect(t).toMatch(/Village/);
     expect(h).toMatch(/href="#\/games\/g1\?game=\d+"/); expect(h).not.toMatch(/href="#\/games\/g1\/\d+"/);   // the Last played dates highlight the game in the Games list
-    expect(t).toMatch(/Not played yet/); expect(h).toContain('played=no'); expect(t).toMatch(/Your record with cards/); expect(t).toMatch(/75%/);
+    expect(t).toMatch(/Not played yet/); expect(h).toContain('played=no'); expect(t).not.toMatch(/Your record with cards/); expect(t).toMatch(/Whose games\?/); expect(t).toMatch(/Whole group/);
+  });
+  it('reads one player\'s games from ?who= in the address, and ignores a name that is not a player', () => {
+    expect(text(view('insights?who=Ann'))).toMatch(/Based on \d+ of \d+ games Ann played in the group that/);
+    expect(text(view('insights?who=Nobody'))).toMatch(/Based on 4 of 5 games in Friends/);
+  });
+  it('scopes every list to the chosen player: only the games they sat at count, in Insights, the card table and a card page', () => {
+    const g2 = [game(1, kc('Village', 'Moat'), { Ann: 1, Cat: 2 }), game(2, kc('Militia'), { Ann: 1, Bob: 2 })];
+    const over = { D: { games: g2 } };
+    const ins = text(view('insights?who=Cat', over));
+    expect(ins).toMatch(/Based on 1 of 1 game Cat played in the group/); expect(ins).toContain('Moat'); expect(ins).not.toContain('Militia'); expect(ins).toMatch(/Most played landscapes/);
+    expect(text(view('insights', over))).toContain('Militia');
+    const table = view('cards?by=Cat&played=yes', over);
+    expect(table).toContain('Moat'); expect(table).not.toContain('>Militia<'); expect(table).toContain('dn-scope-inline');
+    expect(text(view(`cards/${card('Moat').id}?by=Cat`, over))).toMatch(/In 1 logged game Cat sat at/);
+    expect(text(view(`cards/${card('Militia').id}?by=Cat`, over))).toMatch(/Cat hasn.t played with it/);
+  });
+  it('the Randomizer offers whose games Prioritize counts, only once a priority is on', () => {
+    expect(text(view('randomizer'))).not.toContain('Count games');
+    const t = text(view('randomizer?fav=1'));
+    expect(t).toContain('Count games'); expect(t).toContain('Whole group'); expect(t).toContain('A player');
   });
   it('explains itself when no kingdom has been logged, with a pointer for an admin', () => {
     const none = { D: { games: [game(1, [], { Ann: 1, Bob: 2 })] } };
     expect(text(view('insights', none))).toMatch(/No game for Friends has a kingdom logged yet/); expect(text(view('insights', none))).toMatch(/Once the admin starts logging them/);
     expect(text(view('insights', { ...none, me: { name: 'Ann', is_admin: true } }))).toMatch(/step 5 of Add a game/);
   });
-  it('says so outside the league, and asks for more games before showing a record', () => {
+  it('says so outside the league', () => {
     expect(text(view('insights', null))).toMatch(/aren.t available here/);
-    expect(text(view('insights', { D: { games: games.slice(0, 2) } }))).toMatch(/Once you.ve played 3 games/);
   });
 });
 
