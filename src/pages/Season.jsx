@@ -40,7 +40,7 @@ export default function Season() {
         <div className="stat"><b>{s.regularGames}</b><span>regular games</span></div>
         <div className="stat"><b>{s.nightsHeld}</b><span>nights held</span></div>
         <div className="stat"><b>{s.minGames}</b><span>games to qualify ({s.target} target)</span></div>
-        <div className="stat"><b>{s.spots || 'None'}</b><span>{s.spots ? 'playoff spots' : 'playoffs · the top 3 are honoured'}</span></div>
+        {s.spots > 0 && <div className="stat"><b>{s.spots}</b><span>playoff spots</span></div>}
         <div className="stat"><b>{s.champion || '—'}</b><span>champion</span></div>
       </div>
       {s.ok && (
@@ -57,7 +57,7 @@ export default function Season() {
       </details>
       {seasonGames.length > 0 && <>
         <h2>Games this season</h2>
-        <GamesTable key={num} stateKey={String(num)} games={seasonGames} />
+        <GamesTable paged key={num} stateKey={String(num)} games={seasonGames} />
       </>}
     </>
   );

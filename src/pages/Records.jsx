@@ -62,7 +62,7 @@ export default function Records() {
   if (R.gain) single.push(['Biggest Elo gain in one game', link(gameOf(R.gain.line), R.gain.name), when(R.gain.date, R.gain.line), sgn(R.gain.value)]);
   if (R.loss) single.push(['Biggest Elo drop in one game', link(gameOf(R.loss.line), R.loss.name), when(R.loss.date, R.loss.line), sgn(R.loss.value)]);
   if (R.topVP) single.push(['Highest winning score', winnerOf(R.topVP.game), when(R.topVP.game.date, R.topVP.game.line), R.topVP.value + ' VP']);
-  if (R.mostLandscapes) single.push(['Most landscape types in one game', folks(R.mostLandscapes.game, R.mostLandscapes.game.names.filter(n => R.mostLandscapes.game.places[n] === 1), ' won'), when(R.mostLandscapes.game.date, R.mostLandscapes.game.line), R.mostLandscapes.value + ' of ' + LANDSCAPES.length]);
+  if (R.mostLandscapes) single.push(['Most landscape types in one game', folks(R.mostLandscapes.game, R.mostLandscapes.game.names.filter(n => R.mostLandscapes.game.places[n] === 1)), when(R.mostLandscapes.game.date, R.mostLandscapes.game.line), R.mostLandscapes.value + ' of ' + LANDSCAPES.length]);
 
   // more single-game records, worked out here from the games (a game needs every VP entered to have a margin)
   const rated = D.games.filter(g => g.n >= 2 && g.type !== 'Friendly');

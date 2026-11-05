@@ -274,7 +274,7 @@ function SeasonForm({ editId, status, say }) {
       </div>
       <div className="controls"><label className="f">Champion <select id="sfChamp" value={f.champion_player_id} onChange={e => set({ champion_player_id: e.target.value })}>
         <option value="">Not decided</option>
-        {championRoster.map(n => <option key={n} value={playerIdByName.get(n) || ''}>{n}</option>)}
+        {[...championRoster].sort((a, b) => a.localeCompare(b)).map(n => <option key={n} value={playerIdByName.get(n) || ''}>{n}</option>)}
       </select></label></div>
       <label className="f">Notes <input type="text" id="sfNotes" size={50} value={f.notes} onChange={e => set({ notes: e.target.value })} /></label>
       <div className="controls" style={{ marginTop: 10 }}>

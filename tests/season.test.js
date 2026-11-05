@@ -81,3 +81,12 @@ describe('a season with no playoffs is decided by the table', () => {
     expect(live.seasons[0].champion).toBe(''); expect(live.seasons[0].podium).toBeUndefined();
   });
 });
+
+describe('the season ladder column for top-half finishes', () => {
+  it('counts the regular games a player finished in the top half of', () => {
+    const rows = [g('Ann > Bob > Cy > Dee'), g('Bob > Ann > Dee > Cy'), g('Cy > Dee > Ann > Bob')];
+    const D = Eng.compute({ title: 't', players: ['Ann', 'Bob', 'Cy', 'Dee'], seasons: SEASON, elo: {}, season: {} }, rows, Eng.todayDay());
+    const r = n => D.seasonStandings(1).rows.find(x => x.name === n);
+    expect(r('Ann').topHalf).toBeCloseTo(2 / 3, 10); expect(r('Dee').topHalf).toBeCloseTo(1 / 3, 10);
+  });
+});

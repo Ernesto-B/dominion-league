@@ -367,8 +367,8 @@ function compute(config, csvRows, today) {
     const after = s.ok ? snapshotAtOrBefore(g => g.day <= s.end) : null;
     const rows = [];
     roster.forEach((n, ri) => {
-      let gp = 0, w = 0, pts = 0, spts = 0;
-      reg.forEach(g => { if (g.places[n] != null) { gp++; if (g.places[n] === 1) w++; pts += g.pts[n]; spts += g.sp[n]; } });
+      let gp = 0, w = 0, pts = 0, spts = 0, th = 0;
+      reg.forEach(g => { if (g.places[n] != null) { gp++; if (g.places[n] === 1) w++; if (g.pts[n] >= 0.5) th++; pts += g.pts[n]; spts += g.sp[n]; } });
       if (!gp) return;
       const nights = new Set(sg.filter(g => g.places[n] != null).map(g => g.day)).size;
       const score = (spts + S.prior * 0.5) / (gp + S.prior);
@@ -376,7 +376,7 @@ function compute(config, csvRows, today) {
       const eloB = before ? (before.snapshot[n] ?? E.start) : E.start;
       const eloA = after ? (after.snapshot[n] ?? E.start) : E.start;
       rows.push({
-        name: n, order: ri, games: gp, wins: w, winPct: w / gp, avgPts: pts / gp, bonusPts: spts - pts, score, qualified: q,
+        name: n, order: ri, games: gp, wins: w, winPct: w / gp, topHalf: th / gp, avgPts: pts / gp, bonusPts: spts - pts, score, qualified: q,
         need: q ? 0 : Math.max(0, s.minGames - gp), eloChange: eloA - eloB, nights, attendance: nightsHeld ? nights / nightsHeld : null, seed: null,
       });
     });
