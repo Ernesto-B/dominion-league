@@ -1369,7 +1369,7 @@ main h2::before{content:'';display:inline-block;width:8px;height:8px;margin:0 10
 
 /* the ladder's showcase badge: a small static chip (no glint or glow here, the ladder has many rows) */
 .pin-chip.lpin{display:inline-block;flex:none;max-width:200px;padding:1px 9px;font-size:12px;line-height:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-shadow:none;cursor:default}
-@media (max-width:720px){.pin-chip.lpin{display:none}}   /* the phone ladder is dense: the badge shows on the Player page instead */
+
 .pin-chip.lpin::before,.pin-chip.lpin::after{display:none}
 
 /* second pass: page titles, tables and cards share the theme; the Season champion gets a trophy panel */
@@ -2088,3 +2088,19 @@ tr.stand1 td:first-child{--m:#E3B84A}tr.stand2 td:first-child{--m:#B7C0CC}tr.sta
 .gr-compact .gr-newtag.left{right:auto;left:-9cqw}
 /* the card section's heading row: air above it (the box before it ends right there) and below it (before the first card or expansion icon) */
 .gr-cardshead{margin:28px 0 14px}
+/* the ladder's player link: on hover ONE continuous line under the player's icon, name and level (not under the chips and tags after them, which can run past it), instead of an underline per piece */
+.lname:hover{text-decoration:none}
+.lname-id{display:inline-flex;align-items:center;gap:6px}
+@media (hover:hover){.lname:hover .lname-id{background:linear-gradient(currentColor,currentColor) no-repeat 0 calc(100% - 1px)/100% 1px}}
+/* the badge a player shows off, on the ladder. The popup wrapper is a flex box so the chip centres on the row; wide screens put it after the name, a phone beside the form dots
+   (a second copy, shown only there, so the two-line phone row keeps its shape) */
+.lpin-wrap{display:flex;align-items:center;flex:none;min-width:0}
+.lsub{display:contents}
+.lpin-m{display:none}
+@media (max-width:720px){
+  .lname .lpin-wrap{display:none}
+  .lsub{grid-area:fm;display:flex;align-items:center;gap:8px;min-width:0}
+  .lsub .form{grid-area:auto}
+  .lsub .lpin-m{display:flex;min-width:0;margin:-5px 0}   /* the chip is taller than the form dots: negative margins make it add no height, so a row with a title is as tall as one without */
+  .lsub .pin-chip.lpin{display:block;max-width:150px;font-size:11px;line-height:16px;padding:0 8px}
+}

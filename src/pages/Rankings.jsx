@@ -7,6 +7,8 @@ import StoryCards from '../components/StoryCards.jsx';
 import TierIcon from '../components/TierIcon.jsx';
 import TierLegend from '../components/TierLegend.jsx';
 import LastNight from '../components/LastNight.jsx';
+import HoverPopup from '../components/HoverPopup.jsx';
+import BadgePop from '../components/BadgePop.jsx';
 import RankMedal from '../components/RankMedal.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import MeCard from '../components/MeCard.jsx';
@@ -14,10 +16,9 @@ import Hub from '../components/Hub.jsx';
 import Welcome from '../components/Welcome.jsx';
 import SinceVisit from '../components/SinceVisit.jsx';
 import { badgesFor, xpOf } from '../lib/xp.js';
-import { pinnedBadges, viewHint, TIERS } from '../lib/achievements.js';
+import { pinnedBadges, viewHint } from '../lib/achievements.js';
 import { steadyPayout } from '../lib/steadyElo.js';
 
-const TIER_LABEL = { ...Object.fromEntries(TIERS.map(t => [t.id, t.label])), secret: 'Secret' };
 
 function Ladder({ ranked: rk, highlight, setHighlight }) {
   const { D, gid, hashFor, catalog, rawPlayers, me } = usePage();
@@ -39,7 +40,7 @@ function Ladder({ ranked: rk, highlight, setHighlight }) {
         const d = p.elo - D.E.start, wpx = Math.abs(d) / mx * 50;
         const lastR = p.results[p.results.length - 1];
         const dl = lastR ? lastR.after - lastR.before : 0;
-        const rm = p.rankDelta, lv = xpOf(D, p.name, catalog);
+        const rm = p.rankDelta, lv = xpOf(D, p.name, catalog), sb = showcase.get(p.name);   // sb: the badge they show off beside their name
         return (
           <div key={p.name} className={'lrow' + (p.rank <= 3 ? ' stand stand' + p.rank : '') + (highlight === p.name ? ' hot' : '')} data-p={p.name} role="row" style={{ '--i': Math.min(idx, 12) }}
             onMouseEnter={() => setHighlight(p.name)} onFocus={() => setHighlight(p.name)}>
@@ -49,19 +50,22 @@ function Ladder({ ranked: rk, highlight, setHighlight }) {
                 : <span className="rankmove down-t" title={`Down ${-rm} spot${rm === -1 ? '' : 's'} since last night`}>▼{-rm}</span>}
             </span>
             <a className="lname" href={hashFor('players', gid, encodeURIComponent(p.name))}>
-              <TierIcon id={p.tier.icon} size={28} alt={p.tier.name + ' tier'} />{p.name}
-              {lv && lv.perGame.length > 0 ? <span className="lvl" title={`Level ${lv.level} · ${lv.total.toLocaleString()} XP`}>Lv {lv.level}</span> : null}
+              <span className="lname-id"><TierIcon id={p.tier.icon} size={28} alt={p.tier.name + ' tier'} />{p.name}
+              {lv && lv.perGame.length > 0 ? <span className="lvl" title={`Level ${lv.level} · ${lv.total.toLocaleString()} XP`}>Lv {lv.level}</span> : null}</span>
               {p.titles ? <span className="crown" title={`${p.titles} season title${p.titles > 1 ? 's' : ''}`}><TierIcon id="champion" size={20} alt="Season champion" />{p.titles > 1 ? '×' + p.titles : ''}</span> : null}
-              {showcase.get(p.name) ? <span className={'pin-chip lpin dn-hide-sm td-' + showcase.get(p.name).tier} title={`${TIER_LABEL[showcase.get(p.name).tier] || ''}: ${viewHint(showcase.get(p.name), !!me && me.name === p.name)}`}>{showcase.get(p.name).name}</span> : null}
+              {sb ? <HoverPopup className="lpin-wrap" content={<BadgePop badge={sb} hint={viewHint(sb, !!me && me.name === p.name)} />}><span className={'pin-chip lpin td-' + sb.tier}>{sb.name}</span></HoverPopup> : null}
               {p.streak >= 3 ? <span className="pill hot" title={`${p.streak}-game win streak`}>🔥 {p.streak}</span> : null}
               {p.status === 'Provisional' ? <span className="tag">provisional</span> : null}
             </a>
             <span className="bar" aria-hidden="true"><i className={d >= 0 ? 'up' : 'down'} style={{ width: wpx + '%', left: d >= 0 ? '50%' : (50 - wpx) + '%' }}></i></span>
             <span className="lelo">{f0(p.elo)}</span>
             <span className={'ldelta ' + (dl > 0.5 ? 'up-t' : dl < -0.5 ? 'down-t' : '')}>{sgn(dl)}</span>
-            <span className="form" aria-label="Recent form">{p.results.slice(-5).map((r, i) => (
-              <i key={i} className={r.pts >= 0.67 ? 'w' : r.pts <= 0.33 ? 'l' : 'm'} title={`${r.game.date}: ${ord(r.place)} of ${r.game.n}`}></i>
-            ))}</span>
+            <span className="lsub">
+              <span className="form" aria-label="Recent form">{p.results.slice(-5).map((r, i) => (
+                <i key={i} className={r.pts >= 0.67 ? 'w' : r.pts <= 0.33 ? 'l' : 'm'} title={`${r.game.date}: ${ord(r.place)} of ${r.game.n}`}></i>
+              ))}</span>
+              {sb ? <HoverPopup className="lpin-wrap lpin-m" content={<BadgePop badge={sb} hint={viewHint(sb, !!me && me.name === p.name)} />}><span className={'pin-chip lpin td-' + sb.tier}>{sb.name}</span></HoverPopup> : null}
+            </span>
           </div>
         );
       })}
