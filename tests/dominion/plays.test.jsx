@@ -165,6 +165,11 @@ describe('the Insights page', () => {
     const t = text(view('randomizer?fav=1'));
     expect(t).toContain('Count games'); expect(t).toContain('Whole group'); expect(t).toContain('A player');
   });
+  it('the Not played yet table has sortable headers', () => {
+    const h = view('insights');
+    const never = h.slice(h.indexOf('id="in-never"'), h.indexOf('<tfoot'));
+    expect((never.match(/class="[^"]*sortable[^"]*"/g) || []).length).toBe(4); expect(never).toContain('aria-sort="ascending"');
+  });
   it('explains itself when no kingdom has been logged, with a pointer for an admin', () => {
     const none = { D: { games: [game(1, [], { Ann: 1, Bob: 2 })] } };
     expect(text(view('insights', none))).toMatch(/No game for Friends has a kingdom logged yet/); expect(text(view('insights', none))).toMatch(/Once the admin starts logging them/);

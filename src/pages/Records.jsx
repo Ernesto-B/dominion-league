@@ -14,8 +14,11 @@ import SortableTable from '../components/SortableTable.jsx';
 const L = 'l';
 
 export default function Records() {
-  const { D, gid, hashFor, catalog, me } = usePage();
-  const R = D.records, O = R.overview, min = D.S.minGamesForRecords;
+  const { D, gid, hashFor, catalog, me, arg } = usePage();
+  // ?season=N narrows every record to that season's games (the default is all time)
+  const asked = +((/[?&]season=(\d+)/.exec(arg || '') || [])[1] || 0);
+  const scope = D.seasons.find(s => s.number === asked && s.ok) || null;
+  const R = scope ? D.seasonRecords(scope.number) : D.records, O = R.overview, min = D.S.minGamesForRecords;
 
   const rec = (label, x, fmt, iconSrc) => ({
     key: label,
@@ -33,7 +36,7 @@ export default function Records() {
     rec(`Best win % (min ${min} games)`, R.bestWinPct, pc),
     rec(`Best average points (min ${min} games)`, R.bestAvgPts, f2, 'icons/stats/average-points.png'),
     rec('Longest win streak', R.bestStreak, f0, 'icons/stats/win-streak.png'),
-    rec('Most season titles', R.mostTitles?.value > 0 ? R.mostTitles : null, f0, 'icons/champion.png'),
+    ...(scope ? [] : [rec('Most season titles', R.mostTitles?.value > 0 ? R.mostTitles : null, f0, 'icons/champion.png')]),
   ];
 
   // badge records, from every rated player's badges (kingdom badges count once the catalog has loaded)
@@ -65,7 +68,7 @@ export default function Records() {
   if (R.mostLandscapes) single.push(['Most landscape types in one game', folks(R.mostLandscapes.game, R.mostLandscapes.game.names.filter(n => R.mostLandscapes.game.places[n] === 1)), when(R.mostLandscapes.game.date, R.mostLandscapes.game.line), R.mostLandscapes.value + ' of ' + LANDSCAPES.length]);
 
   // more single-game records, worked out here from the games (a game needs every VP entered to have a margin)
-  const rated = D.games.filter(g => g.n >= 2 && g.type !== 'Friendly');
+  const rated = D.games.filter(g => g.n >= 2 && g.type !== 'Friendly' && (!scope || g.season === scope.number));
   const vps = g => g.names.map(n => ({ n, v: g.playerVP && g.playerVP[n] !== '' && g.playerVP[n] != null ? Number(g.playerVP[n]) : NaN }));
   const best = (list, score, high = true) => list.reduce((a, g) => { const s = score(g); return s == null ? a : !a || (high ? s > a.s : s < a.s) ? { g, s } : a; }, null);
   const margin = g => { const v = vps(g); if (v.length < 2 || v.some(x => !Number.isFinite(x.v))) return null; const t = v.map(x => x.v).sort((x, y) => y - x); return t[0] - t[1]; };
@@ -91,7 +94,13 @@ export default function Records() {
   return (
     <>
       <div className="head">
-        <div><h1>Records</h1><p className="lede">Everything the league has produced so far.</p></div>
+        <div><h1>Records</h1><p className="lede">{scope ? `Only the games of ${scope.name}.` : 'Everything the league has produced so far.'}</p></div>
+        {D.seasons.some(s => s.ok) && (
+          <div className="pills" aria-label="Which games the records count">
+            <a href={hashFor('records', gid)} aria-current={!scope ? 'true' : undefined}>All time</a>
+            {D.seasons.filter(s => s.ok).map(s => <a key={s.number} href={hashFor('records', gid) + '?season=' + s.number} aria-current={scope && scope.number === s.number ? 'true' : undefined}>{s.name}</a>)}
+          </div>
+        )}
       </div>
       <Banner />
       <div className="stats">
@@ -101,7 +110,7 @@ export default function Records() {
         <div className="stat"><b>{O.avgTable ? f1(O.avgTable) : '—'}</b><span>players per table</span></div>
         <div className="stat"><b>{O.avgVP ? f1(O.avgVP) : '—'}</b><span>avg winning VP</span></div>
       </div>
-      {mine > 0 && <p className="holds"><b>You hold {mine} record{mine === 1 ? '' : 's'}</b> <span className="meta">on this page</span></p>}
+      {!scope && mine > 0 && <p className="holds"><b>You hold {mine} record{mine === 1 ? '' : 's'}</b> <span className="meta">on this page</span></p>}
       <div className="grid2">
         <div>
           <h2>Player records</h2>
@@ -109,10 +118,12 @@ export default function Records() {
         </div>
         <div>
           <h2>Table sizes</h2>
-          <SortableTable head={[{ label: 'Players at the table', cls: L }, { label: 'Tables' }]}
+          <SortableTable head={[{ label: 'Players at the table', cls: L }, { label: 'Matches' }]}
             rows={Object.entries(R.tableSizes).map(([k, v]) => ({ key: k, cells: [k, v] }))} empty="None yet" />
-          <h2>Badges</h2>
-          <SortableTable stack head={[{ label: 'Record', cls: L }, { label: 'Holder', cls: L }, { label: 'Value' }]} rows={badgeRows} />
+          {!scope && <>
+            <h2>Badges</h2>
+            <SortableTable stack head={[{ label: 'Record', cls: L }, { label: 'Holder', cls: L }, { label: 'Value' }]} rows={badgeRows} />
+          </>}
         </div>
       </div>
 

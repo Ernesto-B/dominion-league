@@ -500,6 +500,24 @@ function compute(config, csvRows, today) {
     };
   }
   const records = buildRecords(players, games, ranked);
+  /* The same records, from one season's games only: each player's career numbers are worked out again from just their results in that season (the streaks, win %, peak
+     and landscape results restart), so "Most wins" means most wins THIS season. Titles belong to no single season, so they are left out. */
+  function seasonRecords(num) {
+    const sg = games.filter(g => g.season === num);
+    const scoped = players.map(p => {
+      const rs = p.results.filter(r => r.game.season === num);
+      let wins = 0, streak = 0, bestStreak = 0, dry = 0, bestDry = 0, pts = 0, peak = -Infinity;
+      rs.forEach(r => {
+        pts += r.pts; peak = Math.max(peak, r.after);
+        if (r.place === 1) { wins++; streak++; bestStreak = Math.max(bestStreak, streak); dry = 0; } else { streak = 0; dry++; bestDry = Math.max(bestDry, dry); }
+      });
+      const landscapeStats = {};
+      rs.forEach(r => r.game.landscapes.forEach(l => { const e = landscapeStats[l] || (landscapeStats[l] = { games: 0, wins: 0 }); e.games++; if (r.place === 1) e.wins++; }));
+      Object.values(landscapeStats).forEach(e => { e.winPct = e.wins / e.games; });
+      return { ...p, rated: rs.length, wins, winPct: rs.length ? wins / rs.length : null, avgPts: rs.length ? pts / rs.length : null, bestStreak, bestDry, peak: rs.length ? peak : p.peak, titles: 0, results: rs, landscapeStats };
+    }).filter(p => p.rated > 0);
+    return buildRecords(scoped, sg, scoped.slice().sort((a, b) => b.elo - a.elo));
+  }
 
   /* rating history by night, for charts */
   const nights = nightsAll.map(day => {
@@ -528,7 +546,7 @@ function compute(config, csvRows, today) {
 
   if (!seasons.length) warnings.push('No seasons are set up yet. Games will still count for Elo.');
 
-  return { preview, lastNight, config, E, S, roster, players, ranked, games, seasons, currentSeason, currentSeasonFor, nights, tiers, tierFor, tierAt: (g, name) => (g.tierSnap && g.tierSnap[name]) || tierFor(g.snapshot[name]), startTier: tiers[tierIndex(E.start)], warnings, seasonStandings, h2h, records, today };
+  return { preview, seasonRecords, lastNight, config, E, S, roster, players, ranked, games, seasons, currentSeason, currentSeasonFor, nights, tiers, tierFor, tierAt: (g, name) => (g.tierSnap && g.tierSnap[name]) || tierFor(g.snapshot[name]), startTier: tiers[tierIndex(E.start)], warnings, seasonStandings, h2h, records, today };
 }
 
 export { DEFAULT_TIERS, compute, parseCSV, parseFinish, parseISO, fmtDay, todayDay };

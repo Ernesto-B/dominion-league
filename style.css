@@ -2068,3 +2068,10 @@ tr.stand1 td:first-child{--m:#E3B84A}tr.stand2 td:first-child{--m:#B7C0CC}tr.sta
 .lrow.stand2{background:color-mix(in srgb,#B7C0CC 12%,var(--panel));box-shadow:inset 3px 0 0 #B7C0CC}
 .lrow.stand3{background:color-mix(in srgb,#C98B55 12%,var(--panel));box-shadow:inset 3px 0 0 #C98B55}
 .lrow.stand.hot,.lrow.stand:hover{background:color-mix(in srgb,var(--ink) 9%,var(--bg))}
+/* Game night: seating help under the player pills */
+.seating{margin:10px 0}
+.seating-warn{margin:0 0 8px}
+.seating-split{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:8px 0}
+.seating-table{padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.seating-table p{margin:6px 0 0}
+.seating-new{margin:8px 0 0}

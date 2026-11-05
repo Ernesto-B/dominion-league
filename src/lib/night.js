@@ -1,3 +1,4 @@
+import { MAX_PLAYERS } from './seating.js';
 /* The state of a Game night (the guided way to log a game, see pages/Night.jsx), kept per group in localStorage (so a phone that puts the tab to sleep, or a browser that restarts it, still finds the night; one older than
    NIGHT_TTL is forgotten) so a reload, or
    a look at a card's page in the middle of the game, doesn't lose it. Pure apart from the storage it is handed, so it is tested. */
@@ -17,8 +18,8 @@ export const blankNight = (today = todayISO()) => ({
   date: today, type: '', notes: '', startedAt: null, endedAt: null, minutesEdit: null, editId: null,
 });
 
-// Can the viewer leave this step? Only the first has a rule: a game needs at least two players.
-export const canAdvance = (step, st) => (step === 'players' ? st.picked.length >= 2 : true);
+// Can the viewer leave this step? Only the first has a rule: a game needs two to six players (a table seats six at most).
+export const canAdvance = (step, st) => (step === 'players' ? st.picked.length >= 2 && st.picked.length <= MAX_PLAYERS : true);
 export const nextStep = step => ids[Math.min(ids.length - 1, ids.indexOf(step) + 1)];
 export const prevStep = step => ids[Math.max(0, ids.indexOf(step) - 1)];
 export const stepNumber = step => ids.indexOf(step) + 1;

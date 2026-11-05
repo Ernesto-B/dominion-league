@@ -90,3 +90,16 @@ describe('the season ladder column for top-half finishes', () => {
     expect(r('Ann').topHalf).toBeCloseTo(2 / 3, 10); expect(r('Dee').topHalf).toBeCloseTo(1 / 3, 10);
   });
 });
+
+describe('records for one season', () => {
+  const two = [{ name: 'S1', start: '2025-01-01', weeks: 4, targetGames: 2, playoffSpots: 0 }, { name: 'S2', start: '2025-02-01', weeks: 4, targetGames: 2, playoffSpots: 0 }];
+  const rows = [g('Ann > Bob', {}, '2025-01-05'), g('Ann > Bob', {}, '2025-01-06'), g('Bob > Ann', {}, '2025-02-05')];
+  const D = Eng.compute({ title: 't', players: ['Ann', 'Bob'], seasons: two, elo: {}, season: {} }, rows, Eng.todayDay());
+  it('counts only that season\'s games, streaks and wins included', () => {
+    const s1 = D.seasonRecords(1), s2 = D.seasonRecords(2);
+    expect(s1.overview.tables).toBe(2); expect(s2.overview.tables).toBe(1);
+    expect(s1.mostWins).toEqual({ name: 'Ann', value: 2 }); expect(s2.mostWins).toEqual({ name: 'Bob', value: 1 });
+    expect(s1.bestStreak.value).toBe(2); expect(s2.bestStreak.name).toBe('Bob');
+    expect(D.records.overview.tables).toBe(3); expect(D.records.mostWins.value).toBe(2);   // all time is unchanged
+  });
+});
