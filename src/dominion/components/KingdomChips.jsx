@@ -35,7 +35,7 @@ export function KingdomChip({ r, onRemove, onPeek, plain = false, expansion = fa
   if (onRemove) return (
     <span className={cls} {...hover}>{inner}{onPeek && <button type="button" className="dn-kchip-more" aria-label={`Show the text of ${displayName(obj)}`} onClick={onPeek}>⌄</button>}<button type="button" className="dn-kchip-x" aria-label={`Remove ${displayName(obj)}`} title={`Remove ${displayName(obj)}`} onClick={onRemove}>×</button></span>
   );
-  return <a className={cls} {...hover} href={r.kind === 'card' ? cardHref(obj.id) : landscapeHref(obj.id)} title={r.kind === 'card' ? displayName(obj) : `${obj.type}: ${obj.name}`}>{inner}</a>;
+  return <a className={cls} {...hover} href={r.kind === 'card' ? cardHref(obj.id) : landscapeHref(obj.id)}>{inner}</a>;
 }
 
 /* A kingdom laid out like the boxes it came from: one row per expansion (its icon and name), the expansion's cards A to Z beside it, the expansions in the

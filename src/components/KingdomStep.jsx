@@ -1,12 +1,13 @@
-import KingdomPicker from './KingdomPicker.jsx';
+import ConfirmDialog from './ConfirmDialog.jsx';
 import RandomizerPanel from '../dominion/components/RandomizerPanel.jsx';
 import SnakeDraft from '../dominion/components/SnakeDraft.jsx';
 import { draftState, handSwaps } from '../dominion/draft.js';
-import { resolveKingdom, shelfOrder } from '../dominion/kingdom.js';
+import { useState } from 'react';
+import { impliedSets, resolveKingdom, shelfOrder } from '../dominion/kingdom.js';
+import { decodeKingdom, looksLikeCode } from '../dominion/kingdomCode.js';
 import { Setup } from '../dominion/components/RandomizerPanel.jsx';
 import { KingdomChip, ShelfGroups } from '../dominion/components/KingdomChips.jsx';
-import { formatSeed, stateFromItems } from '../dominion/randomizer.js';
-import { toGameItems } from '../dominion/randomizer.js';
+import { formatSeed, parseSeed, playsFor, rollSeeded, stateFromItems, toGameItems, withAvoid } from '../dominion/randomizer.js';
 
 const CHOICES = [
   { id: 'random', title: 'Random', text: 'Roll a kingdom with your own rules. Lock the cards you like and re-roll the rest.' },
@@ -23,6 +24,7 @@ const CHOICES = [
    applyKingdom(items, rolled)      stores a roll, a draft or a hand-picked list as the game's kingdom
    onSkip()              leave the kingdom out and go on to the scores (a game can be saved without one) */
 export default function KingdomStep({ catalog, mode, setMode, players, roll, setRollOpts, resetRoll, kept, onKeep, hand, setHand, draftSave, onDraft, onRestartDraft, plays, items, resolved, rolled, setupNow, handEdited, randomDone, randomOriginal, setRandomDone, applyKingdom, onPick, onSkip, text, avoid = [], handBane = null }) {
+  const [ask, setAsk] = useState(false);   // the Manual screen's "Remove everything?" question is open
   if (!mode) return (
     <>
       <p className="night-q">How do you want to decide your kingdom?</p>
@@ -44,13 +46,42 @@ export default function KingdomStep({ catalog, mode, setMode, players, roll, set
   );
   if (mode === 'manual') return (
     <>
-      <p className="meta">Add the cards and landscapes in play. Remove any with its ✕.</p>
-      <KingdomPicker items={items} onChange={onPick} avoid={avoid} />
+      <div className="dn-manual-head">
+        <SeedLoader catalog={catalog} roll={roll} plays={plays} avoid={avoid} onLoad={state => onPick(toGameItems(state), impliedSets(resolveKingdom(catalog, toGameItems(state))))} />
+        {items.length > 0 && <button type="button" className="ghost dn-remove" onClick={() => setAsk(true)}>Remove all</button>}
+      </div>
+      <RandomizerPanel bare editing catalog={catalog} opts={roll} setOpts={setRollOpts} state={stateFromItems(catalog, items, handBane)} onState={() => {}} onReset={() => {}} onEdit={(next, implied) => onPick(next, implied)} avoid={avoid} />
+      {ask && <ConfirmDialog danger title="Remove everything?" text="Every card and landscape comes out of this kingdom." confirmLabel="Remove all" onCancel={() => setAsk(false)} onConfirm={() => { setAsk(false); onPick([], { sets: [], landscapes: [] }); }} />}
       {handEdited && items.length > 0 && setupNow && <Setup catalog={catalog} setup={setupNow} />}
-      {items.length > 0 && text}
     </>
   );
   return <RandomRoll {...{ catalog, roll, setRollOpts, resetRoll, kept, onKeep, hand, setHand, setupNow, handEdited, randomDone, randomOriginal, setRandomDone, plays, items, resolved, rolled, applyKingdom, onPick, text, avoid, handBane }} />;
+}
+
+/* A seed or a kingdom code typed (or pasted) on the Manual screen: a code puts exactly that kingdom in; a seed rolls it with the current options (the same seed and options give the same kingdom as on the Random way). */
+function SeedLoader({ catalog, roll, plays, avoid, onLoad }) {
+  const [text, setText] = useState(''), [msg, setMsg] = useState('');
+  const load = () => {
+    if (!text.trim()) return;
+    if (looksLikeCode(text)) {
+      const got = decodeKingdom(catalog, text);
+      if (got.error) { setMsg(got.error); return; }
+      setMsg(''); setText(''); onLoad(got.state); return;
+    }
+    const seed = parseSeed(text);
+    if (seed == null) { setMsg('A seed is a number, like 182736 (or a kingdom code, starting with K-).'); return; }
+    const res = rollSeeded(catalog, withAvoid(roll, avoid), seed, { plays: playsFor(roll, plays) });
+    if (!res.ok) { setMsg(res.message); return; }
+    setMsg(''); setText(''); onLoad(res);
+  };
+  return (
+    <div className="dn-seedload">
+      <label className="f dn-seed-in">Seed or code <input type="text" size={14} placeholder="182736 or K-…" autoComplete="off" spellCheck={false} value={text}
+        onChange={e => { setText(e.target.value.replace(/[^0-9A-Za-z\- ]/g, '').slice(0, 80)); setMsg(''); }} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); load(); } }} /></label>
+      <button type="button" className="ghost" onClick={load} disabled={!text.trim()}>Load</button>
+      {msg && <p className="dn-rz-msg" role="alert">{msg}</p>}
+    </div>
+  );
 }
 
 // the Random screen: the options and Roll row, with "Pick cards by hand" beside Reset (it opens the hand-picker under the options)

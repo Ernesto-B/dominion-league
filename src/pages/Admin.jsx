@@ -5,6 +5,7 @@ import * as Eng from '../lib/engine.js';
 import { slugify } from '../lib/format.js';
 import { SET_NAMES } from '../lib/sets.js';
 import SetIcon from '../components/SetIcon.jsx';
+import { useConfirm } from '../components/ConfirmDialog.jsx';
 
 /* The Admin page manages the whole site, not just the group being viewed, so it reads allGroups /
    rawPlayers / rawSeasons (unfiltered) rather than the group-scoped D. Every write here is gated by
@@ -98,13 +99,14 @@ function PlayerGroups({ status, say }) {
 
 // ---- Password recovery ----
 function PasswordResets({ status, say }) {
+  const [ask, confirmDialog] = useConfirm();
   const { rawPlayers } = usePage();
   const [busy, setBusy] = useState(null);
   const [issued, setIssued] = useState(null);
   const setMsg = t => say('prMsg', t);
 
   const reset = async p => {
-    if (!confirm(`Reset ${p.name}'s password? This signs them out everywhere and makes their current password stop working.`)) return;
+    if (!(await ask({ title: `Reset ${p.name}’s password?`, text: 'This signs them out everywhere and makes their current password stop working.', confirmLabel: 'Reset password', danger: true }))) return;
     setBusy(p.id); setIssued(null); setMsg('Resetting…');
     const { data, error } = await sb.functions.invoke('reset-player-password', { body: { player_id: p.id } });
     setBusy(null);
@@ -128,6 +130,7 @@ function PasswordResets({ status, say }) {
         <tbody>{players.map(p => <tr key={p.id}><td className="l">{p.name}</td><td><button type="button" className="ghost" disabled={!!busy} onClick={() => reset(p)}>{busy === p.id ? 'Resetting…' : 'Reset password'}</button></td></tr>)}</tbody>
       </table></div>
       <Msg id="prMsg" status={status} />
+      {confirmDialog}
       {issued && <p className="note" role="status"><strong>{issued.name}'s one-time password:</strong> <code>{issued.password}</code><br />Give this to them privately. It is shown only until this page is refreshed.</p>}
     </div>
   );
@@ -161,6 +164,7 @@ function Sets({ status, say }) {
 
 // ---- Groups ----
 function Groups({ status, say }) {
+  const [ask, confirmDialog] = useConfirm();
   const { allGroups, rawSeasons, computedByGroup, reload } = usePage();
   const [name, setName] = useState('');
   const setMsg = t => say('gfMsg', t), setDelMsg = t => say('dgMsg', t);
@@ -172,7 +176,7 @@ function Groups({ status, say }) {
     const cd = computedByGroup[id];
     const gameCount = cd ? cd.games.filter(x => x.n >= 2).length : 0;
     const seasonCount = rawSeasons.filter(s => s.group === id).length;
-    const sure = confirm(`Delete "${g ? g.name : id}"? This permanently deletes its ${gameCount} game${gameCount === 1 ? '' : 's'} and ${seasonCount} season${seasonCount === 1 ? '' : 's'}, and removes it from every player's group list. This cannot be undone.`);
+    const sure = await ask({ title: `Delete “${g ? g.name : id}”?`, text: `This permanently deletes its ${gameCount} game${gameCount === 1 ? '' : 's'} and ${seasonCount} season${seasonCount === 1 ? '' : 's'}, and removes it from every player's group list. This cannot be undone.`, confirmLabel: 'Delete group', danger: true });
     if (!sure) return;
     setDelMsg('Deleting…');
     const { error } = await sb.rpc('delete_group', { p_group_id: id });
@@ -193,6 +197,7 @@ function Groups({ status, say }) {
   };
   return (
     <>
+      {confirmDialog}
       {allGroups.length ? <>
         <div className="tablewrap"><table className="plain">
           <thead><tr><th className="l">Name</th><th className="l">Id</th><th></th></tr></thead>

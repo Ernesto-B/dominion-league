@@ -9,6 +9,7 @@ import { pilesPlayed } from '../playStats.js';
 import { useLeagueGames } from '../useLeagueGames.js';
 import { DEFAULT_OPTIONS, formatSeed, kingdomFromParams, stateFromItems, kingdomToParams, optionsFromParams, optionsToParams, toGameItems } from '../randomizer.js';
 import RandomizerPanel from '../components/RandomizerPanel.jsx';
+import { useConfirm } from '../../components/ConfirmDialog.jsx';
 import FlashButton from '../../components/FlashButton.jsx';
 import { PageShortcuts } from '../../components/Shortcuts.jsx';
 
@@ -22,6 +23,7 @@ export default function Randomizer({ query = '' }) {
   const params = useMemo(() => new URLSearchParams(query.replace(/^\?/, '')), [query]);
   const opts = useMemo(() => optionsFromParams(params), [params]);
   const state = useMemo(() => kingdomFromParams(catalog, params), [catalog, params]);
+  const [ask, confirmDialog] = useConfirm();
   const [flash, setFlash] = useState({});   // which button just confirmed itself: { link | seed: 'ok' | 'fail' }
   const flashFor = (key, status) => { setFlash({ [key]: status }); setTimeout(() => setFlash(f => (f[key] === status ? {} : f)), status === 'ok' ? 1800 : 3500); };
   const [hand, setHand] = useState(peekResumeEditing);   // back from choosing a card in the full list: still editing   // hand-editing: the tiles get Replace / Remove and an Add tile (the same editing Game night's Random way has)
@@ -51,7 +53,7 @@ export default function Randomizer({ query = '' }) {
     let ls = null; try { ls = window.localStorage; } catch { /* storage blocked */ }
     if (!ls) { window.location.hash = page.hashFor('night', page.gid); return; }
     const cur = loadNight(ls, page.gid);
-    if (nightInProgress(cur) && !window.confirm('A game is already under way on Game night. Replace its kingdom with this one?')) return;
+    if (nightInProgress(cur) && !(await ask({ title: 'Replace the kingdom?', text: 'A game is already under way on Game night. Its kingdom will be replaced with this one.', confirmLabel: 'Replace it' }))) return;
     saveNight(ls, page.gid, withRolledKingdom(cur, { options: opts, items, rolledQ: kingdomToParams(state).toString(), sets: implied.sets, landscapes: implied.landscapes, seed }));
     window.location.hash = page.hashFor('night', page.gid);
   };
@@ -68,6 +70,7 @@ export default function Randomizer({ query = '' }) {
 
   return (
     <>
+      {confirmDialog}
       <div className="head"><div><h1>Kingdom randomizer</h1><p className="lede">Roll a Kingdom for your next game. Choose the expansions and any rules, roll, then lock the cards you like and re-roll the rest.</p></div></div>
       <PageShortcuts bindings={[{ key: 'r', label: 'Roll a kingdom', run: () => { const b = document.querySelector('.dn-rz-go button[type=submit]'); if (b) b.click(); } }]} />
       <RandomizerPanel catalog={catalog} opts={opts} setOpts={patch => write({ ...opts, ...patch }, state)} state={state}

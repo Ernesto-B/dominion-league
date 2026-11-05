@@ -7,6 +7,7 @@ import { SET_NAMES, LANDSCAPES } from '../lib/sets.js';
 import NameIcon from './NameIcon.jsx';
 import SetIcon from './SetIcon.jsx';
 import KingdomPicker from './KingdomPicker.jsx';
+import { useConfirm } from './ConfirmDialog.jsx';
 import EloPreview from './EloPreview.jsx';
 import FinishOrder from './FinishOrder.jsx';
 import { buildGameArgs, resortByVP, toggle } from '../lib/gameForm.js';
@@ -29,6 +30,7 @@ function fromGame(D, editId) {
 
 // Add / edit a game (admin only; the server re-checks via the add_game / edit_game / delete_game RPCs).
 export default function GameModal({ editId, onClose }) {
+  const [ask, confirmDialog] = useConfirm();
   const { D, gid, allGroups, enabledSets, playerIdByName, reload } = usePage();
   const [bs, setBs] = useState(() => editId != null ? fromGame(D, editId)
     : blank());
@@ -63,7 +65,7 @@ export default function GameModal({ editId, onClose }) {
     await reload();
   };
   const del = async () => {
-    if (!confirm('Delete this game? This cannot be undone.')) return;
+    if (!(await ask({ title: 'Delete this game?', text: 'This cannot be undone.', confirmLabel: 'Delete game', danger: true }))) return;
     const { error } = await sb.rpc('delete_game', { p_game_id: bs.editId });
     if (error) { setMsg(error.message); return; }
     onClose();
@@ -71,6 +73,7 @@ export default function GameModal({ editId, onClose }) {
   };
 
   return createPortal(
+    <>
     <div className="modal-overlay" id="modalOverlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-box" tabIndex={-1} ref={boxRef}>
         <button className="modal-close" id="modalClose" type="button" aria-label="Close" onClick={onClose}>×</button>
@@ -112,7 +115,9 @@ export default function GameModal({ editId, onClose }) {
         </div>
         <p className="note" style={{ marginTop: 20 }}>Manage seasons and friend groups from the <a href="#/admin">Admin page</a>. To add a brand-new player, create their Supabase account first (see README), then they'll show up in the picker above.</p>
       </div>
-    </div>,
+    </div>
+    {confirmDialog}
+    </>,
     document.getElementById('modalRoot'),
   );
 }

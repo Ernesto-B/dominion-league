@@ -186,12 +186,12 @@ describe('"Play this kingdom again"', () => {
     expect(a).toMatchObject({ step: 'kingdom', kingdomMode: 'manual', handEdited: true, kingdom: items, rolledQ: null, startedAt: null });
     expect(withGameKingdom(blankNight(), { items, sets: [], landscapes: [] }).step).toBe('players');
   });
-  it('asks before replacing a game that is under way, and says whether it went ahead', () => {
+  it('asks before replacing a game that is under way, and says whether it went ahead', async () => {
     const m = memory(); const ok = { ...blankNight(), step: 'play', picked: ['Ann', 'Bob'] }; saveNight(m, 'g', ok);
-    expect(playAgain({ game, catalog, gid: 'g', storage: m, confirmFn: () => false })).toBe(false);
+    expect(await playAgain({ game, catalog, gid: 'g', storage: m, confirmFn: () => false })).toBe(false);
     expect(loadNight(m, 'g').step).toBe('play');                                  // refused: untouched
-    expect(playAgain({ game, catalog, gid: 'g', storage: m, confirmFn: () => true })).toBe(true);
+    expect(await playAgain({ game, catalog, gid: 'g', storage: m, confirmFn: () => true })).toBe(true);
     expect(loadNight(m, 'g')).toMatchObject({ step: 'kingdom', kingdomMode: 'manual' });
-    expect(playAgain({ game: {}, catalog, gid: 'g', storage: m })).toBe(false);   // nothing logged: nothing to play
+    expect(await playAgain({ game: {}, catalog, gid: 'g', storage: m })).toBe(false);   // nothing logged: nothing to play
   });
 });

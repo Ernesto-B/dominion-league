@@ -12,6 +12,7 @@ import SetIcon from '../components/SetIcon.jsx';
 import EloPreview from '../components/EloPreview.jsx';
 import FinishOrder from '../components/FinishOrder.jsx';
 import KingdomStep from '../components/KingdomStep.jsx';
+import { useConfirm } from '../components/ConfirmDialog.jsx';
 import { DRAFT_PICKS, draftState, poolSizeFor, rollPool } from '../dominion/draft.js';
 import { useCatalogLoad } from '../dominion/CatalogContext.jsx';
 import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
@@ -40,6 +41,7 @@ export default function Night() {
    other one just hidden, so a game's clock, kingdom and unsaved scores are exactly as they were when switching back. The only thing the tables share is who is
    sitting where: a player can't be at both, so whoever is at one table is greyed out at the other. */
 function Tables() {
+  const [ask, confirmDialog] = useConfirm();
   const { gid, me, allGroups } = usePage();
   const [open, setOpen] = useState(() => (storage() && hasNight(storage(), gid, 1) ? 2 : 1));   // how many tables are running
   const [active, setActive] = useState(0);
@@ -50,15 +52,16 @@ function Tables() {
   const avoidAt = i => (info[1 - i] && !info[1 - i].done ? info[1 - i].kingdom || [] : []);   // the cards and landscapes in play at the other table: there is one copy of each
   const busyAt = i => (info[1 - i] && !info[1 - i].done ? info[1 - i].picked : []);
   const addTable = () => { setOpen(2); setActive(1); };
-  const closeTable = () => {
+  const closeTable = async () => {
     const w = info[1];
-    if (w && !w.done && (w.picked.length || w.step !== 'players') && !window.confirm('Close table 2? Anything not saved there is lost.')) return;
+    if (w && !w.done && (w.picked.length || w.step !== 'players') && !(await ask({ title: 'Close table 2?', text: 'Anything not saved there is lost.', confirmLabel: 'Close table', danger: true }))) return;
     if (storage()) clearNight(storage(), gid, 1);
     setInfo(s => ({ ...s, 1: undefined })); setOpen(1); setActive(0);
   };
   const admin = !!(me && me.is_admin);
   return (
     <>
+      {confirmDialog}
       {admin && (
         <div className="night-tables" role="group" aria-label="Tables">
           {open === 1 ? <button type="button" className="ghost" onClick={addTable}>+ A second table</button> : (

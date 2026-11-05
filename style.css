@@ -1959,3 +1959,13 @@ a.gr-face{position:relative}
   .dn-rz-actions .dn-seed b{min-width:0;overflow:hidden;text-overflow:ellipsis;margin-left:.3em}
   .dn-rz-actions .dn-seed .dn-copyglyph{flex:none}
 }
+
+.dn-manual-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;margin:0 0 4px}.dn-manual-head>p{margin:0}
+.dn-manual-head .dn-remove:hover,.dn-manual-head .dn-remove:focus-visible{color:#ff8a80;border-color:rgba(255,107,95,.7);background:rgba(255,80,70,.14);opacity:1}
+.dn-seedload{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}.dn-seedload .dn-seed-in input{width:16ch}.dn-seedload .dn-rz-msg{flex-basis:100%;margin:0}
+
+/* the site's own yes/no question (components/ConfirmDialog.jsx) */
+.dn-confirm-back{align-items:center;padding:16px}
+.dn-confirm{max-width:420px;padding:20px 22px}.dn-confirm h2{margin:0 0 6px;font-size:20px}.dn-confirm p{margin:0 0 16px}
+.dn-confirm-btns{display:flex;justify-content:flex-end;gap:10px}
+.dn-confirm-danger{background:#c8453c;color:#fff}.dn-confirm-danger:hover{opacity:1;background:#d9534a}
