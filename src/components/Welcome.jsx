@@ -45,7 +45,7 @@ export default function Welcome() {
         <span className="welcome-dots" aria-hidden="true">{steps.map((_, k) => <i key={k} className={k === i ? 'on' : k < i ? 'seen' : ''} />)}</span>
         <span className="welcome-go">
           {i > 0 && <button type="button" className="ghost" onClick={() => setI(i - 1)}>Back</button>}
-          {last ? <a className="btn" href={hashFor('players', gid, encodeURIComponent(me.name))} onClick={done}>See my badges</a> : <button type="button" onClick={() => setI(i + 1)}>Next</button>}
+          {last ? <a className="btn" href={hashFor('players', gid, encodeURIComponent(me.name)) + '?tab=badges'} onClick={done}>See my badges</a> : <button type="button" onClick={() => setI(i + 1)}>Next</button>}
           {last ? <button type="button" className="ghost" onClick={done}>Done</button> : <button type="button" className="linkish" onClick={done}>Skip</button>}
         </span>
       </div>

@@ -9,6 +9,10 @@ import TierProgressBar from '../components/TierProgressBar.jsx';
 import GameCards from '../components/GameCards.jsx';
 import H2HMatrix from '../components/H2HMatrix.jsx';
 import Badges from '../components/Badges.jsx';
+import BadgeShelf from '../components/BadgeShelf.jsx';
+import ProfileTabs from '../components/ProfileTabs.jsx';
+import { tabFromQuery } from '../lib/profileTabs.js';
+import { badgesFor } from '../lib/xp.js';
 import XpPanel from '../components/XpPanel.jsx';
 import { rivalries } from '../lib/achievements.js';
 import { lifetimeVP } from '../lib/vpRate.js';
@@ -16,11 +20,13 @@ import PlayerPicker from '../components/PlayerPicker.jsx';
 import Compare from '../components/Compare.jsx';
 import ComparePicker from '../components/ComparePicker.jsx';
 import PinnedBadges from '../components/PinnedBadges.jsx';
+import PinAdd from '../components/PinAdd.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import { useState } from 'react';
+import { usePager } from '../dominion/components/Pager.jsx';
 
 export default function Players() {
-  const { D, gid, arg, hashFor, enabledSets } = usePage();
+  const { D, gid, arg, hashFor, enabledSets, catalog } = usePage();
   const [hover, setHover] = useState({ of: null, name: null });
   const all = D.players.filter(p => p.allGames > 0);
   if (!all.length) return <><h1>Players</h1><p className="empty">No games yet.</p></>;
@@ -28,6 +34,8 @@ export default function Players() {
   // the arg is the player's name, plus an optional ?badge=<id> that points at one badge (from the front page's Next up)
   const [argName, argQuery] = (arg || '').split('?');
   const focusBadge = new URLSearchParams(argQuery || '').get('badge');
+  const showOwned = new URLSearchParams(argQuery || '').get('show') === 'owned';   // ?show=owned: the Badges tab opens on the earned ones
+  const tab = tabFromQuery(argQuery);   // ?tab=badges | history (a ?badge= link opens Badges)
   const vsName = new URLSearchParams(argQuery || '').get('vs');   // ?vs=<player>: the two side by side (components/Compare.jsx)
   const name = argName ? decodeURIComponent(argName) : (rankedHere[0] || all[0]).name;
   const p = D.players.find(x => x.name === name) || all[0];
@@ -39,7 +47,7 @@ export default function Players() {
         <div className="who">
           {p.tier && <TierIcon id={p.tier.icon} size={72} alt={p.tier.name + ' tier'} />}
           <div>
-            <div className="namerow"><h1>{p.name}</h1><PinnedBadges p={p} /></div>
+            <div className="namerow"><h1>{p.name}</h1><PinnedBadges p={p} /><PinAdd p={p} /></div>
             {p.tier && <p className="lede">{p.tier.name} tier{p.nextTier ? `, ${p.nextTier.need} Elo to ${p.nextTier.tier.name}` : ', top tier'}{p.peakTier && p.peakTier.id !== p.tier.id ? `. Best ever: ${p.peakTier.name}.` : ''}</p>}
           </div>
         </div>
@@ -85,9 +93,13 @@ export default function Players() {
   const { nem, vic } = rivalries(hh, p.name);
   const opp = rivals.filter(x => x.w + x.l > 0).sort((a, b) => (b.w / (b.w + b.l)) - (a.w / (a.w + a.l)) || (b.w + b.l) - (a.w + a.l));
 
+  const list = badgesFor(D, p, catalog);
+  const earned = list.filter(b => b.earned).length;
   return (
     <>
       {header}
+      <ProfileTabs tab={tab} base={hashFor('players', gid, encodeURIComponent(p.name))} badgeCount={catalog ? earned : null} />
+      {tab === 'overview' && <>
       <div className="stats">
         <StatTile icon="icons/stats/elo.png" big={f0(p.elo)} label={'Elo' + (p.rank ? ', rank ' + p.rank : '')}
           popup={<PopText text={`Your current skill rating. Everyone starts at ${D.E.start}; it moves after every rated game based on who you played and how surprising the result was.`} />} />
@@ -119,8 +131,11 @@ export default function Players() {
           {vic && <p><b>Favourite victim</b> <PlayerLink name={vic.o} />, finished behind {vic.w} of {vic.w + vic.l} times.</p>}
         </div>
       )}
-      <XpPanel name={p.name} />
-      <Badges p={p} focus={focusBadge} />
+        <XpPanel name={p.name} />
+        <BadgeShelf p={p} list={list} />
+      </>}
+      {tab === 'badges' && <Badges p={p} focus={focusBadge} showOwned={showOwned} />}
+      {tab === 'history' && <>
       <h2>Rating history</h2>
       <RatingChart names={rankedHere.map(x => x.name)} hot={p.name} highlight={highlight} onHover={n => setHover({ of: p.name, name: n })} />
       {opp.length > 0 && <>
@@ -130,6 +145,7 @@ export default function Players() {
       </>}
       <h2>Results</h2>
       <Results key={p.name} p={p} />
+      </>}
     </>
   );
 }
@@ -139,5 +155,6 @@ function Results({ p }) {
   const [open, setOpen] = useState(() => new Set());
   const toggle = line => setOpen(o => { const n = new Set(o); n.has(line) ? n.delete(line) : n.add(line); return n; });
   // the same games as on the Games page: cards on a phone and a wide screen; the line marked is the player whose page this is, not the signed-in viewer
-  return <div className="gview-cards"><GameCards games={p.results.slice().reverse().map(r => r.game)} open={open} toggle={toggle} showDate me={p.name} /></div>;
+  const { pg, pager } = usePager(p.results.slice().reverse().map(r => r.game), 'games', [6, 12, 24]);   // 6 at first, then 12, 24 or all
+  return <><div className="gview-cards"><GameCards games={pg.items} open={open} toggle={toggle} showDate me={p.name} /></div>{pager}</>;
 }
