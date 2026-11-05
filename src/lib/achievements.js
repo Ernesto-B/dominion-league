@@ -53,15 +53,15 @@ export const BADGES = [
   { id: 'apex-predator', group: 'The table', tier: 'rare', name: 'Apex Predator', hint: 'Win a 6-player game.', bonus: 40 },
   { id: 'colossus', group: 'The table', tier: 'epic', name: 'Colossus', hint: 'In a 5 or 6-player game, outscore the bottom three players combined.', bonus: 100 },
   { id: 'the-final-boss', group: 'The table', tier: 'epic', name: 'The Final Boss', hint: 'Win a 6-player rated game while rated highest at the table.', bonus: 100 },
-  { id: 'world-voyage', group: 'The table', tier: 'epic', name: 'World Voyage', hint: 'Win a game at every table size, from 2 to 6 players.', bonus: 200 },
+  { id: 'world-voyage', group: 'The table', tier: 'epic', name: 'Grand Tour', hint: 'Win a game at every table size, from 2 to 6 players.', bonus: 200 },
   { id: 'the-grandmaster', group: 'The table', tier: 'legendary', name: 'The Grandmaster', hint: 'Win a rated game at every table size (2 to 6) against opponents whose average Elo is at least your own going in.', bonus: 500 },
-  { id: 'long-day', group: 'The table', tier: 'rare', name: 'A Long Day at Court', hint: 'Play 5 matches in a single calendar day.', target: 5, bonus: 50 },
-  { id: 'the-unbreakable', group: 'The table', tier: 'legendary', name: 'The Unbreakable', hint: 'Play 20 rated games in a row without finishing last.', target: 20, bonus: 600 },
+  { id: 'long-day', group: 'The table', tier: 'rare', name: 'Court Master', hint: 'Play 5 matches in a single calendar day.', target: 5, bonus: 50 },
+  { id: 'the-unbreakable', group: 'The table', tier: 'legendary', name: 'The Unbreakable', hint: 'Play 11 rated games in a row without finishing last.', target: 11, bonus: 600 },
   // Speed: wins against the clock. They read a game's saved length (the Game night timer), so a game saved without one counts for nothing here.
   { id: 'swift-conquest', group: 'Speed', tier: 'uncommon', name: 'Swift Conquest', hint: 'Win a match of 4 or more players in under 30 minutes.', bonus: 30 },
-  { id: 'blitzkrieg', group: 'Speed', tier: 'rare', name: 'Blitzkrieg', hint: 'Win a match in under 15 minutes.', bonus: 50 },
-  { id: 'lightning-strike', group: 'Speed', tier: 'epic', name: 'Lightning Strike', hint: 'Win a match in under 10 minutes.', bonus: 100 },
-  { id: 'speed-demon', group: 'Speed', tier: 'epic', name: 'Speed Demon', hint: 'Win 3 matches, each completed in under 15 minutes.', target: 3, bonus: 100 },
+  { id: 'blitzkrieg', group: 'Speed', tier: 'rare', name: 'Blitzkrieg', hint: 'Win a match in under 30 minutes.', bonus: 50 },
+  { id: 'lightning-strike', group: 'Speed', tier: 'epic', name: 'Lightning Strike', hint: 'Win a match in under 20 minutes.', bonus: 100 },
+  { id: 'speed-demon', group: 'Speed', tier: 'epic', name: 'Speed Demon', hint: 'Win 3 matches, each completed in under 30 minutes.', target: 3, bonus: 100 },
   { id: 'efficient-conqueror', group: 'Speed', tier: 'rare', name: 'Efficient Conqueror', hint: 'Win a match with at least 50 VP in under 20 minutes.', bonus: 50 },
   { id: 'rapid-expansion', group: 'Speed', tier: 'epic', name: 'Rapid Expansion', hint: 'Win a match with at least 75 VP in under 30 minutes.', bonus: 100 },
   { id: 'the-golden-hour', group: 'Speed', tier: 'rare', name: 'The Golden Hour', hint: 'Win a match with at least 100 VP in under 60 minutes.', bonus: 60 },
@@ -90,7 +90,7 @@ export const BADGES = [
   { id: 'beyond-the-horizon', group: 'Landscapes', track: 'lsee', trackName: 'Pioneer', tier: 'rare', name: 'Beyond the Horizon', hint: 'See 50 different landscape cards in your games.', target: 50, bonus: 100 },
   // Milestones
   { id: 'regular', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'common', name: 'Regular', hint: 'Play 10 rated games.', target: 10 },
-  { id: 'veteran', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'uncommon', name: 'Veteran', hint: 'Play 20 rated games.', target: 20 },
+  { id: 'veteran', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'uncommon', name: 'Seasoned', hint: 'Play 20 rated games.', target: 20 },
   { id: 'games-50', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'rare', name: 'Court Fixture', hint: 'Play 50 rated games.', target: 50, bonus: 50 },
   { id: 'games-100', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'epic', name: 'doMINION', hint: 'Play 100 rated games.', target: 100, bonus: 150 },
   { id: 'games-200', group: 'Milestones', track: 'games', trackName: 'Games played', tier: 'legendary', name: 'Pillar of the Realm', hint: 'Play 200 rated games.', target: 200, bonus: 400 },
@@ -192,8 +192,8 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
   let rw = 0, w100 = -1, p1500 = -1;
   rs.forEach((r, i) => { if (r.place === 1 && ++rw === 100) w100 = i; if (p1500 < 0 && r.after >= 1500) p1500 = i; });
   out.set('the-immortal', at(w100 >= 0 && p1500 >= 0 ? Math.max(w100, p1500) : -1));
-  // 20 rated games in a row without finishing last (a shared last place is last)
-  let safe = 0, unbreak = -1; rs.forEach((r, i) => { safe = r.place === r.game.n ? 0 : safe + 1; if (safe === 20 && unbreak < 0) unbreak = i; });
+  // 11 rated games in a row without finishing last (a shared last place is last)
+  let safe = 0, unbreak = -1; rs.forEach((r, i) => { safe = r.place === r.game.n ? 0 : safe + 1; if (safe === 11 && unbreak < 0) unbreak = i; });
   out.set('the-unbreakable', at(unbreak));
   // a win at every table size against opponents rated at least as high on average
   const gm = new Set(); let gmAt = -1;
@@ -256,8 +256,8 @@ export function achievements(p, tiers = [], everyone = [], xp = null, ctx = {}) 
   let played = 0; const cumMin = G.map(g => (played += mins(g) || 0));
   for (const [id, h] of [['hours-5', 5], ['hours-10', 10], ['hours-25', 25], ['hours-50', 50]]) { out.set(id, gat(reach(cumMin, h * 60))); vals.set(id, Math.round(played / 6) / 10); }
   const fast = (i, under) => won[i] && mins(G[i]) != null && mins(G[i]) < under;
-  out.set('blitzkrieg', gat(G.findIndex((g, i) => fast(i, 15)))); out.set('lightning-strike', gat(G.findIndex((g, i) => fast(i, 10))));
-  const [demonAt, demon] = countAt((g, i) => fast(i, 15), 3); out.set('speed-demon', gat(demonAt)); vals.set('speed-demon', demon);
+  out.set('blitzkrieg', gat(G.findIndex((g, i) => fast(i, 30)))); out.set('lightning-strike', gat(G.findIndex((g, i) => fast(i, 20))));
+  const [demonAt, demon] = countAt((g, i) => fast(i, 30), 3); out.set('speed-demon', gat(demonAt)); vals.set('speed-demon', demon);
   out.set('swift-conquest', gat(G.findIndex((g, i) => g.n >= 4 && fast(i, 30))));
   out.set('efficient-conqueror', gat(G.findIndex((g, i) => fast(i, 20) && (vpOf(g, me) ?? 0) >= 50)));
   out.set('rapid-expansion', gat(G.findIndex((g, i) => fast(i, 30) && (vpOf(g, me) ?? 0) >= 75)));
