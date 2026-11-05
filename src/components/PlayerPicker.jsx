@@ -3,7 +3,8 @@ import NameIcon from './NameIcon.jsx';
 
 /* Choose which player's page to look at: one small button showing who you are looking at, opening a short list, with the previous and next arrows to its right, so they stay put whatever the name's length (stepping wraps round). It replaces a row of pills
    that took two lines on a phone. Closes on a pick, Escape (focus goes back to the button) or a click elsewhere. */
-export default function PlayerPicker({ names, current, hrefFor }) {
+export default function PlayerPicker({ names: unsorted, current, hrefFor }) {
+  const names = [...unsorted].sort((a, b) => a.localeCompare(b));   // A to Z, so a name is where you expect it (the arrows step through the same order)
   const [open, setOpen] = useState(false);
   const box = useRef(null), btn = useRef(null);
   useEffect(() => {

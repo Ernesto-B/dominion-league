@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { writeQuery } from '../urlState.js';
 import ScopePicker from '../components/ScopePicker.jsx';
 import { useCatalog } from '../CatalogContext.jsx';
@@ -9,6 +9,7 @@ import { EmptyState } from '../components/States.jsx';
 import { ExpansionBadge, LandscapePill, Section, TypePills } from '../components/bits.jsx';
 import CostIcons from '../components/Cost.jsx';
 import { usePager } from '../components/Pager.jsx';
+import SortHeaders from '../components/SortHeaders.jsx';
 import { hoverHandlers } from '../components/CardHover.jsx';
 import { slotFaceId } from '../cardImages.js';
 
@@ -48,7 +49,17 @@ function Loaded({ head, lg, query }) {
   const lands = useMemo(() => [...stats.landscapes].map(([id, e]) => ({ l: catalog.landscapesById.get(id), games: e.games, last: e.list[e.list.length - 1] })).filter(x => x.l)
     .sort((a, b) => b.games - a.games || b.last.day - a.last.day || a.l.name.localeCompare(b.l.name)), [catalog, stats]);
   const { pg: lpg, pager: lpager } = usePager(lands, 'landscapes');
+  // the "Not played yet" table sorts like the other tables: a click on the open column flips it, another column starts ascending (Expansion is the box order)
+  const [nsort, setNsort] = useState({ key: 'expansion', dir: 'asc' });
+  const onSort = key => setNsort(o => (o.key === key ? { key, dir: o.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
   const ins = useMemo(() => insights(catalog, stats, { top: Infinity }), [catalog, stats]);
+  const neverRows = useMemo(() => {
+    const val = x => (nsort.key === 'played' ? x.total - x.never : x[nsort.key]);
+    const rows = ins.neverByExpansion.map((x, i) => ({ x, i }));
+    if (nsort.key !== 'expansion') rows.sort((a, b) => val(a.x) - val(b.x) || a.i - b.i);   // ties keep the box order
+    if (nsort.dir === 'desc') rows.reverse();
+    return rows.map(r => r.x);
+  }, [ins, nsort]);
   const { pg, pager } = usePager(ins.mostPlayed, 'cards');
   const repCard = key => catalog.pilesByKey.get(key).cardIds[0];
   // the picture that stands for a pile: its own pile card (Knights, Castles, split piles) or its first card that has one
@@ -105,8 +116,8 @@ function Loaded({ head, lg, query }) {
       <Section title={who ? `Not played yet by ${who}` : 'Not played yet'} id="in-never">
         <div className="tablewrap"><table className="plain dn-table dn-pcttable">
           <caption className="dn-sr">Kingdom supply piles played and not played yet, by expansion</caption>
-          <thead><tr><th className="l" scope="col">Expansion</th><th className="dn-hide-sm" scope="col">Piles</th><th scope="col">Played</th><th scope="col">Not played</th></tr></thead>
-          <tbody>{ins.neverByExpansion.map(x => (
+          <SortHeaders columns={[['expansion', 'Expansion', 'l'], ['total', 'Piles', 'dn-hide-sm'], ['played', 'Played', ''], ['never', 'Not played', '']]} sort={nsort.key} dir={nsort.dir} onSort={onSort} />
+          <tbody>{neverRows.map(x => (
             <tr key={x.expansion}>
               <td className="l"><a href={cardsFilterHref({ expansions: [x.expansion], by: who })}><ExpansionBadge name={x.expansion} /></a></td>
               <Counts total={x.total} played={x.total - x.never} patch={{ expansions: [x.expansion], by: who }} />

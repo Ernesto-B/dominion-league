@@ -2041,4 +2041,37 @@ a.gr-face{position:relative}
 .dn-scope-inline .pp-menu,.dn-chips .pp-menu{max-height:50vh;left:0;right:auto}
 .dn-based + h2{margin-top:18px}
 /* an open player menu must paint over the sections below its box: the glass panels each make their own stacking layer, and a later one would cover it */
-.builder:has(.pp-menu),.dn-fieldset:has(.pp-menu),.dn-scopebar:has(.pp-menu),.dn-rz-grid:has(.pp-menu){position:relative;z-index:40}
+.builder:has(.pp-menu),.dn-fieldset:has(.pp-menu),.dn-scopebar:has(.pp-menu),.dn-rz-grid:has(.pp-menu){position:relative;z-index:25}   /* above the boxes after it, but under the sticky Collection tab bar (30) and the site header */
+/* a season's podium, under the champion in the Hall of Fame */
+.podium{list-style:none;margin:12px 0 4px;padding:0;display:flex;flex-wrap:wrap;gap:8px 16px}
+.podium li{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel)}
+.podium-place{font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--brass)}
+.podium .podium-1{border-color:var(--brass)}
+/* Rankings' recent days: one block per date */
+.recent-day{margin:0 0 18px}
+.recent-date{margin:18px 0 8px;font-size:16px;font-weight:700;color:var(--muted)}
+.recent-day:first-of-type .recent-date{margin-top:8px}
+/* places 1 to 3 as medals (components/RankMedal.jsx): the player comparison's circles, in gold, silver and bronze */
+.rank-medal{display:inline-grid;place-items:center;width:var(--sz,32px);height:var(--sz,32px);border-radius:50%;background:color-mix(in srgb,var(--m) 22%,transparent);border:2px solid var(--m);vertical-align:middle}
+.rank-medal b{font:700 12px var(--text);color:var(--ink)}
+.rank-medal.p1{--m:#E3B84A}.rank-medal.p2{--m:#B7C0CC}.rank-medal.p3{--m:#C98B55}
+.lrank .rank-medal{margin-left:-2px}
+/* the season's top three as things stand (not a `.top` class: that is the site header's, which sets its text colour and sticks it) */
+/* tinted over the table's own panel colour (not over nothing: a see-through row let the picture behind it wash the text out) */
+tr.stand1 td{background:color-mix(in srgb,#E3B84A 14%,var(--panel))}
+tr.stand2 td{background:color-mix(in srgb,#B7C0CC 12%,var(--panel))}
+tr.stand3 td{background:color-mix(in srgb,#C98B55 12%,var(--panel))}
+tr.stand td:first-child{box-shadow:inset 3px 0 0 var(--m,transparent)}
+tr.stand1 td:first-child{--m:#E3B84A}tr.stand2 td:first-child{--m:#B7C0CC}tr.stand3 td:first-child{--m:#C98B55}
+/* the same top three tint on the Rankings ladder; a hovered row keeps its own highlight */
+.lrow.stand1{background:color-mix(in srgb,#E3B84A 14%,var(--panel));box-shadow:inset 3px 0 0 #E3B84A}
+.lrow.stand2{background:color-mix(in srgb,#B7C0CC 12%,var(--panel));box-shadow:inset 3px 0 0 #B7C0CC}
+.lrow.stand3{background:color-mix(in srgb,#C98B55 12%,var(--panel));box-shadow:inset 3px 0 0 #C98B55}
+.lrow.stand.hot,.lrow.stand:hover{background:color-mix(in srgb,var(--ink) 9%,var(--bg))}
+/* Game night: seating help under the player pills */
+.seating{margin:10px 0}
+.seating-warn{margin:0 0 8px}
+.seating-split{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:8px 0}
+.seating-table{padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.seating-table p{margin:6px 0 0}
+.seating-new{margin:8px 0 0}

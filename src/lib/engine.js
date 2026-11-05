@@ -268,6 +268,15 @@ function compute(config, csvRows, today) {
     });
   });
 
+  /* A season with no playoffs (playoffSpots 0) is decided by the table: once it is over, the top qualified player is its champion (unless the admin
+     named one) and the top three form its podium. Everything that reads a champion (titles, the badge, XP, the Hall of Fame) then just works. */
+  seasons.forEach(s => {
+    if (!s.ok || s.status !== 'Complete' || s.spots > 0) return;
+    const top = seasonStandings(s.number).rows.filter(r => r.qualified).slice(0, 3);
+    s.podium = top.map(r => ({ name: r.name, score: r.score, games: r.games }));
+    if (!s.champion && top.length) { s.champion = top[0].name; s.championAuto = true; }
+  });
+
   /* titles */
   const titles = {};
   seasons.forEach(s => { if (s.champion) { const k = rosterKey.get(s.champion.toLowerCase()); if (k) titles[k] = (titles[k] || 0) + 1; } });
@@ -358,8 +367,8 @@ function compute(config, csvRows, today) {
     const after = s.ok ? snapshotAtOrBefore(g => g.day <= s.end) : null;
     const rows = [];
     roster.forEach((n, ri) => {
-      let gp = 0, w = 0, pts = 0, spts = 0;
-      reg.forEach(g => { if (g.places[n] != null) { gp++; if (g.places[n] === 1) w++; pts += g.pts[n]; spts += g.sp[n]; } });
+      let gp = 0, w = 0, pts = 0, spts = 0, th = 0;
+      reg.forEach(g => { if (g.places[n] != null) { gp++; if (g.places[n] === 1) w++; if (g.pts[n] >= 0.5) th++; pts += g.pts[n]; spts += g.sp[n]; } });
       if (!gp) return;
       const nights = new Set(sg.filter(g => g.places[n] != null).map(g => g.day)).size;
       const score = (spts + S.prior * 0.5) / (gp + S.prior);
@@ -367,7 +376,7 @@ function compute(config, csvRows, today) {
       const eloB = before ? (before.snapshot[n] ?? E.start) : E.start;
       const eloA = after ? (after.snapshot[n] ?? E.start) : E.start;
       rows.push({
-        name: n, order: ri, games: gp, wins: w, winPct: w / gp, avgPts: pts / gp, bonusPts: spts - pts, score, qualified: q,
+        name: n, order: ri, games: gp, wins: w, winPct: w / gp, topHalf: th / gp, avgPts: pts / gp, bonusPts: spts - pts, score, qualified: q,
         need: q ? 0 : Math.max(0, s.minGames - gp), eloChange: eloA - eloB, nights, attendance: nightsHeld ? nights / nightsHeld : null, seed: null,
       });
     });
@@ -491,6 +500,24 @@ function compute(config, csvRows, today) {
     };
   }
   const records = buildRecords(players, games, ranked);
+  /* The same records, from one season's games only: each player's career numbers are worked out again from just their results in that season (the streaks, win %, peak
+     and landscape results restart), so "Most wins" means most wins THIS season. Titles belong to no single season, so they are left out. */
+  function seasonRecords(num) {
+    const sg = games.filter(g => g.season === num);
+    const scoped = players.map(p => {
+      const rs = p.results.filter(r => r.game.season === num);
+      let wins = 0, streak = 0, bestStreak = 0, dry = 0, bestDry = 0, pts = 0, peak = -Infinity;
+      rs.forEach(r => {
+        pts += r.pts; peak = Math.max(peak, r.after);
+        if (r.place === 1) { wins++; streak++; bestStreak = Math.max(bestStreak, streak); dry = 0; } else { streak = 0; dry++; bestDry = Math.max(bestDry, dry); }
+      });
+      const landscapeStats = {};
+      rs.forEach(r => r.game.landscapes.forEach(l => { const e = landscapeStats[l] || (landscapeStats[l] = { games: 0, wins: 0 }); e.games++; if (r.place === 1) e.wins++; }));
+      Object.values(landscapeStats).forEach(e => { e.winPct = e.wins / e.games; });
+      return { ...p, rated: rs.length, wins, winPct: rs.length ? wins / rs.length : null, avgPts: rs.length ? pts / rs.length : null, bestStreak, bestDry, peak: rs.length ? peak : p.peak, titles: 0, results: rs, landscapeStats };
+    }).filter(p => p.rated > 0);
+    return buildRecords(scoped, sg, scoped.slice().sort((a, b) => b.elo - a.elo));
+  }
 
   /* rating history by night, for charts */
   const nights = nightsAll.map(day => {
@@ -519,7 +546,7 @@ function compute(config, csvRows, today) {
 
   if (!seasons.length) warnings.push('No seasons are set up yet. Games will still count for Elo.');
 
-  return { preview, lastNight, config, E, S, roster, players, ranked, games, seasons, currentSeason, currentSeasonFor, nights, tiers, tierFor, tierAt: (g, name) => (g.tierSnap && g.tierSnap[name]) || tierFor(g.snapshot[name]), startTier: tiers[tierIndex(E.start)], warnings, seasonStandings, h2h, records, today };
+  return { preview, seasonRecords, lastNight, config, E, S, roster, players, ranked, games, seasons, currentSeason, currentSeasonFor, nights, tiers, tierFor, tierAt: (g, name) => (g.tierSnap && g.tierSnap[name]) || tierFor(g.snapshot[name]), startTier: tiers[tierIndex(E.start)], warnings, seasonStandings, h2h, records, today };
 }
 
 export { DEFAULT_TIERS, compute, parseCSV, parseFinish, parseISO, fmtDay, todayDay };

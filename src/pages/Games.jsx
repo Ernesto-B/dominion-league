@@ -63,7 +63,7 @@ export default function Games() {
         </select></label>
       <label className="f">Player <select id="gfp" value={gf.player} onChange={set('player')}>
           <option value="all">Everyone</option>
-          {D.players.map(p => <option key={p.name}>{p.name}</option>)}
+          {D.players.map(p => p.name).sort((a, b) => a.localeCompare(b)).map(n => <option key={n}>{n}</option>)}
         </select></label>
       <span className="f">Set <SetSelect id="gfset" value={gf.set} sets={SET_NAMES.filter(n => enabledSets.has(n) || D.records.sets[n])} onChange={v => { saved = { ...gf, set: v }; setGf(saved); }} /></span>
     </>
@@ -88,7 +88,7 @@ export default function Games() {
         </div>
       </div>
       {modal && <Suspense fallback={null}><GameModal key={String(modal.editId)} editId={modal.editId} onClose={() => setModal(null)} /></Suspense>}
-      {list.length && shownView === 'kingdoms' ? <KingdomWall key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}`} games={list} /> : list.length ? <GamesTable key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} stateKey={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} games={list} highlight={hl ? hl.line : undefined} mark={gf.player !== 'all' ? gf.player : null} view={shownView === 'table' ? 'table' : 'cards'} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
+      {list.length && shownView === 'kingdoms' ? <KingdomWall key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}`} games={list} /> : list.length ? <GamesTable paged key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} stateKey={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} games={list} highlight={hl ? hl.line : undefined} mark={gf.player !== 'all' ? gf.player : null} view={shownView === 'table' ? 'table' : 'cards'} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
     </>
   );
 }

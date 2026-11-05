@@ -6,6 +6,8 @@ import { SET_NAMES, LANDSCAPES } from '../lib/sets.js';
 import { buildGameArgs, callGameRpc, resortByVP, toggle } from '../lib/gameForm.js';
 import { badgesFor, gameXp, leagueXp } from '../lib/xp.js';
 import { BadgeReward, LevelReward } from '../components/RewardCard.jsx';
+import SeatingHelp from '../components/SeatingHelp.jsx';
+import { MAX_PLAYERS, MAX_SEATS } from '../lib/seating.js';
 import { MAX_TABLES, STEPS, advance, back, blankNight, cleanMinutes, clearNight, elapsed, gameSummary, hasNight, loadNight, playedMinutes, saveNight, stepNumber, tableLabel } from '../lib/night.js';
 import NameIcon from '../components/NameIcon.jsx';
 import SetIcon from '../components/SetIcon.jsx';
@@ -52,6 +54,9 @@ function Tables() {
   const report = useMemo(() => [0, 1].map(i => v => setInfo(s => ({ ...s, [i]: v }))), []);
   const avoidAt = i => (info[1 - i] && !info[1 - i].done ? info[1 - i].kingdom || [] : []);   // the cards and landscapes in play at the other table: there is one copy of each
   const busyAt = i => (info[1 - i] && !info[1 - i].done ? info[1 - i].picked : []);
+  const [seatReq, setSeatReq] = useState(null);                // { id, slots: { 0: [names], 1: [names] } }: a split of a crowd, handed to both tables
+  const otherFree = i => !info[1 - i] || (info[1 - i].step === 'players' && !info[1 - i].done);   // the other table can be (re)seated while it is still on the player step
+  const seat = (from, mine, theirs) => { setSeatReq({ id: Date.now(), slots: { [from]: mine, [1 - from]: theirs } }); setOpen(2); };
   const addTable = () => { setOpen(2); setActive(1); };
   const closeTable = async () => {
     const w = info[1];
@@ -78,7 +83,7 @@ function Tables() {
         </div>
       )}
       {Array.from({ length: open }, (_, i) => (
-        <div key={i} hidden={active !== i}><NightFlow slot={i} busy={busyAt(i)} avoid={avoidAt(i)} onReport={report[i]} /></div>
+        <div key={i} hidden={active !== i}><NightFlow slot={i} busy={busyAt(i)} avoid={avoidAt(i)} onReport={report[i]} seatReq={seatReq} canSeat={otherFree(i)} onSeat={(a, b) => seat(i, a, b)} /></div>
       ))}
     </>
   );
@@ -104,7 +109,7 @@ class NightBoundary extends Component {
   }
 }
 
-function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
+function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, canSeat = true, onSeat = () => {} }) {
   const { me, gid, D, allGroups, enabledSets, playerIdByName, hashFor, reload } = usePage();
   const cat = useCatalogLoad();
   const [st, setSt] = useState(() => (storage() ? loadNight(storage(), gid, undefined, undefined, slot) : blankNight()));
@@ -133,6 +138,9 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
 
   useEffect(() => { if (storage() && !done) saveNight(storage(), gid, st, undefined, slot); }, [st, gid, done, slot]);
   // tell the tab strip who is seated here and how far along the table is
+  // a split from either table seats this one with its half of the crowd (once per request)
+  const seatedBy = useRef(null);
+  useEffect(() => { if (seatReq && seatReq.id !== seatedBy.current && seatReq.slots[slot]) { seatedBy.current = seatReq.id; setSt(s => ({ ...s, picked: seatReq.slots[slot], tie: {} })); } }, [seatReq, slot]);
   useEffect(() => { if (onReport) onReport({ picked: st.picked, step: st.step, startedAt: st.startedAt, kingdom: st.kingdom, done: !!done }); }, [st.picked, st.step, st.startedAt, st.kingdom, done, onReport]);
   useEffect(() => {
     if (st.step !== 'play') return undefined;
@@ -175,6 +183,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
   // ---- saving
   const save = async () => {
     if (st.picked.length < 2) { setMsg('Pick at least 2 players.'); return; }
+    if (st.picked.length > MAX_PLAYERS) { setMsg(`A table seats at most ${MAX_PLAYERS} players.`); return; }
     if (!st.date) { setMsg('Pick a date.'); return; }
     savedSt.current = st;
     before.current = { ranks: Object.fromEntries(D.ranked.map(p => [p.name, p.rank])), tiers: Object.fromEntries(D.ranked.map(p => [p.name, p.tier.id])) };
@@ -228,6 +237,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
   const atRandomRoll = st.step === 'kingdom' && !!catalog && st.kingdomMode === 'random' && !st.randomDone;   // the Random screen: its button turns the roll into the summary
   // why the main button is greyed out (nothing when it can be pressed): fewer than 2 players, or no kingdom yet (skip it with its link) or a draft still on
   const holdOn = st.step === 'players' && st.picked.length < 2 ? 'Pick at least 2 players first'
+    : st.step === 'players' && st.picked.length > MAX_PLAYERS ? `A table seats at most ${MAX_PLAYERS} players`
     : st.step === 'scores' && st.picked.some(n => !/^\s*-?\d+\s*$/.test(st.vp[n] ?? '')) ? 'Enter every player’s VP first'
     : atRandomRoll && !items.length ? 'Roll a kingdom first' : st.step === 'kingdom' && drafting ? 'Finish the draft first' : st.step === 'kingdom' && !items.length ? 'Set up a kingdom first, or skip it' : '';
   const atDraftOptions = st.step === 'kingdom' && !!catalog && st.kingdomMode === 'draft' && !st.draftSave?.draft;   // the draft's options page: its button replaces Start Game & Timer
@@ -258,11 +268,12 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport }) {
               {roster.map(n => {
                 const elsewhere = busy.includes(n) && !st.picked.includes(n);   // already sitting at the other table
                 return <a key={n} href="#" aria-current={st.picked.includes(n) ? 'true' : undefined} aria-disabled={elsewhere ? 'true' : undefined} title={elsewhere ? 'At the other table' : undefined}
-                  onClick={e => { e.preventDefault(); if (elsewhere) return; setSt(s => ({ ...s, picked: toggle(s.picked, n), tie: {}, vp: s.vp })); }}><NameIcon name={n} size={18} />{n}</a>;
+                  onClick={e => { e.preventDefault(); if (elsewhere) return; if (!st.picked.includes(n) && st.picked.length >= MAX_SEATS) { setMsg(`Two tables seat ${MAX_SEATS} at most.`); return; } setSt(s => ({ ...s, picked: toggle(s.picked, n), tie: {}, vp: s.vp })); }}><NameIcon name={n} size={18} />{n}</a>;
               })}
             </div>
-            <p className="meta" role="status">{st.picked.length ? `${st.picked.length} player${st.picked.length === 1 ? '' : 's'}${st.picked.length < 2 ? ' — pick at least 2' : ''}` : 'No one picked yet.'}</p>
-            <EloPreview picked={st.picked} />
+            <p className="meta" role="status">{st.picked.length ? `${st.picked.length} player${st.picked.length === 1 ? '' : 's'}${st.picked.length < 2 ? ' — pick at least 2' : st.picked.length > MAX_PLAYERS ? ` — a table seats at most ${MAX_PLAYERS}` : ''}` : 'No one picked yet.'}</p>
+            <SeatingHelp picked={st.picked} canSeat={canSeat} onSeat={onSeat} />
+            {st.picked.length <= MAX_PLAYERS && <EloPreview picked={st.picked} />}
           </>
         )}
 

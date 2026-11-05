@@ -7,6 +7,7 @@ import StoryCards from '../components/StoryCards.jsx';
 import TierIcon from '../components/TierIcon.jsx';
 import TierLegend from '../components/TierLegend.jsx';
 import LastNight from '../components/LastNight.jsx';
+import RankMedal from '../components/RankMedal.jsx';
 import RatingChart from '../components/RatingChart.jsx';
 import MeCard from '../components/MeCard.jsx';
 import Hub from '../components/Hub.jsx';
@@ -40,9 +41,9 @@ function Ladder({ ranked: rk, highlight, setHighlight }) {
         const dl = lastR ? lastR.after - lastR.before : 0;
         const rm = p.rankDelta, lv = xpOf(D, p.name, catalog);
         return (
-          <div key={p.name} className={'lrow' + (highlight === p.name ? ' hot' : '')} data-p={p.name} role="row" style={{ '--i': Math.min(idx, 12) }}
+          <div key={p.name} className={'lrow' + (p.rank <= 3 ? ' stand stand' + p.rank : '') + (highlight === p.name ? ' hot' : '')} data-p={p.name} role="row" style={{ '--i': Math.min(idx, 12) }}
             onMouseEnter={() => setHighlight(p.name)} onFocus={() => setHighlight(p.name)}>
-            <span className="lrank">{p.rank}
+            <span className="lrank"><RankMedal rank={p.rank} size={30} />
               {!rm ? null : rm > 0
                 ? <span className="rankmove up-t" title={`Up ${rm} spot${rm === 1 ? '' : 's'} since last night`}>▲{rm}</span>
                 : <span className="rankmove down-t" title={`Down ${-rm} spot${rm === -1 ? '' : 's'} since last night`}>▼{-rm}</span>}

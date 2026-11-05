@@ -3,9 +3,9 @@ import { PAGE_SIZES, pageSlice } from '../model.js';
 
 /* "Showing 1–10 of 40 cards · Per page [10] · ← Previous  Page 1 of 4  Next →" under a table. usePager(items) pages the items;
    render `pg.items` in the table and `pager` beneath it. Keyed by the caller where a new list should start again on page 1. */
-export function usePager(items, noun = 'cards', sizes = PAGE_SIZES) {   // `sizes`: the per-page choices (then All); the first is the default
-  const [size, setSize] = useState(sizes[0]);
-  const [page, setPage] = useState(1);
+export function usePager(items, noun = 'cards', sizes = PAGE_SIZES, { size: first = sizes[0], page: firstPage = 1 } = {}) {   // `sizes`: the per-page choices (then All); the first is the default unless `size` says otherwise; `page` opens on that page
+  const [size, setSize] = useState(first);
+  const [page, setPage] = useState(firstPage);
   const pg = pageSlice(items, page, size);
   const pager = (
     <div className="dn-pager">

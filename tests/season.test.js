@@ -61,3 +61,45 @@ describe('season score bonuses', () => {
     const last = D.games[D.games.length - 1].score.Ann.after; expect(last).toBeCloseTo(standing(D, 'Ann').score, 12);
   });
 });
+
+describe('a season with no playoffs is decided by the table', () => {
+  const past = (spots, champion) => [{ name: 'S1', start: '2025-01-01', weeks: 4, targetGames: 3, qualifyPct: 0.6, playoffSpots: spots, ...(champion ? { champion } : {}) }];
+  const rows = ['Ann > Bob > Cy > Dee', 'Ann > Cy > Bob > Dee', 'Bob > Ann > Dee > Cy', 'Ann > Bob > Cy > Dee'].map((f, i) => g(f, {}, `2025-01-0${i + 2}`));
+  const go = seasons => Eng.compute({ title: 't', players: ['Ann', 'Bob', 'Cy', 'Dee'], seasons, elo: {}, season: {} }, rows, Eng.todayDay());
+
+  it('crowns the top qualified player and lists the top three once it is over', () => {
+    const s = go(past(0)).seasons[0];
+    expect(s.champion).toBe('Ann'); expect(s.championAuto).toBe(true); expect(s.podium.map(p => p.name)).toEqual(['Ann', 'Bob', 'Cy']);
+    expect(go(past(0)).players.find(p => p.name === 'Ann').titles).toBe(1);
+  });
+  it('leaves a season with playoffs to the admin, and never overrides a champion that was named', () => {
+    const withSpots = go(past(2)).seasons[0]; expect(withSpots.champion).toBe(''); expect(withSpots.podium).toBeUndefined();
+    const named = go(past(0, 'Bob')).seasons[0]; expect(named.champion).toBe('Bob'); expect(named.championAuto).toBeUndefined();
+  });
+  it('does nothing while the season is still running', () => {
+    const live = Eng.compute({ title: 't', players: ['Ann', 'Bob'], seasons: [{ name: 'S', start: '2025-01-01', weeks: 5000, targetGames: 3, playoffSpots: 0 }], elo: {}, season: {} }, rows.map(r => ({ ...r, finish: 'Ann > Bob' })), Eng.todayDay());
+    expect(live.seasons[0].champion).toBe(''); expect(live.seasons[0].podium).toBeUndefined();
+  });
+});
+
+describe('the season ladder column for top-half finishes', () => {
+  it('counts the regular games a player finished in the top half of', () => {
+    const rows = [g('Ann > Bob > Cy > Dee'), g('Bob > Ann > Dee > Cy'), g('Cy > Dee > Ann > Bob')];
+    const D = Eng.compute({ title: 't', players: ['Ann', 'Bob', 'Cy', 'Dee'], seasons: SEASON, elo: {}, season: {} }, rows, Eng.todayDay());
+    const r = n => D.seasonStandings(1).rows.find(x => x.name === n);
+    expect(r('Ann').topHalf).toBeCloseTo(2 / 3, 10); expect(r('Dee').topHalf).toBeCloseTo(1 / 3, 10);
+  });
+});
+
+describe('records for one season', () => {
+  const two = [{ name: 'S1', start: '2025-01-01', weeks: 4, targetGames: 2, playoffSpots: 0 }, { name: 'S2', start: '2025-02-01', weeks: 4, targetGames: 2, playoffSpots: 0 }];
+  const rows = [g('Ann > Bob', {}, '2025-01-05'), g('Ann > Bob', {}, '2025-01-06'), g('Bob > Ann', {}, '2025-02-05')];
+  const D = Eng.compute({ title: 't', players: ['Ann', 'Bob'], seasons: two, elo: {}, season: {} }, rows, Eng.todayDay());
+  it('counts only that season\'s games, streaks and wins included', () => {
+    const s1 = D.seasonRecords(1), s2 = D.seasonRecords(2);
+    expect(s1.overview.tables).toBe(2); expect(s2.overview.tables).toBe(1);
+    expect(s1.mostWins).toEqual({ name: 'Ann', value: 2 }); expect(s2.mostWins).toEqual({ name: 'Bob', value: 1 });
+    expect(s1.bestStreak.value).toBe(2); expect(s2.bestStreak.name).toBe('Bob');
+    expect(D.records.overview.tables).toBe(3); expect(D.records.mostWins.value).toBe(2);   // all time is unchanged
+  });
+});
