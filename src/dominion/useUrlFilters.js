@@ -33,6 +33,6 @@ export function useUrlFilters(query, { fromQuery, toQuery, defaults }) {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => { pendingQ.current = null; writeQuery(toQuery({ ...latest.current, q: value })); }, 250);
   };
-  const clear = () => { clearTimeout(timer.current); pendingQ.current = null; setQText(''); writeQuery(toQuery(defaults)); };
+  const clear = () => { clearTimeout(timer.current); pendingQ.current = null; setQText(''); writeQuery(toQuery({ ...defaults, ...(latest.current.by ? { by: latest.current.by } : {}) })); };   // whose games is a choice of view, not a filter: clearing keeps it
   return { f, update, qText, onQ, clear };
 }

@@ -6,6 +6,8 @@ import { PageShortcuts } from '../../components/Shortcuts.jsx';
 import { keepScrollOnce } from '../../lib/navMemory.js';
 import { hasTrail, popTrail, pushTrail } from '../../lib/randomTrail.js';
 import PlayHistory from '../components/PlayHistory.jsx';
+import ScopePicker from '../components/ScopePicker.jsx';
+import { writeQuery } from '../urlState.js';
 import { useLeagueGames } from '../useLeagueGames.js';
 import { PLURAL, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
@@ -18,7 +20,8 @@ import { formatCost } from '../model.js';
 
 export default function LandscapeDetail({ id, query = '' }) {
   const { catalog } = useCatalog();
-  const lg = useLeagueGames();
+  const by = landscapeFiltersFromQuery(query).by;   // whose games "In our games" reads (carried in the address with the list's filters)
+  const lg = useLeagueGames(by);
   const { get: picture } = useCardImages();
   const l = catalog.landscapesById.get(id);
   if (!l) return (
@@ -30,7 +33,7 @@ export default function LandscapeDetail({ id, query = '' }) {
   );
   const filters = landscapeFiltersFromQuery(query);
   let list = browseLandscapes(catalog.landscapes, filters), qs = landscapeFiltersToQuery(filters);
-  if (!list.some(o => o.id === l.id)) { list = browseLandscapes(catalog.landscapes, DEFAULT_LANDSCAPE_FILTERS); qs = ''; }
+  if (!list.some(o => o.id === l.id)) { list = browseLandscapes(catalog.landscapes, DEFAULT_LANDSCAPE_FILTERS); qs = by ? landscapeFiltersToQuery({ ...DEFAULT_LANDSCAPE_FILTERS, by }) : ''; }
   const nav = neighbors(list, l.id);
   const random = () => { const o = pickRandom(list, l.id); if (o) { pushTrail('landscape', l.id); window.location.hash = landscapeHref(o.id, qs); } };
   const mine = new Set(l.mechanicIds);
@@ -98,7 +101,7 @@ export default function LandscapeDetail({ id, query = '' }) {
 
       {lg && lg.stats && (
         <Section title="In our games" id="ld-plays">
-          <div className="builder"><PlayHistory entry={lg.stats.landscapes.get(l.id)} lg={lg} /></div>
+          <div className="builder"><ScopePicker who={lg.who} players={lg.players} onPick={n => writeQuery(landscapeFiltersToQuery({ ...filters, by: n }))} label="Counted for" /><PlayHistory entry={lg.stats.landscapes.get(l.id)} lg={lg} /></div>
         </Section>
       )}
 

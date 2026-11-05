@@ -10,7 +10,7 @@ import { tabFromQuery, tabQuery } from '../src/lib/profileTabs.js';
 describe('the Player page tab address', () => {
   it('defaults to Overview, reads ?tab=, and a ?badge= link opens Badges', () => {
     expect(tabFromQuery('')).toBe('overview'); expect(tabFromQuery(undefined)).toBe('overview');
-    expect(tabFromQuery('tab=history')).toBe('history'); expect(tabFromQuery('tab=nonsense')).toBe('overview');
+    expect(tabFromQuery('tab=history')).toBe('history'); expect(tabFromQuery('tab=nonsense')).toBe('overview'); expect(tabFromQuery('tab=cards')).toBe('cards');
     expect(tabFromQuery('badge=first-win')).toBe('badges'); expect(tabFromQuery('tab=history&badge=x')).toBe('badges');
   });
   it('writes no query for Overview', () => {
@@ -23,6 +23,10 @@ const D = Eng.compute({ ...cfg, players: ['Ann', 'Bob'], seasons: [] }, [row('An
 const draw = arg => renderToString(createElement(PageContext.Provider, { value: { D, gid: 'a', arg, hashFor: (r, g, x) => `#/${r}/${g}/${x}`, me: null, catalog: null, allGroups: [{ id: 'a' }], enabledSets: new Set(['Base']), rawPlayers: [] } }, createElement(Players)));
 
 describe('the Player page by tab', () => {
+  it('Cards says it is loading until the card list is in, and offers no other section\'s content', () => {
+    const h = draw('Ann?tab=cards');
+    expect(h).toContain('Loading the card list'); expect(h).not.toContain('class="stats"'); expect(h).not.toContain('Rating history');
+  });
   it('Overview has the tiles and a badge shelf, not the rating chart or the whole collection', () => {
     const h = draw('Ann');
     expect(h).toContain('pt-tabs'); expect(h).toContain('class="stats"'); expect(h).toContain('View all →'); expect(h).not.toContain('Rating history'); expect(h).not.toContain('badges-tab');

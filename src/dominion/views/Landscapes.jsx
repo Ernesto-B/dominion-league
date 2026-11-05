@@ -4,6 +4,7 @@ import { useCatalog } from '../CatalogContext.jsx';
 import { browseLandscapes, filterLandscapes, facetCount, landscapeMatchOf, landscapeMatchPatch, activeLandscapeFilters, DEFAULT_LANDSCAPE_FILTERS, landscapeFiltersFromQuery, landscapeFiltersToQuery, landscapeCostKey, NO_COST, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
 import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
 import { useLeagueGames } from '../useLeagueGames.js';
+import ScopePicker from '../components/ScopePicker.jsx';
 import KingdomPickBar from '../components/KingdomPickBar.jsx';
 import { choosePick, useKingdomPick } from '../kingdomPick.js';
 import { artifactHref, landscapeHref } from '../links.js';
@@ -25,7 +26,7 @@ export default function Landscapes({ query = '' }) {
   const { f, update, qText, onQ, clear: clearFilters } = useUrlFilters(query, { fromQuery: landscapeFiltersFromQuery, toQuery: landscapeFiltersToQuery, defaults: DEFAULT_LANDSCAPE_FILTERS });
   useListScroll();
   const [mq, setMq] = useState('');
-  const lg = useLeagueGames();
+  const lg = useLeagueGames(f.by);
   const plays = lg && lg.stats ? lg.stats.landscapes : null;   // landscape id -> { games }; null until a kingdom has been logged
   const qs = landscapeFiltersToQuery(f);   // carried into each landscape's page (Previous/Next, back to the list)
   // header clicks share state with the "Sort by" menu: the active column flips direction, another column starts ascending
@@ -103,6 +104,7 @@ export default function Landscapes({ query = '' }) {
         <ModeRow show ariaLabel="How to match the selected filters" value={landscapeMatchOf(f)} options={[['all'], ['any'], ['none']]} onChange={m => update(landscapeMatchPatch(m))} />
         {f.typeMode === 'none' && f.mechanics.length > 0 && <p className="meta dn-mode-note">Recorded tags stay “any of”: a missing tag doesn’t prove a landscape lacks it.</p>}
         {plays && <fieldset className="dn-fieldset"><legend>Play history</legend>
+          <ScopePicker who={lg.who} players={lg.players} onPick={n => update({ by: n })} label="Counted for" />
           <div className="dn-chips">
             <Chip pressed={f.played === 'yes'} count={fc.yes} onClick={() => update({ played: f.played === 'yes' ? 'any' : 'yes' })}>Played</Chip>
             <Chip pressed={f.played === 'no'} count={fc.no} onClick={() => update({ played: f.played === 'no' ? 'any' : 'no' })}>Not played yet</Chip>

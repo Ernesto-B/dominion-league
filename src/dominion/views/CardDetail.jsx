@@ -6,6 +6,8 @@ import { PageShortcuts } from '../../components/Shortcuts.jsx';
 import { keepScrollOnce } from '../../lib/navMemory.js';
 import { hasTrail, popTrail, pushTrail } from '../../lib/randomTrail.js';
 import PlayHistory from '../components/PlayHistory.jsx';
+import ScopePicker from '../components/ScopePicker.jsx';
+import { writeQuery } from '../urlState.js';
 import { useLeagueGames } from '../useLeagueGames.js';
 import { useState } from 'react';
 import { usePager } from '../components/Pager.jsx';
@@ -20,7 +22,8 @@ import { ExpansionBadge, TypePills, Section, Stat, CardText, rowLink } from '../
 
 export default function CardDetail({ id, query = '' }) {
   const { catalog } = useCatalog();
-  const lg = useLeagueGames();
+  const by = cardFiltersFromQuery(query).by;   // whose games "In our games" reads (carried in the address with the list's filters)
+  const lg = useLeagueGames(by);
   const { get: picture } = useCardImages();
   const card = catalog.cardsById.get(id);
   if (!card) return (
@@ -38,7 +41,7 @@ export default function CardDetail({ id, query = '' }) {
   const filters = cardFiltersFromQuery(query);
   const ctx = { plays: lg?.stats?.piles };   // so Previous/Next follow the same order as a list sorted by times played
   let list = browseCards(catalog.cards, filters, ctx), qs = cardFiltersToQuery(filters);
-  if (!list.some(c => c.id === card.id)) { list = browseCards(catalog.cards, DEFAULT_CARD_FILTERS, ctx); qs = ''; }
+  if (!list.some(c => c.id === card.id)) { list = browseCards(catalog.cards, DEFAULT_CARD_FILTERS, ctx); qs = by ? cardFiltersToQuery({ ...DEFAULT_CARD_FILTERS, by }) : ''; }
   const plays = lg?.stats ? lg.stats.piles.get(card.pileKey) : undefined;
   const nav = neighbors(list, card.id);
   const random = () => { const c = pickRandom(list, card.id); if (c) { pushTrail('card', card.id); window.location.hash = cardHref(c.id, qs); } };
@@ -107,7 +110,7 @@ export default function CardDetail({ id, query = '' }) {
 
       {lg && lg.stats && (
         <Section title="In our games" id="cd-plays">
-          <div className="builder"><PlayHistory entry={plays} lg={lg} /></div>
+          <div className="builder"><ScopePicker who={lg.who} players={lg.players} onPick={n => writeQuery(cardFiltersToQuery({ ...filters, by: n }))} label="Counted for" /><PlayHistory entry={plays} lg={lg} /></div>
         </Section>
       )}
 

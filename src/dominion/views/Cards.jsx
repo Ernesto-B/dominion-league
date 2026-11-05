@@ -4,6 +4,7 @@ import { useCatalog } from '../CatalogContext.jsx';
 import { browseCards, filterCards, facetCount, cardMatchOf, cardMatchPatch, activeCardFilters, DEFAULT_CARD_FILTERS, cardFiltersFromQuery, cardFiltersToQuery, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
 import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
 import { useLeagueGames } from '../useLeagueGames.js';
+import ScopePicker from '../components/ScopePicker.jsx';
 import { cardHref, MAX_COMPARE, compareHref } from '../links.js';
 import KingdomPickBar from '../components/KingdomPickBar.jsx';
 import { choosePick, useKingdomPick } from '../kingdomPick.js';
@@ -27,7 +28,7 @@ export default function Cards({ query = '' }) {
   const { catalog, summary: s } = useCatalog();
   const { f, update, qText, onQ, clear: clearFilters } = useUrlFilters(query, { fromQuery: cardFiltersFromQuery, toQuery: cardFiltersToQuery, defaults: DEFAULT_CARD_FILTERS });
   useListScroll();
-  const lg = useLeagueGames();
+  const lg = useLeagueGames(f.by);
   const basket = useCompareBasket();
   const kp = useKingdomPick(), choosing = !!kp && kp.kind === 'card';   // choosing a card FOR a kingdom (the Randomizer's Add / Replace), not browsing
   const picking = basket.picking, picked = new Set(basket.ids);
@@ -80,6 +81,7 @@ export default function Cards({ query = '' }) {
         </fieldset>
 
         {plays && <fieldset className="dn-fieldset"><legend>Play history</legend>
+          <ScopePicker who={lg.who} players={lg.players} onPick={n => update({ by: n })} label="Counted for" />
           <div className="dn-chips">
             <Chip pressed={f.played === 'yes'} count={fc.yes} onClick={() => update({ played: f.played === 'yes' ? 'any' : 'yes' })}>Played</Chip>
             <Chip pressed={f.played === 'no'} count={fc.no} onClick={() => update({ played: f.played === 'no' ? 'any' : 'no' })}>Not played yet</Chip>

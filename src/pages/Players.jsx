@@ -11,6 +11,8 @@ import H2HMatrix from '../components/H2HMatrix.jsx';
 import Badges from '../components/Badges.jsx';
 import BadgeShelf from '../components/BadgeShelf.jsx';
 import ProfileTabs from '../components/ProfileTabs.jsx';
+import PlayerCards from '../components/PlayerCards.jsx';
+import { dominionHref } from '../dominion/links.js';
 import { tabFromQuery } from '../lib/profileTabs.js';
 import { badgesFor } from '../lib/xp.js';
 import XpPanel from '../components/XpPanel.jsx';
@@ -135,6 +137,7 @@ export default function Players() {
         <BadgeShelf p={p} list={list} />
       </>}
       {tab === 'badges' && <Badges p={p} focus={focusBadge} showOwned={showOwned} />}
+      {tab === 'cards' && <PlayerCards p={p} D={D} catalog={catalog} insightsHref={dominionHref('insights') + '?who=' + encodeURIComponent(p.name)} gamesHref={line => hashFor('games', gid) + '?game=' + line} />}
       {tab === 'history' && <>
       <h2>Rating history</h2>
       <RatingChart names={rankedHere.map(x => x.name)} hot={p.name} highlight={highlight} onHover={n => setHover({ of: p.name, name: n })} />

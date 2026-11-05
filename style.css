@@ -2028,3 +2028,17 @@ a.gr-face{position:relative}
 @media (prefers-reduced-motion:no-preference){.pin-add{transition:background-color .15s ease,border-color .15s ease,color .15s ease,transform .12s ease}.pin-add:hover{transform:scale(1.1)}}
 /* on a phone the pager's two rows (count + per page, then Previous / Page / Next) are centred instead of leaning right */
 @media (max-width:720px){.dn-pager{justify-content:center;text-align:center}.dn-pager-nav{margin-left:0;flex-basis:100%;justify-content:center}}
+/* Kingdom insights: whose games to read (whole group or one player), a bar of its own under the title */
+.dn-scopebar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px;margin:0 0 16px;padding:12px 16px;border:1px solid color-mix(in srgb, var(--brass) 55%, var(--line));border-radius:14px;background:color-mix(in srgb, var(--brass) 7%, var(--panel))}
+.dn-scopebar-text{display:grid;gap:2px;min-width:0}
+.dn-scopebar-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.dn-scopebar .pp-menu{right:auto;left:0}
+.dn-scopebar .pp-btn.on{border-color:var(--brass);background:color-mix(in srgb, var(--brass) 22%, var(--panel))}
+@media (pointer:coarse){.dn-scopebar .pp-btn{min-height:44px}}
+.dn-based + section h2{margin-top:18px}
+.dn-scope-inline{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 10px}
+.dn-scope-label{font-weight:600;font-size:14px;color:var(--muted)}
+.dn-scope-inline .pp-menu,.dn-chips .pp-menu{max-height:50vh;left:0;right:auto}
+.dn-based + h2{margin-top:18px}
+/* an open player menu must paint over the sections below its box: the glass panels each make their own stacking layer, and a later one would cover it */
+.builder:has(.pp-menu),.dn-fieldset:has(.pp-menu),.dn-scopebar:has(.pp-menu),.dn-rz-grid:has(.pp-menu){position:relative;z-index:40}

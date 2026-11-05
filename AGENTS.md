@@ -291,7 +291,8 @@ technique is the best way to prove any refactor *doesn't* change what users see:
   be missed, never wrongly counted). Keep it that way. Setup notes (Bane, Platinum/Colony, Shelters, Ruins) follow the official rules.
 - Filters AND the rolled kingdom live in the URL hash query (`urlState.js` writes with `replaceState`; `useHash` only scrolls
   to the top when the *path* changes). Anything new on the Collection that has state worth sharing should follow suit.
-- Play counts/insights are for the group the viewer last picked (`page.gid`); the Collection itself has no group in its URL.
+- Play counts/insights are for the group the viewer last picked (`page.gid`); the Collection itself has no group in its URL. They can be narrowed to ONE player: `useLeagueGames(who)` (the games that player sat at; `mine` becomes their record), chosen with `components/ScopePicker.jsx`
+  and kept in the address (`?by=` on the card and landscape tables and detail pages, a filter-codec field that `clear` keeps; `?who=` on Insights). The Player page's Cards tab (`components/PlayerCards.jsx`) and Game night's "Only this table's games" option (`favorTable`, `TableScopeContext`) use the same counts.
 
 ## Switching sets on and off, adding an expansion
 
