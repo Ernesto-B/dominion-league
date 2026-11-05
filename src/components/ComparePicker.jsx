@@ -1,3 +1,4 @@
+import { scrollFadeRef } from '../lib/scrollFade.js';
 import { useEffect, useRef, useState } from 'react';
 import NameIcon from './NameIcon.jsx';
 
@@ -21,7 +22,7 @@ export default function ComparePicker({ current, names: unsorted, hrefFor }) {
         {current && <NameIcon name={current} size={18} />}<span>{current || 'Choose…'}</span><span className="pp-chev" aria-hidden="true">▾</span>
       </button>
       {open && (
-        <nav className="pp-menu" aria-label="Compare with">
+        <nav className="pp-menu" ref={scrollFadeRef} aria-label="Compare with">
           {names.map(n => <a key={n} href={hrefFor(n)} aria-current={n === current ? 'true' : undefined} onClick={() => setOpen(false)}><NameIcon name={n} size={18} />{n}</a>)}
         </nav>
       )}

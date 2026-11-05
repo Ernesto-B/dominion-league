@@ -2104,3 +2104,9 @@ tr.stand1 td:first-child{--m:#E3B84A}tr.stand2 td:first-child{--m:#B7C0CC}tr.sta
   .lsub .lpin-m{display:flex;min-width:0;margin:-5px 0}   /* the chip is taller than the form dots: negative margins make it add no height, so a row with a title is as tall as one without */
   .lsub .pin-chip.lpin{display:block;max-width:150px;font-size:11px;line-height:16px;padding:0 8px}
 }
+/* every player dropdown shows eight names at a time on a desktop (six on a touch screen) and scrolls for the rest (one column, so the rows really are players) */
+.pp-menu,.dn-scope-inline .pp-menu,.dn-chips .pp-menu{--pp-row:38px;--pp-n:8;grid-template-columns:1fr;max-height:calc(var(--pp-n) * var(--pp-row) + 12px);overflow-y:auto;overscroll-behavior:contain}
+@media (pointer:coarse){.pp-menu,.dn-scope-inline .pp-menu,.dn-chips .pp-menu{--pp-row:46px;--pp-n:6}.pp-menu a{min-height:44px;box-sizing:border-box}}
+/* a list that scrolls hints at it: while there is more below, the last visible row fades into the panel (set by lib/scrollFade.js) */
+.pp-menu::after{content:"";grid-column:1/-1;position:sticky;bottom:-6px;height:40px;margin-top:-40px;background:linear-gradient(to bottom,transparent,var(--panel) 85%);pointer-events:none;border-radius:0 0 12px 12px}
+.pp-menu:not([data-more="true"])::after{display:none}

@@ -1,3 +1,4 @@
+import { scrollFadeRef } from '../lib/scrollFade.js';
 import { useEffect, useRef, useState } from 'react';
 import NameIcon from './NameIcon.jsx';
 
@@ -25,7 +26,7 @@ export default function PlayerPicker({ names: unsorted, current, hrefFor }) {
       {names.length > 1 && step(prev, 'Previous player', '‹')}
       {names.length > 1 && step(next, 'Next player', '›')}
       {open && (
-        <nav className="pp-menu" aria-label="Choose a player">
+        <nav className="pp-menu" ref={scrollFadeRef} aria-label="Choose a player">
           {names.map(n => <a key={n} href={hrefFor(n)} aria-current={n === current ? 'true' : undefined} onClick={() => setOpen(false)}><NameIcon name={n} size={18} />{n}</a>)}
         </nav>
       )}

@@ -1,3 +1,4 @@
+import { scrollFadeRef } from '../../lib/scrollFade.js';
 import { useEffect, useRef, useState } from 'react';
 import NameIcon from '../../components/NameIcon.jsx';
 
@@ -25,7 +26,7 @@ export default function ScopePicker({ who, players, onPick, bar = false, label =
           {who ? <NameIcon name={who} size={18} /> : null}<span>{who || 'A player'}</span><span className="pp-chev" aria-hidden="true">▾</span>
         </button>
         {open && (
-          <nav className="pp-menu" aria-label="Choose a player">
+          <nav className="pp-menu" ref={scrollFadeRef} aria-label="Choose a player">
             {players.map(n => <a key={n} href="#" aria-current={n === who ? 'true' : undefined} onClick={e => { e.preventDefault(); choose(n); }}><NameIcon name={n} size={18} />{n}</a>)}
           </nav>
         )}
