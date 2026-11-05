@@ -268,6 +268,15 @@ function compute(config, csvRows, today) {
     });
   });
 
+  /* A season with no playoffs (playoffSpots 0) is decided by the table: once it is over, the top qualified player is its champion (unless the admin
+     named one) and the top three form its podium. Everything that reads a champion (titles, the badge, XP, the Hall of Fame) then just works. */
+  seasons.forEach(s => {
+    if (!s.ok || s.status !== 'Complete' || s.spots > 0) return;
+    const top = seasonStandings(s.number).rows.filter(r => r.qualified).slice(0, 3);
+    s.podium = top.map(r => ({ name: r.name, score: r.score, games: r.games }));
+    if (!s.champion && top.length) { s.champion = top[0].name; s.championAuto = true; }
+  });
+
   /* titles */
   const titles = {};
   seasons.forEach(s => { if (s.champion) { const k = rosterKey.get(s.champion.toLowerCase()); if (k) titles[k] = (titles[k] || 0) + 1; } });

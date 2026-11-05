@@ -2042,3 +2042,12 @@ a.gr-face{position:relative}
 .dn-based + h2{margin-top:18px}
 /* an open player menu must paint over the sections below its box: the glass panels each make their own stacking layer, and a later one would cover it */
 .builder:has(.pp-menu),.dn-fieldset:has(.pp-menu),.dn-scopebar:has(.pp-menu),.dn-rz-grid:has(.pp-menu){position:relative;z-index:40}
+/* a season's podium, under the champion in the Hall of Fame */
+.podium{list-style:none;margin:12px 0 4px;padding:0;display:flex;flex-wrap:wrap;gap:8px 16px}
+.podium li{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel)}
+.podium-place{font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--brass)}
+.podium .podium-1{border-color:var(--brass)}
+/* Rankings' recent days: one block per date */
+.recent-day{margin:0 0 18px}
+.recent-date{margin:18px 0 8px;font-size:16px;font-weight:700;color:var(--muted)}
+.recent-day:first-of-type .recent-date{margin-top:8px}

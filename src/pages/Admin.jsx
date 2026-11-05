@@ -225,7 +225,7 @@ function loadSeason(ctx, editId) {
   if (!s) return blankSeason(allGroups);
   return {
     editId, group_id: s.group || '', name: s.name, start_date: s.start || '',
-    weeks: s.weeks || '', target_games: s.targetGames || '', qualify_pct: s.qualifyPct ?? '', playoff_spots: s.playoffSpots || '',
+    weeks: s.weeks || '', target_games: s.targetGames || '', qualify_pct: s.qualifyPct ?? '', playoff_spots: s.playoffSpots ?? '',
     champion_player_id: s.champion ? (playerIdByName.get(s.champion) || '') : '', notes: s.notes || '',
   };
 }
@@ -245,7 +245,7 @@ function SeasonForm({ editId, status, say }) {
       group_id: f.group_id, name: f.name.trim(), start_date: f.start_date,
       weeks: +f.weeks, target_games: f.target_games ? +f.target_games : 8,
       qualify_pct: f.qualify_pct ? +f.qualify_pct : 0.6,
-      playoff_spots: f.playoff_spots ? +f.playoff_spots : 4,
+      playoff_spots: f.playoff_spots === '' || f.playoff_spots == null ? 4 : Math.max(0, +f.playoff_spots || 0),   // 0 = no playoffs: the top of the table wins
       champion_player_id: f.champion_player_id || null, notes: f.notes || null,
     };
     setBusy(true); setMsg('Saving…');
@@ -270,7 +270,7 @@ function SeasonForm({ editId, status, say }) {
         <label className="f">Weeks <input type="text" id="sfWeeks" size={4} value={f.weeks} onChange={e => set({ weeks: e.target.value })} /></label>
         <label className="f">Target games <input type="text" id="sfTarget" size={4} value={f.target_games} onChange={e => set({ target_games: e.target.value })} /></label>
         <label className="f">Qualify % (0–1) <input type="text" id="sfPct" size={4} value={f.qualify_pct} onChange={e => set({ qualify_pct: e.target.value })} /></label>
-        <label className="f">Playoff spots <input type="text" id="sfSpots" size={4} value={f.playoff_spots} onChange={e => set({ playoff_spots: e.target.value })} /></label>
+        <label className="f">Playoff spots (0 = none: the top of the table wins) <input type="text" id="sfSpots" size={4} value={f.playoff_spots} onChange={e => set({ playoff_spots: e.target.value })} /></label>
       </div>
       <div className="controls"><label className="f">Champion <select id="sfChamp" value={f.champion_player_id} onChange={e => set({ champion_player_id: e.target.value })}>
         <option value="">Not decided</option>

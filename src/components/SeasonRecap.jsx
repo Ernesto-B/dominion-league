@@ -39,7 +39,14 @@ export default function SeasonRecap({ standings: st }) {
     <>
       <h2>Hall of Fame</h2>
       <div className="recap">
-        <div className="recapchamp"><TierIcon id="champion" size={56} alt="" /><div><span className="slabel">Season champion</span><h3>{s.champion ? <PlayerLink name={s.champion} /> : 'Not decided'}</h3></div></div>
+        <div className="recapchamp"><TierIcon id="champion" size={56} alt="" /><div><span className="slabel">Season champion{s.championAuto ? ' · top of the table' : ''}</span><h3>{s.champion ? <PlayerLink name={s.champion} /> : 'Not decided'}</h3></div></div>
+        {s.podium && s.podium.length > 1 && (
+          <ol className="podium" aria-label="Top three of the season">
+            {s.podium.map((r, i) => (
+              <li key={r.name} className={'podium-' + (i + 1)}><span className="podium-place">{['1st', '2nd', '3rd'][i]}</span><PlayerLink name={r.name} /><span className="meta">{(r.score * 100).toFixed(1)} · {r.games} {r.games === 1 ? 'game' : 'games'}</span></li>
+            ))}
+          </ol>
+        )}
         <div className="stats">
           {riser && <div className="stat has-icon"><img className="staticon" src="icons/stats/elo.png" alt="" /><div className="stat-body"><b className={tone(riser.eloChange)}>{sgn(riser.eloChange)}</b><span>biggest riser: {riser.name}</span></div></div>}
           {best && <div className="stat"><b>{pc(best.winPct)}</b><span>best record: {best.name}</span></div>}
