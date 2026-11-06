@@ -6,6 +6,7 @@
    The pictures are never committed (public/cards is in .gitignore); they are uploaded to the private Supabase bucket once that is set up (docs/card-images.md).
    The script reports what is missing, so a gap is known and not a blank tile: catalog entries with no image (for the expansions that have at least one), and images that match nothing
    (Plunder's Loot cards, for example, are not Kingdom cards and are not in the catalog). */
+import { EXTRA_PICTURES } from '../../src/dominion/extras.js';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -28,7 +29,9 @@ const byName = new Map();
 // a pile with several names (Knights, Castles, the split piles) can have a picture of its own, the pile card: it is stored as <expansion id>:pile:<pile name slugged>
 const pileRows = readTable(TABLES.find(t => t.table === 'dominion_kingdom_piles')).filter(r => Number(r.distinct_names) > 1);
 const piles = pileRows.map(r => ({ id: `${r.card_ids.split(/[|;,]/)[0].split(':')[0]}:pile:${slugOf(r.pile_id)}`, name: r.pile_id, exp: r.expansion }));
-[...cards, ...lands, ...artifacts, ...piles].forEach(e => { const k = normName(e.name); byName.set(k, [...(byName.get(k) || []), e]); });
+// the extra cards a catalog card's text hands out (Horse, Spoils, Madman, Mercenary and the cards of the Loot, Ruins and Rewards piles): not in the catalog, pictured as `extra:<name>` / `extra:<pile>:<name>`
+const extras = EXTRA_PICTURES.map(x => ({ id: x.id, name: x.name, exp: x.expansion }));
+[...cards, ...lands, ...artifacts, ...piles, ...extras].forEach(e => { const k = normName(e.name); byName.set(k, [...(byName.get(k) || []), e]); });
 // a card renamed in a later printing (Harem -> Farm) is often still pictured under its old name: that is the same card, so the old name is a fallback, never a rival to a current name
 cardRows.filter(r => r.previous_name).forEach(r => { const k = normName(r.previous_name); if (!byName.has(k)) byName.set(k, [cards.find(c => c.id === r.card_id)]); });
 

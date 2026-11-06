@@ -1,3 +1,5 @@
+import { Pile } from './GivenCards.jsx';
+import { pileByKey } from '../extras.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MAX_CARDS, MAX_LANDSCAPES, displayName, impliedSets, primaryType, resolveKingdom } from '../kingdom.js';
 import { decodeKingdom, encodeKingdom, looksLikeCode } from '../kingdomCode.js';
@@ -251,9 +253,9 @@ export function Setup({ catalog, setup }) {
   if (setup.needsBane) notes.push(<li key="bane"><b>Young Witch</b> needs a Bane card: add a Kingdom card that costs $2 or $3 to the kingdom.</li>);
   if (setup.bane) notes.push(<li key="bane"><b>Young Witch</b> needs a Bane card: <KingdomChip r={{ kind: 'card', id: setup.bane.cards[0].id, obj: setup.bane.cards[0] }} />. It’s an extra Kingdom pile.</li>);
   const why = (exp, n, chance) => (setup.hand ? `${n} of the ${setup.hand.total} kingdom cards are from ${exp}; half or more uses it.` : chance);
-  if (setup.platinumColony != null) notes.push(<li key="pc"><b>{setup.platinumColony ? 'Use' : 'Don’t use'} Platinum and Colony.</b> <span className="meta">{why('Prosperity', setup.hand?.prosperity, 'Decided by chance in proportion to how many Prosperity cards are in the kingdom.')}</span></li>);
-  if (setup.shelters != null) notes.push(<li key="sh"><b>{setup.shelters ? 'Use Shelters' : 'Use Estates'}</b> {setup.shelters ? 'instead of the three starting Estates.' : '(no Shelters).'} <span className="meta">{why('Dark Ages', setup.hand?.darkAges, 'Decided by chance in proportion to how many Dark Ages cards are in the kingdom.')}</span></li>);
-  if (setup.ruins) notes.push(<li key="ruins">A <b>Looter</b> is in the kingdom, so add the <b>Ruins</b> pile.</li>);
+  if (setup.platinumColony != null) notes.push(<li key="pc"><b>{setup.platinumColony ? 'Use' : 'Don’t use'} Platinum and Colony.</b> <span className="meta">{why('Prosperity', setup.hand?.prosperity, 'Decided by chance in proportion to how many Prosperity cards are in the kingdom.')}</span>{setup.platinumColony ? <Pile r={pileByKey('platinum-colony')} catalog={catalog} /> : null}</li>);
+  if (setup.shelters != null) notes.push(<li key="sh"><b>{setup.shelters ? 'Use Shelters' : 'Use Estates'}</b> {setup.shelters ? 'instead of the three starting Estates.' : '(no Shelters).'} <span className="meta">{why('Dark Ages', setup.hand?.darkAges, 'Decided by chance in proportion to how many Dark Ages cards are in the kingdom.')}</span>{setup.shelters ? <Pile r={pileByKey('shelters')} catalog={catalog} /> : null}</li>);
+  if (setup.ruins) notes.push(<li key="ruins">A <b>Looter</b> is in the kingdom, so add the <b>Ruins</b> pile.<Pile r={pileByKey('ruins')} catalog={catalog} /></li>);
   if (!notes.length) return null;
   return <section aria-labelledby="rz-setup" className="dn-rz-setup"><h3 id="rz-setup" className="dn-rz-sub">Don’t forget the setup</h3><ul className="dn-plain-list">{notes}</ul></section>;
 }

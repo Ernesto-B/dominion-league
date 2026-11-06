@@ -2,6 +2,7 @@
 /* Uploads the built card pictures (public/cards, from `npm run cards:build`) to the private `card-images` bucket of the LINKED Supabase project, with a confirmation first.
      npm run cards:upload              # asks first
      npm run cards:upload -- --dry-run # shows what would go up
+     npm run cards:upload -- --manifest-only [--yes]   # just the manifest (removes the old one first: `storage cp` of one file will not replace it)
    Needs the bucket to exist (`npm run db:apply -- images`). Uses the Supabase CLI's own login, so no key is read or stored here. The pictures go up folder by folder and the
    manifest goes LAST, so a member's browser never sees a manifest that names a picture which is not there yet. Re-running replaces what is there (same names, same pictures). */
 import { spawnSync } from 'node:child_process';
@@ -23,7 +24,11 @@ const ref = existsSync(refFile) ? readFileSync(refFile, 'utf8').trim() : '(not l
 const cp = (src, dst, recursive) => ['storage', 'cp', ...(recursive ? ['-r'] : []), '--experimental', '--linked', '--jobs', '4', '--cache-control', 'max-age=3600', src, dst];
 // A folder is copied INTO the bucket root (the trailing slash): the CLI then always keeps the folder's own name. Copying to `ss:///card-images/<folder>` is flat the first time but nests
 // `<folder>/<folder>/` once that folder exists, so a retry or a re-run would have doubled it up.
-const plan = [...folders.map(f => cp(path.join('public', 'cards', f), 'ss:///card-images/', true)), cp(path.join('public', 'cards', 'manifest.json'), 'ss:///card-images/manifest.json', false)];
+// `storage cp` of ONE file refuses to replace one that exists (KeyAlreadyExists; a recursive copy does replace), so the old manifest is removed right before the new one goes up. A device keeps its saved
+// copy of the manifest meanwhile, so nothing blinks. `--manifest-only` does just that last step (after a folder upload that stopped at the manifest).
+const rmManifest = ['storage', 'rm', '--experimental', '--linked', '--yes', 'ss:///card-images/manifest.json'];   // --yes: the CLI will not delete without a confirmation, and there is no prompt here
+const manifest = [rmManifest, cp(path.join('public', 'cards', 'manifest.json'), 'ss:///card-images/manifest.json', false)];
+const plan = flag('--manifest-only') ? manifest : [...folders.map(f => cp(path.join('public', 'cards', f), 'ss:///card-images/', true)), ...manifest];
 
 console.log(`Linked Supabase project: ${ref}\n${files.length} files, ${(bytes / 1048576).toFixed(1)} MB, to the private bucket "card-images". This will run, in order:`);
 plan.forEach(a => console.log('  supabase ' + a.join(' ')));
@@ -37,13 +42,15 @@ if (!flag('--yes')) {
   if (answer !== 'upload') { console.log('Cancelled — nothing was uploaded.'); process.exit(1); }
 }
 for (const a of plan) {
-  console.log(`\n→ supabase storage cp … ${a[a.length - 2].replace(/^.*public\/cards\//, '')}`);
+  const removing = a[1] === 'rm';   // removing a manifest that is not there yet is fine
+  console.log(removing ? '\n→ supabase storage rm … manifest.json (the old one)' : `\n→ supabase storage cp … ${a[a.length - 2].replace(/^.*public\/cards\//, '')}`);
   let r;
   for (let attempt = 1; attempt <= 4; attempt++) {   // a dropped connection part-way through is retried: the copy overwrites what is there, so it is safe to repeat
     r = spawnSync('supabase', a, { cwd: ROOT, stdio: 'inherit' });
     if (r.status === 0) break;
     if (attempt < 4) console.log(`\n(attempt ${attempt} failed, exit ${r.status}; trying again)`);
   }
+  if (removing) continue;
   if (r.status !== 0) { console.error(`\nStopped (exit ${r.status}). The manifest is only uploaded at the very end, so the site is not affected by a partial upload.`); process.exit(r.status || 1); }
 }
 console.log('\nUploaded. Signed-in members now get the pictures from the bucket.');

@@ -6,6 +6,7 @@ import { PageShortcuts } from '../../components/Shortcuts.jsx';
 import { keepScrollOnce } from '../../lib/navMemory.js';
 import { hasTrail, popTrail, pushTrail } from '../../lib/randomTrail.js';
 import PlayHistory from '../components/PlayHistory.jsx';
+import GivenCards from '../components/GivenCards.jsx';
 import ScopePicker from '../components/ScopePicker.jsx';
 import { writeQuery } from '../urlState.js';
 import { useLeagueGames } from '../useLeagueGames.js';
@@ -108,11 +109,15 @@ export default function CardDetail({ id, query = '' }) {
       </Section>
       )}
 
-      {lg && lg.stats && (
-        <Section title="In our games" id="cd-plays">
-          <div className="builder"><ScopePicker who={lg.who} players={lg.players} onPick={n => writeQuery(cardFiltersToQuery({ ...filters, by: n }))} label="Counted for" /><PlayHistory entry={plays} lg={lg} /></div>
-        </Section>
-      )}
+      {/* "In our games" takes half the width, and the cards the text hands out sit beside it */}
+      <div className="dn-pair">
+        {lg && lg.stats && (
+          <Section title="In our games" id="cd-plays">
+            <div className="builder"><ScopePicker who={lg.who} players={lg.players} onPick={n => writeQuery(cardFiltersToQuery({ ...filters, by: n }))} label="Counted for" /><PlayHistory entry={plays} lg={lg} /></div>
+          </Section>
+        )}
+        <GivenCards catalog={catalog} item={card} id="cd-gives" />
+      </div>
 
       {/* a pile of one name (all 10 or 12 copies are this card) has nothing to say beyond "physical copies"; only a shared pile (Knights, Castles, the split piles) is worth a box */}
       {pile && pile.names > 1 && (

@@ -2139,3 +2139,30 @@ tr.stand1 td:first-child{--m:#E3B84A}tr.stand2 td:first-child{--m:#B7C0CC}tr.sta
 /* the Player page's one-line note beside the big tier icon */
 .rs-note{display:block;width:auto;margin-top:2px;font-size:13px;font-weight:600;cursor:help}
 .rs-note.trial{color:var(--felt)} .rs-note.grace{color:var(--brick)}
+
+/* a pile the text hands out (Loot, Ruins, Rewards): one line with a fan of its cards, opened to show them all */
+.dn-pile{margin-top:14px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.dn-wall + .dn-pile{margin-top:18px}
+.dn-pile summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:10px}
+.dn-pile summary::-webkit-details-marker{display:none}
+.dn-pile summary::after{content:"▾";margin-left:auto;color:var(--muted);transition:transform .15s ease}
+.dn-pile[open] summary::after{transform:rotate(180deg)}
+.dn-pile summary:hover{background:color-mix(in srgb,var(--text) 5%,transparent)}
+.dn-pile-fan{display:flex;flex:none;min-width:84px}
+.dn-pile-fan .dn-face{width:38px;margin-left:-14px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+.dn-pile-fan .dn-face:first-child{margin-left:0}
+.dn-pile-name{display:grid;gap:2px}.dn-pile-name .meta{display:inline-flex;align-items:center;gap:5px;font-size:12px}
+.dn-pile-grid{padding:4px 14px 16px}
+/* a card page's "In our games" and the cards its text hands out, side by side at half width each (stacked on a narrow screen) */
+.dn-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:32px;align-items:start}
+@media (max-width:900px){.dn-pair{grid-template-columns:minmax(0,1fr)}}
+
+/* several cards the text hands out: a wall of pictures, packed like the game report's kingdom tab (a landscape-shaped card, an Artifact, takes two columns) */
+.dn-wall{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px;align-items:start}
+.dn-wall li{min-width:0}.dn-wall li:has(.dn-face.wide){grid-column:span 2}
+.dn-wall a,.dn-wall li>span{display:block}
+.dn-wall .dn-face{width:100%}
+.dn-wall-text{display:grid;place-items:center;min-height:90px;padding:8px;border:1px solid var(--line);border-radius:8px;font-weight:600;font-size:13px;text-align:center}
+.dn-wall.one{grid-template-columns:minmax(0,170px)}.dn-wall.one li:has(.dn-face.wide){grid-column:auto;width:min(100%,260px)}.dn-wall.one:has(.dn-face.wide){grid-template-columns:minmax(0,260px)}
+/* a picture on the wall is a button that opens the large card */
+.dn-wall .dn-face{cursor:zoom-in}

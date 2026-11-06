@@ -58,3 +58,10 @@ Until step 2, a production build shows no pictures (the old text tiles), because
 ## Not done / ideas
 - A larger source for the few 200 / 320 px pictures (Nobles, Cardinal, Livery, Way of the Goat) would sharpen their enlarge view.
 - The Loot cards, Rewards, Ruins, Shelters, Colony / Platinum and the basic cards have pictures but no catalog entries, so nothing shows them yet.
+
+## Extra cards a card hands out (Horse, Spoils, Madman, Mercenary, the Loot, Ruins and Reward piles) and Artifacts
+- `src/dominion/extras.js` lists the non-catalog cards that get a picture (`extra:horse` ...); the build script matches their files by name like any other card and writes `extra/<name>.webp`. They have no page, only a picture.
+- A card or landscape page shows a "Cards it brings into play" section (`components/GivenCards.jsx`): `relatedOf()` reads the item's own printed text for those names and for any Artifact (Treasure Chest on Swashbuckler,
+  Flag, Horn, Key, Lantern), so nothing is guessed. An Artifact links to its page. The piles of different cards (Plunder's Loot, 15; Dark Ages' Ruins, 5; Cornucopia & Guilds' Rewards, 6, which Joust gives) are one closed line that opens to show every card; they match only a text that GIVES the pile (`gain a Loot`), so Vagrant, which just looks for Ruins, shows none. On a card or landscape page the section sits beside "In our games" at half width (`.dn-pair`).
+- To see the new pictures live: `npm run cards:build -- ~/Downloads/dominion_card_images` then `npm run cards:upload` (the owner's step; it writes to the private bucket).
+

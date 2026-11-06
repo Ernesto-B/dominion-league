@@ -6,6 +6,7 @@ import { PageShortcuts } from '../../components/Shortcuts.jsx';
 import { keepScrollOnce } from '../../lib/navMemory.js';
 import { hasTrail, popTrail, pushTrail } from '../../lib/randomTrail.js';
 import PlayHistory from '../components/PlayHistory.jsx';
+import GivenCards from '../components/GivenCards.jsx';
 import ScopePicker from '../components/ScopePicker.jsx';
 import { writeQuery } from '../urlState.js';
 import { useLeagueGames } from '../useLeagueGames.js';
@@ -99,11 +100,14 @@ export default function LandscapeDetail({ id, query = '' }) {
       </Section>
       )}
 
-      {lg && lg.stats && (
-        <Section title="In our games" id="ld-plays">
-          <div className="builder"><ScopePicker who={lg.who} players={lg.players} onPick={n => writeQuery(landscapeFiltersToQuery({ ...filters, by: n }))} label="Counted for" /><PlayHistory entry={lg.stats.landscapes.get(l.id)} lg={lg} /></div>
-        </Section>
-      )}
+      <div className="dn-pair">
+        {lg && lg.stats && (
+          <Section title="In our games" id="ld-plays">
+            <div className="builder"><ScopePicker who={lg.who} players={lg.players} onPick={n => writeQuery(landscapeFiltersToQuery({ ...filters, by: n }))} label="Counted for" /><PlayHistory entry={lg.stats.landscapes.get(l.id)} lg={lg} /></div>
+          </Section>
+        )}
+        <GivenCards catalog={catalog} item={l} id="ld-gives" />
+      </div>
 
       {!picture(l.id) && (
       <Section title="Recorded tags" id="ld-tags">

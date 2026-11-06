@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { runningEntry } from '../lib/version.js';
 
 /* Card pictures: WHERE they come from lives in this one file. Everything else asks `cardImage(id)` and hands the result to <CardFace>.
    Two homes, tried in this order (the reverse in `npm run dev`, so a developer's own copy wins):
@@ -18,6 +19,9 @@ const MAX_PARALLEL = 12;   // the database host speaks HTTP/2, which runs many r
 let manifest = null, loading = null, failed = false, mode = 'local';   // mode: where the manifest was found, 'bucket' or 'local'
 const listeners = new Set();
 const announce = () => listeners.forEach(f => f());
+
+// which build of the site is running (the hashed entry script's name; null in dev)
+const thisBuild = () => { try { return typeof document === 'undefined' ? null : runningEntry(document); } catch { return null; } };
 
 const parse = text => { try { const m = JSON.parse(text); return m && m.items ? m : null; } catch { return null; } };
 
@@ -40,11 +44,13 @@ export function loadManifest(fetcher = (...a) => fetch(...a)) {
   failed = false;
   const saved = (() => { try { const s = JSON.parse(localStorage.getItem(MANIFEST_KEY) || 'null'); return s && s.m && s.m.items ? s : null; } catch { return null; } })();
   if (saved) { manifest = saved.m; mode = saved.mode || 'local'; }   // shown at once; refreshed below when it is old
-  const fresh = !!saved && saved.mode === order()[0][0] && Date.now() - saved.at < REFRESH_MS;   // a list saved from another source than this build prefers is out of date at once
+  // a saved list is used as it is for 6 hours, unless it came from another source than this build prefers, or from another BUILD of the site (a new deploy may have new pictures: the list is asked for again
+  // once per deploy), or this is `npm run dev` (the local folder is free to ask and changes whenever the pictures are rebuilt)
+  const fresh = !!saved && saved.mode === order()[0][0] && Date.now() - saved.at < REFRESH_MS && saved.build === thisBuild() && !(import.meta.env && import.meta.env.DEV);
   const fetchIt = async () => {
     for (const [name, get] of order()) {
       const m = await get(fetcher);
-      if (m) { manifest = m; mode = name; try { localStorage.setItem(MANIFEST_KEY, JSON.stringify({ m, mode: name, at: Date.now() })); } catch { /* storage full: not kept */ } if (name === 'bucket') keepPictures(); return; }
+      if (m) { manifest = m; mode = name; try { localStorage.setItem(MANIFEST_KEY, JSON.stringify({ m, mode: name, at: Date.now(), build: thisBuild() })); } catch { /* storage full: not kept */ } if (name === 'bucket') keepPictures(); return; }
     }
     if (!saved) { manifest = { v: 2, items: {} }; failed = true; }   // none anywhere: no pictures for now
   };
