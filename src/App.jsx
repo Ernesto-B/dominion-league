@@ -22,6 +22,7 @@ import { popup } from './components/popup.js';
 import BottomNav from './components/BottomNav.jsx';
 import OfflineBar from './components/OfflineBar.jsx';
 import UpdateBar from './components/UpdateBar.jsx';
+import NewGamesBar from './components/NewGamesBar.jsx';
 import PullToRefresh from './components/PullToRefresh.jsx';
 
 function Shell() {
@@ -89,6 +90,7 @@ function Shell() {
       {ready && <BottomNav ready={{ ...state, route }} hash={hash} />}
       {ready && (['home', 'season', 'games', 'players', 'records', 'night', 'dominion'].includes(route.route)) && <ScrollTopButton lift={route.route === 'night'} />}
       {ready && <Shortcuts ready={{ ...state, route }} />}
+      {ready && !state.offlineAt && <NewGamesBar mark={state.gameMark} onRefresh={boot} />}
       <UpdateBar />
       <PopLayer />
       <PeekLayer />

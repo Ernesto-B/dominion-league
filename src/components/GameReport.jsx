@@ -3,7 +3,7 @@ import { usePage } from '../PageContext.js';
 import { f0, long, ord, sgn } from '../lib/format.js';
 import { gameReport } from '../lib/gameReport.js';
 import { TIERS } from '../lib/achievements.js';
-import { PART_ORDER, XP, partLabel } from '../lib/xp.js';
+import { PART_ORDER, partLabel } from '../lib/xp.js';
 import PlayerLink from './PlayerLink.jsx';
 import SetIcon from './SetIcon.jsx';
 import LandscapePills from './LandscapePills.jsx';
@@ -197,7 +197,12 @@ export function Kingdom({ rep, game, loaded }) {
   const level = c => Math.min(6, Math.max(2, c.coins)) - 2;   // the same cost levels as the bars above ($2 or less, $3, $4, $5, $6+); a Debt card has none
   const fresh = new Set(((k.history && k.history.firstInGroup) || []).map(c => c.id));   // cards this group had never played before this game
   const freshLands = new Set(((k.history && k.history.firstLandscapes) || []).map(l => l.id));   // landscapes this group had never played with before this game
-  const hit = c => (!focus ? true : focus.kind === 'new' ? fresh.has(c.id) : focus.kind === 'type' ? c.types.includes(focus.key) : focus.kind === 'cost' ? c.debt === 0 && level(c) === focus.key : (c.mechanicIds || []).some(t => REQUIRE_RULES[focus.key].tags.includes(t)));
+  // cards and landscapes this game was the first time each player met (the same test XP pays for); picking a player below shows just theirs
+  const newBy = new Map((rep.players || []).map(p => [p.name, new Set([...(p.newCards || []).map(c => c.id), ...(p.newLandscapes || []).map(l => l.id)])]));
+  const byPlayer = focus && focus.kind === 'player' ? newBy.get(focus.key) || new Set() : null;
+  const isNew = (id, set) => (byPlayer ? byPlayer.has(id) : set.has(id));   // the tag: new to the picked player, else new to the group
+  const hit = c => (!focus ? true : focus.kind === 'player' ? byPlayer.has(c.id) : focus.kind === 'new' ? fresh.has(c.id) : focus.kind === 'type' ? c.types.includes(focus.key) : focus.kind === 'cost' ? c.debt === 0 && level(c) === focus.key : (c.mechanicIds || []).some(t => REQUIRE_RULES[focus.key].tags.includes(t)));
+  const landHit = id => (focus ? (focus.kind === 'player' ? byPlayer.has(id) : focus.kind === 'new' && freshLands.has(id)) : true);   // landscapes only answer to the "new" picks
   const pickCost = i => setFocus(focus && focus.kind === 'cost' && focus.key === i ? null : { kind: 'cost', key: i });
   const cards = k.cards.map(c => ({ r: { kind: 'card', id: c.id, obj: c }, c })), lands = k.landscapes.map(l => ({ r: { kind: 'landscape', id: l.id, obj: l } }));
   // a percentile of a handful of kingdoms says nothing, so it needs a few to compare with
@@ -221,7 +226,7 @@ export function Kingdom({ rep, game, loaded }) {
         </li>
       ))}</ol>
       {k.debtCards > 0 && <p className="meta">{k.debtCards} Debt card{k.debtCards === 1 ? '' : 's'} not counted in the average.</p>}
-      <KingdomFacts k={k} focus={focus} setFocus={setFocus} />
+      <KingdomFacts k={k} focus={focus} setFocus={setFocus} newBy={newBy} />
       <div className="gr-cardshead">
         <h4 className="gr-h">The cards</h4>
         <div className="gr-cardsacts">
@@ -235,11 +240,11 @@ export function Kingdom({ rep, game, loaded }) {
       {/* a card with a picture is the card itself (tap for its page); one without keeps its chip, so the shelf is never missing anything */}
       {(() => {
         const cardEntries = cards.map(({ r, c }) => ({ r, node: faces && picture(c.id)
-          ? <a key={r.id} className={'gr-face' + (hit(c) ? '' : ' dim')} href={cardHref(c.id)} title={c.name} onClick={e => enlarge(e, { kind: 'card', s: { key: c.pileKey, name: c.name, expansion: c.expansion, cards: [c] } })}><CardFace id={c.id} name={c.name} />{fresh.has(c.id) && <span className="gr-newtag left">New</span>}</a>
+          ? <a key={r.id} className={'gr-face' + (hit(c) ? '' : ' dim')} href={cardHref(c.id)} title={c.name} onClick={e => enlarge(e, { kind: 'card', s: { key: c.pileKey, name: c.name, expansion: c.expansion, cards: [c] } })}><CardFace id={c.id} name={c.name} />{isNew(c.id, fresh) && <span className="gr-newtag left">New</span>}</a>
           : <KingdomChip key={r.id} r={r} compact dim={!hit(c)} /> }));
         const landEntries = lands.map(({ r }) => ({ r, node: faces && picture(r.id)
-          ? <a key={r.id} className={'gr-face wide' + (focus && !(focus.kind === 'new' && freshLands.has(r.id)) ? ' dim' : '')} href={landscapeHref(r.id)} title={r.obj.name} onClick={e => enlarge(e, { kind: 'landscape', l: { landscape: r.obj } })}><CardFace id={r.id} name={r.obj.name} />{freshLands.has(r.id) && <span className="gr-newtag left">New</span>}</a>
-          : <KingdomChip key={r.id} r={r} compact dim={!!focus && !(focus.kind === 'new' && freshLands.has(r.id))} /> }));
+          ? <a key={r.id} className={'gr-face wide' + (focus && !landHit(r.id) ? ' dim' : '')} href={landscapeHref(r.id)} title={r.obj.name} onClick={e => enlarge(e, { kind: 'landscape', l: { landscape: r.obj } })}><CardFace id={r.id} name={r.obj.name} />{isNew(r.id, freshLands) && <span className="gr-newtag left">New</span>}</a>
+          : <KingdomChip key={r.id} r={r} compact dim={!!focus && !landHit(r.id)} /> }));
         return layout === 'compact' ? (
           <div className="gr-compact">
             <div className={'gr-compact-cards' + (faces ? '' : ' chips')}>{cardEntries.map(e => e.node)}</div>
@@ -258,7 +263,7 @@ export function Kingdom({ rep, game, loaded }) {
 }
 
 // what the cards are and how they sit in the group's history: types, tools, price range, and which cards were new to the group
-function KingdomFacts({ k, focus, setFocus }) {
+function KingdomFacts({ k, focus, setFocus, newBy }) {
   const h = k.history, names = list => list.map(c => c.name).join(', ');
   const newItems = h ? [...h.firstInGroup, ...(h.firstLandscapes || [])] : [];   // cards and landscapes the group had never played before this game
   const same = (kind, key) => !!focus && focus.kind === kind && focus.key === key;
@@ -270,6 +275,8 @@ function KingdomFacts({ k, focus, setFocus }) {
     ['In this group', h ? <span>{newItems.length
       ? <button type="button" className="dn-chip gr-newchip" aria-pressed={same('new', 'new')} title={`First time played here: ${names(newItems)}`} onClick={() => pick('new', 'new', 'New to the group')}>New to the group<span className="n">{newItems.length}</span></button>
       : <>Every card and landscape has been played here before.</>}{h.mostPlayed ? <><br />Most played: <b>{h.mostPlayed.card.name}</b>, {h.mostPlayed.before} time{h.mostPlayed.before === 1 ? '' : 's'} before this.</> : null}</span> : null],
+    // who this game showed something new to: one chip per player with the count; pressing one marks just their cards below
+    ['New to a player', (() => { const who = [...newBy].filter(([, s]) => s.size > 0); return who.length ? <span className="gr-pills">{who.map(([n, s]) => <button key={n} type="button" className="dn-chip gr-newchip" aria-pressed={same('player', n)} title={`First time ${n} has seen these`} onClick={() => pick('player', n, n)}>{n}<span className="n">{s.size}</span></button>)}</span> : null; })()],
   ].filter(([, v]) => v);
   return (
     <>
@@ -337,7 +344,6 @@ export function Rewards({ rep, me, loaded }) {
   const { gid, hashFor, catalog } = usePage();
   const withXp = rep.players.filter(p => p.xp);
   const levels = withXp.filter(p => p.xp.levelUp), many = new Set([...levels.map(p => p.name), ...rep.players.filter(p => p.badges.length).map(p => p.name)]).size > 1;
-  const anyNew = rep.players.some(p => p.newCards.length || p.newLandscapes.length);
   return (
     <>
       <ul className="gr-xps">
@@ -358,21 +364,6 @@ export function Rewards({ rep, me, loaded }) {
           </ul>
         </>
       )}
-      {anyNew && (
-        <>
-          <h4 className="gr-h">New to them</h4>
-          <p className="meta">Each new card is worth {XP.newCard} XP, each new landscape {XP.newLandscape}.</p>
-          <ul className="gr-new">
-            {rep.players.filter(p => p.newCards.length || p.newLandscapes.length).map(p => (
-              <li key={p.name}>
-                <b>{p.name}</b> <span className="meta">{p.newCards.length} card{p.newCards.length === 1 ? '' : 's'}{p.newLandscapes.length ? `, ${p.newLandscapes.length} landscape${p.newLandscapes.length === 1 ? '' : 's'}` : ''}</span>
-                <div className="dn-kchips">{[...p.newCards.map(c => ({ kind: 'card', id: c.id, obj: c })), ...p.newLandscapes.map(l => ({ kind: 'landscape', id: l.id, obj: l }))].map(r => <KingdomChip key={r.kind + r.id} r={r} expansion plain catalog={catalog} />)}</div>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      {!anyNew && loaded && <p className="meta">Nobody saw a card or landscape for the first time here.</p>}
     </>
   );
 }

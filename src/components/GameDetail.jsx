@@ -11,7 +11,7 @@ import SetIcon from './SetIcon.jsx';
 const GameKingdom = lazy(() => import('../dominion/components/GameKingdom.jsx'));
 
 // The expanded per-player breakdown under a game row.
-export default function GameDetail({ game: g, onEdit, me = null }) {
+export default function GameDetail({ game: g, onEdit, me = null, editShown = false }) {
   const { D, gid, hashFor } = usePage();
   // Season score is a 0-1 ratio internally, but displayed x1000 so it reads as a whole-number
   // points total instead of a 3-decimal fraction.
@@ -44,7 +44,7 @@ export default function GameDetail({ game: g, onEdit, me = null }) {
       {g.notes && <p className="note">{g.notes}</p>}
       <p className="gr-actions">
         <a className="btn" href={hashFor('games', gid, g.line)} onClick={e => e.stopPropagation()}>Full game report →</a>
-        {onEdit && <button type="button" className="ghost dn-only-sm" onClick={e => { e.stopPropagation(); onEdit(g.line); }}>Edit game</button>}
+        {onEdit && <button type="button" className={'ghost' + (editShown ? '' : ' dn-only-sm')} onClick={e => { e.stopPropagation(); onEdit(g.line); }}>Edit game</button>}
       </p>
     </>
   );

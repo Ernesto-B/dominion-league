@@ -63,7 +63,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
   // Add / Replace take the viewer to the full list to choose from, and the choice is waiting here when they come back
   const choose = (kind, index) => {
     const label = index == null ? null : kind === 'card' ? state.slots[index].name : state.landscapes[index].landscape.name;
-    startKingdomPick({ kind, index, label, labelId: index == null ? null : kind === 'card' ? slotCardId(state.slots[index]) : state.landscapes[index].landscape.id, taken: [...items(), ...(avoid || [])].map(i => i.id), returnHash: window.location.hash, scrollY: window.scrollY });
+    startKingdomPick({ kind, index, label, labelId: index == null ? null : kind === 'card' ? slotCardId(state.slots[index]) : state.landscapes[index].landscape.id, taken: items().map(i => i.id), blocked: (avoid || []).map(i => i.id), returnHash: window.location.hash, scrollY: window.scrollY });
     window.location.hash = dominionHref(kind === 'card' ? 'cards' : 'landscapes');
   };
   useEffect(() => {

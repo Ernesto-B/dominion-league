@@ -155,6 +155,9 @@ export function withRolledKingdom(st, { options, items, rolledQ, sets, landscape
   };
 }
 // a game is under way (past the Kingdom step with a clock or scores): handing it a new kingdom would replace what was played
+export const nightTabKey = gid => `dl.nighttab.${gid}`;   // sessionStorage: which table (0 or 1) Game night shows
+// a night that has been touched at all (someone seated, a kingdom chosen, or a later step): its table is taken
+export const nightStarted = st => st.picked.length > 0 || st.kingdom.length > 0 || st.step !== 'players';
 export const nightInProgress = st => !['players', 'kingdom'].includes(st.step);
 
 /* "Play this kingdom again": the night as it becomes when a past game's kingdom is handed to Game night. The cards and landscapes are placed as if picked by hand (so the setup notes, Bane,

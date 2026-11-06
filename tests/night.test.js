@@ -186,12 +186,23 @@ describe('"Play this kingdom again"', () => {
     expect(a).toMatchObject({ step: 'kingdom', kingdomMode: 'manual', handEdited: true, kingdom: items, rolledQ: null, startedAt: null });
     expect(withGameKingdom(blankNight(), { items, sets: [], landscapes: [] }).step).toBe('players');
   });
-  it('asks before replacing a game that is under way, and says whether it went ahead', async () => {
-    const m = memory(); const ok = { ...blankNight(), step: 'play', picked: ['Ann', 'Bob'] }; saveNight(m, 'g', ok);
-    expect(await playAgain({ game, catalog, gid: 'g', storage: m, confirmFn: () => false })).toBe(false);
-    expect(loadNight(m, 'g').step).toBe('play');                                  // refused: untouched
-    expect(await playAgain({ game, catalog, gid: 'g', storage: m, confirmFn: () => true })).toBe(true);
-    expect(loadNight(m, 'g')).toMatchObject({ step: 'kingdom', kingdomMode: 'manual' });
+  it('uses Table 1 when it is idle, otherwise a new Table 2 on step 1 with the game\'s players ticked', async () => {
+    const m = memory(); const g = { ...game, names: ['Ann', 'Bob', 'Cy'] };
+    expect(await playAgain({ game: g, catalog, gid: 'g', storage: m })).toBe(true);
+    expect(loadNight(m, 'g', undefined, undefined, 0)).toMatchObject({ step: 'players', kingdomMode: 'manual' });   // nobody seated yet: Table 1, Players step
+    saveNight(m, 'g', { ...blankNight(), step: 'play', picked: ['Dee', 'Eve'] });                                  // Table 1 now under way
+    expect(await playAgain({ game: g, catalog, gid: 'g', storage: m })).toBe(true);
+    expect(loadNight(m, 'g', undefined, undefined, 0).step).toBe('play');                                           // Table 1 untouched
+    expect(loadNight(m, 'g', undefined, undefined, 1)).toMatchObject({ step: 'players', picked: ['Ann', 'Bob', 'Cy'], kingdom: [{ kind: 'card', id: 'a:one' }, { kind: 'landscape', id: 'a:way', on: 'a:two' }] });
+  });
+  it('asks before replacing a Table 2 that is under way, and says whether it went ahead', async () => {
+    const m = memory(); const g = { ...game, names: ['Ann', 'Bob'] };
+    saveNight(m, 'g', { ...blankNight(), step: 'play', picked: ['Dee', 'Eve'] });
+    saveNight(m, 'g', { ...blankNight(), step: 'play', picked: ['Ann', 'Bob'] }, undefined, 1);
+    expect(await playAgain({ game: g, catalog, gid: 'g', storage: m, confirmFn: () => false })).toBe(false);
+    expect(loadNight(m, 'g', undefined, undefined, 1).step).toBe('play');                                           // refused: untouched
+    expect(await playAgain({ game: g, catalog, gid: 'g', storage: m, confirmFn: () => true })).toBe(true);
+    expect(loadNight(m, 'g', undefined, undefined, 1).step).toBe('players');
     expect(await playAgain({ game: {}, catalog, gid: 'g', storage: m })).toBe(false);   // nothing logged: nothing to play
   });
 });

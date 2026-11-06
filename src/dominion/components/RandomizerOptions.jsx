@@ -75,6 +75,16 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
           </>}
         </div>
 
+        <p className="dn-rz-lab">Keep to at most</p>
+        <div className="dn-chips" title="Counted from the recorded mechanics, so a card that does this but isn’t tagged won’t be counted.">
+          {[['draw', 'Drawers'], ['trash', 'Trashers'], ['village', '+Actions'], ['buy', '+Buy']].map(([r, label]) => (
+            <label key={r} className="dn-atk">{label} <select className="dn-num" aria-label={`Most ${label} cards`} value={opts.maxOf?.[r] ?? ''}
+              onChange={e => { const next = { ...(opts.maxOf || {}) }; if (e.target.value === '') delete next[r]; else next[r] = Number(e.target.value); setOpts({ maxOf: next }); }}>
+              <option value="">any</option>{[0, 1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+            </select></label>
+          ))}
+        </div>
+
         <p className="dn-rz-lab">Cost spread</p>
         <div className="dn-chips" role="radiogroup" aria-label="Cost spread">
           <Chip pressed={!opts.costSpread} onClick={() => setOpts({ costSpread: null })}>Off</Chip>

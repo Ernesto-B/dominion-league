@@ -9,6 +9,7 @@ import LandscapePills from './LandscapePills.jsx';
 import SetIcon from './SetIcon.jsx';
 import TierIcon from './TierIcon.jsx';
 import TypePill from './TypePill.jsx';
+import PlayAgain from '../dominion/components/PlayAgain.jsx';
 
 const GameKingdom = lazy(() => import('../dominion/components/GameKingdom.jsx'));
 const tone = (d, eps) => (d > eps ? 'up-t' : d < -eps ? 'down-t' : '');
@@ -61,6 +62,7 @@ export default function GameCards({ games, open, toggle, onEdit, showDate = fals
                 <p className="gr-actions">
                   <a className="btn" href={hashFor('games', gid, g.line)}>Full game report →</a>
                   {onEdit && <button type="button" className="ghost" onClick={() => onEdit(g.line)}>Edit game</button>}
+                  <PlayAgain game={g} icon />
                 </p>
               </div>
             )}

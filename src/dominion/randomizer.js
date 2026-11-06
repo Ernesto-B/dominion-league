@@ -42,6 +42,14 @@ export const COST_SPREADS = {
 };
 const costLevel = info => Math.min(6, Math.max(2, (info.cards[0].coins || 0) + (info.cards[0].debt || 0))) - 2;   // 0 ($2 or less) .. 4 ($6 or more)
 
+/* "At most N of these": a cap on how many piles in a kingdom do one thing (five Drawers is a very different game from two). Keyed by the REQUIRE_RULES mechanic rules, counted with the same
+   recorded tags, so a card that does it but isn't tagged isn't counted (a cap can let one through, never refuse a card wrongly). */
+export const CAP_RULES = ['draw', 'village', 'trash', 'buy'];
+export const MAX_CAP = 8;
+const capsOf = o => Object.entries(o.maxOf || {}).filter(([r, n]) => CAP_RULES.includes(r) && Number.isInteger(n) && n >= 0);
+const capCount = (chosen, rule) => chosen.filter(i => satisfies(i, rule)).length;
+const capBroken = (chosen, o) => { const hit = capsOf(o).find(([r, n]) => capCount(chosen, r) > n); return hit ? (hit[1] === 0 ? `No ${REQUIRE_RULES[hit[0]].chip} cards was asked for` : `At most ${hit[1]} ${REQUIRE_RULES[hit[0]].chip} card${hit[1] === 1 ? '' : 's'} was asked for`) : null; };
+
 export const MAX_ATTACK_CHOICES = [0, 1, 2, 3];   // "no Attacks", "at most 1"... ; null = any number
 export const DEFAULT_OPTIONS = Object.freeze({
   expansions: [],          // empty = every owned expansion
@@ -50,6 +58,7 @@ export const DEFAULT_OPTIONS = Object.freeze({
   landscapeTypes: [],      // empty = all five types
   maxAttacks: null,        // null = any number of Attack piles
   minAttacks: 0,           // at least this many Attack piles
+  maxOf: {},               // { draw: 3, trash: 2, ... }: at most this many piles with that mechanic (CAP_RULES)
   maxCost: null,           // null = any, else no card costs more than this many coins (and none costs Debt)
   reaction: false,         // if there is an Attack, make sure there is a Reaction too
   require: [],             // keys of REQUIRE_RULES
@@ -209,6 +218,7 @@ const normalize = (opts, catalog = null) => {
   o.landscapes = Math.max(0, Math.min(6, Number(o.landscapes) || 0));
   o.themes = [...new Set((o.themes || []).filter(t => THEMES[t]))];
   o.minAttacks = Math.max(0, Math.min(12, Math.round(Number(o.minAttacks) || 0)));
+  o.maxOf = Object.fromEntries(Object.entries(o.maxOf || {}).filter(([r, n]) => CAP_RULES.includes(r) && Number.isInteger(n) && n >= 0).map(([r, n]) => [r, Math.min(MAX_CAP, n)]));
   o.maxCost = o.maxCost != null && Number(o.maxCost) >= 2 ? Math.min(10, Math.round(Number(o.maxCost))) : null;
   return o;
 };
@@ -216,6 +226,7 @@ const attackCount = infos => infos.filter(i => i.attack).length;
 
 /* Does a chosen set of piles obey every rule? Returns null when it does, otherwise a short sentence for the first rule broken. */
 function breaks(chosen, o, wanted, quotas = []) {
+  const capped = capBroken(chosen, o); if (capped) return capped;
   if (o.maxAttacks != null && attackCount(chosen) > o.maxAttacks) return o.maxAttacks === 0 ? 'No Attacks was asked for' : `At most ${o.maxAttacks} Attack${o.maxAttacks === 1 ? '' : 's'} was asked for`;
   if (o.reaction && attackCount(chosen) > 0 && !chosen.some(i => i.reaction)) return 'A Reaction is required when there is an Attack';
   if (o.junkTrash && chosen.some(i => i.junking) && !chosen.some(i => satisfies(i, 'trash'))) return 'A trashing card is required when an Attack gives opponents junk';
@@ -230,7 +241,7 @@ function breaks(chosen, o, wanted, quotas = []) {
 function poolFor(catalog, o) {
   const { list, byCardId } = pileInfos(catalog);
   const banned = new Set(o.exclude.map(id => byCardId.get(id)?.key).filter(Boolean));
-  return list.filter(i => (!o.expansions.length || o.expansions.includes(i.expansion)) && !banned.has(i.key) && !(o.maxAttacks === 0 && i.attack) && !overCost(i, o));
+  return list.filter(i => (!o.expansions.length || o.expansions.includes(i.expansion)) && !banned.has(i.key) && !(o.maxAttacks === 0 && i.attack) && !overCost(i, o) && !capsOf(o).some(([r, n]) => n === 0 && satisfies(i, r)));
 }
 
 // the played-count weighting: plays is Map(pile key -> games). Piles played less get more chance ('favor'), or those played more ('favorPlayed').
@@ -274,7 +285,10 @@ export function generate(catalog, options = {}, { rng = Math.random, keep = [], 
   const fixedBreak = o.maxAttacks != null && attackCount(fixed) > o.maxAttacks;
   if (fixedBreak) return { ok: false, message: `The cards you included or locked already have more Attacks than your limit (${o.maxAttacks}).` };
 
-  const eligible = chosen => pool.filter(i => !chosen.includes(i) && !(o.maxAttacks != null && i.attack && attackCount(chosen) >= o.maxAttacks));
+  const capFixed = capBroken(fixed, o);
+  if (capFixed) return { ok: false, message: `The cards you included or locked already break a limit: ${capFixed.toLowerCase()}.` };
+  const eligible = chosen => pool.filter(i => !chosen.includes(i) && !(o.maxAttacks != null && i.attack && attackCount(chosen) >= o.maxAttacks)
+    && !capsOf(o).some(([r, n]) => satisfies(i, r) && capCount(chosen, r) >= n));
   if (o.minAttacks > 0 && o.maxAttacks != null && o.minAttacks > o.maxAttacks) return { ok: false, message: `At least ${o.minAttacks} Attacks but at most ${o.maxAttacks}: the limits don’t fit.` };
   if (fixed.some(i => overCost(i, o))) return { ok: false, message: `A card you included or locked costs more than your limit ($${o.maxCost}).` };
   const quotas = quotasFor(pool, o);
@@ -489,6 +503,7 @@ export function optionsToParams(opts, p = new URLSearchParams()) {
   if (o.maxAttacks != null) p.set('atk', String(o.maxAttacks));
   if (o.minAttacks) p.set('atkmin', String(o.minAttacks));
   if (o.maxCost != null) p.set('maxc', String(o.maxCost));
+  capsOf(o).forEach(([r, n]) => p.append('mx', `${r}:${n}`));
   if (o.reaction) p.set('rx', '1');
   o.require.forEach(v => p.append('req', v));
   o.include.forEach(v => p.append('inc', v));
@@ -513,6 +528,7 @@ export function optionsFromParams(p) {
     require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: many(p, 'inc'), exclude: many(p, 'exc'), excludeLandscapes: [], favor: p.get('fav') === '1',
     favorPlayed: p.get('fp') === '1', favorTable: p.get('ft') === '1', favorBy: (p.get('fb') || '').slice(0, 60), junkTrash: p.get('jt') === '1', costSpread: COST_SPREADS[p.get('cs')] ? p.get('cs') : null,
     themes: [...new Set(many(p, 'th').filter(t => THEMES[t]))],
+    maxOf: Object.fromEntries(many(p, 'mx').map(v => v.split(':')).filter(([r, n]) => CAP_RULES.includes(r) && /^\d$/.test(n || '')).map(([r, n]) => [r, Math.min(MAX_CAP, +n)])),
   };
 }
 

@@ -32,9 +32,10 @@ export default function Landscapes({ query = '' }) {
   // header clicks share state with the "Sort by" menu: the active column flips direction, another column starts ascending
   const sortBy = key => update(f.sort === key ? { dir: f.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: 'asc' });
   const clear = () => { clearFilters(); setMq(''); };
-  const random = () => { const l = pickRandom(rows); if (!l) return; if (choosing) choosePick(l.id); else window.location.hash = landscapeHref(l.id, qs); };   // choosing: a random one of the landscapes the filters still show goes straight into the kingdom
+  const random = () => { const l = pickRandom(choosing ? rows.filter(x => !blockedL.has(x.id)) : rows); if (!l) return; if (choosing) choosePick(l.id); else window.location.hash = landscapeHref(l.id, qs); };   // choosing: a random one of the landscapes the filters still show goes straight into the kingdom
 
   const kp = useKingdomPick(), choosing = !!kp && kp.kind === 'landscape';   // choosing a landscape FOR a kingdom, not browsing
+  const blockedL = useMemo(() => new Set(choosing ? kp.blocked || [] : []), [choosing, kp]);   // in play at the other table: greyed, not pickable
   const rows = useMemo(() => browseLandscapes(catalog.landscapes, f, { plays }).filter(l => !(choosing && kp.taken.includes(l.id))), [catalog, f, plays, choosing, kp]);
   const active = activeLandscapeFilters(f);
   const expansions = catalog.ownedExpansions.filter(e => catalog.landscapes.some(l => l.expansion === e.name));
@@ -137,8 +138,8 @@ export default function Landscapes({ query = '' }) {
             <caption className="dn-sr">Landscapes matching the current filters</caption>
             <SortHeaders columns={COLUMNS} sort={f.sort} dir={f.dir} onSort={sortBy} />
             <tbody>{rows.map(l => (
-              <tr key={l.id} {...(choosing ? { className: 'dn-rowlink dn-pickrow', onClick: e => { if (!e.target.closest('a, button, input, select, textarea')) choosePick(l.id, e.currentTarget); } } : rowLink(landscapeHref(l.id, qs)))} {...hoverHandlers(l.id)}>
-                <td className="l">{choosing && <button type="button" className="dn-addpill" onClick={e => choosePick(l.id, e.currentTarget)} aria-label={kp.label ? `Use ${l.name} instead` : `Add ${l.name} to your kingdom`} title={kp.label ? 'Use this one instead' : 'Add to your kingdom'}>{kp.label ? '✓' : '+'}</button>}<ExpansionBadge name={l.expansion} size={18} /></td>
+              <tr key={l.id} {...(choosing ? (blockedL.has(l.id) ? { className: 'dn-blocked', 'aria-disabled': true } : { className: 'dn-rowlink dn-pickrow', onClick: e => { if (!e.target.closest('a, button, input, select, textarea')) choosePick(l.id, e.currentTarget); } }) : rowLink(landscapeHref(l.id, qs)))} {...hoverHandlers(l.id)}>
+                <td className="l">{choosing && blockedL.has(l.id) && <span className="dn-inplay" title="This landscape is in play at the other table">In play</span>}{choosing && !blockedL.has(l.id) && <button type="button" className="dn-addpill" onClick={e => choosePick(l.id, e.currentTarget)} aria-label={kp.label ? `Use ${l.name} instead` : `Add ${l.name} to your kingdom`} title={kp.label ? 'Use this one instead' : 'Add to your kingdom'}>{kp.label ? '✓' : '+'}</button>}<ExpansionBadge name={l.expansion} size={18} /></td>
                 <td className="l name"><a href={landscapeHref(l.id, qs)}>{l.name}</a>{f.text && f.q.trim() && !nameMatches(l, f.q) && <small className="meta dn-snippet">{textSnippet(l.text, f.q)}</small>}</td>
                 <td className="l"><LandscapePill type={l.type} /></td>
                 <td className="dn-cost-cell">{l.coins != null ? <CostIcons coins={l.coins} debt={l.debt} size={26} /> : <span className="dn-nocost" role="img" aria-label="No cost" title={`${PLURAL[l.type] || l.type} have no cost`} />}</td>

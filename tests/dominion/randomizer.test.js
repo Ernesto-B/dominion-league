@@ -243,9 +243,23 @@ describe('re-rolling one slot or one landscape', () => {
   });
 });
 
+describe('limits: at most N of a kind', () => {
+  const count = (r, rule) => r.slots.filter(s => s.cards.some(c => c.mechanicIds.some(t => REQUIRE_RULES[rule].tags.includes(t)))).length;
+  it('keeps drawers to the cap, in every roll and every swap', () => {
+    for (const r of rolls({ maxOf: { draw: 2 } }, 120)) { expect(r.ok).toBe(true); expect(count(r, 'draw')).toBeLessThanOrEqual(2); }
+    const r = roll({ maxOf: { draw: 2 } }, 3);
+    for (let i = 0; i < r.slots.length; i++) { const s = rerollSlot(catalog, { maxOf: { draw: 2 } }, r, i, { rng: seededRng(i + 9) }); if (s.ok) expect(count(s, 'draw')).toBeLessThanOrEqual(2); }
+  });
+  it('0 leaves the kind out altogether, and a cap the locked cards already break is refused', () => {
+    for (const r of rolls({ maxOf: { trash: 0 } }, 60)) expect(count(r, 'trash')).toBe(0);
+    const drawers = catalog.cards.filter(c => c.mechanicIds.some(t => REQUIRE_RULES.draw.tags.includes(t))).slice(0, 3);
+    expect(roll({ maxOf: { draw: 1 }, include: drawers.map(c => c.id) }).ok).toBe(false);
+  });
+});
+
 describe('the link', () => {
   it('round-trips the options', () => {
-    const o = { expansions: ['Seaside', 'Dark Ages'], cards: 8, landscapes: 2, landscapeTypes: ['Way'], maxAttacks: 3, minAttacks: 2, maxCost: 4, reaction: true, require: ['village', 'buy'], include: ['a:b'], exclude: ['c:d'], excludeLandscapes: [], favor: true, favorPlayed: false, favorTable: true, favorBy: 'Ann', junkTrash: true, costSpread: 'high', themes: ['treasure', 'trash'] };
+    const o = { expansions: ['Seaside', 'Dark Ages'], cards: 8, landscapes: 2, landscapeTypes: ['Way'], maxAttacks: 3, minAttacks: 2, maxCost: 4, reaction: true, require: ['village', 'buy'], include: ['a:b'], exclude: ['c:d'], excludeLandscapes: [], favor: true, favorPlayed: false, favorTable: true, favorBy: 'Ann', junkTrash: true, costSpread: 'high', themes: ['treasure', 'trash'], maxOf: { draw: 2, trash: 0 } };
     expect(optionsFromParams(new URLSearchParams(optionsToParams(o).toString()))).toEqual(o);
     expect(optionsToParams(DEFAULT_OPTIONS).toString()).toBe('');
     expect(optionsFromParams(new URLSearchParams(''))).toEqual(DEFAULT_OPTIONS);

@@ -74,5 +74,5 @@ export async function loadData() {
     targetGames: s.target_games, qualifyPct: s.qualify_pct, playoffSpots: s.playoff_spots,
     champion: s.champion_player_id ? (nameById.get(s.champion_player_id) || '') : '', notes: s.notes || '',
   }));
-  return { rows, players: pr.data, groups: grp.data, seasons: seasonRows, enabledSets: enabled };
+  return { rows, players: pr.data, groups: grp.data, seasons: seasonRows, enabledSets: enabled, gameMark: { count: gr.data.length, latest: gr.data.reduce((m, g) => Math.max(m, g.id), 0) } };   // gameMark: what a later look (components/NewGamesBar.jsx) compares against
 }

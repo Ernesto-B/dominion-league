@@ -38,10 +38,11 @@ export default function Cards({ query = '' }) {
   // a header click uses the same sort state as the "Sort by" menu: the active column flips direction, another column starts ascending
   const sortBy = key => update(f.sort === key ? { dir: f.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: 'asc' });
   const clear = () => { clearFilters(); setMq(''); };
-  const random = () => { const c = pickRandom(rows); if (!c) return; if (choosing) choosePick(c.id); else window.location.hash = cardHref(c.id, qs); };   // choosing: a random one of the cards the filters still show goes straight into the kingdom
+  const random = () => { const c = pickRandom(choosing ? rows.filter(x => !blocked.has(x.pileKey)) : rows); if (!c) return; if (choosing) choosePick(c.id); else window.location.hash = cardHref(c.id, qs); };   // choosing: a random one of the cards the filters still show goes straight into the kingdom
 
   const taken = useMemo(() => new Set(choosing ? kp.taken.map(id => catalog.cardsById.get(id)?.pileKey).filter(Boolean) : []), [catalog, choosing, kp]);
   const rows = useMemo(() => browseCards(catalog.cards, f, { plays }).filter(c => !taken.has(c.pileKey)), [catalog, f, plays, taken]);   // a pile already in the kingdom is not offered
+  const blocked = useMemo(() => new Set(choosing ? (kp.blocked || []).map(id => catalog.cardsById.get(id)?.pileKey).filter(Boolean) : []), [catalog, choosing, kp]);   // in play at the other table: shown greyed, not pickable
   const active = activeCardFilters(f);
   const debts = [...new Set(catalog.cards.map(c => c.debt).filter(d => d > 0))].sort((a, b) => a - b);
   // the small number on every chip follows the other filters (see facetCount): "how many would show if I picked this"
@@ -151,8 +152,8 @@ export default function Cards({ query = '' }) {
             <SortHeaders columns={plays ? [...COLUMNS, PLAYED_COLUMN] : COLUMNS} sort={f.sort} dir={f.dir} onSort={sortBy} />
             <tbody>{rows.map(c => {
               return (
-                <tr key={c.id} {...(choosing ? chooseRow(c.id) : picking ? pickRow(c.id, picked) : rowLink(cardHref(c.id, qs)))} {...hoverHandlers(c.id)}>
-                  <td className="l">{choosing && <button type="button" className="dn-addpill" onClick={e => choosePick(c.id, e.currentTarget)} aria-label={kp.label ? `Use ${c.name} instead` : `Add ${c.name} to your kingdom`} title={kp.label ? 'Use this one instead' : 'Add to your kingdom'}>{kp.label ? '✓' : '+'}</button>}{!choosing && picking && <span className={'dn-pickbox' + (picked.has(c.id) ? ' on' : '')} aria-hidden="true">{picked.has(c.id) ? '✓' : ''}</span>}<ExpansionBadge name={c.expansion} size={18} /></td>
+                <tr key={c.id} {...(choosing ? (blocked.has(c.pileKey) ? blockedRow : chooseRow(c.id)) : picking ? pickRow(c.id, picked) : rowLink(cardHref(c.id, qs)))} {...hoverHandlers(c.id)}>
+                  <td className="l">{choosing && blocked.has(c.pileKey) && <span className="dn-inplay" title="This card is in play at the other table">In play</span>}{choosing && !blocked.has(c.pileKey) && <button type="button" className="dn-addpill" onClick={e => choosePick(c.id, e.currentTarget)} aria-label={kp.label ? `Use ${c.name} instead` : `Add ${c.name} to your kingdom`} title={kp.label ? 'Use this one instead' : 'Add to your kingdom'}>{kp.label ? '✓' : '+'}</button>}{!choosing && picking && <span className={'dn-pickbox' + (picked.has(c.id) ? ' on' : '')} aria-hidden="true">{picked.has(c.id) ? '✓' : ''}</span>}<ExpansionBadge name={c.expansion} size={18} /></td>
                   <td className="l name"><a href={cardHref(c.id, qs)}>{c.name}</a>{c.previousName && <small className="meta"> (was {c.previousName})</small>}{f.text && f.q.trim() && !nameMatches(c, f.q) && <small className="meta dn-snippet">{textSnippet(c.text, f.q)}</small>}</td>
                   <td className="l"><TypePills types={c.types} /></td>
                   <td className="dn-cost-cell"><CostIcons coins={c.coins} debt={c.debt} overpay={c.overpay} size={26} /></td>
@@ -176,6 +177,9 @@ const chooseRow = id => ({
   className: 'dn-rowlink dn-pickrow',
   onClick: e => { if (e.target.closest('a, button, input, select, textarea')) return; choosePick(id, e.currentTarget); },
 });
+
+// a card at the other table: greyed out and not clickable (its name stays a link)
+const blockedRow = { className: 'dn-blocked', 'aria-disabled': true };
 
 // in pick mode a row toggles instead of opening the card (its name stays a real link); a fifth card is refused by the store
 const pickRow = (id, picked) => ({

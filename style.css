@@ -2166,3 +2166,35 @@ tr.stand1 td:first-child{--m:#E3B84A}tr.stand2 td:first-child{--m:#B7C0CC}tr.sta
 .dn-wall.one{grid-template-columns:minmax(0,170px)}.dn-wall.one li:has(.dn-face.wide){grid-column:auto;width:min(100%,260px)}.dn-wall.one:has(.dn-face.wide){grid-template-columns:minmax(0,260px)}
 /* a picture on the wall is a button that opens the large card */
 .dn-wall .dn-face{cursor:zoom-in}
+
+/* a card or landscape in play at the other table, while choosing for this one: shown, greyed, not pickable */
+.dn-table tr.dn-blocked{opacity:.42;cursor:not-allowed}
+.dn-table tr.dn-blocked a{pointer-events:auto}
+.dn-inplay{display:inline-block;margin-right:8px;padding:2px 7px;border-radius:999px;font:600 11px/1.4 var(--text);border:1px solid color-mix(in srgb,var(--ink) 40%,transparent);vertical-align:middle;white-space:nowrap}
+
+/* the "new games logged" notice sits above the "new version" one when both show */
+.updatebar.gamesbar{bottom:64px}
+@media (max-width:720px){.updatebar.gamesbar{bottom:calc(128px + env(safe-area-inset-bottom))}}
+
+/* Game night, Who's playing: tiles in a grid, recent players first */
+.ppick-h{margin:14px 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ppick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:8px}
+.ptile{position:relative;display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:16px;text-align:left;cursor:pointer}
+.ptile-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ptile.on{background:linear-gradient(180deg,#f2d27f,#cb9c2f);color:#2a1d05;border-color:#cb9c2f;font-weight:700}
+.ptile-ck{font-style:normal;font-weight:800}
+.ptile[aria-disabled=true]{opacity:.4;cursor:not-allowed}
+.ppick-q{width:100%;box-sizing:border-box;margin:0 0 4px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit}
+.ppick-again{margin:0 0 6px}
+.ppick-tables{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.ppick-t{padding:8px 12px;border-radius:999px;border:1px dashed var(--line);background:none;color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+.ppick-t.on{border-style:solid;background:color-mix(in srgb,var(--ink) 14%,transparent)}
+.ppick-t:disabled{opacity:.4}
+@media (max-width:720px){.ppick-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* the Me card: the name block needs a real width to wrap against, or at in-between widths the title is squeezed to nothing and runs under the buttons */
+.mc-who{flex:1 1 200px;min-width:min(100%,200px)}
+.mc-tier .tag{white-space:nowrap}
+
+/* the Replay icon beside Edit game on a game card: square, no label */
+.gr-replay{display:inline-grid;place-items:center;min-width:44px;padding:0 10px}

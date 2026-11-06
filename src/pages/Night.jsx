@@ -7,8 +7,9 @@ import { buildGameArgs, callGameRpc, resortByVP, toggle } from '../lib/gameForm.
 import { badgesFor, gameXp, leagueXp } from '../lib/xp.js';
 import { BadgeReward, LevelReward } from '../components/RewardCard.jsx';
 import SeatingHelp from '../components/SeatingHelp.jsx';
+import PlayerPick from '../components/PlayerPick.jsx';
 import { MAX_PLAYERS, MAX_SEATS } from '../lib/seating.js';
-import { MAX_TABLES, STEPS, advance, back, blankNight, cleanMinutes, clearNight, elapsed, gameSummary, hasNight, loadNight, playedMinutes, saveNight, stepNumber, tableLabel } from '../lib/night.js';
+import { MAX_TABLES, STEPS, advance, back, blankNight, cleanMinutes, clearNight, elapsed, gameSummary, hasNight, loadNight, playedMinutes, saveNight, stepNumber, tableLabel, withGameKingdom, nightTabKey } from '../lib/night.js';
 import NameIcon from '../components/NameIcon.jsx';
 import SetIcon from '../components/SetIcon.jsx';
 import EloPreview from '../components/EloPreview.jsx';
@@ -47,7 +48,10 @@ function Tables() {
   const [ask, confirmDialog] = useConfirm();
   const { gid, me, allGroups } = usePage();
   const [open, setOpen] = useState(() => (storage() && hasNight(storage(), gid, 1) ? 2 : 1));   // how many tables are running
-  const [active, setActive] = useState(0);
+  // which table is on screen: kept for the session, because picking a card by hand leaves this page and coming back remounts it (it would drop to Table 1)
+  const tabKey = nightTabKey(gid);
+  const [active, setActiveState] = useState(() => { try { return sessionStorage.getItem(tabKey) === '1' && storage() && hasNight(storage(), gid, 1) ? 1 : 0; } catch { return 0; } });
+  const setActive = i => { setActiveState(i); try { sessionStorage.setItem(tabKey, String(i)); } catch { /* not remembered */ } };
   const [info, setInfo] = useState({});                          // slot -> { picked, step, startedAt, done }, reported by each table
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 20000); return () => clearInterval(t); }, []);
@@ -214,6 +218,16 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
     setSt(savedSt.current || blankNight()); setDone(null);
     await reload();
   };
+  // "Next game": the same players and the same kingdom, ready to change a few cards (each tile has Re-roll and Lock) before the next timer starts
+  const nextGame = () => {
+    const was = savedSt.current; if (!was) return;
+    const items = (was.kingdom || []).filter(k => (k.kind === 'card' ? catalog?.cardsById.has(k.id) : catalog?.landscapesById.has(k.id)));
+    if (!catalog || !items.length) { startOver(); return; }
+    const implied = impliedSets(resolveKingdom(catalog, items));
+    const fresh = withGameKingdom({ ...blankNight(), picked: was.picked.slice() }, { items, sets: implied.sets, landscapes: implied.landscapes });
+    setSt({ ...fresh, kingdomMode: 'random', rollOpts: was.rollOpts || null });
+    setDone(null); setMsg('');
+  };
   const startOver = () => { if (storage()) clearNight(storage(), gid, slot); setSt(blankNight()); setDone(null); setMsg(''); };
 
   if (done) return (
@@ -224,6 +238,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
         <p className="night-go">
           <a className="btn" href={hashFor('', gid)}>See the rankings</a>
           <a className="btn ghost" href={done.id != null ? hashFor('games', gid, done.id) : hashFor('games', gid)}>See the game</a>
+          {done.id != null && (savedSt.current?.kingdom || []).length > 0 && <button type="button" className="ghost" onClick={nextGame} title="Same players and kingdom; change a few cards before you start">Next game, same kingdom</button>}
           <button type="button" className="ghost" onClick={startOver}>Log another</button>
           {done.id != null && <button type="button" className="ghost" disabled={undoing} onClick={undo}>{undoing ? 'Undoing…' : 'Undo and fix'}</button>}
         </p>
@@ -264,13 +279,9 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
               </div>
             )}
             <p className="meta">Tap everyone at the table.{busy.length ? ' Anyone already at the other table is greyed out.' : ''}</p>
-            <div className="pills" id="bpick">
-              {roster.map(n => {
-                const elsewhere = busy.includes(n) && !st.picked.includes(n);   // already sitting at the other table
-                return <a key={n} href="#" aria-current={st.picked.includes(n) ? 'true' : undefined} aria-disabled={elsewhere ? 'true' : undefined} title={elsewhere ? 'At the other table' : undefined}
-                  onClick={e => { e.preventDefault(); if (elsewhere) return; if (!st.picked.includes(n) && st.picked.length >= MAX_SEATS) { setMsg(`Two tables seat ${MAX_SEATS} at most.`); return; } setSt(s => ({ ...s, picked: toggle(s.picked, n), tie: {}, vp: s.vp })); }}><NameIcon name={n} size={18} />{n}</a>;
-              })}
-            </div>
+            <PlayerPick roster={roster} games={D.games} picked={st.picked} busy={busy} max={MAX_SEATS}
+              onToggle={n => { if (!st.picked.includes(n) && st.picked.length >= MAX_SEATS) { setMsg(`Two tables seat ${MAX_SEATS} at most.`); return; } setSt(s => ({ ...s, picked: toggle(s.picked, n), tie: {}, vp: s.vp })); }}
+              onSet={names => setSt(s => ({ ...s, picked: names, tie: {}, vp: s.vp }))} />
             <p className="meta" role="status">{st.picked.length ? `${st.picked.length} player${st.picked.length === 1 ? '' : 's'}${st.picked.length < 2 ? ' — pick at least 2' : st.picked.length > MAX_PLAYERS ? ` — a table seats at most ${MAX_PLAYERS}` : ''}` : 'No one picked yet.'}</p>
             <SeatingHelp picked={st.picked} canSeat={canSeat} onSeat={onSeat} />
             {st.picked.length <= MAX_PLAYERS && <EloPreview picked={st.picked} />}

@@ -51,7 +51,7 @@ export function LeagueProvider({ children }) {
 
       const data = await dataP;
       saveSnapshot({ cfg, me, data });
-      set({ status: 'ready', cfg, me, ...buildLeague(cfg, data, me) });
+      set({ status: 'ready', cfg, me, gameMark: data.gameMark, ...buildLeague(cfg, data, me) });
     } catch (e) {
       // the network failed: open the last league this device saw (marked offline) rather than an error page
       const snap = loadSnapshot();

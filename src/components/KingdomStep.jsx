@@ -115,6 +115,7 @@ function RandomRoll({ catalog, roll, setRollOpts, resetRoll, kept, onKeep, hand,
   const shown = handEdited ? stateFromItems(catalog, items, handBane) : rolled;
   return (
     <>
+      {handEdited && items.length > 0 && !hand && <p className="meta">This kingdom is as chosen before. <b>Re-roll</b> a card to swap just that one, or <b>Lock</b> the ones to keep and roll again.</p>}
       <RandomizerPanel catalog={catalog} opts={roll} setOpts={setRollOpts} state={shown} plays={plays} emptyHint={false} avoid={avoid}
         onState={res => applyKingdom(toGameItems(res), res)} onReset={resetRoll} kept={kept} onKeep={onKeep}
         editing={hand} onEdit={(next, implied) => onPick(next, implied)}
