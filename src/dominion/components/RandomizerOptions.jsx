@@ -77,14 +77,14 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
         )}
 
         {cardCount ? <Row label="Kingdom cards">{cardCount}</Row> : <Row label="Kingdom cards"><Stepper label="Kingdom cards" value={opts.cards} min={5} max={12} onChange={n => setOpts({ cards: n })} /></Row>}
-        <Row label="Landscapes"><Stepper label="Landscapes" value={opts.landscapes} min={0} max={4} onChange={n => setOpts({ landscapes: n })} /></Row>
-        {opts.landscapes > 0 && (
-          <Row label="Landscape types" note={opts.landscapeTypes.length ? `${opts.landscapeTypes.length} chosen` : 'all'}>
-            <div className="dn-chips">{catalog.landscapeTypes.map(t => (
+        <Row label="Landscapes">
+          <Stepper label="Landscapes" value={opts.landscapes} min={0} max={4} onChange={n => setOpts({ landscapes: n })} />
+          {opts.landscapes > 0 && (
+            <div className="dn-chips rzo-in" role="group" aria-label={`Landscape types: ${opts.landscapeTypes.length ? opts.landscapeTypes.length + ' chosen' : 'all of them'}`}>{catalog.landscapeTypes.map(t => (
               <Chip key={t} tone={t.toLowerCase()} pressed={opts.landscapeTypes.includes(t)} onClick={() => setOpts({ landscapeTypes: toggle(opts.landscapeTypes, t) })}>{PLURAL[t] || t}</Chip>
             ))}</div>
-          </Row>
-        )}
+          )}
+        </Row>
 
         <Row label="Must have" note="Uses the recorded mechanics: a card that does this but isn’t tagged won’t count.">
           <div className="dn-chips">{tagRules.map(ruleChip)}</div>
@@ -93,15 +93,13 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
         <Row label="Attacks" note="The most Attacks in the kingdom">
           <Seg label="Most Attacks" value={opts.maxAttacks ?? 'any'} onChange={v => setMaxAttacks(v === 'any' ? null : v)}
             options={[...attackChoices.map(n => ({ value: n, label: n === 0 ? 'None' : String(n), aria: n === 0 ? 'No Attacks' : `At most ${n} Attack${n === 1 ? '' : 's'}`, title: n === 0 ? 'No Attacks' : `At most ${n}` })), { value: 'any', label: 'Any' }]} />
-        </Row>
-        {attacksOn && (
-          <Row label="With Attacks" note="Only matters when an Attack is rolled">
-            <div className="dn-chips">
+          {attacksOn && (
+            <div className="dn-chips rzo-in" role="group" aria-label="When an Attack is rolled">
               <Chip pressed={opts.reaction} onClick={() => setOpts({ reaction: !opts.reaction })}>Add a Reaction</Chip>
               <Chip pressed={opts.junkTrash} onClick={() => setOpts({ junkTrash: !opts.junkTrash })}>Add a trasher if Attacks give junk</Chip>
             </div>
-          </Row>
-        )}
+          )}
+        </Row>
 
         <Row label="Cost mix" note="How the kingdom spreads over $2 to $6+">
           <Seg label="Cost spread" value={opts.costSpread || 'off'} onChange={v => setOpts({ costSpread: v === 'off' ? null : v })}
@@ -111,14 +109,15 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
         <Row label="Prioritize" note={canFavor ? 'Favour cards by how often the group has played them' : 'Available once games with a kingdom are logged'}>
           <Seg label="Prioritize" value={!canFavor ? 'none' : opts.favorPlayed ? 'played' : opts.favor ? 'new' : 'none'} onChange={v => setOpts({ favorPlayed: v === 'played', favor: v === 'new' })}
             options={[{ value: 'none', label: 'Neither' }, { value: 'played', label: 'Played cards', disabled: !canFavor }, { value: 'new', label: 'New cards', disabled: !canFavor }]} />
+          {playsScope && (opts.favor || opts.favorPlayed) && (
+            <span className="rzo-in rzo-count" role="group" aria-label="Count games">
+              <span className="rzo-l">Count games</span>
+              {playsScope === true ? (
+                <Seg label="Whose games count" value={!!opts.favorTable} onChange={v => setOpts({ favorTable: v })} options={[{ value: false, label: 'The whole group’s' }, { value: true, label: 'Only this table’s' }]} />
+              ) : <ScopePicker label={null} who={opts.favorBy} players={playsScope.players} onPick={n => setOpts({ favorBy: n })} />}
+            </span>
+          )}
         </Row>
-        {playsScope && (opts.favor || opts.favorPlayed) && (
-          <Row label="Count games">
-            {playsScope === true ? (
-              <Seg label="Whose games count" value={!!opts.favorTable} onChange={v => setOpts({ favorTable: v })} options={[{ value: false, label: 'The whole group’s' }, { value: true, label: 'Only this table’s' }]} />
-            ) : <ScopePicker label={null} who={opts.favorBy} players={playsScope.players} onPick={n => setOpts({ favorBy: n })} />}
-          </Row>
-        )}
       </div>
 
       <details className="dn-mech dn-rz-details">
