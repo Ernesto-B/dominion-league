@@ -272,7 +272,7 @@ describe('caps are on by default', () => {
 describe('include cards that give...', () => {
   const countOf = (r, k) => r.slots.filter(s => (GIVES[k].tags ? s.cards.some(c => c.mechanicIds.some(t => GIVES[k].tags.includes(t))) : s.cards.some(c => GIVES[k].text.test(c.text || '')))).length;
   it('puts at least two of each chosen kind in every roll, and survives the link', () => {
-    for (const k of ['coffers', 'horses', 'spoils']) for (const r of rolls({ gives: [k] }, 40)) { expect(r.ok).toBe(true); expect(countOf(r, k)).toBeGreaterThanOrEqual(2); }
+    for (const k of ['coffers', 'horses', 'spoils', 'exile']) for (const r of rolls({ gives: [k] }, 40)) { expect(r.ok).toBe(true); expect(countOf(r, k)).toBeGreaterThanOrEqual(2); }
     const o = { ...DEFAULT_OPTIONS, gives: ['coffers', 'loot'] };
     expect(optionsFromParams(new URLSearchParams(optionsToParams(o).toString())).gives).toEqual(['coffers', 'loot']);
   });
@@ -281,6 +281,16 @@ describe('include cards that give...', () => {
 
 describe('Balance (option)', () => {
   it('is on by default, and only "off" is written to the link', () => { expect(DEFAULT_OPTIONS.balance).toBe(true); expect(optionsToParams({ ...DEFAULT_OPTIONS, balance: false }).toString()).toBe('bal=0'); });
+});
+
+describe('the automatic fewest Attacks', () => {
+  it('is one whenever the most is 1 or more, until a number is set', () => {
+    for (const r of rolls({ maxAttacks: 2 }, 60)) expect(attacks(r)).toBeGreaterThanOrEqual(1);
+    expect(rolls({ maxAttacks: 2, minAttacks: 0 }, 150).some(r => attacks(r) === 0)).toBe(true);   // set by hand to 0: allowed
+    expect(rolls({ maxAttacks: 0 }, 30).every(r => attacks(r) === 0)).toBe(true);
+    expect(roll({ maxAttacks: 2, expansions: ['Dominion Base Game'], exclude: [] }).ok).toBe(true);
+    expect(optionsToParams({ ...DEFAULT_OPTIONS, maxAttacks: 2 }).toString()).toBe('atk=2');   // nothing about the fewest is written until it is set
+  });
 });
 
 describe('the link', () => {

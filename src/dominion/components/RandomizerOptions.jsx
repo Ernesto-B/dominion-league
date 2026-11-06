@@ -58,15 +58,16 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
   const listsOn = opts.include.length + opts.exclude.length;
   const tagRules = Object.entries(REQUIRE_RULES).filter(([k]) => !ruleIsExact(k)), costRules = Object.entries(REQUIRE_RULES).filter(([k]) => ruleIsExact(k));
   const ruleChip = ([k, r]) => <Chip key={k} cls={r.coins != null || r.atLeast != null ? 'rzo-coin' : ''} pressed={opts.require.includes(k)} label={r.coins != null ? `A card costing ${r.coins} coins` : r.atLeast != null ? `A card costing ${r.atLeast} coins or more` : undefined} onClick={() => setOpts({ require: toggle(opts.require, k) })}>{r.coins != null ? <CoinIcon coins={r.coins} size={24} /> : r.atLeast != null ? <><CoinIcon coins={r.atLeast} size={24} /><b className="rzo-plus">+</b></> : r.chip || r.box || r.label}</Chip>;
-  const advOn = themes.length + gives.length + capsChanged + (opts.minAttacks > 0 ? 1 : 0) + (opts.maxCost != null ? 1 : 0) + opts.require.filter(ruleIsExact).length;
+  const advOn = themes.length + gives.length + capsChanged + (opts.minAttacks != null ? 1 : 0) + (opts.maxCost != null ? 1 : 0) + opts.require.filter(ruleIsExact).length;
   const owned = catalog.ownedExpansions, chosen = opts.expansions.length;
   const expansionChips = owned.map(e => (
     <Chip key={e.name} label={e.name} pressed={opts.expansions.includes(e.name)} onClick={() => setOpts({ expansions: toggle(opts.expansions, e.name) })}><ExpansionBadge name={e.name} iconOnly size={26} /></Chip>
   ));
   const expSummary = chosen ? `${chosen} of ${owned.length}` : `all ${owned.length}`;
   const attackChoices = [...new Set([...ATTACK_STEPS, ...(opts.maxAttacks != null ? [opts.maxAttacks] : [])])].sort((x, y) => x - y);
-  // choosing Attacks after "None" asks for at least one (the fewest-Attacks stepper in Advanced starts at 1, and can be lowered); "None" means no minimum
-  const setMaxAttacks = n => setOpts({ maxAttacks: n, ...(n === 0 ? { minAttacks: 0 } : opts.maxAttacks === 0 ? { minAttacks: 1 } : n != null && (opts.minAttacks || 0) > n ? { minAttacks: n } : {}) });
+  // the fewest Attacks is automatic (1 whenever the most is 1 or more) until someone sets it; "None" clears a number they set, and a lower most pulls a higher fewest down with it
+  const fewest = opts.minAttacks ?? (opts.maxAttacks != null && opts.maxAttacks >= 1 ? 1 : 0);
+  const setMaxAttacks = n => setOpts({ maxAttacks: n, ...(n === 0 ? { minAttacks: null } : n != null && opts.minAttacks != null && opts.minAttacks > n ? { minAttacks: n } : {}) });
   const setCap = (r, n) => setOpts({ maxOf: Object.fromEntries(CAP_RULES.flatMap(k => { const v = k === r ? n : (opts.maxOf || {})[k]; return v == null ? [] : [[k, v]]; })) });   // in rule order, so "unchanged" compares equal
   return (
     <div className="rzo">
@@ -141,7 +142,7 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
               ))}
             </div>
           </Row>
-          {attacksOn && <Row label="Fewest Attacks" note="At least this many Attacks in the kingdom"><Stepper label="Fewest Attacks" value={opts.minAttacks || 0} min={0} max={opts.maxAttacks ?? 12} onChange={n => setOpts({ minAttacks: n })} /></Row>}
+          {attacksOn && <Row label="Fewest Attacks" note="At least this many Attacks in the kingdom"><Stepper label="Fewest Attacks" value={fewest} min={0} max={opts.maxAttacks ?? 12} onChange={n => setOpts({ minAttacks: n })} /></Row>}
           <Row label="Include a card costing" note="At least one card at each cost you pick"><div className="dn-chips">{costRules.map(ruleChip)}</div></Row>
           <Row label="No card above" note="The most any card may cost (none picked: any)">
             <div className="dn-chips">{[3, 4, 5, 6].map(c => <Chip key={c} cls="rzo-coin" label={`No card above ${c} coins`} pressed={opts.maxCost === c} onClick={() => setOpts({ maxCost: opts.maxCost === c ? null : c })}><CoinIcon coins={c} size={24} /></Chip>)}</div>

@@ -53,6 +53,7 @@ export const GIVES = {
   horses: { chip: 'Horses', label: 'cards that gain Horses', tags: ['horse_gaining'] },
   loot: { chip: 'Loot', label: 'cards that gain Loot', tags: ['loot_gaining'] },
   spoils: { chip: 'Spoils', label: 'cards that gain Spoils', text: /\bSpoils\b/ },
+  exile: { chip: 'Exile', label: 'cards that use the Exile mat', tags: ['exile_from_hand', 'exile_from_supply', 'exile_opponent', 'gain_to_exile', 'exile_from_play'] },
   vp: { chip: 'VP tokens', label: 'cards that give VP tokens', tags: ['vp_token_generation'] },
 };
 export const GIVES_KEYS = Object.keys(GIVES);
@@ -96,7 +97,7 @@ export const DEFAULT_OPTIONS = Object.freeze({
   landscapes: 0,           // how many Events/Landmarks/Projects/Ways/Traits (from ANY expansion — independent of `expansions`)
   landscapeTypes: [],      // empty = all five types
   maxAttacks: null,        // null = any number of Attack piles
-  minAttacks: 0,           // at least this many Attack piles
+  minAttacks: null,        // at least this many Attack piles; null = automatic: one once the most is 1 or more (so "at most 2" also means "at least 1"), until someone sets it
   balance: true,           // no two specialists of the same role (BALANCE_LIMIT); on unless turned off
   gives: [],               // keys of GIVES: at least GIVES_MIN cards that give each
   maxOf: Object.freeze({ draw: 3, trash: 3, village: 3, buy: 3 }),   // at most this many piles with that mechanic (CAP_RULES); a kind left out has no cap
@@ -171,7 +172,7 @@ export function quotasFor(pool, o) {
     out.push({ label: THEMES[t].label, test, total, n: Math.min(total, Math.max(2, Math.round(o.cards * share))), none: `None of the chosen expansions has ${THEMES[t].label} to build the kingdom around.` });
   });
   o.gives.forEach(k => { const test = givesTest(k), total = count(test); out.push({ label: GIVES[k].label, test, total, n: Math.min(total, GIVES_MIN), none: `None of the chosen expansions has ${GIVES[k].label}.` }); });
-  if (o.minAttacks > 0) { const test = i => i.attack, total = count(test); out.push({ label: 'Attack cards', test, total, n: o.minAttacks, strict: true }); }
+  if (o.minAttacks > 0) { const test = i => i.attack, total = count(test); out.push(o.minAttacksAuto ? { label: 'Attack cards', test, total, n: Math.min(total, o.minAttacks) } : { label: 'Attack cards', test, total, n: o.minAttacks, strict: true }); }   // the automatic one never makes a roll fail: with no Attacks to draw from it asks for none
   if (o.costSpread === 'barbell') {
     const n = Math.max(2, Math.round(o.cards * FOLLOW));
     [['cards costing $2 or less', i => i.cards[0].debt === 0 && i.cards[0].coins <= 2], ['cards costing $6 or more', i => i.cards[0].debt === 0 && i.cards[0].coins >= 6]]   // by the pile's first card: the one a logged game records
@@ -259,7 +260,8 @@ const normalize = (opts, catalog = null) => {
   o.cards = Math.max(1, Math.min(12, Number(o.cards) || 10));
   o.landscapes = Math.max(0, Math.min(6, Number(o.landscapes) || 0));
   o.themes = [...new Set((o.themes || []).filter(t => THEMES[t]))];
-  o.minAttacks = Math.max(0, Math.min(12, Math.round(Number(o.minAttacks) || 0)));
+  o.minAttacksAuto = o.minAttacks == null;
+  o.minAttacks = o.minAttacksAuto ? (o.maxAttacks != null && o.maxAttacks >= 1 ? 1 : 0) : Math.max(0, Math.min(12, Math.round(Number(o.minAttacks) || 0)));
   o.gives = [...new Set((o.gives || []).filter(k => GIVES[k]))];
   o.maxOf = Object.fromEntries(Object.entries(o.maxOf || {}).filter(([r, n]) => CAP_RULES.includes(r) && Number.isInteger(n) && n >= 0).map(([r, n]) => [r, Math.min(MAX_CAP, n)]));
   o.maxCost = o.maxCost != null && Number(o.maxCost) >= 2 ? Math.min(10, Math.round(Number(o.maxCost))) : null;
@@ -552,7 +554,7 @@ export function optionsToParams(opts, p = new URLSearchParams()) {
   if (o.landscapes !== d.landscapes) p.set('nl', String(o.landscapes));
   o.landscapeTypes.forEach(v => p.append('lt', v));
   if (o.maxAttacks != null) p.set('atk', String(o.maxAttacks));
-  if (o.minAttacks) p.set('atkmin', String(o.minAttacks));
+  if (o.minAttacks != null) p.set('atkmin', String(o.minAttacks));   // only a number someone set
   if (o.maxCost != null) p.set('maxc', String(o.maxCost));
   CAP_RULES.forEach(r => { const v = (o.maxOf || {})[r]; if (v !== d.maxOf[r]) p.append('mx', `${r}:${v == null ? 'x' : v}`); });   // only what differs from the default; x = no cap
   if (o.reaction) p.set('rx', '1');
@@ -577,7 +579,7 @@ export function optionsFromParams(p) {
   return {
     expansions: many(p, 'exp'), cards: intIn(p.get('n'), 1, 12, d.cards), landscapes: intIn(p.get('nl'), 0, 6, d.landscapes),
     landscapeTypes: many(p, 'lt').filter(t => LANDSCAPE_TYPES.includes(t)),
-    maxAttacks: intIn(p.get('atk'), 0, 12, null), minAttacks: intIn(p.get('atkmin'), 0, 12, 0), maxCost: intIn(p.get('maxc'), 2, 10, null), reaction: p.get('rx') === '1',
+    maxAttacks: intIn(p.get('atk'), 0, 12, null), minAttacks: intIn(p.get('atkmin'), 0, 12, null), maxCost: intIn(p.get('maxc'), 2, 10, null), reaction: p.get('rx') === '1',
     require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: many(p, 'inc'), exclude: many(p, 'exc'), excludeLandscapes: [], favor: p.get('fav') === '1',
     favorPlayed: p.get('fp') === '1', favorTable: p.get('ft') === '1', favorBy: (p.get('fb') || '').slice(0, 60), junkTrash: p.get('jt') === '1', costSpread: p.get('cs') === 'off' ? null : COST_SPREADS[p.get('cs')] ? p.get('cs') : d.costSpread,
     themes: [...new Set(many(p, 'th').filter(t => THEMES[t]))], gives: [...new Set(many(p, 'gv').filter(k => GIVES[k]))], balance: p.get('bal') !== '0',
