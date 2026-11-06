@@ -30,9 +30,9 @@ export function ShowTextButton({ on, onClick, className = '' }) {
   );
 }
 
-export function Chip({ pressed, onClick, children, count, label, tone }) {
+export function Chip({ pressed, onClick, children, count, label, tone, cls = '' }) {
   return (
-    <button type="button" className={(tone ? `dn-chip t-${tone}` : 'dn-chip') + (count === 0 && !pressed ? ' dn-zero' : '')} aria-pressed={pressed} onClick={onClick} aria-label={label} title={label}>
+    <button type="button" className={(tone ? `dn-chip t-${tone}` : 'dn-chip') + (cls ? ' ' + cls : '') + (count === 0 && !pressed ? ' dn-zero' : '')} aria-pressed={pressed} onClick={onClick} aria-label={label} title={label}>
       {children}{count != null && <span className="n">{count}</span>}
     </button>
   );
