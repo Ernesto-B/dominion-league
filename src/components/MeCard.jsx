@@ -1,6 +1,9 @@
 import { nightGroup } from '../lib/groups.js';
 import { usePage } from '../PageContext.js';
 import { meSummary } from '../lib/meSummary.js';
+
+// does reaching this tier go through a promotion trial? (from `promotionHoldFrom` upward, when the trial is longer than one game)
+const trialAfter = (D, tier) => D.E.promotionHold > 1 && D.tiers.findIndex(t => t.id === tier.id) >= D.tiers.findIndex(t => t.id === D.E.promotionHoldFrom);
 import { ord, short, sgn } from '../lib/format.js';
 import TierIcon from './TierIcon.jsx';
 import { BadgeReward, LevelReward } from './RewardCard.jsx';
@@ -69,7 +72,7 @@ export default function MeCard({ ranked }) {
         <div className="mc-who">
           <p className="mecard-hi">Hi {me.name}{s.titles ? ' · season champion' : ''}</p>
           <div className="mc-tierrow">
-            <p className="mc-tier">{s.tier.name}{s.provisional && <span className="tag">provisional</span>}{s.tierHeld && <span className="tag" title="Your Elo is under this tier's line. Get back over it soon or you drop.">on thin ice</span>}</p>
+            <p className="mc-tier">{s.tier.name}{s.provisional && <span className="tag">provisional</span>}{s.tierHeld && <span className="tag" title="Your Elo is under this tier's line. Get back over it soon or you drop.">in grace</span>}{s.trial && <span className="tag" title={`End ${s.trial.need} rated games in a row at or over ${s.trial.tier.min} Elo to become a ${s.trial.tier.name}. A game that ends under the line starts it again.`}>{s.trial.tier.name} trial {s.trial.have} of {s.trial.need}</span>}</p>
             {mineP && <PinnedBadges p={mineP} list={list} fit />}
           </div>
         </div>
@@ -96,7 +99,9 @@ export default function MeCard({ ranked }) {
           <TierIcon id={s.tier.icon} size={24} alt="" />
           <span className="mecard-bar" role="img" aria-label={`${pct}% of the way to ${s.next.tier.name}`}><i style={{ width: pct + '%' }}></i></span>
           <TierIcon id={s.next.tier.icon} size={24} alt="" />
-          <span className="mc-next-txt"><b>{s.next.need} Elo</b> to {s.next.tier.name}{s.next.wins ? <> — about {s.next.wins === 1 ? 'one win' : `${s.next.wins} wins`} at a table of four</> : null}</span>
+          <span className="mc-next-txt">{s.trial
+            ? <><b>{s.trial.tier.name} trial: {s.trial.have} of {s.trial.need}</b> — end {s.trial.need - s.trial.have === 1 ? 'one more game' : `${s.trial.need - s.trial.have} more games`} at or over {s.trial.tier.min} Elo</>
+            : <><b>{s.next.need} Elo</b> to {s.next.tier.name}{s.next.wins ? <> — about {s.next.wins === 1 ? 'one win' : `${s.next.wins} wins`} at a table of four</> : null}{trialAfter(D, s.next.tier) ? <>, then a {D.E.promotionHold}-game trial over the line</> : null}</>}</span>
         </div></HoverPopup>
       )}
       {list.length > 0 && <p className="mc-badges"><a href={mine}>Badges <b>{list.filter(b => b.earned).length}</b> of {list.length}</a><span className="meta"> — see what’s next</span></p>}

@@ -90,10 +90,10 @@ describe('the engine with model "steady"', () => {
 });
 
 describe('the shipped configuration', () => {
-  it('turns the steady model on with K=100, drift 0.52 and tiers scaled to match (K=200 tiers x 100/200)', async () => {
+  it('turns the steady model on with K=175, drift 0.52, a 2-game promotion trial from Knight, and the six rank lines', async () => {
     const cfg = JSON.parse((await import('node:fs')).readFileSync('public/data/config.json', 'utf8'));
-    expect(cfg.elo).toMatchObject({ model: 'steady', k: 100, provisionalK: 200, target: 0.52 });
-    expect(cfg.tiers.map(t => t.min)).toEqual([null, 1125, 1275, 1475, 1700]);
+    expect(cfg.elo).toMatchObject({ model: 'steady', k: 175, provisionalK: 200, target: 0.52, promotionHold: 2, promotionHoldFrom: 'knight' });
+    expect(cfg.tiers.map(t => t.min)).toEqual([null, 1075, 1150, 1240, 1300, 1375]);
   });
   it('turns on both season bonuses (win streaks and VP)', async () => {
     const cfg = JSON.parse((await import('node:fs')).readFileSync('public/data/config.json', 'utf8'));

@@ -10,6 +10,8 @@ import LastNight from '../components/LastNight.jsx';
 import HoverPopup from '../components/HoverPopup.jsx';
 import BadgePop from '../components/BadgePop.jsx';
 import RankMedal from '../components/RankMedal.jsx';
+import RankMark from '../components/RankState.jsx';
+import { tierProgress } from '../lib/tierProgress.js';
 import RatingChart from '../components/RatingChart.jsx';
 import MeCard from '../components/MeCard.jsx';
 import Hub from '../components/Hub.jsx';
@@ -19,6 +21,20 @@ import { badgesFor, xpOf } from '../lib/xp.js';
 import { pinnedBadges, viewHint } from '../lib/achievements.js';
 import { steadyPayout } from '../lib/steadyElo.js';
 
+
+// How far along the way to the next rank, in one thin bar: Elo to go and the next tier's icon; in a trial the games done; in grace the Elo under the line.
+function NextRank({ p }) {
+  const nx = p.nextTier, kind = p.trial ? ' trial' : p.grace ? ' grace' : '';
+  const pct = !nx ? 100 : p.trial ? 100 : Math.round(tierProgress(p.elo, p.tier, nx.tier) * 100);
+  const txt = p.trial ? `${p.trial.have}/${p.trial.need}` : p.grace ? `−${Math.max(1, Math.round(p.grace.line - p.elo))}` : nx ? String(nx.need) : '';
+  const label = p.trial ? `${p.trial.tier.name} trial, ${p.trial.have} of ${p.trial.need} games` : p.grace ? `${Math.round(p.grace.line - p.elo)} Elo under the ${p.tier.name} line` : nx ? `${nx.need} Elo to ${nx.tier.name}` : 'Top rank';
+  return (
+    <span className={'lnext' + kind} role="img" aria-label={label} title={label}>
+      <span className="nbar"><i style={{ width: pct + '%' }}></i></span>
+      {nx ? <><span className="nneed">{txt}</span><TierIcon id={nx.tier.icon} size={18} alt="" /></> : <span className="nneed">Top rank</span>}
+    </span>
+  );
+}
 
 function Ladder({ ranked: rk, highlight, setHighlight }) {
   const { D, gid, hashFor, catalog, rawPlayers, me } = usePage();
@@ -32,17 +48,15 @@ function Ladder({ ranked: rk, highlight, setHighlight }) {
     }
     return m;
   }, [D, catalog, rawPlayers]);
-  const mx = Math.max(60, ...rk.map(p => Math.abs(p.elo - D.E.start))) * 1.08;
   return (
     <div className="ladder" role="table" aria-label="Elo rankings">
-      <div className="lhead" role="row"><span>Rank</span><span>Player</span><span>Rating vs {D.E.start} start</span><span>Elo</span><span>Last</span><span>Recent form</span></div>
+      <div className="lhead" role="row"><span>Rank</span><span>Player</span><span>Next rank</span><span>Elo</span><span>Last</span><span>Recent form</span></div>
       {rk.map((p, idx) => {
-        const d = p.elo - D.E.start, wpx = Math.abs(d) / mx * 50;
         const lastR = p.results[p.results.length - 1];
         const dl = lastR ? lastR.after - lastR.before : 0;
         const rm = p.rankDelta, lv = xpOf(D, p.name, catalog), sb = showcase.get(p.name);   // sb: the badge they show off beside their name
         return (
-          <div key={p.name} className={'lrow' + (p.rank <= 3 ? ' stand stand' + p.rank : '') + (highlight === p.name ? ' hot' : '')} data-p={p.name} role="row" style={{ '--i': Math.min(idx, 12) }}
+          <div key={p.name} className={'lrow' + (p.rank <= 3 ? ' stand stand' + p.rank : '') + (sb ? '' : ' nopin') + (highlight === p.name ? ' hot' : '')} data-p={p.name} role="row" style={{ '--i': Math.min(idx, 12) }}
             onMouseEnter={() => setHighlight(p.name)} onFocus={() => setHighlight(p.name)}>
             <span className="lrank"><RankMedal rank={p.rank} size={30} />
               {!rm ? null : rm > 0
@@ -50,14 +64,14 @@ function Ladder({ ranked: rk, highlight, setHighlight }) {
                 : <span className="rankmove down-t" title={`Down ${-rm} spot${rm === -1 ? '' : 's'} since last night`}>▼{-rm}</span>}
             </span>
             <a className="lname" href={hashFor('players', gid, encodeURIComponent(p.name))}>
-              <span className="lname-id"><TierIcon id={p.tier.icon} size={28} alt={p.tier.name + ' tier'} />{p.name}
+              <span className="lname-id"><RankMark p={p} />{p.name}
               {lv && lv.perGame.length > 0 ? <span className="lvl" title={`Level ${lv.level} · ${lv.total.toLocaleString()} XP`}>Lv {lv.level}</span> : null}</span>
               {p.titles ? <span className="crown" title={`${p.titles} season title${p.titles > 1 ? 's' : ''}`}><TierIcon id="champion" size={20} alt="Season champion" />{p.titles > 1 ? '×' + p.titles : ''}</span> : null}
               {sb ? <HoverPopup className="lpin-wrap" content={<BadgePop badge={sb} hint={viewHint(sb, !!me && me.name === p.name)} />}><span className={'pin-chip lpin td-' + sb.tier}>{sb.name}</span></HoverPopup> : null}
               {p.streak >= 3 ? <span className="pill hot" title={`${p.streak}-game win streak`}>🔥 {p.streak}</span> : null}
               {p.status === 'Provisional' ? <span className="tag">provisional</span> : null}
             </a>
-            <span className="bar" aria-hidden="true"><i className={d >= 0 ? 'up' : 'down'} style={{ width: wpx + '%', left: d >= 0 ? '50%' : (50 - wpx) + '%' }}></i></span>
+            <NextRank p={p} />
             <span className="lelo">{f0(p.elo)}</span>
             <span className={'ldelta ' + (dl > 0.5 ? 'up-t' : dl < -0.5 ? 'down-t' : '')}>{sgn(dl)}</span>
             <span className="lsub">
@@ -92,8 +106,9 @@ export default function Rankings() {
     </div>
     <h2>Rank tiers</h2>
     <TierLegend />
-    <p className="note">Your tier follows your Elo, so it can go down as well as up. {D.E.demotionGrace > 0 && <><b>Demotion grace:</b> if your Elo falls under the line of the tier you hold, you keep that tier for {D.E.demotionGrace} more game{D.E.demotionGrace === 1 ? '' : 's'}. Get back to the line in any of them and the grace resets; stay under and you drop. Your Elo itself is never changed by it.</>}</p>
+    <p className="note">Your tier follows your Elo, so it can go down as well as up. {D.E.demotionGrace > 0 && <><b>Demotion grace:</b> you can end {D.E.demotionGrace} rated game{D.E.demotionGrace === 1 ? '' : 's'} in a row under the line of the tier you hold and keep it. The game that takes you under counts as the first. Finish a game back at or over the line and the count resets; end one more game under it after your last one and you drop. Your Elo itself is never changed by it.</>}</p>
     {D.E.demotionGrace > 0 && D.E.savingGrace > 0 && <p className="note"><b>Saving Grace:</b> while you are in grace, a top-half finish adds {Math.round(D.E.savingGrace * 100)}% of what you lost in your previous rated game on top of the normal gain, so one decent night can pull you back over the line.</p>}
+    {D.E.promotionHold > 1 && <p className="note"><b>Promotion trial:</b> from {(D.tiers.find(t => t.id === D.E.promotionHoldFrom) || D.tiers[1]).name} upward, one big game does not promote you. You rise one rank after ending {D.E.promotionHold} rated games in a row at or over the next line, and a game that ends under it starts the count again. Win more than one rank's worth and the next trial starts straight after.</p>}
     <p className="note">The trophy is for winning a season and never goes away.</p>
     <p className="note">Everyone starts at {D.E.start} as a {D.startTier.name} and climbs from there. Elo carries across seasons; friendly games never count. New players move faster for their first {D.E.provisionalGames} games (provisional).</p>
     <p className="note">This ladder is Elo — a lifetime skill rating that never resets. It's not what decides a season's winner; that's points, on the <a href={hashFor('season', gid)}>Season page</a>.</p>

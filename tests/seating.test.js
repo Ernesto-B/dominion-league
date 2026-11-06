@@ -62,3 +62,13 @@ describe('the seating help on Game night', () => {
     expect(draw(['P1', 'P2'])).toBe('');
   });
 });
+
+describe('the six-player limit is enforced in the database too', () => {
+  it('add_game and edit_game both refuse more than 6 results', async () => {
+    const sql = (await import('node:fs')).readFileSync('supabase/schema.sql', 'utf8');
+    for (const fn of ['add_game', 'edit_game']) {
+      const body = sql.slice(sql.indexOf(`create or replace function ${fn}(`));
+      expect(body.slice(0, body.indexOf('$$;'))).toContain("jsonb_array_length(p_results) > 6");
+    }
+  });
+});

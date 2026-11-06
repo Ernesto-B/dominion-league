@@ -365,6 +365,10 @@ begin
     raise exception 'only the admin can add games';
   end if;
 
+  if jsonb_array_length(p_results) > 6 then
+    raise exception 'a table seats at most 6 players';
+  end if;
+
   if p_group_id is not null then
     select count(*) into v_bad from jsonb_array_elements(p_results) r
     join players pl on pl.id = (r->>'player_id')::uuid
@@ -403,6 +407,10 @@ declare
 begin
   if not is_admin() then
     raise exception 'only the admin can edit games';
+  end if;
+
+  if jsonb_array_length(p_results) > 6 then
+    raise exception 'a table seats at most 6 players';
   end if;
 
   if p_group_id is not null then

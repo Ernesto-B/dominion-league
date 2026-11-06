@@ -131,7 +131,7 @@ export const maskSecrets = list => list.map(b => (b.secret && !b.earned ? { id: 
 const stepNames = n => { const m = expansionMeta(n); return m.badges || [`${m.label} Explorer`, `${m.label} Master`]; };
 const LEVEL_NAMES = { 5: 'Apprentice', 10: 'Adept', 20: 'Sage', 50: 'Grandmaster', 100: 'Paragon', 200: 'Dominion Incarnate' };
 const LEVEL_TIERS = { 5: 'common', 10: 'common', 20: 'uncommon', 50: 'rare', 100: 'epic', 200: 'legendary' };
-const RANK_TIERS = ['common', 'uncommon', 'rare', 'epic'];   // Knight, Lord, Duke, Emperor (the tiers above the first)
+const RANK_TIERS = ['common', 'common', 'uncommon', 'rare', 'epic'];   // the difficulty of reaching Commoner, Knight, Lord, Duke, Emperor (the tiers above the first); a tier added later takes the last one
 const slug = n => n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 const vpOf = (g, n) => (g.playerVP && g.playerVP[n] != null && !Number.isNaN(+g.playerVP[n]) ? +g.playerVP[n] : null);

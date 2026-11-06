@@ -11,6 +11,7 @@ import { useConfirm } from './ConfirmDialog.jsx';
 import EloPreview from './EloPreview.jsx';
 import FinishOrder from './FinishOrder.jsx';
 import { buildGameArgs, resortByVP, toggle } from '../lib/gameForm.js';
+import { MAX_PLAYERS } from '../lib/seating.js';
 
 const blank = () => ({ date: Eng.fmtDay(Eng.todayDay()), type: '', picked: [], tie: {}, sets: [], landscapes: [], kingdom: [], kingdomTouched: false, vp: {}, notes: '', editId: null });
 
@@ -55,6 +56,7 @@ export default function GameModal({ editId, onClose }) {
   const pick = (key, n) => e => { e.preventDefault(); setBs(b => key === 'picked' ? { ...b, picked: toggle(b.picked, n), tie: b.picked.includes(n) ? Object.fromEntries(Object.entries(b.tie).filter(([k]) => k !== n)) : b.tie } : { ...b, [key]: toggle(b[key], n) }); };
   const save = async () => {
     if (bs.picked.length < 2) { setMsg('Pick at least 2 players.'); return; }
+    if (bs.picked.length > MAX_PLAYERS) { setMsg(`A table seats at most ${MAX_PLAYERS} players: take ${bs.picked.length - MAX_PLAYERS} off.`); return; }
     if (!bs.date) { setMsg('Pick a date.'); return; }
     const args = buildGameArgs(bs, gid, playerIdByName);
     setSaving(true); setMsg('Saving…');
@@ -90,6 +92,7 @@ export default function GameModal({ editId, onClose }) {
         <div className="pills" id="bpick">
           {roster.map(n => <a key={n} href="#" data-n={n} aria-current={bs.picked.includes(n) ? 'true' : undefined} onClick={pick('picked', n)}><NameIcon name={n} size={18} />{n}</a>)}
         </div>
+        {bs.picked.length > MAX_PLAYERS && <p className="night-nudge" role="alert">A table seats at most {MAX_PLAYERS} players: take {bs.picked.length - MAX_PLAYERS} off.</p>}
         <p className="meta">2. Fill in each player's VP and the order sorts itself (ties too, for equal scores). No VP tracked? Use the arrows and the "tied" box instead.</p>
         <FinishOrder bs={bs} setBs={setBs} resort={resortByVP} />
         <EloPreview picked={bs.picked} />
@@ -109,7 +112,7 @@ export default function GameModal({ editId, onClose }) {
         <p className="meta" style={{ marginTop: 14 }}>6. Optional details.</p>
         <label className="f">Notes <input type="text" id="bn" size={50} value={bs.notes} onChange={e => set({ notes: e.target.value })} /></label>
         <div className="controls" style={{ marginTop: 14 }}>
-          <button id="bsave" type="button" disabled={saving} onClick={save}>{bs.editId ? 'Save changes' : 'Save game'}</button>
+          <button id="bsave" type="button" disabled={saving || bs.picked.length > MAX_PLAYERS} onClick={save}>{bs.editId ? 'Save changes' : 'Save game'}</button>
           {bs.editId && <><button id="bdel" className="ghost" type="button" onClick={del}>Delete game</button><button id="bcancel" className="ghost" type="button" onClick={onClose}>Cancel</button></>}
           <span className="meta" id="bmsg" role="status">{msg}</span>
         </div>

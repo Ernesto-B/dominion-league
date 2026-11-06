@@ -61,17 +61,21 @@ index.html     — the shell Vite builds from: #root (React mounts here), #modal
 ```
 
 **The rating model** is chosen by `config.elo.model` in `public/data/config.json`. `classic` (the engine's default when the key is absent, and what the
-spreadsheet verified) is pairwise Elo, K=200. The league runs `steady` (`src/lib/steadyElo.js`): K=100 (200 while provisional), a points-per-finish
+spreadsheet verified) is pairwise Elo, K=200. The league runs `steady` (`src/lib/steadyElo.js`): K=175 (200 while provisional), a points-per-finish
 table that pays the top half first and the win second, half the top-half bonus for the exact middle of an odd table, and a table that pays `target`
-(0.52) of the points on average, which is the deliberate slow upward drift. Tier thresholds in `config.json` are the K=200 ones scaled by K/200
-(1125 / 1275 / 1475 / 1700): change K and the tiers together. Ratings are recomputed from the games on every load, so changing the model rewrites history.
+(0.52) of the points on average, which is the deliberate slow upward drift. Tier thresholds in `config.json` (Commoner 1075, Knight 1150, Lord 1240, Duke 1300, Emperor 1375) were set from simulations of K=200 at 50 games and kept when K went to 175, so
+change K and the tiers together. A tier needs an `icons/<id>.png` (the owner supplies it). Ratings are recomputed from the games on every load, so changing the model rewrites history.
+
+**Promotion trial** (`config.elo.promotionHold` 2, `promotionHoldFrom` `knight`, in `settle()` in `engine.js`): from that tier upward a player rises ONE rank after ending `promotionHold` rated games in a row at or over the next line;
+a game under it resets the count; a finished trial starts the next one fresh (no skipping ranks upward). Below that tier a rise is immediate (one rank). Exposed as `p.trial` and `g.elo[name].trial`; shown on the me card, Rankings' notes and the
+game report (`tierMove` kind `trial`). `components/RankState.jsx` is the one picture of it: `RankMark` (the tier icon with trial dots or a grace arrow and the popup: pips + an Elo-against-the-line meter) on the ladder and the Player page, `rankState(p)` for the text. The ladder's "Next rank" column (`NextRank` in `pages/Rankings.jsx`) replaced the old rating-vs-1000 bars. Tests: `tests/promotionTrial.test.js`, `tests/ladderMarks.test.jsx`.
 
 **Tiers are not a pure function of Elo any more.** `config.elo.demotionGrace` (2 now): a player who falls under the line of the tier they hold keeps it for that many more rated games; if their Elo is
 back at or over the line after any of them the grace resets, otherwise they drop. `config.elo.savingGrace` (0.2): in grace, a top-half finish (`pts >= 0.5`) adds that share of what they lost in their
 previous rated game, on top of the normal gain. Elo itself is never clamped except by that bonus. The engine keeps `held[name]` / `below[name]` per player and records, per game and player,
 `g.elo[name].tierBefore / tierAfter / held / below / saving` and `g.tierSnap`. **Show a tier after a game with `D.tierAt(game, name)`, never `D.tierFor(elo)`** (that is only the tier an Elo
 earns on its own; `tierAt` falls back to it for a game without a snapshot). `p.tier` / `p.tierHeld` / `p.nextTier` on a player follow the held tier. The rules are explained on Rankings ("How ratings and tiers
-work") from the config values, and the game report's Players tab says when a tier rose, dropped or is on thin ice (`tierMove` in `lib/gameReport.js`). Tests: `tests/demotionGrace.test.js`.
+work") from the config values, and the game report's Players tab says when a tier rose, dropped or is in grace or on a promotion trial (`tierMove` in `lib/gameReport.js`). Tests: `tests/demotionGrace.test.js`.
 
 **Season score** = the average of each Regular game's season points with `prior` imaginary average games. A game's season points are
 `(1 - vpWeight) x finish points + vpWeight x (your VP / the winner's VP)` (0.3: 70% place, 30% VP share; a ratio, so it never depends on how many VP an

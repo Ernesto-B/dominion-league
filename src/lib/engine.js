@@ -180,9 +180,21 @@ function compute(config, csvRows, today) {
   const lastLoss = {};   // what each player lost in their latest rated game (0 if they gained)
   const held = {}, below = {};   // the tier index each player is shown at, and how many games in a row they have sat under it
   roster.forEach(n => { held[n] = tierIndex(E.start); below[n] = 0; });
+  // Promotion trial: from `promotionHoldFrom` (a tier id) upward a player rises ONE rank only after ending `promotionHold` rated games in a row at or over the next rank's line;
+  // a game that ends under the line starts the count again. A finished trial moves them up one rank and the next one starts fresh. 1 (or unset) = no trial: rise at once to the tier the Elo earns.
+  const hold = Math.max(1, Math.floor(+E.promotionHold || 1));
+  const holdFrom = (() => { const i = tiers.findIndex(t => t.id === E.promotionHoldFrom); return i < 0 ? 0 : i; })();
+  const above = {};   // rated games in a row each player has ended over the line of the next rank
+  roster.forEach(n => { above[n] = 0; });
   const settle = (n, elo) => {
-    const raw = tierIndex(elo);
-    if (raw >= (held[n] ?? 0)) { held[n] = raw; below[n] = 0; } else if (++below[n] > grace) { held[n] = raw; below[n] = 0; }
+    const raw = tierIndex(elo), h = held[n] ?? 0;
+    if (raw > h) {
+      below[n] = 0;
+      if (hold <= 1) { held[n] = raw; above[n] = 0; return; }
+      const next = h + 1;
+      if (next < holdFrom) { held[n] = next; above[n] = 0; } else if ((above[n] = (above[n] || 0) + 1) >= hold) { held[n] = next; above[n] = 0; }
+    } else if (raw === h) { below[n] = 0; above[n] = 0; }
+    else { above[n] = 0; if (++below[n] > grace) { held[n] = raw; below[n] = 0; } }
   };
   games.forEach(g => {
     g.pts = {}; g.elo = {};
@@ -214,6 +226,7 @@ function compute(config, csvRows, today) {
         if (bonus[a] > 0) g.elo[a].saving = bonus[a];
         settle(a, next[a]);
         g.elo[a].tierBefore = tierBefore; g.elo[a].tierAfter = tiers[held[a]]; g.elo[a].held = below[a] > 0; g.elo[a].below = below[a];
+        if ((above[a] || 0) > 0) g.elo[a].trial = { tier: tiers[held[a] + 1], have: above[a], need: hold };   // a promotion trial under way after this game
         pa.rated++; pa.ptsSum += g.pts[a];
         const won = g.places[a] === 1;
         if (won) { pa.wins++; pa.streak++; pa.bestStreak = Math.max(pa.bestStreak, pa.streak); pa.dry = 0; } else { pa.streak = 0; pa.dry++; pa.bestDry = Math.max(pa.bestDry, pa.dry); }
@@ -303,6 +316,8 @@ function compute(config, csvRows, today) {
         return m;
       })(),
       tier: p.rated ? tiers[held[n] ?? tierIndex(p.elo)] : null,
+      trial: p.rated > 0 && (above[n] || 0) > 0 && tiers[(held[n] ?? 0) + 1] ? { tier: tiers[held[n] + 1], have: above[n], need: hold } : null,   // promotion trial under way (see settle)
+      grace: p.rated > 0 && (below[n] || 0) > 0 ? { line: tiers[held[n]].min, left: Math.max(0, grace - below[n]), total: grace } : null,   // in demotion grace: the line they are under and how many games remain
       tierHeld: p.rated > 0 && (below[n] || 0) > 0,   // under their tier's line but still shown at it (the demotion grace)
       peakTier: p.rated ? tiers[tierIndex(p.peak)] : null,
       nextTier: p.rated && (held[n] ?? tierIndex(p.elo)) < tiers.length - 1 ? { tier: tiers[(held[n] ?? tierIndex(p.elo)) + 1], need: Math.max(1, tiers[(held[n] ?? tierIndex(p.elo)) + 1].min - Math.round(p.elo)) } : null,

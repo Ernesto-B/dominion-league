@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { usePage } from '../PageContext.js';
 import { compare } from '../lib/compare.js';
-import TierIcon from './TierIcon.jsx';
+import RankMark, { rankState } from './RankState.jsx';
 import RatingChart from './RatingChart.jsx';
 import SetIcon from './SetIcon.jsx';
 import ComparePicker from './ComparePicker.jsx';
@@ -24,9 +24,10 @@ export default function Compare({ a, b, names = [] }) {
   // the whole block is one link to that player's page
   const side = (p, hue) => (
     <a className={'cmp-who ' + hue} href={hashFor('players', gid, encodeURIComponent(p.name))}>
-      {p.tier && <TierIcon id={p.tier.icon} size={64} alt={p.tier.name + ' tier'} />}
+      {p.tier && <RankMark p={p} size={64} />}
       <span className="cmp-name">{p.name}</span>
       {p.tier && <span className="meta">{p.tier.name}{p.rated ? ` · ${Math.round(p.elo)} Elo` : ''}</span>}
+      {(() => { const st = rankState(p); return st ? <span className={'rs-note ' + st.kind}>{st.short}</span> : null; })()}
     </a>
   );
   const chip = (x, owner) => {

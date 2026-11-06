@@ -110,7 +110,8 @@ export function Players({ rep, game, me }) {
 function GraceNote({ g }) {
   if (g.kind === 'up') return <>Rose to <b>{g.tier}</b></>;
   if (g.kind === 'down') return <>Dropped from <b>{g.from}</b> to <b>{g.tier}</b></>;
-  return <>On thin ice: still <b>{g.tier}</b> under the line, {g.left > 0 ? `${g.left} more game${g.left === 1 ? '' : 's'} of grace` : 'out of grace, the next game under the line drops them'}</>;
+  if (g.kind === 'trial') return <>{g.next} trial: <b>{g.have} of {g.need}</b> games over the line</>;
+  return <>In grace: still <b>{g.tier}</b> under the line, {g.left > 0 ? `${g.left} more game${g.left === 1 ? '' : 's'} under the line allowed` : 'out of grace, the next game under the line drops them'}</>;
 }
 
 function PlayerCard({ p, game, mine, open }) {

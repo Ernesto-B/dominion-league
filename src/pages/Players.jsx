@@ -6,6 +6,8 @@ import NameIcon from '../components/NameIcon.jsx';
 import TierIcon from '../components/TierIcon.jsx';
 import StatTile, { SetStatTile, SetBreakdown, PopText } from '../components/StatTile.jsx';
 import TierProgressBar from '../components/TierProgressBar.jsx';
+import RankMark, { rankState } from '../components/RankState.jsx';
+import HoverPopup from '../components/HoverPopup.jsx';
 import GameCards from '../components/GameCards.jsx';
 import H2HMatrix from '../components/H2HMatrix.jsx';
 import Badges from '../components/Badges.jsx';
@@ -47,10 +49,11 @@ export default function Players() {
   const headTop = (
       <div className="head headc">
         <div className="who">
-          {p.tier && <TierIcon id={p.tier.icon} size={72} alt={p.tier.name + ' tier'} />}
+          {p.tier && <RankMark p={p} size={72} />}
           <div>
             <div className="namerow"><h1>{p.name}</h1><PinnedBadges p={p} /><PinAdd p={p} /></div>
             {p.tier && <p className="lede">{p.tier.name} tier{p.nextTier ? `, ${p.nextTier.need} Elo to ${p.nextTier.tier.name}` : ', top tier'}{p.peakTier && p.peakTier.id !== p.tier.id ? `. Best ever: ${p.peakTier.name}.` : ''}</p>}
+            {(() => { const st = rankState(p); return st ? <HoverPopup className={'rs-note ' + st.kind} content={st.pop}><span>{st.short}</span></HoverPopup> : null; })()}
           </div>
         </div>
         <div className="head-tools">

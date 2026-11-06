@@ -88,7 +88,7 @@ details.help .note{margin:8px 0 0}
 
 /* ladder */
 .ladder{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 0}
-.lrow{display:grid;grid-template-columns:44px minmax(150px,210px) minmax(160px,1fr) 78px 64px 92px;gap:10px;align-items:center;padding:9px 16px;border-top:1px solid var(--line);cursor:default}
+.lrow{display:grid;grid-template-columns:44px minmax(150px,1fr) 130px 78px 64px 92px;gap:10px;align-items:center;padding:9px 16px;border-top:1px solid var(--line);cursor:default}
 .lrow:first-child{border-top:0}
 .lrow:hover,.lrow.hot{background:var(--bg)}
 .lrank{font:700 20px var(--display);color:var(--muted);display:flex;align-items:center;gap:4px}
@@ -98,18 +98,14 @@ details.help .note{margin:8px 0 0}
 .lname:hover{text-decoration:underline}
 .tag{font-size:12px;color:var(--muted);font-weight:400}
 .crown{color:var(--brass);font-size:13px;font-weight:600}
-.bar{position:relative;height:20px}
-.bar::before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:var(--line)}
-.bar i{position:absolute;top:3px;height:14px;border-radius:2px}
-.bar i.up{background:var(--felt)} .bar i.down{background:var(--brick)}
 .lelo{font:700 24px var(--display);text-align:right}
 .ldelta{font-size:14px;text-align:right}
 .up-t{color:var(--felt)} .down-t{color:var(--brick)}
 .form{display:flex;gap:4px;justify-content:flex-end}
 .form i{width:10px;height:10px;border-radius:50%;background:var(--line)}
 .form i.w{background:var(--felt)} .form i.l{background:var(--brick)} .form i.m{background:var(--muted);opacity:.55}
-.lhead{display:grid;grid-template-columns:44px minmax(150px,210px) minmax(160px,1fr) 78px 64px 92px;gap:10px;padding:6px 16px 8px;color:var(--muted);font-size:13px}
-.lhead span:nth-child(3){text-align:center}   /* over the bar chart's centre line */
+.lhead{display:grid;grid-template-columns:44px minmax(150px,1fr) 130px 78px 64px 92px;gap:10px;padding:6px 16px 8px;color:var(--muted);font-size:13px}
+.lhead span:nth-child(3){text-align:left}
 .lhead span:nth-child(n+4){text-align:right}
 .axis{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
 
@@ -231,7 +227,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;backgroun
 @media (max-width:720px){
   .lhead{display:none}
   .lrow{grid-template-columns:34px 1fr auto;grid-template-areas:"rk nm elo" "bar bar bar" "dl dl fm";row-gap:6px;padding:12px 14px}
-  .lrank{grid-area:rk} .lname{grid-area:nm} .lelo{grid-area:elo} .bar{grid-area:bar} .ldelta{grid-area:dl;text-align:left} .form{grid-area:fm}
+  .lrank{grid-area:rk} .lname{grid-area:nm} .lelo{grid-area:elo} .lnext{grid-area:bar} .ldelta{grid-area:dl;text-align:left} .form{grid-area:fm}
 
   .top-inner{justify-content:space-between}
   #navuser{order:2;margin-left:auto}
@@ -268,9 +264,6 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;backgroun
   .order button[data-dn]{grid-area:dn}
   .order label.vp{grid-area:vp}
   .order label.tie{grid-area:tie;justify-self:end}
-}
-@media (prefers-reduced-motion:no-preference){
-  .bar i{transition:width .5s ease,left .5s ease}
 }
 
 img.tier{display:inline-block;vertical-align:middle;flex:none}
@@ -770,9 +763,10 @@ details.how>h2:first-of-type{margin-top:8px}
 .gcards,.chart-keys{display:none}
 @media (max-width:720px){
   /* the ladder: one tight line per player (rank, name, Elo, last change); the bar and form dots stay on the player's page */
-  .lrow{grid-template-columns:30px 1fr auto 52px;grid-template-areas:"rk nm elo dl" "rk fm elo dl";row-gap:3px;column-gap:8px;padding:8px 12px;min-height:52px}
-  .lrow .bar{display:none}
-  .lrow .form{display:flex;justify-content:flex-start;gap:5px}
+  .lrow{grid-template-columns:62px 1fr auto 52px;grid-template-areas:"rk nm elo dl" "rk pb fm fm";row-gap:3px;column-gap:8px;padding:8px 12px;min-height:52px}
+  .lrow .lnext{display:none}
+  .lrow.nopin{grid-template-areas:"rk nm elo dl" "rk nm fm fm"}   /* no pinned badge under the name: the name block takes both lines, so it sits centred in the row */
+  .lrow .form{display:flex;justify-content:flex-end;gap:5px}   /* the recent form sits under Elo and the last change, on the right; the name's side keeps just the pinned badge */
   .lrow .form i{width:9px;height:9px}
   .lrow .lelo{font-size:20px}
   .lrow .ldelta{grid-area:dl;text-align:right;font-size:14px}
@@ -2055,7 +2049,7 @@ a.gr-face{position:relative}
 .rank-medal{display:inline-grid;place-items:center;width:var(--sz,32px);height:var(--sz,32px);border-radius:50%;background:color-mix(in srgb,var(--m) 22%,transparent);border:2px solid var(--m);vertical-align:middle}
 .rank-medal b{font:700 12px var(--text);color:var(--ink)}
 .rank-medal.p1{--m:#E3B84A}.rank-medal.p2{--m:#B7C0CC}.rank-medal.p3{--m:#C98B55}
-.lrank .rank-medal{margin-left:-2px}
+.lrank .rank-medal{margin-left:-2px;flex:none}   /* never squeezed by the rank-move arrow beside it */
 /* the season's top three as things stand (not a `.top` class: that is the site header's, which sets its text colour and sticks it) */
 /* tinted over the table's own panel colour (not over nothing: a see-through row let the picture behind it wash the text out) */
 tr.stand1 td{background:color-mix(in srgb,#E3B84A 14%,var(--panel))}
@@ -2099,9 +2093,8 @@ tr.stand1 td:first-child{--m:#E3B84A}tr.stand2 td:first-child{--m:#B7C0CC}tr.sta
 .lpin-m{display:none}
 @media (max-width:720px){
   .lname .lpin-wrap{display:none}
-  .lsub{grid-area:fm;display:flex;align-items:center;gap:8px;min-width:0}
-  .lsub .form{grid-area:auto}
-  .lsub .lpin-m{display:flex;min-width:0;margin:-5px 0}   /* the chip is taller than the form dots: negative margins make it add no height, so a row with a title is as tall as one without */
+  .lsub .form{grid-area:fm}
+  .lsub .lpin-m{grid-area:pb;display:flex;min-width:0;margin:-5px 0}   /* the chip is taller than the form dots: negative margins make it add no height, so a row with a title is as tall as one without */
   .lsub .pin-chip.lpin{display:block;max-width:150px;font-size:11px;line-height:16px;padding:0 8px}
 }
 /* every player dropdown shows eight names at a time on a desktop (six on a touch screen) and scrolls for the rest (one column, so the rows really are players) */
@@ -2110,3 +2103,39 @@ tr.stand1 td:first-child{--m:#E3B84A}tr.stand2 td:first-child{--m:#B7C0CC}tr.sta
 /* a list that scrolls hints at it: while there is more below, the last visible row fades into the panel (set by lib/scrollFade.js) */
 .pp-menu::after{content:"";grid-column:1/-1;position:sticky;bottom:-6px;height:40px;margin-top:-40px;background:linear-gradient(to bottom,transparent,var(--panel) 85%);pointer-events:none;border-radius:0 0 12px 12px}
 .pp-menu:not([data-more="true"])::after{display:none}
+
+/* the ladder's tier icon says when a rank is on trial (dots) or in grace (a red arrow); the words are in its popup */
+.tmark{position:relative;display:inline-flex;flex:none;line-height:0;cursor:help;outline-offset:3px;border-radius:6px}
+@media (pointer:coarse){.tmark{min-height:0}}
+.tmark .tgem{position:absolute;right:-4px;top:-2px;width:9px;height:9px;transform:rotate(45deg);border-radius:1px;box-shadow:0 0 0 1.5px var(--panel)}
+.tmark .tgem.trial{background:var(--felt)} .tmark .tgem.grace{background:var(--brick)}   /* one diamond, green for a trial and red for grace; never an arrow, those belong to rank moves */
+.tmark.big .tgem{width:14px;height:14px;right:-3px;top:-1px}
+
+/* the ladder's "Next rank" column: a thin bar, the Elo to go (or the trial's games, or the grace's Elo under the line) and the next tier's icon */
+.lnext{display:flex;align-items:center;gap:6px;height:20px}
+.lnext .nbar{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.lnext .nbar i{display:block;height:100%;border-radius:3px;background:var(--felt)}
+.lnext .nneed{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.lnext.trial .nneed{color:var(--felt);font-weight:600}
+.lnext.grace .nbar i{background:var(--brick);min-width:5px}
+.lnext.grace .nneed{color:var(--brick);font-weight:600}
+.lnext img{flex:none;opacity:.85}
+/* the picture in a rank-state popup */
+.rsp{width:232px;display:grid;gap:10px;white-space:normal}
+.rsp-head{display:flex;align-items:center;gap:6px;font-size:15px}.rsp-head b{margin-left:4px}.rsp-head span{color:var(--muted)}
+.rsp-pips{display:flex;align-items:center;gap:6px}.rsp-pips small{color:var(--muted);font-size:12px;margin-left:4px;line-height:1.2}
+.rsp .pip{width:26px;height:26px;border-radius:50%;display:inline-grid;place-items:center;font-size:12px;font-weight:700;border:2px solid var(--line);color:var(--muted)}
+.rsp.trial .pip.on{background:var(--felt);border-color:var(--felt);color:#fff}
+.rsp.grace .pip.on{background:var(--brick);border-color:var(--brick);color:#fff}
+.rsp.grace .pip.used{border-style:dashed;opacity:.7}
+.rsp-meter p{margin:6px 0 0;font-size:12px;color:var(--muted)}
+.rsp-meter.over p{color:var(--felt)} .rsp-meter.under p{color:var(--brick)}
+.rsp-track{position:relative;height:8px;border-radius:4px;background:var(--line);margin-top:16px}
+.rsp-tick{position:absolute;top:-4px;width:2px;height:16px;background:var(--text);transform:translateX(-1px)}
+.rsp-tick b{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;font-style:normal;color:var(--muted)}
+.rsp-dot{position:absolute;top:-3px;width:14px;height:14px;border-radius:50%;transform:translateX(-50%);border:2px solid var(--panel)}
+.rsp-meter.over .rsp-dot{background:var(--felt)} .rsp-meter.under .rsp-dot{background:var(--brick)}
+.rsp-foot{margin:0;font-size:12px;line-height:1.4;color:var(--muted)}
+/* the Player page's one-line note beside the big tier icon */
+.rs-note{display:block;width:auto;margin-top:2px;font-size:13px;font-weight:600;cursor:help}
+.rs-note.trial{color:var(--felt)} .rs-note.grace{color:var(--brick)}

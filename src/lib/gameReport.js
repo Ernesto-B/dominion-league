@@ -159,6 +159,7 @@ function tierMove(e, E) {
   if (b.min > a.min) return { kind: 'up', tier: b.name };
   if (b.min < a.min) return { kind: 'down', tier: b.name, from: a.name };
   if (e.held) return { kind: 'held', tier: b.name, left: Math.max(0, left) };
+  if (e.trial) return { kind: 'trial', tier: b.name, next: e.trial.tier.name, have: e.trial.have, need: e.trial.need };
   return null;
 }
 
