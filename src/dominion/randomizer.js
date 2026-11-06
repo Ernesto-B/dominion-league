@@ -332,8 +332,13 @@ export function generate(catalog, options = {}, { rng = Math.random, keep = [], 
 
   const capFixed = capBroken(fixed, o);
   if (capFixed) return { ok: false, message: `The cards you included or locked already break a limit: ${capFixed.toLowerCase()}.` };
-  const eligible = chosen => pool.filter(i => !chosen.includes(i) && !(o.maxAttacks != null && i.attack && attackCount(chosen) >= o.maxAttacks)
-    && !capsOf(o).some(([r, n]) => satisfies(i, r) && capCount(chosen, r) >= n) && !(o.balance && balanceFull(chosen, i)));
+  const caps = capsOf(o);   // worked out once per roll, not once per candidate
+  const eligible = chosen => {
+    const full = new Set(caps.filter(([r, n]) => capCount(chosen, r) >= n).map(([r]) => r));
+    const attackFull = o.maxAttacks != null && attackCount(chosen) >= o.maxAttacks;
+    const roleFull = o.balance ? Object.entries(BALANCE_LIMIT).filter(([role, n]) => chosen.filter(c => specialistOf(c, role)).length >= n).map(([role]) => role) : [];
+    return pool.filter(i => !chosen.includes(i) && !(attackFull && i.attack) && !(full.size && [...full].some(r => satisfies(i, r))) && !(roleFull.length && roleFull.some(role => specialistOf(i, role))));
+  };
   if (o.minAttacks > 0 && o.maxAttacks != null && o.minAttacks > o.maxAttacks) return { ok: false, message: `At least ${o.minAttacks} Attacks but at most ${o.maxAttacks}: the limits don’t fit.` };
   if (fixed.some(i => overCost(i, o))) return { ok: false, message: `A card you included or locked costs more than your limit ($${o.maxCost}).` };
   const quotas = quotasFor(pool, o);

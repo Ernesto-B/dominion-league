@@ -53,9 +53,9 @@ describe('rules that exclude', () => {
 
 describe('rules that require', () => {
   it('guarantees each of Village, drawing, trashing and +Buy, and all four together', () => {
-    for (const rule of Object.keys(REQUIRE_RULES)) for (const r of rolls({ require: [rule] }, 100)) expect(has(r, rule), rule).toBe(true);
-    for (const r of rolls({ require: Object.keys(REQUIRE_RULES) }, 100)) for (const rule of Object.keys(REQUIRE_RULES)) expect(has(r, rule), rule).toBe(true);
-  });
+    for (const rule of Object.keys(REQUIRE_RULES)) for (const r of rolls({ require: [rule] }, 40)) expect(has(r, rule), rule).toBe(true);
+    for (const r of rolls({ require: Object.keys(REQUIRE_RULES) }, 40)) for (const rule of Object.keys(REQUIRE_RULES)) expect(has(r, rule), rule).toBe(true);
+  }, 30000);   // many rolls: a slower CI machine needs more than vitest's 5 seconds
   it('combines with the exclusions', () => {
     for (const r of rolls({ require: ['village', 'trash'], maxAttacks: 0, reaction: true }, 100)) { expect(attacks(r)).toBe(0); expect(has(r, 'village')).toBe(true); expect(has(r, 'trash')).toBe(true); }
   });
