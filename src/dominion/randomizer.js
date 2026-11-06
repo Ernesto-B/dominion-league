@@ -44,6 +44,20 @@ const costLevel = info => Math.min(6, Math.max(2, (info.cards[0].coins || 0) + (
 
 /* "At most N of these": a cap on how many piles in a kingdom do one thing (five Drawers is a very different game from two). Keyed by the REQUIRE_RULES mechanic rules, counted with the same
    recorded tags, so a card that does it but isn't tagged isn't counted (a cap can let one through, never refuse a card wrongly). */
+/* "Include cards that give...": turning a kind on asks for at least GIVES_MIN cards of it in the kingdom (fewer if the chosen expansions have fewer). Counted from the recorded mechanics (Spoils from the
+   printed text), so it is a lower bound: a card that gives it but isn't tagged isn't counted, and the roll can hold more than the minimum. */
+export const GIVES_MIN = 2;
+export const GIVES = {
+  coffers: { chip: 'Coffers', label: 'cards that give Coffers', tags: ['coffers_generation', 'conditional_coffers'] },
+  villagers: { chip: 'Villagers', label: 'cards that give Villagers', tags: ['villager_generation', 'trash_for_villagers'] },
+  horses: { chip: 'Horses', label: 'cards that gain Horses', tags: ['horse_gaining'] },
+  loot: { chip: 'Loot', label: 'cards that gain Loot', tags: ['loot_gaining'] },
+  spoils: { chip: 'Spoils', label: 'cards that gain Spoils', text: /\bSpoils\b/ },
+  vp: { chip: 'VP tokens', label: 'cards that give VP tokens', tags: ['vp_token_generation'] },
+};
+export const GIVES_KEYS = Object.keys(GIVES);
+const givesTest = k => i => (GIVES[k].tags ? GIVES[k].tags.some(t => i.tags.has(t)) : i.cards.some(c => GIVES[k].text.test(c.text || '')));
+
 export const CAP_RULES = ['draw', 'village', 'trash', 'buy'];
 export const MAX_CAP = 8;
 export const CAP_DEFAULT = 3;   // every kind starts capped at three; the Must have and Attack rules are met first, so a cap only limits the random fill
@@ -59,6 +73,7 @@ export const DEFAULT_OPTIONS = Object.freeze({
   landscapeTypes: [],      // empty = all five types
   maxAttacks: null,        // null = any number of Attack piles
   minAttacks: 0,           // at least this many Attack piles
+  gives: [],               // keys of GIVES: at least GIVES_MIN cards that give each
   maxOf: Object.freeze({ draw: 3, trash: 3, village: 3, buy: 3 }),   // at most this many piles with that mechanic (CAP_RULES); a kind left out has no cap
   maxCost: null,           // null = any, else no card costs more than this many coins (and none costs Debt)
   reaction: false,         // if there is an Attack, make sure there is a Reaction too
@@ -130,6 +145,7 @@ export function quotasFor(pool, o) {
     const test = i => themeRole(i, t) === 'core', total = count(test);
     out.push({ label: THEMES[t].label, test, total, n: Math.min(total, Math.max(2, Math.round(o.cards * share))), none: `None of the chosen expansions has ${THEMES[t].label} to build the kingdom around.` });
   });
+  o.gives.forEach(k => { const test = givesTest(k), total = count(test); out.push({ label: GIVES[k].label, test, total, n: Math.min(total, GIVES_MIN), none: `None of the chosen expansions has ${GIVES[k].label}.` }); });
   if (o.minAttacks > 0) { const test = i => i.attack, total = count(test); out.push({ label: 'Attack cards', test, total, n: o.minAttacks, strict: true }); }
   if (o.costSpread === 'barbell') {
     const n = Math.max(2, Math.round(o.cards * FOLLOW));
@@ -219,6 +235,7 @@ const normalize = (opts, catalog = null) => {
   o.landscapes = Math.max(0, Math.min(6, Number(o.landscapes) || 0));
   o.themes = [...new Set((o.themes || []).filter(t => THEMES[t]))];
   o.minAttacks = Math.max(0, Math.min(12, Math.round(Number(o.minAttacks) || 0)));
+  o.gives = [...new Set((o.gives || []).filter(k => GIVES[k]))];
   o.maxOf = Object.fromEntries(Object.entries(o.maxOf || {}).filter(([r, n]) => CAP_RULES.includes(r) && Number.isInteger(n) && n >= 0).map(([r, n]) => [r, Math.min(MAX_CAP, n)]));
   o.maxCost = o.maxCost != null && Number(o.maxCost) >= 2 ? Math.min(10, Math.round(Number(o.maxCost))) : null;
   return o;
@@ -514,6 +531,7 @@ export function optionsToParams(opts, p = new URLSearchParams()) {
   if (o.favorTable) p.set('ft', '1');
   if (o.favorBy) p.set('fb', o.favorBy);
   if (o.junkTrash) p.set('jt', '1');
+  o.gives.forEach(v => p.append('gv', v));
   if (o.costSpread) p.set('cs', o.costSpread);
   o.themes.forEach(v => p.append('th', v));
   return p;
@@ -528,7 +546,7 @@ export function optionsFromParams(p) {
     maxAttacks: intIn(p.get('atk'), 0, 12, null), minAttacks: intIn(p.get('atkmin'), 0, 12, 0), maxCost: intIn(p.get('maxc'), 2, 10, null), reaction: p.get('rx') === '1',
     require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: many(p, 'inc'), exclude: many(p, 'exc'), excludeLandscapes: [], favor: p.get('fav') === '1',
     favorPlayed: p.get('fp') === '1', favorTable: p.get('ft') === '1', favorBy: (p.get('fb') || '').slice(0, 60), junkTrash: p.get('jt') === '1', costSpread: COST_SPREADS[p.get('cs')] ? p.get('cs') : null,
-    themes: [...new Set(many(p, 'th').filter(t => THEMES[t]))],
+    themes: [...new Set(many(p, 'th').filter(t => THEMES[t]))], gives: [...new Set(many(p, 'gv').filter(k => GIVES[k]))],
     maxOf: many(p, 'mx').map(v => v.split(':')).filter(([r, n]) => CAP_RULES.includes(r) && /^(\d|x)$/.test(n || '')).reduce((m, [r, n]) => { if (n === 'x') delete m[r]; else m[r] = Math.min(MAX_CAP, +n); return m; }, { ...d.maxOf }),
   };
 }

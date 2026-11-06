@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import { CAP_DEFAULT, CAP_RULES, CARD_COUNTS, COST_SPREADS, REQUIRE_RULES, THEMES, THEME_KEYS, ruleIsExact } from '../randomizer.js';
+import { CAP_DEFAULT, CAP_RULES, GIVES, GIVES_KEYS, GIVES_MIN, CARD_COUNTS, COST_SPREADS, REQUIRE_RULES, THEMES, THEME_KEYS, ruleIsExact } from '../randomizer.js';
 import { toggle } from '../filters.js';
 import { PLURAL } from '../constants.js';
 import { resolveKingdom } from '../kingdom.js';
@@ -52,12 +52,13 @@ const ATTACK_STEPS = [0, 1, 2, 3];
 export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = false, foldExpansions = false, cardCount = null }) {
   const playsScope = useContext(PlaysScopeContext);
   const attacksOn = opts.maxAttacks !== 0;
-  const themes = opts.themes || [];   // a night saved before themes existed has none
+  const themes = opts.themes || [];
+  const gives = opts.gives || [];   // a night saved before themes existed has none
   const capsChanged = CAP_RULES.filter(r => (opts.maxOf || {})[r] !== CAP_DEFAULT).length;   // caps are on by default: only a change counts
   const listsOn = opts.include.length + opts.exclude.length;
   const tagRules = Object.entries(REQUIRE_RULES).filter(([k]) => !ruleIsExact(k)), costRules = Object.entries(REQUIRE_RULES).filter(([k]) => ruleIsExact(k));
   const ruleChip = ([k, r]) => <Chip key={k} cls={r.coins != null || r.atLeast != null ? 'rzo-coin' : ''} pressed={opts.require.includes(k)} label={r.coins != null ? `A card costing ${r.coins} coins` : r.atLeast != null ? `A card costing ${r.atLeast} coins or more` : undefined} onClick={() => setOpts({ require: toggle(opts.require, k) })}>{r.coins != null ? <CoinIcon coins={r.coins} size={24} /> : r.atLeast != null ? <><CoinIcon coins={r.atLeast} size={24} /><b className="rzo-plus">+</b></> : r.chip || r.box || r.label}</Chip>;
-  const advOn = themes.length + capsChanged + (opts.minAttacks > 0 ? 1 : 0) + (opts.maxCost != null ? 1 : 0) + opts.require.filter(ruleIsExact).length;
+  const advOn = themes.length + gives.length + capsChanged + (opts.minAttacks > 0 ? 1 : 0) + (opts.maxCost != null ? 1 : 0) + opts.require.filter(ruleIsExact).length;
   const owned = catalog.ownedExpansions, chosen = opts.expansions.length;
   const expansionChips = owned.map(e => (
     <Chip key={e.name} label={e.name} pressed={opts.expansions.includes(e.name)} onClick={() => setOpts({ expansions: toggle(opts.expansions, e.name) })}><ExpansionBadge name={e.name} iconOnly size={26} /></Chip>
@@ -129,6 +130,9 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
           <Row label="Build around" note="Lean the kingdom towards one style (pick any)">
             <div className="dn-chips">{THEME_KEYS.map(k => <Chip key={k} hint={THEMES[k].hint} pressed={themes.includes(k)} onClick={() => setOpts({ themes: toggle(themes, k) })}>{THEMES[k].chip}</Chip>)}</div>
           </Row>
+          <Row label="Include cards that give" note={`At least ${GIVES_MIN} of each kind you pick`}>
+            <div className="dn-chips">{GIVES_KEYS.map(k => <Chip key={k} pressed={gives.includes(k)} onClick={() => setOpts({ gives: toggle(gives, k) })}>{GIVES[k].chip}</Chip>)}</div>
+          </Row>
           <Row label="Keep to at most" note="How many of each kind a roll may hold">
             <div className="rzo-caps">
               {[['draw', 'Drawers'], ['trash', 'Trashers'], ['village', '+Actions'], ['buy', '+Buy']].map(([r, label]) => (
@@ -139,9 +143,8 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
           </Row>
           {attacksOn && <Row label="Fewest Attacks" note="At least this many Attacks in the kingdom"><Stepper label="Fewest Attacks" value={opts.minAttacks || 0} min={0} max={opts.maxAttacks ?? 12} onChange={n => setOpts({ minAttacks: n })} /></Row>}
           <Row label="Include a card costing" note="At least one card at each cost you pick"><div className="dn-chips">{costRules.map(ruleChip)}</div></Row>
-          <Row label="No card above" note="The most any card may cost">
-            <Seg cls="coins" label="Highest card cost" value={opts.maxCost ?? 'any'} onChange={v => setOpts({ maxCost: v === 'any' ? null : v })}
-              options={[{ value: 'any', label: 'Any' }, ...[3, 4, 5, 6].map(c => ({ value: c, label: <CoinIcon coins={c} size={24} />, aria: `${c} coins` }))]} />
+          <Row label="No card above" note="The most any card may cost (none picked: any)">
+            <div className="dn-chips">{[3, 4, 5, 6].map(c => <Chip key={c} cls="rzo-coin" label={`No card above ${c} coins`} pressed={opts.maxCost === c} onClick={() => setOpts({ maxCost: opts.maxCost === c ? null : c })}><CoinIcon coins={c} size={24} /></Chip>)}</div>
           </Row>
         </div>
       </Fold>

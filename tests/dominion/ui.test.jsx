@@ -722,9 +722,9 @@ describe('the randomizer\'s Attacks and Cost rows', () => {
   it('has an Attack limit, a fewest-Attacks stepper, a Barbell spread and a cost cap, each as one compact control', () => {
     const html = render('randomizer?atk=2');
     expect(html).toContain('aria-label="Most Attacks"'); expect(html).toContain('aria-label="Fewest Attacks"');
-    expect(html).toContain('>Barbell<'); expect(html).toContain('aria-label="Highest card cost"');
+    expect(html).toContain('>Barbell<'); expect(html).toContain('No card above 4 coins');
     const on = render('randomizer?atk=3&atkmin=2&maxc=4');
-    expect(on).toMatch(/aria-label="Fewest Attacks"[^]*?<output[^>]*>2</); expect(on).toMatch(/aria-pressed="true"[^>]*aria-label="4 coins"/);
+    expect(on).toMatch(/aria-label="Fewest Attacks"[^]*?<output[^>]*>2</); expect(on).toMatch(/aria-pressed="true"[^>]*aria-label="No card above 4 coins"/);
     expect(on).toMatch(/aria-pressed="true"[^>]*aria-label="At most 3 Attacks"/);
   });
 });
