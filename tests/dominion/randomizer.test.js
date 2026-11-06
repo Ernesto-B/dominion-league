@@ -279,9 +279,13 @@ describe('include cards that give...', () => {
   it('says so when the chosen expansions have none', () => { const r = roll({ gives: ['loot'], expansions: ['Seaside'] }); expect(r.ok).toBe(false); expect(r.message).toMatch(/Loot/); });
 });
 
+describe('Balance (option)', () => {
+  it('is on by default, and only "off" is written to the link', () => { expect(DEFAULT_OPTIONS.balance).toBe(true); expect(optionsToParams({ ...DEFAULT_OPTIONS, balance: false }).toString()).toBe('bal=0'); });
+});
+
 describe('the link', () => {
   it('round-trips the options', () => {
-    const o = { expansions: ['Seaside', 'Dark Ages'], cards: 8, landscapes: 2, landscapeTypes: ['Way'], maxAttacks: 3, minAttacks: 2, maxCost: 4, reaction: true, require: ['village', 'buy'], include: ['a:b'], exclude: ['c:d'], excludeLandscapes: [], favor: true, favorPlayed: false, favorTable: true, favorBy: 'Ann', junkTrash: true, costSpread: 'high', themes: ['treasure', 'trash'], maxOf: { draw: 2, trash: 0 }, gives: [] };
+    const o = { expansions: ['Seaside', 'Dark Ages'], cards: 8, landscapes: 2, landscapeTypes: ['Way'], maxAttacks: 3, minAttacks: 2, maxCost: 4, reaction: true, require: ['village', 'buy'], include: ['a:b'], exclude: ['c:d'], excludeLandscapes: [], favor: true, favorPlayed: false, favorTable: true, favorBy: 'Ann', junkTrash: true, costSpread: 'high', themes: ['treasure', 'trash'], maxOf: { draw: 2, trash: 0 }, gives: [], balance: false };
     expect(optionsFromParams(new URLSearchParams(optionsToParams(o).toString()))).toEqual(o);
     expect(optionsToParams(DEFAULT_OPTIONS).toString()).toBe('');
     expect(optionsFromParams(new URLSearchParams(''))).toEqual(DEFAULT_OPTIONS);

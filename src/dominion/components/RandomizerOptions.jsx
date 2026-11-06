@@ -92,7 +92,7 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
         </Row>
 
         <Row label="Must have">
-          <div className="dn-chips">{tagRules.map(ruleChip)}</div>
+          <div className="dn-chips"><Chip hint="No two cards doing the same single job, like two plain drawers or two plain trashers. A card that does something else as well doesn’t count against it." pressed={!!opts.balance} onClick={() => setOpts({ balance: !opts.balance })}>No overlap</Chip>{tagRules.map(ruleChip)}</div>
         </Row>
 
         <Row label="Attacks" note="The most Attacks in the kingdom">
@@ -107,8 +107,8 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
         </Row>
 
         <Row label="Cost mix" note="How the kingdom spreads over $2 to $6+">
-          <Seg label="Cost spread" value={opts.costSpread || 'off'} onChange={v => setOpts({ costSpread: v === 'off' ? null : v })}
-            options={[{ value: 'off', label: 'Off' }, ...Object.entries(COST_SPREADS).map(([k, c]) => ({ value: k, label: c.label }))]} />
+          <Seg label="Cost spread" value={opts.costSpread || 'standard'} onChange={v => setOpts({ costSpread: v })}
+            options={Object.entries(COST_SPREADS).map(([k, c]) => ({ value: k, label: c.label, title: c.avg ? `Aims for an average card cost of about $${c.avg.toFixed(1)}` : 'Cheap and pricey cards, little in between' }))} />
         </Row>
 
         <Row label="Prioritize" note={canFavor ? 'Favour cards by how often the group has played them' : 'Available once games with a kingdom are logged'}>
