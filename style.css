@@ -2267,3 +2267,10 @@ tr.stand1 td:first-child{--m:#E3B84A}tr.stand2 td:first-child{--m:#B7C0CC}tr.sta
 
 /* the "A player" menu opens leftward from its button, so it can't run off the right edge of a narrow screen */
 .rzo .rzo-in .pp-menu,.rzo .rzo-ctl .pp-menu{left:auto;right:0;max-width:calc(100vw - 32px)}
+.rzo-caps{display:flex;flex-wrap:wrap;gap:10px 22px}
+.rzo-cap{display:inline-flex;align-items:center;gap:8px}
+details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
+@media (max-width:640px){
+  .rzo-caps{display:grid;grid-template-columns:max-content max-content;justify-content:start;gap:10px 14px;align-items:center}
+  .rzo-cap{display:contents}
+}

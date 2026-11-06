@@ -46,6 +46,7 @@ const costLevel = info => Math.min(6, Math.max(2, (info.cards[0].coins || 0) + (
    recorded tags, so a card that does it but isn't tagged isn't counted (a cap can let one through, never refuse a card wrongly). */
 export const CAP_RULES = ['draw', 'village', 'trash', 'buy'];
 export const MAX_CAP = 8;
+export const CAP_DEFAULT = 3;   // every kind starts capped at three; the Must have and Attack rules are met first, so a cap only limits the random fill
 const capsOf = o => Object.entries(o.maxOf || {}).filter(([r, n]) => CAP_RULES.includes(r) && Number.isInteger(n) && n >= 0);
 const capCount = (chosen, rule) => chosen.filter(i => satisfies(i, rule)).length;
 const capBroken = (chosen, o) => { const hit = capsOf(o).find(([r, n]) => capCount(chosen, r) > n); return hit ? (hit[1] === 0 ? `No ${REQUIRE_RULES[hit[0]].chip} cards was asked for` : `At most ${hit[1]} ${REQUIRE_RULES[hit[0]].chip} card${hit[1] === 1 ? '' : 's'} was asked for`) : null; };
@@ -58,7 +59,7 @@ export const DEFAULT_OPTIONS = Object.freeze({
   landscapeTypes: [],      // empty = all five types
   maxAttacks: null,        // null = any number of Attack piles
   minAttacks: 0,           // at least this many Attack piles
-  maxOf: {},               // { draw: 3, trash: 2, ... }: at most this many piles with that mechanic (CAP_RULES)
+  maxOf: Object.freeze({ draw: 3, trash: 3, village: 3, buy: 3 }),   // at most this many piles with that mechanic (CAP_RULES); a kind left out has no cap
   maxCost: null,           // null = any, else no card costs more than this many coins (and none costs Debt)
   reaction: false,         // if there is an Attack, make sure there is a Reaction too
   require: [],             // keys of REQUIRE_RULES
@@ -503,7 +504,7 @@ export function optionsToParams(opts, p = new URLSearchParams()) {
   if (o.maxAttacks != null) p.set('atk', String(o.maxAttacks));
   if (o.minAttacks) p.set('atkmin', String(o.minAttacks));
   if (o.maxCost != null) p.set('maxc', String(o.maxCost));
-  capsOf(o).forEach(([r, n]) => p.append('mx', `${r}:${n}`));
+  CAP_RULES.forEach(r => { const v = (o.maxOf || {})[r]; if (v !== d.maxOf[r]) p.append('mx', `${r}:${v == null ? 'x' : v}`); });   // only what differs from the default; x = no cap
   if (o.reaction) p.set('rx', '1');
   o.require.forEach(v => p.append('req', v));
   o.include.forEach(v => p.append('inc', v));
@@ -528,7 +529,7 @@ export function optionsFromParams(p) {
     require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: many(p, 'inc'), exclude: many(p, 'exc'), excludeLandscapes: [], favor: p.get('fav') === '1',
     favorPlayed: p.get('fp') === '1', favorTable: p.get('ft') === '1', favorBy: (p.get('fb') || '').slice(0, 60), junkTrash: p.get('jt') === '1', costSpread: COST_SPREADS[p.get('cs')] ? p.get('cs') : null,
     themes: [...new Set(many(p, 'th').filter(t => THEMES[t]))],
-    maxOf: Object.fromEntries(many(p, 'mx').map(v => v.split(':')).filter(([r, n]) => CAP_RULES.includes(r) && /^\d$/.test(n || '')).map(([r, n]) => [r, Math.min(MAX_CAP, +n)])),
+    maxOf: many(p, 'mx').map(v => v.split(':')).filter(([r, n]) => CAP_RULES.includes(r) && /^(\d|x)$/.test(n || '')).reduce((m, [r, n]) => { if (n === 'x') delete m[r]; else m[r] = Math.min(MAX_CAP, +n); return m; }, { ...d.maxOf }),
   };
 }
 
