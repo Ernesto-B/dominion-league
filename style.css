@@ -2198,3 +2198,79 @@ tr.stand1 td:first-child{--m:#E3B84A}tr.stand2 td:first-child{--m:#B7C0CC}tr.sta
 
 /* the Replay icon beside Edit game on a game card: square, no label */
 .gr-replay{display:inline-grid;place-items:center;min-width:44px;padding:0 10px}
+
+/* ---- The randomizer's options (components/RandomizerOptions.jsx): small labelled groups, set icons, segmented choices and steppers ---- */
+.rzo{display:grid;gap:14px}
+.rzo-l{margin:0;font:600 12px var(--text);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.rzo-g{min-width:0;display:grid;gap:6px;align-content:start}
+.rzo-g>.rzo-l,.rzo-g>h4{display:flex;align-items:center;gap:8px;margin:0}
+.rzo-g h4.rzo-l .meta{text-transform:none;letter-spacing:0;font-weight:400}
+.rzo-clear{margin-left:auto;font-size:12px;text-transform:none;letter-spacing:0}
+.rzo-exp{gap:6px}
+.rzo-exp .dn-chip{padding:5px 8px;min-height:0}
+.rzo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px 22px}
+.rzo-counts{display:flex;flex-wrap:wrap;align-items:center;gap:10px 24px}
+.rzo-count{display:inline-flex;align-items:center;gap:10px}
+.rzo-lt{margin-left:auto}
+.rzo-sub{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:2px}
+.rzo-above .dn-seg button{padding:2px 8px}
+.rzo-caps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px 18px;margin-top:4px}
+.rzo-cap{display:grid;gap:4px}
+.dn-seg{display:inline-flex;max-width:100%;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--panel)}
+.dn-seg button{flex:0 1 auto;min-height:0;padding:5px 12px;border:0;border-right:1px solid var(--line);border-radius:0;background:none;color:var(--ink);font:500 14px var(--text);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+.dn-seg button:last-child{border-right:0}
+.dn-seg button[aria-checked=true]{background:linear-gradient(180deg,#f2d27f,#cb9c2f);color:#2a1d05;font-weight:700}
+.dn-seg button:disabled{opacity:.4;cursor:not-allowed}
+.dn-step{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:var(--panel);overflow:hidden}
+.dn-step button{width:34px;min-height:34px;padding:0;border:0;border-radius:0;background:none;color:var(--ink);font:600 18px/1 var(--text);cursor:pointer}
+.dn-step button:disabled{opacity:.35;cursor:default}
+.dn-step output{min-width:2.2ch;text-align:center;font:700 16px var(--text);font-variant-numeric:tabular-nums}
+@media (pointer:coarse){.dn-seg button{min-height:40px}.dn-step button{width:44px;min-height:44px}}
+@media (max-width:720px){.rzo-lt{margin-left:0;flex-basis:100%}.dn-seg{flex-wrap:wrap}}
+
+/* randomizer options, second pass: the Cost mix bar fits its column, coin buttons keep their picture readable when chosen, the player menu opens upward */
+.rzo-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,350px),1fr));gap:16px 28px}
+.rzo-g>.dn-seg{justify-self:start}
+.dn-seg button{padding:5px 11px}
+.rzo-coin{min-width:46px;justify-content:center;gap:1px;padding:3px 8px}
+.rzo-plus{font:700 15px var(--text)}
+.dn-chip.rzo-coin[aria-pressed=true],.dn-seg.coins button[aria-checked=true]{background:color-mix(in srgb,#cb9c2f 28%,var(--panel));color:var(--ink);border-color:#cb9c2f;box-shadow:inset 0 0 0 2px #cb9c2f}
+.dn-seg.coins button{padding:3px 10px}
+.rzo-sub{gap:8px 12px}
+.rzo .pp-menu{top:auto;bottom:calc(100% + 6px);--pp-n:5}
+.rzo-g:has(.pp-menu){position:relative;z-index:25}
+
+/* randomizer options, third pass: one settings list. Every setting is a row of two columns (its name, its control), so labels and controls line up at any width. */
+.rzo-rows{display:grid;gap:0;border-top:1px solid var(--line)}
+.rzo-row{display:grid;grid-template-columns:minmax(120px,170px) minmax(0,1fr);gap:6px 18px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.rzo-name{display:grid;gap:2px;min-width:0}
+.rzo-name small{font-size:12px;line-height:1.3;color:var(--muted)}
+.rzo-ctl{min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.rzo-ctl>.dn-chips{flex:1 1 auto}
+.rzo-fold{padding:10px 0;border-bottom:1px solid var(--line);margin:0}
+.rzo-clear{margin-left:8px;font-size:12px}
+@media (max-width:640px){.rzo-row{grid-template-columns:1fr;gap:8px}}
+/* a segmented choice is a row of separate pills (it wraps instead of being clipped) */
+.dn-seg{display:flex;flex-wrap:wrap;gap:6px;border:0;border-radius:0;overflow:visible;background:none}
+.dn-seg button{border:1px solid var(--line);border-radius:999px;background:var(--panel);padding:5px 14px}
+.dn-seg button:last-child{border:1px solid var(--line)}
+.dn-seg button[aria-checked=true]{border-color:#cb9c2f}
+.dn-seg.coins button{padding:3px 12px}
+.dn-seg.coins button[aria-checked=true]{border-color:#cb9c2f}
+.rzo .pp-menu{top:calc(100% + 6px);bottom:auto}
+
+/* a control that belongs to the one beside it (landscape types, Attack extras, whose games count): it fades in to the right of its parent's control, and wraps under it when there is no room */
+.rzo-in{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding-left:14px;border-left:2px solid var(--line)}
+@media (prefers-reduced-motion:no-preference){.rzo-in{animation:rzoin .16s ease-out both}}
+@keyframes rzoin{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+@media (max-width:640px){.rzo-in{padding-left:0;border-left:0;flex-basis:100%}}
+
+/* the "A player" menu opens leftward from its button, so it can't run off the right edge of a narrow screen */
+.rzo .rzo-in .pp-menu,.rzo .rzo-ctl .pp-menu{left:auto;right:0;max-width:calc(100vw - 32px)}
+.rzo-caps{display:flex;flex-wrap:wrap;gap:10px 22px}
+.rzo-cap{display:inline-flex;align-items:center;gap:8px}
+details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
+@media (max-width:640px){
+  .rzo-caps{display:grid;grid-template-columns:max-content max-content;justify-content:start;gap:10px 14px;align-items:center}
+  .rzo-cap{display:contents}
+}

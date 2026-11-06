@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { realCatalog } from './fixtures.js';
 import {
   generate, rerollSlot, rerollLandscape, seededRng, sortSlots, slotCardId, pileKeyOf, REQUIRE_RULES,
-  optionsToParams, optionsFromParams, kingdomToParams, kingdomFromParams, toGameItems, DEFAULT_OPTIONS, rollSeeded, newSeed, parseSeed, formatSeed, setupForHand,
+  optionsToParams, optionsFromParams, kingdomToParams, kingdomFromParams, toGameItems, DEFAULT_OPTIONS, GIVES, rollSeeded, newSeed, parseSeed, formatSeed, setupForHand,
 } from '../../src/dominion/randomizer.js';
 
 const catalog = realCatalog();
@@ -257,9 +257,35 @@ describe('limits: at most N of a kind', () => {
   });
 });
 
+describe('caps are on by default', () => {
+  const count = (r, rule) => r.slots.filter(s => s.cards.some(c => c.mechanicIds.some(t => REQUIRE_RULES[rule].tags.includes(t)))).length;
+  it('a plain roll holds at most three of each kind, and a Must have is still met', () => {
+    expect(DEFAULT_OPTIONS.maxOf).toEqual({ draw: 3, trash: 3, village: 3, buy: 3 });
+    for (const r of rolls({ require: ['draw', 'trash'] }, 80)) { expect(r.ok).toBe(true); expect(count(r, 'draw')).toBeGreaterThanOrEqual(1); for (const k of ['draw', 'trash', 'village', 'buy']) expect(count(r, k)).toBeLessThanOrEqual(3); }
+  });
+  it('"no cap" survives the link', () => {
+    const o = { ...DEFAULT_OPTIONS, maxOf: { trash: 3, village: 3, buy: 3 } };
+    expect(optionsFromParams(new URLSearchParams(optionsToParams(o).toString())).maxOf).toEqual({ trash: 3, village: 3, buy: 3 });
+  });
+});
+
+describe('include cards that give...', () => {
+  const countOf = (r, k) => r.slots.filter(s => (GIVES[k].tags ? s.cards.some(c => c.mechanicIds.some(t => GIVES[k].tags.includes(t))) : s.cards.some(c => GIVES[k].text.test(c.text || '')))).length;
+  it('puts at least two of each chosen kind in every roll, and survives the link', () => {
+    for (const k of ['coffers', 'horses', 'spoils']) for (const r of rolls({ gives: [k] }, 40)) { expect(r.ok).toBe(true); expect(countOf(r, k)).toBeGreaterThanOrEqual(2); }
+    const o = { ...DEFAULT_OPTIONS, gives: ['coffers', 'loot'] };
+    expect(optionsFromParams(new URLSearchParams(optionsToParams(o).toString())).gives).toEqual(['coffers', 'loot']);
+  });
+  it('says so when the chosen expansions have none', () => { const r = roll({ gives: ['loot'], expansions: ['Seaside'] }); expect(r.ok).toBe(false); expect(r.message).toMatch(/Loot/); });
+});
+
+describe('Balance (option)', () => {
+  it('is on by default, and only "off" is written to the link', () => { expect(DEFAULT_OPTIONS.balance).toBe(true); expect(optionsToParams({ ...DEFAULT_OPTIONS, balance: false }).toString()).toBe('bal=0'); });
+});
+
 describe('the link', () => {
   it('round-trips the options', () => {
-    const o = { expansions: ['Seaside', 'Dark Ages'], cards: 8, landscapes: 2, landscapeTypes: ['Way'], maxAttacks: 3, minAttacks: 2, maxCost: 4, reaction: true, require: ['village', 'buy'], include: ['a:b'], exclude: ['c:d'], excludeLandscapes: [], favor: true, favorPlayed: false, favorTable: true, favorBy: 'Ann', junkTrash: true, costSpread: 'high', themes: ['treasure', 'trash'], maxOf: { draw: 2, trash: 0 } };
+    const o = { expansions: ['Seaside', 'Dark Ages'], cards: 8, landscapes: 2, landscapeTypes: ['Way'], maxAttacks: 3, minAttacks: 2, maxCost: 4, reaction: true, require: ['village', 'buy'], include: ['a:b'], exclude: ['c:d'], excludeLandscapes: [], favor: true, favorPlayed: false, favorTable: true, favorBy: 'Ann', junkTrash: true, costSpread: 'high', themes: ['treasure', 'trash'], maxOf: { draw: 2, trash: 0 }, gives: [], balance: false };
     expect(optionsFromParams(new URLSearchParams(optionsToParams(o).toString()))).toEqual(o);
     expect(optionsToParams(DEFAULT_OPTIONS).toString()).toBe('');
     expect(optionsFromParams(new URLSearchParams(''))).toEqual(DEFAULT_OPTIONS);

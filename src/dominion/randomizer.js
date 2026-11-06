@@ -35,17 +35,56 @@ export const ruleIsExact = rule => REQUIRE_RULES[rule].coins != null || REQUIRE_
    $5 and $6 or more; a pile's chance is its level's share, divided by 1 + how many of that level are already in, so the kingdom spreads
    out instead of piling up on one level. 'standard' is an even spread, 'high' leans to $5 and up, 'low' to $3 and under. */
 export const COST_SPREADS = {
-  standard: { label: 'Standard', share: [0.20, 0.25, 0.25, 0.20, 0.10] },
-  high: { label: 'High', share: [0.10, 0.15, 0.25, 0.30, 0.20] },
-  low: { label: 'Low', share: [0.30, 0.35, 0.20, 0.10, 0.05] },
+  standard: { label: 'Standard', share: [0.20, 0.25, 0.25, 0.20, 0.10], avg: 4.0 },   // avg: the average card cost a roll lands on (measured over 400 rolls; tests keep it honest)
+  high: { label: 'High', share: [0.10, 0.15, 0.25, 0.30, 0.20], avg: 4.3 },
+  low: { label: 'Low', share: [0.30, 0.35, 0.20, 0.10, 0.05], avg: 3.6 },
   barbell: { label: 'Barbell', share: [0.40, 0.04, 0.08, 0.13, 0.40] },   // cheap and pricey, little in between (it also guarantees a few of each end: see quotasFor)
 };
 const costLevel = info => Math.min(6, Math.max(2, (info.cards[0].coins || 0) + (info.cards[0].debt || 0))) - 2;   // 0 ($2 or less) .. 4 ($6 or more)
 
 /* "At most N of these": a cap on how many piles in a kingdom do one thing (five Drawers is a very different game from two). Keyed by the REQUIRE_RULES mechanic rules, counted with the same
    recorded tags, so a card that does it but isn't tagged isn't counted (a cap can let one through, never refuse a card wrongly). */
+/* "Include cards that give...": turning a kind on asks for at least GIVES_MIN cards of it in the kingdom (fewer if the chosen expansions have fewer). Counted from the recorded mechanics (Spoils from the
+   printed text), so it is a lower bound: a card that gives it but isn't tagged isn't counted, and the roll can hold more than the minimum. */
+export const GIVES_MIN = 2;
+export const GIVES = {
+  coffers: { chip: 'Coffers', label: 'cards that give Coffers', tags: ['coffers_generation', 'conditional_coffers'] },
+  villagers: { chip: 'Villagers', label: 'cards that give Villagers', tags: ['villager_generation', 'trash_for_villagers'] },
+  horses: { chip: 'Horses', label: 'cards that gain Horses', tags: ['horse_gaining'] },
+  loot: { chip: 'Loot', label: 'cards that gain Loot', tags: ['loot_gaining'] },
+  spoils: { chip: 'Spoils', label: 'cards that gain Spoils', text: /\bSpoils\b/ },
+  vp: { chip: 'VP tokens', label: 'cards that give VP tokens', tags: ['vp_token_generation'] },
+};
+export const GIVES_KEYS = Object.keys(GIVES);
+const givesTest = k => i => (GIVES[k].tags ? GIVES[k].tags.some(t => i.tags.has(t)) : i.cards.some(c => GIVES[k].text.test(c.text || '')));
+
+/* "Balance": no two cards doing the same single job. A pile is a SPECIALIST of a role when that role is the only job its recorded mechanics show (a pure drawer, a pure trasher, a plain village, a plain +Buy):
+   a card that draws AND attacks, or trashes AND gains, has another purpose and isn't counted against the role. A roll with Balance holds at most one specialist per role (two for Villages). Like every
+   mechanic rule it reads recorded tags only, so a card with few tags can look like a specialist when it isn't; it is a nudge towards variety, not a promise. */
+export const BALANCE_LIMIT = { draw: 1, village: 2, trash: 1, buy: 1, coins: 2 };
+const ROLE_TAGS = {
+  draw: ['draw', 'terminal_draw', 'conditional_draw'], village: ['village'], trash: ['trashing_from_hand', 'trashing_from_deck', 'trashing_from_play', 'trashing_from_discard', 'trashing_from_supply'],
+  buy: ['plus_buy'], coins: ['plus_coins'], gain: ['gaining', 'gain_to_hand', 'gain_to_topdeck', 'gain_from_trash', 'treasure_gaining', 'horse_gaining', 'loot_gaining', 'gain_replacement'],
+  vp: ['variable_scoring', 'alternate_victory', 'vp_token_generation'], defense: ['attack_defense'],
+};
+const roleCache = new WeakMap();
+function rolesOf(info) {
+  let r = roleCache.get(info);
+  if (!r) {
+    r = new Set(Object.entries(ROLE_TAGS).filter(([, tags]) => tags.some(t => info.tags.has(t))).map(([k]) => k));
+    if (info.attack) r.add('attack'); if (info.reaction) r.add('defense');
+    roleCache.set(info, r);
+  }
+  return r;
+}
+const specialistOf = (info, role) => { const r = rolesOf(info); return r.size === 1 && r.has(role); };
+export const specialistRoles = (catalog, slot) => { const info = infoOfSlot(catalog, slot); return info ? Object.keys(BALANCE_LIMIT).filter(r => specialistOf(info, r)) : []; };
+const balanceFull = (chosen, info) => Object.entries(BALANCE_LIMIT).some(([role, n]) => specialistOf(info, role) && chosen.filter(c => specialistOf(c, role)).length >= n);
+const balanceBroken = (chosen, o) => (o.balance && Object.entries(BALANCE_LIMIT).find(([role, n]) => chosen.filter(c => specialistOf(c, role)).length > n)) || null;
+
 export const CAP_RULES = ['draw', 'village', 'trash', 'buy'];
 export const MAX_CAP = 8;
+export const CAP_DEFAULT = 3;   // every kind starts capped at three; the Must have and Attack rules are met first, so a cap only limits the random fill
 const capsOf = o => Object.entries(o.maxOf || {}).filter(([r, n]) => CAP_RULES.includes(r) && Number.isInteger(n) && n >= 0);
 const capCount = (chosen, rule) => chosen.filter(i => satisfies(i, rule)).length;
 const capBroken = (chosen, o) => { const hit = capsOf(o).find(([r, n]) => capCount(chosen, r) > n); return hit ? (hit[1] === 0 ? `No ${REQUIRE_RULES[hit[0]].chip} cards was asked for` : `At most ${hit[1]} ${REQUIRE_RULES[hit[0]].chip} card${hit[1] === 1 ? '' : 's'} was asked for`) : null; };
@@ -58,7 +97,9 @@ export const DEFAULT_OPTIONS = Object.freeze({
   landscapeTypes: [],      // empty = all five types
   maxAttacks: null,        // null = any number of Attack piles
   minAttacks: 0,           // at least this many Attack piles
-  maxOf: {},               // { draw: 3, trash: 2, ... }: at most this many piles with that mechanic (CAP_RULES)
+  balance: true,           // no two specialists of the same role (BALANCE_LIMIT); on unless turned off
+  gives: [],               // keys of GIVES: at least GIVES_MIN cards that give each
+  maxOf: Object.freeze({ draw: 3, trash: 3, village: 3, buy: 3 }),   // at most this many piles with that mechanic (CAP_RULES); a kind left out has no cap
   maxCost: null,           // null = any, else no card costs more than this many coins (and none costs Debt)
   reaction: false,         // if there is an Attack, make sure there is a Reaction too
   require: [],             // keys of REQUIRE_RULES
@@ -70,7 +111,7 @@ export const DEFAULT_OPTIONS = Object.freeze({
   favorBy: '',             // ...counting only the games this player sat at (the Collection's Randomizer; empty = the whole group's)
   favorTable: false,       // count only the games the seated players sat at, not the whole group's (Game night: the caller hands over that table's `plays`)
   junkTrash: false,        // if an Attack that gives opponents junk is in, make sure there is a trashing card too
-  costSpread: null,        // null = off, else a key of COST_SPREADS
+  costSpread: 'standard',        // a key of COST_SPREADS (null = no spread at all, only from an old link: the page offers no "off")
   themes: [],              // keys of THEMES: build the kingdom around Treasure / VP / Duration / Trashing
 });
 export const CARD_COUNTS = [10, 9, 8, 7, 6, 5, 11, 12];
@@ -129,6 +170,7 @@ export function quotasFor(pool, o) {
     const test = i => themeRole(i, t) === 'core', total = count(test);
     out.push({ label: THEMES[t].label, test, total, n: Math.min(total, Math.max(2, Math.round(o.cards * share))), none: `None of the chosen expansions has ${THEMES[t].label} to build the kingdom around.` });
   });
+  o.gives.forEach(k => { const test = givesTest(k), total = count(test); out.push({ label: GIVES[k].label, test, total, n: Math.min(total, GIVES_MIN), none: `None of the chosen expansions has ${GIVES[k].label}.` }); });
   if (o.minAttacks > 0) { const test = i => i.attack, total = count(test); out.push({ label: 'Attack cards', test, total, n: o.minAttacks, strict: true }); }
   if (o.costSpread === 'barbell') {
     const n = Math.max(2, Math.round(o.cards * FOLLOW));
@@ -218,6 +260,7 @@ const normalize = (opts, catalog = null) => {
   o.landscapes = Math.max(0, Math.min(6, Number(o.landscapes) || 0));
   o.themes = [...new Set((o.themes || []).filter(t => THEMES[t]))];
   o.minAttacks = Math.max(0, Math.min(12, Math.round(Number(o.minAttacks) || 0)));
+  o.gives = [...new Set((o.gives || []).filter(k => GIVES[k]))];
   o.maxOf = Object.fromEntries(Object.entries(o.maxOf || {}).filter(([r, n]) => CAP_RULES.includes(r) && Number.isInteger(n) && n >= 0).map(([r, n]) => [r, Math.min(MAX_CAP, n)]));
   o.maxCost = o.maxCost != null && Number(o.maxCost) >= 2 ? Math.min(10, Math.round(Number(o.maxCost))) : null;
   return o;
@@ -227,6 +270,7 @@ const attackCount = infos => infos.filter(i => i.attack).length;
 /* Does a chosen set of piles obey every rule? Returns null when it does, otherwise a short sentence for the first rule broken. */
 function breaks(chosen, o, wanted, quotas = []) {
   const capped = capBroken(chosen, o); if (capped) return capped;
+  const lopsided = balanceBroken(chosen, o); if (lopsided) return `Balance asked for at most ${lopsided[1]} plain ${lopsided[0] === 'draw' ? 'drawer' : lopsided[0] === 'buy' ? '+Buy card' : lopsided[0] === 'coins' ? '+Coins card' : lopsided[0]}${lopsided[1] === 1 ? '' : 's'}`;
   if (o.maxAttacks != null && attackCount(chosen) > o.maxAttacks) return o.maxAttacks === 0 ? 'No Attacks was asked for' : `At most ${o.maxAttacks} Attack${o.maxAttacks === 1 ? '' : 's'} was asked for`;
   if (o.reaction && attackCount(chosen) > 0 && !chosen.some(i => i.reaction)) return 'A Reaction is required when there is an Attack';
   if (o.junkTrash && chosen.some(i => i.junking) && !chosen.some(i => satisfies(i, 'trash'))) return 'A trashing card is required when an Attack gives opponents junk';
@@ -280,6 +324,7 @@ export function generate(catalog, options = {}, { rng = Math.random, keep = [], 
   const wanted = [...new Set(o.include.map(id => byCardId.get(id)).filter(Boolean))];
   const kept = [...new Set(keep.map(k => byKey.get(k)).filter(Boolean))];
   const fixed = [...new Set([...kept, ...wanted])];
+  if (o.balance && balanceBroken(fixed, o)) o.balance = false;   // cards the person fixed (locked, included, a finished draft's picks) are never refused: Balance only steers what is added
 
   if (fixed.length > o.cards) return { ok: false, message: `You asked to keep or include ${fixed.length} cards, but the kingdom has only ${o.cards}.` };
   const fixedBreak = o.maxAttacks != null && attackCount(fixed) > o.maxAttacks;
@@ -288,7 +333,7 @@ export function generate(catalog, options = {}, { rng = Math.random, keep = [], 
   const capFixed = capBroken(fixed, o);
   if (capFixed) return { ok: false, message: `The cards you included or locked already break a limit: ${capFixed.toLowerCase()}.` };
   const eligible = chosen => pool.filter(i => !chosen.includes(i) && !(o.maxAttacks != null && i.attack && attackCount(chosen) >= o.maxAttacks)
-    && !capsOf(o).some(([r, n]) => satisfies(i, r) && capCount(chosen, r) >= n));
+    && !capsOf(o).some(([r, n]) => satisfies(i, r) && capCount(chosen, r) >= n) && !(o.balance && balanceFull(chosen, i)));
   if (o.minAttacks > 0 && o.maxAttacks != null && o.minAttacks > o.maxAttacks) return { ok: false, message: `At least ${o.minAttacks} Attacks but at most ${o.maxAttacks}: the limits don’t fit.` };
   if (fixed.some(i => overCost(i, o))) return { ok: false, message: `A card you included or locked costs more than your limit ($${o.maxCost}).` };
   const quotas = quotasFor(pool, o);
@@ -465,6 +510,7 @@ export function rerollSlot(catalog, options, state, index, { rng = Math.random, 
   const pool = poolFor(catalog, o).filter(i => !current.includes(i));
   const order = []; const left = pool.slice();
   const others = current.filter((_, k) => k !== index);
+  if (o.balance && balanceBroken(others, o)) o.balance = false;   // a kingdom already out of balance (hand-picked) can still swap a card
   while (left.length) { const p = pick(left, o, plays, rng, others); order.push(p); left.splice(left.indexOf(p), 1); }   // a weighted shuffle
   for (const cand of order) {
     const next = current.slice(); next[index] = cand;
@@ -503,7 +549,7 @@ export function optionsToParams(opts, p = new URLSearchParams()) {
   if (o.maxAttacks != null) p.set('atk', String(o.maxAttacks));
   if (o.minAttacks) p.set('atkmin', String(o.minAttacks));
   if (o.maxCost != null) p.set('maxc', String(o.maxCost));
-  capsOf(o).forEach(([r, n]) => p.append('mx', `${r}:${n}`));
+  CAP_RULES.forEach(r => { const v = (o.maxOf || {})[r]; if (v !== d.maxOf[r]) p.append('mx', `${r}:${v == null ? 'x' : v}`); });   // only what differs from the default; x = no cap
   if (o.reaction) p.set('rx', '1');
   o.require.forEach(v => p.append('req', v));
   o.include.forEach(v => p.append('inc', v));
@@ -513,7 +559,9 @@ export function optionsToParams(opts, p = new URLSearchParams()) {
   if (o.favorTable) p.set('ft', '1');
   if (o.favorBy) p.set('fb', o.favorBy);
   if (o.junkTrash) p.set('jt', '1');
-  if (o.costSpread) p.set('cs', o.costSpread);
+  o.gives.forEach(v => p.append('gv', v));
+  if (!o.balance) p.set('bal', '0');   // on is the default, so only "off" is written
+  if (o.costSpread !== d.costSpread) p.set('cs', o.costSpread ?? 'off');
   o.themes.forEach(v => p.append('th', v));
   return p;
 }
@@ -526,9 +574,9 @@ export function optionsFromParams(p) {
     landscapeTypes: many(p, 'lt').filter(t => LANDSCAPE_TYPES.includes(t)),
     maxAttacks: intIn(p.get('atk'), 0, 12, null), minAttacks: intIn(p.get('atkmin'), 0, 12, 0), maxCost: intIn(p.get('maxc'), 2, 10, null), reaction: p.get('rx') === '1',
     require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: many(p, 'inc'), exclude: many(p, 'exc'), excludeLandscapes: [], favor: p.get('fav') === '1',
-    favorPlayed: p.get('fp') === '1', favorTable: p.get('ft') === '1', favorBy: (p.get('fb') || '').slice(0, 60), junkTrash: p.get('jt') === '1', costSpread: COST_SPREADS[p.get('cs')] ? p.get('cs') : null,
-    themes: [...new Set(many(p, 'th').filter(t => THEMES[t]))],
-    maxOf: Object.fromEntries(many(p, 'mx').map(v => v.split(':')).filter(([r, n]) => CAP_RULES.includes(r) && /^\d$/.test(n || '')).map(([r, n]) => [r, Math.min(MAX_CAP, +n)])),
+    favorPlayed: p.get('fp') === '1', favorTable: p.get('ft') === '1', favorBy: (p.get('fb') || '').slice(0, 60), junkTrash: p.get('jt') === '1', costSpread: p.get('cs') === 'off' ? null : COST_SPREADS[p.get('cs')] ? p.get('cs') : d.costSpread,
+    themes: [...new Set(many(p, 'th').filter(t => THEMES[t]))], gives: [...new Set(many(p, 'gv').filter(k => GIVES[k]))], balance: p.get('bal') !== '0',
+    maxOf: many(p, 'mx').map(v => v.split(':')).filter(([r, n]) => CAP_RULES.includes(r) && /^(\d|x)$/.test(n || '')).reduce((m, [r, n]) => { if (n === 'x') delete m[r]; else m[r] = Math.min(MAX_CAP, +n); return m; }, { ...d.maxOf }),
   };
 }
 

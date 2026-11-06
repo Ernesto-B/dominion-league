@@ -56,7 +56,7 @@ describe('the setup notes show the piles they tell you to add', () => {
     expect((h.match(/class="dn-pile"/g) || []).length).toBe(3);
     expect(h).toContain('3 different cards'); expect(h).toContain('2 different cards'); expect(h).toContain('5 different cards');
     const off = renderToStaticMarkup(createElement(Setup, { catalog, setup: { shelters: false, platinumColony: false } }));
-    expect(off).not.toContain('dn-pile');   // "Use Estates" / "Don't use Platinum and Colony": nothing to show
+    expect(off).not.toContain('dn-pile'); expect(off).not.toContain('Platinum');   // "Use Estates" / "Don't use Platinum and Colony": nothing to show
   });
 });
 

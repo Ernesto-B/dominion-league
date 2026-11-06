@@ -719,11 +719,12 @@ describe('the Landscapes charts on the Overview', () => {
 });
 
 describe('the randomizer\'s Attacks and Cost rows', () => {
-  it('has at-least and at-most Attack boxes, a Barbell spread and a cost cap, all in their existing rows', () => {
-    const html = render('randomizer');
-    expect(html).toContain('aria-label="Fewest Attacks"'); expect(html).toContain('aria-label="Most Attacks"');
-    expect(html).toContain('>Barbell<'); expect(html).toContain('aria-label="Highest card cost"');
-    const on = render('randomizer?atkmin=3&maxc=4');
-    expect(on).toMatch(/aria-label="Fewest Attacks"[^>]*value="3"/); expect(on).toMatch(/<option value="4" selected="">\$4<\/option>/);
+  it('has an Attack limit, a fewest-Attacks stepper, a Barbell spread and a cost cap, each as one compact control', () => {
+    const html = render('randomizer?atk=2');
+    expect(html).toContain('aria-label="Most Attacks"'); expect(html).toContain('aria-label="Fewest Attacks"');
+    expect(html).toContain('>Barbell<'); expect(html).toContain('No card above 4 coins');
+    const on = render('randomizer?atk=3&atkmin=2&maxc=4');
+    expect(on).toMatch(/aria-label="Fewest Attacks"[^]*?<output[^>]*>2</); expect(on).toMatch(/aria-pressed="true"[^>]*aria-label="No card above 4 coins"/);
+    expect(on).toMatch(/aria-pressed="true"[^>]*aria-label="At most 3 Attacks"/);
   });
 });
