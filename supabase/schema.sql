@@ -549,5 +549,18 @@ begin
 end;
 $$;
 
+-- accepting a pending game logs it with the time it was SENT, not the time it was approved (the Games list shows when a match was played from this)
+create or replace function set_game_logged_at(p_game_id bigint, p_at timestamptz) returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if not is_admin() then raise exception 'only the admin can do that'; end if;
+  update games set created_at = p_at where id = p_game_id and p_at <= now();
+end;
+$$;
+
+revoke execute on function set_game_logged_at(bigint, timestamptz) from anon;
 revoke execute on function submit_pending_game(date, text, text, text, text, int, int, text, text, jsonb, jsonb, timestamptz, timestamptz, int) from anon;
 revoke execute on function discard_pending_game(bigint) from anon;

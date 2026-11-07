@@ -32,10 +32,9 @@ export default function PendingGames({ compact = false }) {   // compact: just a
     document.addEventListener('visibilitychange', load);
     return () => { clearInterval(t); document.removeEventListener('visibilitychange', load); };
   }, [admin, load]);
-  // each pending game run through the league's own maths (Elo, season points, tiers), so its card reads like any logged game; opened by default
+  // each pending game run through the league's own maths (Elo, season points, tiers), so its card reads like any logged game; folded until opened
   const previews = useMemo(() => (rows || []).map(row => ({ row, game: previewPending(Eng, D, row, nameById) })).filter(p => p.game), [rows, D, nameById]);
-  const [open, setOpen] = useState(() => new Set());
-  useEffect(() => { setOpen(o => { const n = new Set(o); previews.forEach(p => n.add(p.game.line)); return n; }); }, [previews.length]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const [open, setOpen] = useState(() => new Set());   // folded until opened
   if (!admin || !rows || !rows.length) return null;
   if (compact) return <a className="pending-bar" href={hashFor('games', gid)}><span className="pending-n">{rows.length}</span> game{rows.length === 1 ? '' : 's'} waiting for your approval <span aria-hidden="true">→</span></a>;
   const usual = usualMinutes(D.games);
@@ -43,8 +42,9 @@ export default function PendingGames({ compact = false }) {   // compact: just a
   const accept = async row => {
     setBusy(row.id); setMsg('');
     const form = { ...pendingToForm(row, nameById), startedAt: row.started_at ? Date.parse(row.started_at) : null, endedAt: row.ended_at ? Date.parse(row.ended_at) : null };
-    const { error } = await callGameRpc(sb, 'add_game', buildGameArgs(form, gid, playerIdByName));
+    const { data: gameId, error } = await callGameRpc(sb, 'add_game', buildGameArgs(form, gid, playerIdByName));
     if (error) { setBusy(null); setMsg(error.message); return; }
+    await sb.rpc('set_game_logged_at', { p_game_id: gameId, p_at: row.created_at });   // logged when it was sent, not when you approved it (best effort: an older database just keeps the approval time)
     await sb.rpc('discard_pending_game', { p_id: row.id });
     setBusy(null); await load(); await reload();
   };
@@ -56,24 +56,26 @@ export default function PendingGames({ compact = false }) {   // compact: just a
     await load();
   };
   const rowOf = new Map(previews.map(p => [p.game.line, p.row]));
-  const footer = g => {
+  // folded, a pending game is the card plus its three buttons; opened it also says who hosted it and how long it took
+  const note = g => {
     const row = rowOf.get(g.line), by = nameById.get(row.created_by), noTime = row.minutes == null;
+    return <p className="meta pending-time">Hosted by {by || 'a player'}. {noTime ? <>No time recorded{row.clock_minutes ? ` (the clock ran ${row.clock_minutes} min, so it was left running)` : ''}{usual ? `; the group’s usual game is about ${usual} min` : ''}. Edit to set it.</> : <>{row.minutes} min.</>} <b>Not counted until you accept it.</b></p>;
+  };
+  const buttons = g => {
+    const row = rowOf.get(g.line);
     return (
-      <>
-        <p className="meta pending-time">Hosted by {by || 'a player'}. {noTime ? <>No time recorded{row.clock_minutes ? ` (the clock ran ${row.clock_minutes} min, so it was left running)` : ''}{usual ? `; the group’s usual game is about ${usual} min` : ''}. Edit to set it.</> : <>{row.minutes} min.</>} <b>Not counted until you accept it.</b></p>
-        <p className="pending-go">
-          <button type="button" disabled={busy === row.id} onClick={() => accept(row)}>{busy === row.id ? 'Saving…' : 'Accept'}</button>
-          <button type="button" className="ghost" disabled={busy === row.id} onClick={() => setModal(row)}>Edit</button>
-          <button type="button" className="ghost" disabled={busy === row.id} onClick={() => reject(row)}>Reject</button>
-        </p>
-      </>
+      <p className="pending-go">
+        <button type="button" disabled={busy === row.id} onClick={() => accept(row)}>{busy === row.id ? 'Saving…' : 'Accept'}</button>
+        <button type="button" className="ghost" disabled={busy === row.id} onClick={() => setModal(row)}>Edit</button>
+        <button type="button" className="ghost" disabled={busy === row.id} onClick={() => reject(row)}>Reject</button>
+      </p>
     );
   };
   return (
     <section className="pending" aria-label="Games waiting for approval">
       {dialog}
       <h2>Waiting for approval <span className="pending-n">{rows.length}</span></h2>
-      <div className="gview-cards"><GameCards games={previews.map(p => p.game)} open={open} toggle={id => setOpen(o => { const n = new Set(o); n.has(id) ? n.delete(id) : n.add(id); return n; })} showDate actions={footer} /></div>
+      <div className="gview-cards"><GameCards games={previews.map(p => p.game)} open={open} toggle={id => setOpen(o => { const n = new Set(o); n.has(id) ? n.delete(id) : n.add(id); return n; })} showDate actions={note} always={buttons} /></div>
       {msg && <p className="meta" role="alert">{msg}</p>}
       {modal && <Suspense fallback={null}><GameModal key={modal.id} pending={modal} onClose={() => { setModal(null); load(); }} /></Suspense>}
     </section>

@@ -61,8 +61,11 @@ export default function GameModal({ editId, onClose, pending = null }) {   // `p
     if (!bs.date) { setMsg('Pick a date.'); return; }
     const args = buildGameArgs(bs, gid, playerIdByName);
     setSaving(true); setMsg('Saving…');
-    const { error } = bs.editId ? await sb.rpc('edit_game', { p_game_id: bs.editId, ...args }) : await callGameRpc(sb, 'add_game', args);
-    if (!error && bs.pendingId != null) await sb.rpc('discard_pending_game', { p_id: bs.pendingId });
+    const { data: gameId, error } = bs.editId ? await sb.rpc('edit_game', { p_game_id: bs.editId, ...args }) : await callGameRpc(sb, 'add_game', args);
+    if (!error && bs.pendingId != null) {
+      if (pending && pending.created_at) await sb.rpc('set_game_logged_at', { p_game_id: gameId, p_at: pending.created_at });   // logged when it was sent, not when it was approved
+      await sb.rpc('discard_pending_game', { p_id: bs.pendingId });
+    }
     setSaving(false);
     if (error) { setMsg(error.message); return; }
     onClose();
@@ -114,8 +117,9 @@ export default function GameModal({ editId, onClose, pending = null }) {   // `p
         <p className="meta" style={{ marginTop: 14 }}>6. Optional details.</p>
         <label className="f">Notes <input type="text" id="bn" size={50} value={bs.notes} onChange={e => set({ notes: e.target.value })} /></label>
         <div className="controls" style={{ marginTop: 14 }}>
-          <button id="bsave" type="button" disabled={saving || bs.picked.length > MAX_PLAYERS} onClick={save}>{bs.editId ? 'Save changes' : 'Save game'}</button>
+          <button id="bsave" type="button" disabled={saving || bs.picked.length > MAX_PLAYERS} onClick={save}>{bs.editId ? 'Save changes' : bs.pendingId != null ? 'Accept game' : 'Save game'}</button>
           {bs.editId && <><button id="bdel" className="ghost" type="button" onClick={del}>Delete game</button><button id="bcancel" className="ghost" type="button" onClick={onClose}>Cancel</button></>}
+          {bs.pendingId != null && <button id="bcancel" className="ghost" type="button" onClick={onClose}>Cancel</button>}
           <span className="meta" id="bmsg" role="status">{msg}</span>
         </div>
         <p className="note" style={{ marginTop: 20 }}>Manage seasons and friend groups from the <a href="#/admin">Admin page</a>. To add a brand-new player, create their Supabase account first (see README), then they'll show up in the picker above.</p>

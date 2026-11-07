@@ -2290,3 +2290,5 @@ details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
 /* a pending game is drawn as the ordinary game card; its footer says who hosted it and holds Accept / Edit / Reject */
 .pending-more{display:grid;gap:8px}
 .pending .gview-cards{margin-top:4px}
+.gcard-always{margin-top:10px}
+.gcard-always .pending-go{margin:0}

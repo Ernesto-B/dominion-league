@@ -18,7 +18,7 @@ const tone = (d, eps) => (d > eps ? 'up-t' : d < -eps ? 'down-t' : '');
    per player (place, name, Elo change) with the sets underneath; tapping it opens each player's Elo, season points and VP stacked
    under their line, then the kingdom and notes. Used by Last night and by the Games page; the table stays for desktop.
    `me` marks one player's line (the Players page). `open` is a Set of game ids and `toggle(id)` flips one, owned by the table next to it, so the two views agree. */
-export default function GameCards({ games, open, toggle, onEdit, showDate = false, highlight, me = null, actions = null }) {   // `actions(game)`: a footer of its own in place of the report / edit / replay buttons (pending games)
+export default function GameCards({ games, open, toggle, onEdit, showDate = false, highlight, me = null, actions = null, always = null }) {   // `always(game)`: a row under the card that shows folded or open (the pending games' buttons)   // `actions(game)`: a footer of its own in place of the report / edit / replay buttons (pending games)
   const { D, gid, hashFor } = usePage();
   return (
     <ul className="gcards" aria-label="Games">
@@ -66,6 +66,7 @@ export default function GameCards({ games, open, toggle, onEdit, showDate = fals
                 </p>}
               </div>
             )}
+            {always && <div className="gcard-always" onClick={e => e.stopPropagation()}>{always(g)}</div>}
           </li>
         );
       })}
