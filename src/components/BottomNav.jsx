@@ -37,7 +37,7 @@ export default function BottomNav({ ready, hash }) {
         <div className="moresheet-back" onClick={e => { if (e.target === e.currentTarget) setMore(false); }}>
           <div className="moresheet" role="dialog" aria-modal="true" aria-label="More" ref={sheet}>
             <ul>
-              {ready.me.is_admin && <li><a href={navHref('night', ready)} aria-current={route === 'night' ? 'page' : undefined}><img src="icons/nav/add-a-game.png" alt="" />Game night</a></li>}
+              {<li><a href={navHref('night', ready)} aria-current={route === 'night' ? 'page' : undefined}><img src="icons/nav/add-a-game.png" alt="" />Game night</a></li>}
               {extra.map(([r, label, icon]) => (
                 <li key={r}><a href={navHref(r, ready)} aria-current={route === r ? 'page' : undefined}><img src={`icons/nav/${icon}.png`} alt="" />{label}</a></li>
               ))}

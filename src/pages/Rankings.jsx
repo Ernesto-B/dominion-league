@@ -16,6 +16,7 @@ import RatingChart from '../components/RatingChart.jsx';
 import MeCard from '../components/MeCard.jsx';
 import Hub from '../components/Hub.jsx';
 import Welcome from '../components/Welcome.jsx';
+import PendingGames from '../components/PendingGames.jsx';
 import SinceVisit from '../components/SinceVisit.jsx';
 import { badgesFor, xpOf } from '../lib/xp.js';
 import { pinnedBadges, viewHint } from '../lib/achievements.js';
@@ -128,6 +129,7 @@ export default function Rankings() {
       <h1 className="dn-sr">Rankings</h1>
       <Welcome />
       <MeCard ranked={rk} />
+      <PendingGames compact />
       {rk.length > 0 && <Hub />}
       {rk.length > 0 && <SinceVisit ranked={rk} />}
       {chips}

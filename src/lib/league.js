@@ -28,6 +28,7 @@ export function buildLeague(cfg, loaded, me) {
       const groupSeasons = seasons.filter(s => s.group === g.id);
       const c = Object.assign({}, cfg, { players: groupPlayers, seasons: groupSeasons, groups: undefined });
       const cd = Eng.compute(c, groupRows);
+      cd.input = { config: c, rows: groupRows };   // kept so a pending game can be run through the same maths (components/PendingGames.jsx)
       cd.byName = Object.fromEntries(cd.players.map(p => [p.name, p]));
       computedByGroup[g.id] = cd;
     });

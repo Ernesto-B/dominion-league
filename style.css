@@ -2274,3 +2274,19 @@ details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
   .rzo-caps{display:grid;grid-template-columns:max-content max-content;justify-content:start;gap:10px 14px;align-items:center}
   .rzo-cap{display:contents}
 }
+
+/* the admin's pending games */
+.pending{margin:0 0 18px;padding:14px 16px;border:1px solid var(--brass,var(--line));border-left-width:5px;border-radius:12px;background:var(--panel)}
+.pending h2{margin:0 0 10px;font-size:19px}
+.pending-n{display:inline-block;margin-left:6px;padding:0 8px;border-radius:999px;background:var(--brass,var(--ink));color:#1a1405;font:700 13px/22px var(--text)}
+.pending-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.pending-item{padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+.pending-head,.pending-time{margin:0 0 6px}
+.pending-res{margin:0 0 6px;padding:0;list-style:none}
+.pending-go{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0}
+.pending-bar{display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:10px 14px;border:1px solid var(--brass,var(--line));border-radius:10px;background:var(--panel);color:var(--ink);text-decoration:none;font-weight:600}
+.pending-bar .pending-n{margin:0}
+
+/* a pending game is drawn as the ordinary game card; its footer says who hosted it and holds Accept / Edit / Reject */
+.pending-more{display:grid;gap:8px}
+.pending .gview-cards{margin-top:4px}

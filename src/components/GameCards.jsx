@@ -18,7 +18,7 @@ const tone = (d, eps) => (d > eps ? 'up-t' : d < -eps ? 'down-t' : '');
    per player (place, name, Elo change) with the sets underneath; tapping it opens each player's Elo, season points and VP stacked
    under their line, then the kingdom and notes. Used by Last night and by the Games page; the table stays for desktop.
    `me` marks one player's line (the Players page). `open` is a Set of game ids and `toggle(id)` flips one, owned by the table next to it, so the two views agree. */
-export default function GameCards({ games, open, toggle, onEdit, showDate = false, highlight, me = null }) {
+export default function GameCards({ games, open, toggle, onEdit, showDate = false, highlight, me = null, actions = null }) {   // `actions(game)`: a footer of its own in place of the report / edit / replay buttons (pending games)
   const { D, gid, hashFor } = usePage();
   return (
     <ul className="gcards" aria-label="Games">
@@ -59,11 +59,11 @@ export default function GameCards({ games, open, toggle, onEdit, showDate = fals
                 {(g.kingdom || []).length > 0 && <Suspense fallback={<p className="meta dn-kingdom">Loading the kingdom…</p>}><GameKingdom items={g.kingdom} /></Suspense>}
                 {(g.landscapes || []).length > 0 && <p className="note">Landscapes in play: <LandscapePills game={g} /></p>}
                 {g.notes && <p className="note">{g.notes}</p>}
-                <p className="gr-actions">
+                {actions ? <div className="pending-more">{actions(g)}</div> : <p className="gr-actions">
                   <a className="btn" href={hashFor('games', gid, g.line)}>Full game report →</a>
                   {onEdit && <button type="button" className="ghost" onClick={() => onEdit(g.line)}>Edit game</button>}
                   <PlayAgain game={g} icon />
-                </p>
+                </p>}
               </div>
             )}
           </li>
