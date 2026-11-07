@@ -431,3 +431,17 @@ describe('keeping another table\'s kingdom out (one copy of each pile)', () => {
     expect(withAvoid(DEFAULT_OPTIONS, [])).toBe(DEFAULT_OPTIONS); expect(withAvoid(DEFAULT_OPTIONS, null)).toBe(DEFAULT_OPTIONS);
   });
 });
+
+describe('re-rolling one card', () => {
+  const seedState = (opts, seed = 5) => roll(opts, seed);
+  it('tries cards not shown lately first, so repeated re-rolls do not bounce between a few', () => {
+    let r = seedState({ balance: false }); const shown = new Set([r.slots[4].key]); const rng = seededRng(21);
+    for (let i = 0; i < 25; i++) { const n = rerollSlot(catalog, { balance: false }, r, 4, { rng, recent: [...shown] }); expect(n.ok).toBe(true); expect(shown.has(n.slots.find(s => !r.slots.some(o => o.key === s.key)).key)).toBe(false); shown.add(r.slots[4].key); r = n; shown.add(r.slots[4].key); }
+  });
+  it('says how many cards fit, which is few when the slot holds the only card the rules need', () => {
+    const opts = { maxAttacks: 1, minAttacks: 1, expansions: ['Dominion Base Game'] };
+    const r = roll(opts, 3), i = r.slots.findIndex(s => s.cards[0].types.includes('Attack'));
+    const n = rerollSlot(catalog, opts, r, i, { rng: seededRng(4) });
+    expect(n.ok).toBe(true); expect(n.choices).toBeLessThanOrEqual(6); expect(n.choices).toBeGreaterThan(0);
+  });
+});

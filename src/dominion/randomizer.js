@@ -510,7 +510,10 @@ export function stateFromItems(catalog, items, baneId = null) {
 
 // ---------------------------------------------------------------- re-rolling one thing
 /* Swap one slot for another card that keeps every rule true. */
-export function rerollSlot(catalog, options, state, index, { rng = Math.random, plays = null } = {}) {
+/* Swap one card. Every other card that would still obey the rules is a candidate; they are tried in a weighted shuffle, and ones shown lately (`recent`: pile keys, kept by the caller across re-rolls)
+   go to the back, so pressing Re-roll again doesn't bounce between the same few. `choices` on the result is how many cards fit at all: when a slot holds the only card of a kind the rules ask for
+   (the one Attack, the one drawer...) only a few can replace it, and the caller can say so instead of looking like a loop. */
+export function rerollSlot(catalog, options, state, index, { rng = Math.random, plays = null, recent = [] } = {}) {
   const o = normalize(options, catalog);
   const current = state.slots.map(s => infoOfSlot(catalog, s)), wanted = o.include.map(id => pileInfos(catalog).byCardId.get(id)).filter(Boolean);
   const quotas = quotasFor(poolFor(catalog, o), o);   // the minimums hold: a swap that would break one is refused
@@ -519,17 +522,15 @@ export function rerollSlot(catalog, options, state, index, { rng = Math.random, 
   const others = current.filter((_, k) => k !== index);
   if (o.balance && balanceBroken(others, o)) o.balance = false;   // a kingdom already out of balance (hand-picked) can still swap a card
   while (left.length) { const p = pick(left, o, plays, rng, others); order.push(p); left.splice(left.indexOf(p), 1); }   // a weighted shuffle
-  for (const cand of order) {
-    const next = current.slice(); next[index] = cand;
-    if (!breaks(next, o, wanted, quotas)) {
-      const replaced = state.slots[index];
-      const res = finish(catalog, { ...o, landscapes: state.landscapes.length }, next, state.landscapes.map(l => l.landscape.id), plays, rng, {
-        landscapes: state.landscapes.map(l => (l.on && replaced.cards.some(c => c.id === l.on) ? { ...l, on: null } : l)), setup: state.setup,
-      }, { keepOrder: true });   // the new card takes the old one's place; nothing else moves
-      return res;
-    }
-  }
-  return { ok: false, message: 'No other card fits the rules for that slot. Try relaxing a rule.' };
+  const lately = new Set(recent);
+  const fits = [...order.filter(c => !lately.has(c.key)), ...order.filter(c => lately.has(c.key))].filter(cand => { const next = current.slice(); next[index] = cand; return !breaks(next, o, wanted, quotas); });
+  if (!fits.length) return { ok: false, message: 'No other card fits the rules for that slot. Try relaxing a rule.', choices: 0 };
+  const next = current.slice(); next[index] = fits[0];
+  const replaced = state.slots[index];
+  const res = finish(catalog, { ...o, landscapes: state.landscapes.length }, next, state.landscapes.map(l => l.landscape.id), plays, rng, {
+    landscapes: state.landscapes.map(l => (l.on && replaced.cards.some(c => c.id === l.on) ? { ...l, on: null } : l)), setup: state.setup,
+  }, { keepOrder: true });   // the new card takes the old one's place; nothing else moves
+  return res.ok ? { ...res, choices: fits.length } : res;
 }
 
 export function rerollLandscape(catalog, options, state, index, { rng = Math.random } = {}) {

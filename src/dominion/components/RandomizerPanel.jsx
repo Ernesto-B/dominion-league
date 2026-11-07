@@ -88,14 +88,19 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
       lockedAt: state ? at(state.slots, s => s.key, locked) : null, lockedLandscapeAt: state ? at(state.landscapes, l => l.landscape.id, lockedL) : null,
     });
     if (!res.ok) { setMessage(res.message); return; }
+    seenRef.current = new Set();
     setMessage(''); setFresh(null); onState(res);
     requestAnimationFrame(() => resultRef.current?.scrollIntoView?.({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
   };
+  const seenRef = useRef(new Set());   // pile keys shown by re-rolls since the last full roll
   const swapSlot = i => {
-    const res = rerollSlot(catalog, drawOpts, state, i, { plays: playsFor(opts, plays) });
+    const res = rerollSlot(catalog, drawOpts, state, i, { plays: playsFor(opts, plays), recent: [...seenRef.current] });
     if (!res.ok) { setMessage(res.message); return; }
-    const was = new Set(state.slots.map(s => s.key));
-    setMessage(''); setFresh(res.slots.find(s => !was.has(s.key))?.key ?? null); onState(res);
+    const was = new Set(state.slots.map(s => s.key)), now = res.slots.find(s => !was.has(s.key));
+    seenRef.current.add(state.slots[i].key); if (now) seenRef.current.add(now.key);   // remembered, so the next Re-roll tries cards not shown yet before any it has already shown
+    // only a few cards can replace this one (it is the only Attack, the only drawer... the rules ask for): say so, so a short cycle doesn't look like a bug
+    setMessage(res.choices != null && res.choices <= 6 ? `Only ${res.choices} other card${res.choices === 1 ? '' : 's'} fit${res.choices === 1 ? 's' : ''} the rules for this slot, so re-rolls will repeat. Loosen a rule, or re-roll a different card.` : '');
+    setFresh(now?.key ?? null); onState(res);
   };
   const swapLandscape = i => {
     const res = rerollLandscape(catalog, drawOpts, state, i);
@@ -105,7 +110,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
   };
   // a caller that keeps these (Game night) hears every change, so a look at a card's page doesn't lose the locks or the typed seed
   useEffect(() => { if (onKeep) onKeep({ cards: [...locked], lands: [...lockedL], seed: seedText }); }, [locked, lockedL, seedText]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const reset = () => { setMessage(''); setLocked(new Set()); setLockedL(new Set()); onReset(); };
+  const reset = () => { seenRef.current = new Set(); setMessage(''); setLocked(new Set()); setLockedL(new Set()); onReset(); };
 
   useEffect(() => { if (fresh == null) return; const t = setTimeout(() => setFresh(null), 1800); return () => clearTimeout(t); }, [fresh]);
 
