@@ -529,7 +529,8 @@ begin
     left join players pl on pl.id = (r->>'player_id')::uuid
     where pl.id is null or not (p_group_id = any(pl.group_ids));
   if v_bad > 0 then raise exception 'every player must belong to the selected group'; end if;
-  if (select count(*) from pending_games where created_by = auth.uid()) >= 12 then raise exception 'you already have 12 games waiting for approval'; end if;
+  -- at most six games wait for approval in a group at a time, so the admin is never buried: approve or reject some, then send more
+  if (select count(*) from pending_games where group_id = p_group_id) >= 6 then raise exception 'There are already 6 games waiting for approval. Ask the admin to approve some first.'; end if;
 
   insert into pending_games (group_id, created_by, date, type, sets, landscapes, notes, results, kingdom, minutes, clock_minutes, started_at, ended_at)
   values (p_group_id, auth.uid(), p_date, coalesce(p_type, ''), p_sets, p_landscapes, p_notes, p_results, p_kingdom, p_minutes, p_clock_minutes, p_started_at, p_ended_at)

@@ -37,6 +37,7 @@ describe('pending games: the schema', () => {
     expect(sql).toMatch(/create policy pending_select on pending_games for select[^;]*is_admin\(\) or created_by = auth\.uid\(\)/);
     expect(sql).not.toMatch(/create policy \w+ on pending_games for (insert|update|delete|all)/);
     const fn = sql.slice(sql.indexOf('create or replace function submit_pending_game'), sql.indexOf('create or replace function discard_pending_game'));
+    expect(fn).toMatch(/where group_id = p_group_id\) >= 6/);   // six waiting in a group at most
     for (const check of ["not in that group|you are not in that group", 'a table seats 2 to 6 players', 'every player must belong to the selected group', 'set search_path = public, pg_temp', 'security definer']) expect(fn).toMatch(new RegExp(check));
     const logged = sql.slice(sql.indexOf('create or replace function set_game_logged_at'), sql.indexOf('revoke execute on function set_game_logged_at'));
     expect(logged).toMatch(/is_admin\(\)/); expect(logged).toMatch(/security definer/); expect(logged).toMatch(/p_at <= now\(\)/);   // admin only, and never a time in the future

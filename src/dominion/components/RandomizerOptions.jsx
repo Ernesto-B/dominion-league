@@ -24,7 +24,7 @@ const itemsOf = ids => ids.map(id => ({ kind: 'card', id }));
 /* Small controls the panel is built from. A segmented control is one choice out of a few (a radio group that takes one line); a stepper is a number with − and +. */
 function Seg({ label, value, options, onChange, cls = '' }) {
   return (
-    <div className={'dn-seg' + (cls ? ' ' + cls : '')} role="radiogroup" aria-label={label}>
+    <div className={'rzo-seg' + (cls ? ' ' + cls : '')} role="radiogroup" aria-label={label}>
       {options.map(o => <button key={String(o.value)} type="button" role="radio" aria-checked={o.value === value} aria-pressed={o.value === value} disabled={o.disabled} title={o.title} aria-label={o.aria}
         onClick={() => onChange(o.value)}>{o.label}</button>)}
     </div>

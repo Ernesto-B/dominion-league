@@ -440,8 +440,8 @@ function RolledNotes({ setup }) {
   const lines = [];
   if (setup.needsBane) lines.push('Young Witch needs a Bane: add a card that costs $2 or $3 to the kingdom.');
   if (setup.bane) lines.push(`Young Witch needs a Bane: ${setup.bane.name}.`);
-  if (setup.platinumColony != null) lines.push(setup.platinumColony ? 'Use Platinum and Colony.' : 'No Platinum or Colony.');
-  if (setup.shelters != null) lines.push(setup.shelters ? 'Use Shelters instead of Estates.' : 'Use Estates (no Shelters).');
+  if (setup.platinumColony) lines.push('Use Platinum and Colony.');   // only what to ADD or change: the ordinary game needs no reminder
+  if (setup.shelters) lines.push('Use Shelters instead of Estates.');
   if (setup.ruins) lines.push('A Looter is in: add the Ruins pile.');
   return lines.length ? <ul className="dn-plain-list night-notes">{lines.map(l => <li key={l}>{l}</li>)}</ul> : null;
 }

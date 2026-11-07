@@ -13,9 +13,9 @@ export default function EloPreview({ picked }) {
     <>
       <h3>Before you play</h3>
       <div className="tablewrap"><table className="plain">
-        <thead><tr><th className="l">Player</th><th>Elo</th><th>Expected score</th><th>Win chance</th><th>Elo if 1st</th><th>Elo if last</th></tr></thead>
+        <thead><tr><th className="l">Player</th><th className="dn-hide-sm">Elo</th><th className="dn-hide-sm">Expected score</th><th>Win chance</th><th>Elo if 1st</th><th>Elo if last</th></tr></thead>
         <tbody>{pv.map((x, i) => (
-          <tr key={x.name}><td className="name"><PlayerLink name={x.name} /></td><td>{f0(x.elo)}</td><td>{pc(x.expected)}</td><td className="winchance"><b>{pc(win[i])}</b></td><td className="up-t">{sgn(x.ifWin)}</td><td className="down-t">{sgn(x.ifLast)}</td></tr>
+          <tr key={x.name}><td className="name"><PlayerLink name={x.name} /></td><td className="dn-hide-sm">{f0(x.elo)}</td><td className="dn-hide-sm">{pc(x.expected)}</td><td className="winchance"><b>{pc(win[i])}</b></td><td className="up-t">{sgn(x.ifWin)}</td><td className="down-t">{sgn(x.ifLast)}</td></tr>
         ))}</tbody>
       </table></div>
       <p className="note">Expected score is the share of the available points a player would average at this table; 50% means an even table. Win chance is each player’s chance to finish first, from Elo alone: a rough guide. Use them to see who has the most at stake, or to balance seating.</p>
