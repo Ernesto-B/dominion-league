@@ -211,7 +211,7 @@ function compute(config, csvRows, today) {
           const e = 1 / (1 + Math.pow(10, ((cur[b] ?? E.start) - (cur[a] ?? E.start)) / E.scale));
           tot += act - e; sumE += e;
         });
-        const k = pa.rated < E.provisionalGames ? E.provisionalK : E.k;
+        const k = (pa.rated < E.provisionalGames ? E.provisionalK : E.k) * (g.n === 2 ? E.duelScale ?? 1 : 1);   // duelScale: a duel moves ratings by this share of what the same K would give (1 = no change)
         next[a] = (cur[a] ?? E.start) + (steady ? k * (scores[ai] - sumE / (g.n - 1)) : k / (g.n - 1) * tot);
         bonus[a] = (below[a] || 0) > 0 && g.pts[a] >= 0.5 ? saving * (lastLoss[a] || 0) : 0;
         next[a] += bonus[a];
@@ -552,7 +552,7 @@ function compute(config, csvRows, today) {
     return list.map(a => {
       let sumE = 0;
       list.forEach(b => { if (b !== a) sumE += 1 / (1 + Math.pow(10, (b.elo - a.elo) / E.scale)); });
-      const k = a.rated < E.provisionalGames ? E.provisionalK : E.k;
+      const k = (a.rated < E.provisionalGames ? E.provisionalK : E.k) * (n === 2 ? E.duelScale ?? 1 : 1);
       return steady
         ? { name: a.name, elo: a.elo, k, expected: sumE / (n - 1), ifWin: k * (byPlace[0] - sumE / (n - 1)), ifLast: k * (byPlace[n - 1] - sumE / (n - 1)) }
         : { name: a.name, elo: a.elo, k, expected: sumE / (n - 1), ifWin: k / (n - 1) * (n - 1 - sumE), ifLast: -k / (n - 1) * sumE };

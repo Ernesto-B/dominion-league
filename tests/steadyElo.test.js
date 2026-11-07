@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import * as Eng from '../src/lib/engine.js';
 import { DEFAULT_STEADY, finishScores, steadyPayout } from '../src/lib/steadyElo.js';
@@ -98,5 +99,35 @@ describe('the shipped configuration', () => {
   it('turns on both season bonuses (win streaks and VP)', async () => {
     const cfg = JSON.parse((await import('node:fs')).readFileSync('public/data/config.json', 'utf8'));
     expect(cfg.season).toMatchObject({ streakBonus: 0.04, streakCap: 3, vpWeight: 0.3 });
+  });
+});
+
+const Eng2 = Eng;
+describe('duels (config.elo.duelScale)', () => {
+  const cfg = JSON.parse(readFileSync(new URL('../public/data/config.json', import.meta.url)));
+  const row = (line, finish) => ({ _line: line, date: '2026-01-' + String(line).padStart(2, '0'), type: 'Regular', finish, sets: '', landscapes: '', playerVP: {}, group_id: null, kingdom: [], winner_vp: '', minutes: '', notes: '' });
+  const swing = (elo, names, finish) => {
+    // twenty-odd earlier games would make the players established, so give them all a settled count first
+    const warm = Array.from({ length: 11 }, (_, i) => row(i + 1, i % 2 ? 'A > B > C > D' : 'B > A > D > C'));
+    const D = Eng2.compute({ ...cfg, elo, players: names, seasons: [] }, [...warm, row(12, finish)], '2026-02-01');
+    const g = D.games[D.games.length - 1]; return Object.fromEntries(g.names.map(n => [n, g.elo[n].after - g.elo[n].before]));
+  };
+  it('ships at 0.75, and the duel moves ratings that share of what it would otherwise', () => {
+    expect(cfg.elo.duelScale).toBe(0.75);
+    const a = swing({ ...cfg.elo, duelScale: 1 }, ['A', 'B', 'C', 'D'], 'A > B'), b = swing(cfg.elo, ['A', 'B', 'C', 'D'], 'A > B');
+    expect(b.A / a.A).toBeCloseTo(0.75, 5); expect(b.B / a.B).toBeCloseTo(0.75, 5);
+  });
+  it('leaves a table of four alone', () => {
+    const a = swing({ ...cfg.elo, duelScale: 1 }, ['A', 'B', 'C', 'D'], 'A > B > C > D'), b = swing(cfg.elo, ['A', 'B', 'C', 'D'], 'A > B > C > D');
+    expect(b).toEqual(a);
+  });
+  it('ships with both dials: a duel at even ratings pays about +52 / -47', () => {
+    expect(cfg.elo.duelTopHalf).toBe(0.5);
+    const [w, l] = steadyPayout(2, cfg.elo).map(v => v * cfg.elo.duelScale);
+    expect(Math.round(w)).toBe(52); expect(Math.round(l)).toBe(-47);
+  });
+  it('the optional duelTopHalf dial (option 1) lowers a duel winner\'s pay further', () => {
+    const base = finishScores([1, 2], { ...cfg.elo, duelTopHalf: 1 }), cut = finishScores([1, 2], { ...cfg.elo, duelTopHalf: 0.5 });
+    expect(cut[0]).toBeLessThan(base[0]); expect(finishScores([1, 2, 3, 4], { ...cfg.elo, duelTopHalf: 0.5 })).toEqual(finishScores([1, 2, 3, 4], { ...cfg.elo, duelTopHalf: 1 }));
   });
 });

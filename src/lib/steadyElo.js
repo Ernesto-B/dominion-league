@@ -30,6 +30,8 @@ export function finishScores(places, params = {}) {
   const w = { ...DEFAULT_STEADY };
   Object.keys(DEFAULT_STEADY).forEach(k => { if (params[k] != null) w[k] = params[k]; });
   const n = places.length;
+  // NOTE (ratings): duels are toned down twice, config.elo.duelScale 0.75 (engine.js) AND config.elo.duelTopHalf 0.5 (here): a duel pays about +52 / -47 at K=175 (+82 / -75 with neither). To tone them down further, lower either number.
+  if (n === 2 && params.duelTopHalf != null) w.topHalf *= params.duelTopHalf;   // a duel's winner is top half AND the winner: this takes some of the double payment back (1 = as at any table)
   const byPos = Array.from({ length: n }, (_, i) => raw(i + 1, n, w));
   const mean = byPos.reduce((a, b) => a + b, 0) / n, shift = w.target - mean;
   return places.map(pl => {
