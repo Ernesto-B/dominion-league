@@ -6,7 +6,7 @@ import { kingdomItemsOf, playAgain } from '../playAgain.js';
 export default function PlayAgain({ game, className = 'ghost', icon = false }) {
   const { me, gid, hashFor, catalog } = usePage();
   const [ask, dialog] = useConfirm();
-  if (!me || !me.is_admin || !catalog || !kingdomItemsOf(game, catalog).length) return null;
+  if (!me || !catalog || !kingdomItemsOf(game, catalog).length) return null;
   const go = async e => {
     e.stopPropagation();
     const confirmFn = () => ask({ title: 'Replace the kingdom?', text: 'A game is already under way on Game night. Its kingdom will be replaced with this one.', confirmLabel: 'Replace it' });

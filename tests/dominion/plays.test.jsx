@@ -182,12 +182,12 @@ describe('the Insights page', () => {
 
 describe('the Randomizer\'s hand-off buttons', () => {
   const q = 'randomizer?c=dominion-base-game:village&c=dominion-base-game:smithy&seed=424242';
-  it('a regular player gets "Share seed", the admin gets "Use for a game"', () => {
-    const player = view(q, { me: { name: 'Ann', is_admin: false } }), admin = view(q, { me: { name: 'Ann', is_admin: true } });
-    expect(player).toContain('Share seed'); expect(player).not.toContain('Use for a game');
-    expect(admin).toContain('Use for a game'); expect(admin).not.toContain('Share seed');
+  it('every signed-in player gets "Use for a game" (a player\'s table is approved by the admin); someone outside the league gets "Share seed"', () => {
+    const player = view(q, { me: { name: 'Ann', is_admin: false } }), admin = view(q, { me: { name: 'Ann', is_admin: true } }), out = view(q, { me: null });
+    for (const h of [player, admin]) { expect(h).toContain('Use for a game'); expect(h).not.toContain('Share seed'); }
+    expect(out).toContain('Share seed'); expect(out).not.toContain('Use for a game');
   });
   it('a kingdom with no seed (a locked or re-rolled one) has nothing to share', () => {
-    expect(view('randomizer?c=dominion-base-game:village&c=dominion-base-game:smithy', { me: { name: 'Ann', is_admin: false } })).not.toContain('Share seed');
+    expect(view('randomizer?c=dominion-base-game:village&c=dominion-base-game:smithy', { me: null })).not.toContain('Share seed');
   });
 });

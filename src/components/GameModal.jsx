@@ -10,7 +10,8 @@ import KingdomPicker from './KingdomPicker.jsx';
 import { useConfirm } from './ConfirmDialog.jsx';
 import EloPreview from './EloPreview.jsx';
 import FinishOrder from './FinishOrder.jsx';
-import { buildGameArgs, resortByVP, toggle } from '../lib/gameForm.js';
+import { buildGameArgs, callGameRpc, resortByVP, toggle } from '../lib/gameForm.js';
+import { pendingToForm } from '../lib/pending.js';
 import { MAX_PLAYERS } from '../lib/seating.js';
 
 const blank = () => ({ date: Eng.fmtDay(Eng.todayDay()), type: '', picked: [], tie: {}, sets: [], landscapes: [], kingdom: [], kingdomTouched: false, vp: {}, notes: '', editId: null });
@@ -30,10 +31,10 @@ function fromGame(D, editId) {
 }
 
 // Add / edit a game (admin only; the server re-checks via the add_game / edit_game / delete_game RPCs).
-export default function GameModal({ editId, onClose }) {
+export default function GameModal({ editId, onClose, pending = null }) {   // `pending`: a pending_games row the admin is reviewing; saving it logs the game and removes the row
   const [ask, confirmDialog] = useConfirm();
   const { D, gid, allGroups, enabledSets, playerIdByName, reload } = usePage();
-  const [bs, setBs] = useState(() => editId != null ? fromGame(D, editId)
+  const [bs, setBs] = useState(() => pending ? { ...blank(), ...pendingToForm(pending, new Map([...playerIdByName].map(([n, id]) => [id, n]))) } : editId != null ? fromGame(D, editId)
     : blank());
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
@@ -60,7 +61,8 @@ export default function GameModal({ editId, onClose }) {
     if (!bs.date) { setMsg('Pick a date.'); return; }
     const args = buildGameArgs(bs, gid, playerIdByName);
     setSaving(true); setMsg('Saving…');
-    const { error } = bs.editId ? await sb.rpc('edit_game', { p_game_id: bs.editId, ...args }) : await sb.rpc('add_game', args);
+    const { error } = bs.editId ? await sb.rpc('edit_game', { p_game_id: bs.editId, ...args }) : await callGameRpc(sb, 'add_game', args);
+    if (!error && bs.pendingId != null) await sb.rpc('discard_pending_game', { p_id: bs.pendingId });
     setSaving(false);
     if (error) { setMsg(error.message); return; }
     onClose();
@@ -79,7 +81,7 @@ export default function GameModal({ editId, onClose }) {
     <div className="modal-overlay" id="modalOverlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-box" tabIndex={-1} ref={boxRef}>
         <button className="modal-close" id="modalClose" type="button" aria-label="Close" onClick={onClose}>×</button>
-        <h2 style={{ marginTop: 0 }}>{bs.editId ? 'Edit game' : 'Add a game'}</h2>
+        <h2 style={{ marginTop: 0 }}>{bs.editId ? 'Edit game' : bs.pendingId != null ? 'Approve a game' : 'Add a game'}</h2>
         <p className="lede">{bs.editId ? 'Change the details and save.' : 'Pick who played, in finishing order, and save.'}{curGroupName ? ` For ${curGroupName} — only that group's players are listed below.` : ''}</p>
         <div className="controls">
           <label className="f">Date <input type="date" id="bd" value={bs.date} onChange={e => set({ date: e.target.value })} /></label>

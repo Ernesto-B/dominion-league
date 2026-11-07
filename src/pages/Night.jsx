@@ -4,6 +4,7 @@ import { usePage } from '../PageContext.js';
 import { sb } from '../lib/supabase.js';
 import { SET_NAMES, LANDSCAPES } from '../lib/sets.js';
 import { buildGameArgs, callGameRpc, resortByVP, toggle } from '../lib/gameForm.js';
+import { trustedMinutes, usualMinutes } from '../lib/pending.js';
 import { badgesFor, gameXp, leagueXp } from '../lib/xp.js';
 import { BadgeReward, LevelReward } from '../components/RewardCard.jsx';
 import SeatingHelp from '../components/SeatingHelp.jsx';
@@ -68,7 +69,7 @@ function Tables() {
     if (storage()) clearNight(storage(), gid, 1);
     setInfo(s => ({ ...s, 1: undefined })); setOpen(1); setActive(0);
   };
-  const admin = !!(me && me.is_admin);
+  const admin = !!me;   // every signed-in player can host a table (a non-admin's result goes to the admin for approval)
   return (
     <>
       {confirmDialog}
@@ -158,7 +159,8 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
   const roster = D.roster.slice().sort((a, b) => a.localeCompare(b));
   const patch = p => setSt(s => ({ ...s, ...p }));
   const clockMinutes = playedMinutes(st.startedAt, st.endedAt ?? Date.now());   // what the timer measured, for the Save step's Match time
-  if (!me || !me.is_admin) return <><h1>Game night</h1><p className="empty">Only the admin can log a game.</p></>;
+  if (!me) return <><h1>Game night</h1><p className="empty">Sign in to host a table.</p></>;
+  const isAdmin = !!me.is_admin;
   const catalog = cat.status === 'ready' ? cat.catalog : null;
   const items = st.kingdom;
   const resolved = catalog ? resolveKingdom(catalog, items) : [];
@@ -192,13 +194,23 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
     savedSt.current = st;
     before.current = { ranks: Object.fromEntries(D.ranked.map(p => [p.name, p.rank])), tiers: Object.fromEntries(D.ranked.map(p => [p.name, p.tier.id])) };
     setSaving(true); setMsg('Saving…');
-    const { data, error } = await callGameRpc(sb, 'add_game', buildGameArgs({ ...st, editId: null }, gid, playerIdByName));
+    // a player's table is sent to the admin to approve: nothing about it touches a rating until then. The clock is only trusted when it ran about as long as a game does.
+    let call;
+    if (isAdmin) call = callGameRpc(sb, 'add_game', buildGameArgs({ ...st, editId: null }, gid, playerIdByName));
+    else {
+      const args = buildGameArgs({ ...st, editId: null }, gid, playerIdByName), t = trustedMinutes(st.startedAt, st.endedAt ?? Date.now(), usualMinutes(D.games));
+      const typed = st.minutesEdit != null ? cleanMinutes(st.minutesEdit) : null;
+      args.p_minutes = typed ?? t.minutes; args.p_clock_minutes = t.clock;
+      if (typed == null && t.minutes == null) { delete args.p_started_at; delete args.p_ended_at; }   // a clock left running says nothing true
+      call = callGameRpc(sb, 'submit_pending_game', args);
+    }
+    const { data, error } = await call;
     setSaving(false);
     if (error) { setMsg(error.message); return; }
     if (storage()) clearNight(storage(), gid, slot);
     rememberNightGroup(gid);   // the next Game night opens in this group
-    setMsg(''); setDone({ id: data });
-    await reload();
+    setMsg(''); setDone(isAdmin ? { id: data } : { pending: true });
+    if (isAdmin) await reload();
   };
   // on the first step Back leaves the flow: to the page the viewer came from, or the rankings when there is none (a fresh tab)
   const goBack = () => {
@@ -230,6 +242,19 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
   };
   const startOver = () => { if (storage()) clearNight(storage(), gid, slot); setSt(blankNight()); setDone(null); setMsg(''); };
 
+  if (done && done.pending) return (
+    <>
+      <div className="head"><div><h1>Sent for approval</h1><p className="lede">{groupName ? `${groupName} — ` : ''}the admin will check the result and the standings update then.</p></div></div>
+      <div className="night-card night-done">
+        <p style={{ marginTop: 0 }}>Nothing is counted until it is approved. You can host another table in the meantime.</p>
+        <p className="night-go">
+          <a className="btn" href={hashFor('', gid)}>See the rankings</a>
+          {(savedSt.current?.kingdom || []).length > 0 && <button type="button" className="ghost" onClick={nextGame} title="Same players and kingdom; change a few cards before you start">Next game, same kingdom</button>}
+          <button type="button" className="ghost" onClick={startOver}>Log another</button>
+        </p>
+      </div>
+    </>
+  );
   if (done) return (
     <>
       <div className="head"><div><h1>Game saved</h1><p className="lede">{groupName ? `${groupName} — ` : ''}the standings are updated.</p></div></div>
@@ -343,7 +368,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
       <div className="night-actions">
         <button type="button" className="ghost" onClick={goBack}>← Back</button>
         {st.step === 'review'
-          ? <button type="button" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save game'}</button>
+          ? <button type="button" onClick={save} disabled={saving}>{saving ? 'Saving…' : isAdmin ? 'Save game' : 'Send for approval'}</button>
           : atDraftOptions ? <button type="button" onClick={startDraft}>Start the draft →</button>
           : atRandomRoll ? <button type="button" onClick={() => setSt(s => ({ ...s, randomDone: true, handOpen: false, randomOriginal: s.kingdom.filter(i => i.kind === 'card').map(i => i.id) }))} disabled={!!holdOn} title={holdOn || undefined}>Use this kingdom →</button>
           : <button type="button" onClick={next} disabled={!!holdOn} title={holdOn || undefined}>{st.step === 'kingdom' ? 'Start Game & Timer →' : st.step === 'play' ? 'Game over — scores →' : 'Next →'}</button>}

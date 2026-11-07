@@ -7,6 +7,7 @@ import FilterFold from '../components/FilterFold.jsx';
 import GamesTable from '../components/GamesTable.jsx';
 import SetSelect from '../components/SetSelect.jsx';
 import KingdomWall from '../components/KingdomWall.jsx';
+import PendingGames from '../components/PendingGames.jsx';
 import { useWide } from '../useMedia.js';
 import { nightGroup } from '../lib/groups.js';
 
@@ -73,9 +74,10 @@ export default function Games() {
     <>
       <div className="head">
         <div><h1>Games</h1><p className="lede">Every table we've logged, newest first. Winners in bold.</p></div>
-        {canEdit && <a className="btn gamenight" href={hashFor('night', ngid)}><img src="icons/nav/add-a-game.png" alt="" />Game night</a>}
+        {me && <a className="btn gamenight" href={hashFor('night', ngid)}><img src="icons/nav/add-a-game.png" alt="" />Game night</a>}
       </div>
       <Banner />
+      <PendingGames />
       <FilterFold active={['season', 'type', 'player', 'set'].filter(k => gf[k] !== 'all').length}>
         <div className="controls" style={{ marginTop: 8 }}>{selects}</div>
       </FilterFold>

@@ -480,3 +480,74 @@ revoke execute on function delete_game(bigint) from anon;
 revoke execute on function delete_group(text) from anon;
 revoke execute on function mark_password_changed() from anon;
 revoke execute on function set_my_pinned_badges(text[]) from anon;
+
+-- ---------------------------------------------------------------------------
+-- Pending games: any player can host a table on Game night and submit the result for the admin to approve. Nothing here touches a rating:
+-- the admin accepts a pending game through the ordinary add_game (so the maths, the kingdom validation and the group checks all stay in one place)
+-- and then discards it. Writes go through the two functions below; the table has no write policy.
+-- ---------------------------------------------------------------------------
+create table if not exists pending_games (
+  id bigint generated always as identity primary key,
+  group_id text,
+  created_by uuid not null default auth.uid(),
+  date date not null,
+  type text not null default '',
+  sets text,
+  landscapes text,
+  notes text,
+  results jsonb not null,                -- [{"player_id": "...", "place": 1, "vp": 12}, ...], as add_game takes them
+  kingdom jsonb,                         -- [{"kind": "card"|"landscape", "id": "...", "on": "..."}], checked when the admin accepts it
+  minutes int,                           -- the match length, or null when the clock looked wrong (left running): the admin sets it
+  clock_minutes int,                     -- what the clock actually said, kept so the admin can see why minutes is empty
+  started_at timestamptz,
+  ended_at timestamptz,
+  created_at timestamptz not null default now()
+);
+alter table pending_games enable row level security;
+drop policy if exists pending_select on pending_games;
+create policy pending_select on pending_games for select to authenticated using (is_admin() or created_by = auth.uid());
+
+create or replace function submit_pending_game(
+  p_date date, p_type text, p_sets text, p_landscapes text, p_strategy text,
+  p_winner_vp int, p_minutes int, p_notes text, p_group_id text, p_results jsonb,
+  p_kingdom jsonb default null, p_started_at timestamptz default null, p_ended_at timestamptz default null,
+  p_clock_minutes int default null
+) returns bigint
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_id bigint;
+  v_bad int;
+begin
+  if auth.uid() is null then raise exception 'sign in first'; end if;
+  if p_group_id is null or not (p_group_id = any(my_groups()) or is_admin()) then raise exception 'you are not in that group'; end if;
+  if jsonb_array_length(p_results) < 2 or jsonb_array_length(p_results) > 6 then raise exception 'a table seats 2 to 6 players'; end if;
+  if p_kingdom is not null and jsonb_array_length(p_kingdom) > 18 then raise exception 'too many cards in that kingdom'; end if;
+  select count(*) into v_bad from jsonb_array_elements(p_results) r
+    left join players pl on pl.id = (r->>'player_id')::uuid
+    where pl.id is null or not (p_group_id = any(pl.group_ids));
+  if v_bad > 0 then raise exception 'every player must belong to the selected group'; end if;
+  if (select count(*) from pending_games where created_by = auth.uid()) >= 12 then raise exception 'you already have 12 games waiting for approval'; end if;
+
+  insert into pending_games (group_id, created_by, date, type, sets, landscapes, notes, results, kingdom, minutes, clock_minutes, started_at, ended_at)
+  values (p_group_id, auth.uid(), p_date, coalesce(p_type, ''), p_sets, p_landscapes, p_notes, p_results, p_kingdom, p_minutes, p_clock_minutes, p_started_at, p_ended_at)
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+-- the admin (accepting or rejecting) or whoever submitted it (taking it back) removes a pending game
+create or replace function discard_pending_game(p_id bigint) returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  delete from pending_games where id = p_id and (is_admin() or created_by = auth.uid());
+end;
+$$;
+
+revoke execute on function submit_pending_game(date, text, text, text, text, int, int, text, text, jsonb, jsonb, timestamptz, timestamptz, int) from anon;
+revoke execute on function discard_pending_game(bigint) from anon;

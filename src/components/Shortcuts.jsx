@@ -12,7 +12,7 @@ export default function Shortcuts({ ready }) {
   useEffect(() => {
     if (!ready || !canUseKeys()) return undefined;
     let armed = 0;   // time `g` was pressed
-    const goes = GO.filter(([, , r]) => (r !== 'admin' && r !== 'night') || ready.me.is_admin);
+    const goes = GO.filter(([, , r]) => r !== 'admin' || ready.me.is_admin);
     const onKey = e => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
       if (e.key === 'Escape') { setHelp(false); return; }
@@ -42,7 +42,7 @@ export default function Shortcuts({ ready }) {
   }, [ready, help]);
   if (!help) return null;
   const here = activeBindings();
-  const goes = GO.filter(([, , r]) => (r !== 'admin' && r !== 'night') || ready.me.is_admin);
+  const goes = GO.filter(([, , r]) => r !== 'admin' || ready.me.is_admin);
   return createPortal(
     <div className="overlay kbd-help" role="presentation" onClick={() => setHelp(false)}>
       <div className="kbd-card" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" onClick={e => e.stopPropagation()}>

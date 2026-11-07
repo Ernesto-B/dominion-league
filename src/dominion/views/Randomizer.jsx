@@ -32,7 +32,7 @@ export default function Randomizer({ query = '' }) {
   useEffect(() => { clearResumeEditing(); }, []);
   const lg = useLeagueGames(opts.favorBy);   // "Prioritize" can count one player's games only (opts.favorBy)
   const plays = useMemo(() => (lg && lg.stats ? pilesPlayed(lg.stats) : null), [lg]);
-  const canLog = !!(page && page.me && page.me.is_admin);
+  const canLog = !!(page && page.me);   // any signed-in player can start a table from a roll (a non-admin's result is approved by the admin)
 
   const write = (nextOpts, nextState) => {
     const p = optionsToParams(nextOpts); if (nextState) kingdomToParams(nextState, p);

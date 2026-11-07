@@ -13,7 +13,9 @@ describe('the Game night page', () => {
     const draw = admin => renderToString(createElement(PageContext.Provider, { value: page(admin) }, createElement(Night)));
     const html = draw(true);
     expect(html).toContain('Who’s playing?'); expect(html).toContain('+ A second table'); expect(html).toContain('Ann');
-    expect(draw(false)).toContain('Only the admin can log a game.');
+    const player = draw(false);   // any signed-in player can host a table: its result goes to the admin to approve
+    expect(player).toContain('Who’s playing?'); expect(player).not.toContain('Only the admin');
+    expect(renderToString(createElement(PageContext.Provider, { value: { ...page(false), me: null } }, createElement(Night)))).toContain('Sign in to host a table.');
   });
 });
 
