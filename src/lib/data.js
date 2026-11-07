@@ -74,5 +74,12 @@ export async function loadData() {
     targetGames: s.target_games, qualifyPct: s.qualify_pct, playoffSpots: s.playoff_spots,
     champion: s.champion_player_id ? (nameById.get(s.champion_player_id) || '') : '', notes: s.notes || '',
   }));
-  return { rows, players: pr.data, groups: grp.data, seasons: seasonRows, enabledSets: enabled, gameMark: { count: gr.data.length, latest: gr.data.reduce((m, g) => Math.max(m, g.id), 0) } };   // gameMark: what a later look (components/NewGamesBar.jsx) compares against
+  return { rows, players: pr.data, groups: grp.data, seasons: seasonRows, enabledSets: enabled, gameMarks: gameMarksOf(gr.data) };   // gameMarks: what a later look (components/NewGamesBar.jsx) compares against, one per group
+}
+
+// the game count and newest id per group ('' for a game with no group): the new-games notice only speaks about the group being looked at
+export function gameMarksOf(games) {
+  const marks = {};
+  (games || []).forEach(g => { const k = g.group_id ?? ''; const m = marks[k] || (marks[k] = { count: 0, latest: 0 }); m.count++; m.latest = Math.max(m.latest, g.id); });
+  return marks;
 }

@@ -90,7 +90,7 @@ function Shell() {
       {ready && <BottomNav ready={{ ...state, route }} hash={hash} />}
       {ready && (['home', 'season', 'games', 'players', 'records', 'night', 'dominion'].includes(route.route)) && <ScrollTopButton lift={route.route === 'night'} />}
       {ready && <Shortcuts ready={{ ...state, route }} />}
-      {ready && !state.offlineAt && <NewGamesBar mark={state.gameMark} onRefresh={boot} />}
+      {ready && !state.offlineAt && <NewGamesBar gid={route && route.gid != null ? route.gid : lastGid.current} marks={state.gameMarks} onRefresh={boot} />}
       <UpdateBar />
       <PopLayer />
       <PeekLayer />
