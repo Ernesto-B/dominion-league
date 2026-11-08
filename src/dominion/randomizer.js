@@ -111,7 +111,7 @@ export const DEFAULT_OPTIONS = Object.freeze({
   favorPlayed: false,      // ...or towards piles that have been played more (the same `plays` option)
   favorBy: '',             // ...counting only the games this player sat at (the Collection's Randomizer; empty = the whole group's)
   favorTable: false,       // count only the games the seated players sat at, not the whole group's (Game night: the caller hands over that table's `plays`)
-  junkTrash: false,        // if an Attack that gives opponents junk is in, make sure there is a trashing card too
+  junkTrash: true,         // on unless turned off: if an Attack that gives opponents junk is in, make sure there is a trashing card too
   costSpread: 'standard',        // a key of COST_SPREADS (null = no spread at all, only from an old link: the page offers no "off")
   themes: [],              // keys of THEMES: build the kingdom around Treasure / VP / Duration / Trashing
 });
@@ -566,7 +566,7 @@ export function optionsToParams(opts, p = new URLSearchParams()) {
   if (o.favorPlayed) p.set('fp', '1');
   if (o.favorTable) p.set('ft', '1');
   if (o.favorBy) p.set('fb', o.favorBy);
-  if (o.junkTrash) p.set('jt', '1');
+  if (!o.junkTrash) p.set('jt', '0');   // on is the default, so only "off" is written
   o.gives.forEach(v => p.append('gv', v));
   if (!o.balance) p.set('bal', '0');   // on is the default, so only "off" is written
   if (o.costSpread !== d.costSpread) p.set('cs', o.costSpread ?? 'off');
@@ -582,7 +582,7 @@ export function optionsFromParams(p) {
     landscapeTypes: many(p, 'lt').filter(t => LANDSCAPE_TYPES.includes(t)),
     maxAttacks: intIn(p.get('atk'), 0, 12, null), minAttacks: intIn(p.get('atkmin'), 0, 12, null), maxCost: intIn(p.get('maxc'), 2, 10, null), reaction: p.get('rx') === '1',
     require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: many(p, 'inc'), exclude: many(p, 'exc'), excludeLandscapes: [], favor: p.get('fav') === '1',
-    favorPlayed: p.get('fp') === '1', favorTable: p.get('ft') === '1', favorBy: (p.get('fb') || '').slice(0, 60), junkTrash: p.get('jt') === '1', costSpread: p.get('cs') === 'off' ? null : COST_SPREADS[p.get('cs')] ? p.get('cs') : d.costSpread,
+    favorPlayed: p.get('fp') === '1', favorTable: p.get('ft') === '1', favorBy: (p.get('fb') || '').slice(0, 60), junkTrash: p.get('jt') !== '0', costSpread: p.get('cs') === 'off' ? null : COST_SPREADS[p.get('cs')] ? p.get('cs') : d.costSpread,
     themes: [...new Set(many(p, 'th').filter(t => THEMES[t]))], gives: [...new Set(many(p, 'gv').filter(k => GIVES[k]))], balance: p.get('bal') !== '0',
     maxOf: many(p, 'mx').map(v => v.split(':')).filter(([r, n]) => CAP_RULES.includes(r) && /^(\d|x)$/.test(n || '')).reduce((m, [r, n]) => { if (n === 'x') delete m[r]; else m[r] = Math.min(MAX_CAP, +n); return m; }, { ...d.maxOf }),
   };
@@ -629,3 +629,85 @@ export function toGameItems(state) {
     ...state.landscapes.map(l => ({ kind: 'landscape', id: l.landscape.id, ...(l.on ? { on: l.on } : {}) })),
   ];
 }
+
+/* The Analyze panel's "Fix", in three steps so the viewer decides:
+     fixPlan     which cards of the kingdom could be swapped to close the gap (and why each other one can't), and the one it would suggest;
+     fixChoices  the cards that could take a chosen card's place, every one that keeps the options' rules;
+     applyFix    the swap itself, the same shape as rerollSlot.
+   `issue` is 'draw' | 'village' | 'trash' | 'buy' (a job with no card on record) or 'heavy:<role>' (more pure specialists of a job than Balance allows).
+   A card that may not go is a locked or included one, or the only provider of a job the kingdom needs. A kingdom that was ALREADY past a rule (hand-picked) is only refused a swap that
+   makes it worse. */
+const FIX_JOBS = ['draw', 'village', 'trash', 'buy'];
+function fixContext(catalog, options, state, issue, locked) {
+  const o = normalize(options, catalog);
+  const current = state.slots.map(s => infoOfSlot(catalog, s));
+  const wanted = o.include.map(id => pileInfos(catalog).byCardId.get(id)).filter(Boolean);
+  const quotas = quotasFor(poolFor(catalog, o), o);
+  const heavy = issue.startsWith('heavy:') ? issue.slice(6) : null;
+  const has = heavy ? i => !specialistOf(i, heavy) && !i.attack : i => satisfies(i, issue);
+  const lockedSet = new Set(locked), includedSet = new Set(wanted.map(w => w.key));
+  const was = breaks(current, o, wanted, quotas);
+  if (o.balance && balanceBroken(current.filter(i => !(heavy && specialistOf(i, heavy))), o)) o.balance = false;
+  return { o, current, wanted, quotas, heavy, has, lockedSet, includedSet, was };
+}
+const providersOf = (list, role) => list.filter(i => satisfies(i, role)).length;
+function whyNot(ctx, k) {
+  const info = ctx.current[k];
+  if (ctx.lockedSet.has(info.key)) return 'Locked';
+  if (ctx.includedSet.has(info.key)) return 'Included';
+  if (ctx.heavy) return specialistOf(info, ctx.heavy) ? null : 'Not one of them';
+  const rest = ctx.current.filter((_, j) => j !== k);
+  const lost = FIX_JOBS.find(r => providersOf(ctx.current, r) > 0 && providersOf(rest, r) === 0);
+  return lost ? `Only ${REQUIRE_RULES[lost].chip}` : null;
+}
+function candidatesFor(catalog, ctx, k, recent = [], rng = Math.random) {
+  const lately = new Set(recent);
+  return poolFor(catalog, ctx.o).filter(i => !ctx.current.includes(i) && ctx.has(i)).map(i => [i, rng() + (lately.has(i.key) ? 1 : 0)])
+    .sort((a, b) => a[1] - b[1]).map(x => x[0])
+    .filter(cand => { const next = ctx.current.slice(); next[k] = cand; const now = breaks(next, ctx.o, ctx.wanted, ctx.quotas); return !now || now === ctx.was; });
+}
+
+export function fixPlan(catalog, options, state, issue, { locked = [], rng = Math.random } = {}) {
+  const ctx = fixContext(catalog, options, state, issue, locked);
+  const cards = ctx.current.map((info, k) => {
+    let why = whyNot(ctx, k);
+    if (!why && !candidatesFor(catalog, ctx, k).length) why = 'Nothing fits';
+    return { key: info.key, name: info.name, ok: !why, why, jobs: rolesOf(info).size };
+  });
+  const open = cards.filter(c => c.ok).sort((a, b) => a.jobs - b.jobs + (rng() - 0.5) * 0.5);
+  if (!open.length) return { ok: false, cards, message: ctx.heavy ? 'Every one of them is locked or included, so none can be swapped.' : 'Every unlocked card is doing a job this kingdom needs, or nothing that fits could take its place. Unlock a card, or swap one by hand.' };
+  return { ok: true, cards, suggested: open[0].key };
+}
+
+// the cards that could take `slotKey`'s place, best-first: ones not shown lately before ones that were
+export function fixChoices(catalog, options, state, issue, slotKey, { locked = [], recent = [], rng = Math.random } = {}) {
+  const ctx = fixContext(catalog, options, state, issue, locked);
+  const k = ctx.current.findIndex(i => i.key === slotKey);
+  if (k < 0 || whyNot(ctx, k)) return [];
+  return candidatesFor(catalog, ctx, k, recent, rng).map(toSlot);
+}
+
+export function applyFix(catalog, options, state, slotKey, candidateKey, { rng = Math.random } = {}) {
+  const o = normalize(options, catalog);
+  const current = state.slots.map(s => infoOfSlot(catalog, s));
+  const k = current.findIndex(i => i.key === slotKey), cand = pileInfos(catalog).byKey.get(candidateKey);
+  if (k < 0 || !cand) return { ok: false, message: 'That card is not in the kingdom any more.' };
+  const next = current.slice(); next[k] = cand;
+  const replaced = state.slots[k];
+  const res = finish(catalog, { ...o, landscapes: state.landscapes.length }, next, state.landscapes.map(l => l.landscape.id), null, rng, {
+    landscapes: state.landscapes.map(l => (l.on && replaced.cards.some(c => c.id === l.on) ? { ...l, on: null } : l)), setup: state.setup,
+  }, { keepOrder: true });
+  return res.ok ? { ...res, removed: replaced, added: res.slots.find(x => x.key === candidateKey) } : res;
+}
+
+// one call: the suggested card, replaced by the first choice (what the tests and any caller that does not ask the viewer use)
+export function fixIssue(catalog, options, state, issue, { rng = Math.random, locked = [], recent = [] } = {}) {
+  const plan = fixPlan(catalog, options, state, issue, { locked, rng });
+  if (!plan.ok) return { ok: false, message: plan.message, choices: 0 };
+  const choices = fixChoices(catalog, options, state, issue, plan.suggested, { locked, recent, rng });
+  if (!choices.length) return { ok: false, message: 'No card that would close this gap fits the other rules. Relax a rule, or swap a card by hand.', choices: 0 };
+  return applyFix(catalog, options, state, plan.suggested, choices[0].key, { rng });
+}
+
+// what the analysis panel (analysis.js) reads: the recorded roles of a pile, and the tests the rules above already use
+export { rolesOf as rolesOfInfo, pileInfos, givesTest, specialistOf };
