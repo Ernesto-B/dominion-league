@@ -61,8 +61,8 @@ function Ladder({ ranked: rk, highlight, setHighlight }) {
             onMouseEnter={() => setHighlight(p.name)} onFocus={() => setHighlight(p.name)}>
             <span className="lrank"><RankMedal rank={p.rank} size={30} />
               {!rm ? null : rm > 0
-                ? <span className="rankmove up-t" title={`Up ${rm} spot${rm === 1 ? '' : 's'} since last night`}>▲{rm}</span>
-                : <span className="rankmove down-t" title={`Down ${-rm} spot${rm === -1 ? '' : 's'} since last night`}>▼{-rm}</span>}
+                ? <span className="rankmove up-t" title={`Up ${rm} spot${rm === 1 ? '' : 's'} after the latest game`}>▲{rm}</span>
+                : <span className="rankmove down-t" title={`Down ${-rm} spot${rm === -1 ? '' : 's'} after the latest game`}>▼{-rm}</span>}
             </span>
             <a className="lname" href={hashFor('players', gid, encodeURIComponent(p.name))}>
               <span className="lname-id"><RankMark p={p} />{p.name}

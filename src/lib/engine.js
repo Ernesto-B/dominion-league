@@ -332,16 +332,15 @@ function compute(config, csvRows, today) {
   /* nights */
   const nightsAll = [...new Set(games.map(g => g.day))];
 
-  /* Rank movement since the night before last — people can't eyeball a raw
-     Elo delta against everyone else's, but "passed Bob" reads instantly.
-     Needs at least 2 distinct game nights to have a "before" to compare
-     against; a player with no result before that cutoff (brand new as of
-     last night) just gets no arrow, not a fabricated one. */
-  if (nightsAll.length >= 2) {
-    const cutoff = nightsAll[nightsAll.length - 2];
-    const eloMap = (snapshotAtOrBefore(g => g.day <= cutoff) || { snapshot: {} }).snapshot;
+  /* Rank movement caused by the latest game, so an arrow agrees with the "Last" column beside it (a player who lost their last game and
+     dropped 60 Elo must not show an up arrow because of a game they won earlier in the night). "Passed Bob" reads instantly where a raw
+     Elo delta against everyone else's does not. Needs at least 2 games to have a "before" to compare against; a player whose first
+     result is the latest game just gets no arrow, not a fabricated one. */
+  if (games.length >= 2) {
+    const latest = games[games.length - 1];
+    const eloMap = (games[games.length - 2] || { snapshot: {} }).snapshot;
     const prevCandidates = players
-      .filter(p => p.results.some(r => r.game.day <= cutoff))
+      .filter(p => p.results.some(r => r.game !== latest))
       .map(p => ({ name: p.name, elo: eloMap[p.name] ?? E.start }));
     prevCandidates.forEach(p => {
       p.prevRank = 1 + prevCandidates.filter(q => Math.round(q.elo * 10) > Math.round(p.elo * 10)).length;
