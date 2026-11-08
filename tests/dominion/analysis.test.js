@@ -25,7 +25,7 @@ describe('analyseKingdom', () => {
   });
   it('lists what stands out as short sentences, and nothing for a covered kingdom', () => {
     const gap = concernsOf(analyseKingdom(catalog, slotsOf(['Gardens', 'Moat'])));
-    expect(gap.length).toBeGreaterThan(0); expect(gap.join(' ')).toMatch(/No .* on record/);
+    expect(gap.length).toBeGreaterThan(0); expect(gap.join(' ')).toMatch(/No .* in the kingdom/);
     expect(concernsOf(analyseKingdom(catalog, slotsOf(['Village', 'Smithy', 'Chapel', 'Market'])))).toEqual([]);
     expect(concernsOf(analyseKingdom(catalog, []))).toEqual([]);
   });

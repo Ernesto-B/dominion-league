@@ -15,7 +15,6 @@ export default function KingdomCheck({ concerns, canReview, onReview, onGo, onCl
       <div className="modal-box dn-confirm dn-kcheck" role="alertdialog" aria-modal="true" aria-labelledby="kc-title">
         <h2 id="kc-title"><span className="dn-kcheck-mark" aria-hidden="true">!</span>Worth a look before you start</h2>
         <ul className="dn-kcheck-list">{concerns.map(c => <li key={c}>{c}</li>)}</ul>
-        <p className="meta">Counted from the cards’ recorded mechanics, so a card might do it without being recorded. Your call.</p>
         <div className="dn-confirm-btns">
           <button type="button" className="ghost" onClick={onGo}>Start anyway</button>
           <button type="button" ref={first} onClick={onReview}>{canReview ? 'Review & fix' : 'Change the cards'}</button>

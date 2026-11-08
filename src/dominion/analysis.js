@@ -44,7 +44,7 @@ export function analyseKingdom(catalog, slots) {
 export function concernsOf(a) {
   if (!a.n) return [];
   const out = [];
-  for (const r of a.rows) if (WANTED.includes(r.key) && r.count === 0) out.push(`No ${r.key === 'buy' ? '+Buy card' : r.label.replace(' (+Actions)', '').toLowerCase()} on record`);
+  for (const r of a.rows) if (WANTED.includes(r.key) && r.count === 0) out.push(`No ${r.key === 'buy' ? '+Buy card' : r.label.replace(' (+Actions)', '').toLowerCase()} in the kingdom`);
   for (const r of a.heavy) out.push(`${r.pure} pure ${r.short}s (the usual is ${r.limit})`);
   return out;
 }
