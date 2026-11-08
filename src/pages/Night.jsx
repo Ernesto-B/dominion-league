@@ -22,7 +22,10 @@ import { useCatalogLoad } from '../dominion/CatalogContext.jsx';
 import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
 import { CardText, ShowTextButton } from '../dominion/components/bits.jsx';
 import { PlaysScopeContext } from '../dominion/components/RandomizerOptions.jsx';
-import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, newSeed, setupForHand, withAvoid } from '../dominion/randomizer.js';
+import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, newSeed, setupForHand, stateFromItems, withAvoid } from '../dominion/randomizer.js';
+import { analyseKingdom, concernsOf } from '../dominion/analysis.js';
+import { requestAnalyze } from '../dominion/analyzeBus.js';
+import KingdomCheck from '../components/KingdomCheck.jsx';
 import CountUp from '../components/CountUp.jsx';
 import { pilesPlayed, playStats } from '../dominion/playStats.js';
 import { impliedSets, primaryType, resolveKingdom, shelfOrder } from '../dominion/kingdom.js';
@@ -120,6 +123,8 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
   const [st, setSt] = useState(() => (storage() ? loadNight(storage(), gid, undefined, undefined, slot) : blankNight()));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [check, setCheck] = useState(null);   // the kingdom check: { concerns, go } while it is asked
+  const okSig = useRef(null);               // the kingdom the table already said "start anyway" to
   const savedSt = useRef(null);                          // the form as it was when saved, for Undo
   const [undoing, setUndoing] = useState(false);
   const [done, setDone] = useState(null);                 // { id } after a successful save
@@ -185,6 +190,17 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
   const redoDraft = () => setSt(s => ({ ...s, kingdom: [], rolled: null, rolledQ: null, handOpen: false, handEdited: false, handBane: null, draftSave: { ...draftState(s.draftSave, s.picked), picks: [], banned: [], finished: false, error: '' } }));
   const setMode = kingdomMode => setSt(s => ({ ...s, kingdomMode }));
   const next = () => { setMsg(''); setSt(s => advance(s)); };
+  // before a kingdom is used: if the Analyze panel would flag something, ask once (per kingdom) whether to look or go on
+  const withCheck = go => {
+    if (!catalog || !items.length) { go(); return; }
+    const concerns = concernsOf(analyseKingdom(catalog, stateFromItems(catalog, items, st.handBane).slots)), sig = items.map(i => i.id).join(',');
+    if (!concerns.length || okSig.current === sig) { go(); return; }
+    setCheck({ concerns, go: () => { okSig.current = sig; setCheck(null); go(); } });
+  };
+  const reviewKingdom = () => {
+    setCheck(null);
+    if (st.kingdomMode === 'random' || !st.kingdomMode) { if (st.randomDone) setSt(s => ({ ...s, randomDone: false })); requestAnalyze(); }
+  };
 
   // ---- saving
   const save = async () => {
@@ -365,13 +381,14 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
         )}
       </section>
 
+      {check && <KingdomCheck concerns={check.concerns} canReview={st.kingdomMode === 'random' || !st.kingdomMode} onReview={reviewKingdom} onGo={check.go} onClose={() => setCheck(null)} />}
       <div className="night-actions">
         <button type="button" className="ghost" onClick={goBack}>← Back</button>
         {st.step === 'review'
           ? <button type="button" onClick={save} disabled={saving}>{saving ? 'Saving…' : isAdmin ? 'Save game' : 'Send for approval'}</button>
           : atDraftOptions ? <button type="button" onClick={startDraft}>Start the draft →</button>
-          : atRandomRoll ? <button type="button" onClick={() => setSt(s => ({ ...s, randomDone: true, handOpen: false, randomOriginal: s.kingdom.filter(i => i.kind === 'card').map(i => i.id) }))} disabled={!!holdOn} title={holdOn || undefined}>Use this kingdom →</button>
-          : <button type="button" onClick={next} disabled={!!holdOn} title={holdOn || undefined}>{st.step === 'kingdom' ? 'Start Game & Timer →' : st.step === 'play' ? 'Game over — scores →' : 'Next →'}</button>}
+          : atRandomRoll ? <button type="button" onClick={() => withCheck(() => setSt(s => ({ ...s, randomDone: true, handOpen: false, randomOriginal: s.kingdom.filter(i => i.kind === 'card').map(i => i.id) })))} disabled={!!holdOn} title={holdOn || undefined}>Use this kingdom →</button>
+          : <button type="button" onClick={st.step === 'kingdom' ? () => withCheck(next) : next} disabled={!!holdOn} title={holdOn || undefined}>{st.step === 'kingdom' ? 'Start Game & Timer →' : st.step === 'play' ? 'Game over — scores →' : 'Next →'}</button>}
       </div>
       <p className="night-reset"><button type="button" className="ghost" onClick={startOver}>Restart Game Night</button></p>
     </>

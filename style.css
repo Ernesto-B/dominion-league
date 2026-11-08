@@ -2301,3 +2301,98 @@ details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
   .dn-rz-go .dn-seed-in input{flex:1;min-width:0;width:auto}
   .dn-rz-go>button.ghost{flex:1 1 calc(50% - 8px)}
 }
+
+/* ---- The Randomizer's Analyze panel (AnalyzePanel.jsx): slides in from the right on a computer, up from the bottom on a phone. Closed it is off screen and inert. ---- */
+.dn-az-btn{position:relative}
+.dn-az-btn.on{border-color:var(--brass);color:var(--brass)}
+.dn-az-dot{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--brass);box-shadow:0 0 0 2px var(--panel)}
+.dn-az-scrim{position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .2s ease;display:none}
+.dn-az{position:fixed;z-index:160;top:0;right:0;bottom:0;width:min(340px,92vw);display:flex;flex-direction:column;background:var(--panel);border-left:1px solid var(--frame,var(--line));box-shadow:-8px 0 28px rgba(0,0,0,.28);transform:translateX(105%);transition:transform .25s ease;visibility:hidden}
+.dn-az.open{transform:none;visibility:visible}
+.dn-az-grab{display:none}
+.dn-az-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.dn-az-head h3{margin:0;font-size:18px}
+.dn-az-x{min-height:36px}
+.dn-az-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:12px 16px 22px}
+.dn-az-verdict{margin:0 0 12px;padding:8px 10px;border-radius:8px;background:var(--felt-soft);font-size:14px}
+.dn-az-verdict.warn{background:var(--brass-soft);color:var(--ink)}
+.dn-az-rows,.dn-az-gives,.dn-az-cost{list-style:none;margin:0;padding:0}
+.dn-az-rows li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.dn-az-rows li:last-child{border-bottom:0}
+.dn-az-n{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--felt-soft);color:var(--felt);font-weight:700}
+.dn-az-rows li.zero .dn-az-n{background:transparent;border:1px dashed var(--line);color:var(--muted)}
+.dn-az-rows li.zero b{color:var(--muted);font-weight:500}
+.dn-az-rows li.heavy .dn-az-n{background:var(--brass-soft);color:var(--brass)}
+.dn-az-note{color:var(--brass);font-size:13px}
+.dn-az-what{min-width:0;flex:1}
+.dn-az-names{margin:2px 0 0;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.dn-az-names a{color:inherit;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:2px}
+.dn-az h4{margin:16px 0 6px;font-size:14px}
+.dn-az-gives li{margin:4px 0;font-size:13px}
+.dn-az-cost{display:flex;gap:6px;align-items:flex-end}
+.dn-az-cost li{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px}
+.dn-az-col{width:100%;height:56px;display:flex;align-items:flex-end;border-bottom:1px solid var(--line)}
+.dn-az-col i{display:block;width:100%;min-height:2px;border-radius:4px 4px 0 0;background:var(--felt)}
+.dn-az-cost small{color:var(--muted);font-size:11px;white-space:nowrap}
+.dn-az-foot{margin:16px 0 0;font-size:12px}
+@media (max-width:720px){
+  .dn-az-scrim{display:block}
+  .dn-az-scrim.open{opacity:1;pointer-events:auto}
+  .dn-az{top:auto;left:0;right:0;bottom:0;width:auto;max-height:70vh;border-left:0;border-top:1px solid var(--frame,var(--line));border-radius:16px 16px 0 0;box-shadow:0 -8px 28px rgba(0,0,0,.35);transform:translateY(105%);padding-bottom:env(safe-area-inset-bottom)}
+  .dn-az.open{transform:none}
+  .dn-az-grab{display:block;padding:8px 0 2px;touch-action:none}
+  .dn-az-grab span{display:block;width:40px;height:4px;border-radius:2px;margin:0 auto;background:var(--line)}
+  .dn-az-head{padding:6px 16px 10px}
+  .dn-az-x{min-height:44px}
+}
+@media (prefers-reduced-motion:reduce){.dn-az,.dn-az-scrim{transition:none}}
+.dn-az-gives{margin-top:12px}
+.dn-az-gives li{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px}
+.dn-az-gives .dn-az-names{margin:0}
+/* a card the Analyze panel points at: a brass ring that holds for a few seconds, then fades */
+@keyframes dn-ping{0%,80%{box-shadow:0 0 0 3px var(--brass),0 0 18px var(--brass)}100%{box-shadow:0 0 0 3px transparent,0 0 0 transparent}}
+.dn-rztile.ping,.dn-rzface.ping .dn-face{animation:dn-ping 3.5s ease-out;border-radius:10px}
+@media (prefers-reduced-motion:reduce){.dn-rztile.ping,.dn-rzface.ping .dn-face{animation:none;box-shadow:0 0 0 3px var(--brass)}}
+.dn-az-fix{float:right;margin-left:8px;min-height:30px;padding:2px 12px;font-size:13px}
+.dn-az-said{margin:0 0 10px;padding:8px 10px;border-radius:8px;background:var(--felt-soft);font-size:14px}
+.dn-az-said.no{background:var(--brick-soft)}
+@media (pointer:coarse){.dn-az-fix{min-height:44px;padding:6px 16px}}
+/* ---- Fix, in the open (FixPicker.jsx): pick the card to replace, then one of three that would close the gap ---- */
+.dn-fixbar{position:sticky;top:8px;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding:10px 14px;border-radius:10px;border:1px solid var(--brass);background:var(--brass-soft);color:var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.dn-fixbar .meta{display:block}
+.dn-fixbar .ghost{flex:none;min-height:36px}
+.fixmode .dn-rztile,.fixmode .dn-rzface{position:relative;transition:opacity .2s ease}
+.fixmode .fix-no{opacity:.32;filter:grayscale(.5)}
+.fixmode .fix-ok{cursor:pointer}
+.fixmode .fix-ok *,.fixmode .fix-sel *{pointer-events:none}
+.fixmode .fix-ok:hover,.fixmode .fix-ok:focus-visible{outline:3px solid var(--brass);outline-offset:2px;border-radius:10px}
+.fixmode .fix-sug{outline:3px solid var(--brass);outline-offset:2px;border-radius:10px}
+.fixmode .fix-sel{outline:3px solid var(--brass);outline-offset:2px;border-radius:10px}
+.fixmode [data-why]::after{content:attr(data-why);position:absolute;top:-11px;left:50%;transform:translateX(-50%);z-index:2;padding:1px 9px;border-radius:999px;font-size:11px;line-height:1.5;font-weight:700;white-space:nowrap;background:rgba(0,0,0,.8);color:#fff;border:1px solid rgba(255,255,255,.25);pointer-events:none}
+.fixmode .fix-sug[data-why]::after{background:var(--brass);color:#1b1500;border-color:var(--brass)}
+/* while a card to replace is being picked, Lock and Re-roll are not what a tap does: show them put away */
+.fixmode .dn-rztile-btns,.fixmode .dn-rztile-more{opacity:.3;pointer-events:none}
+
+.dn-kcheck h2{display:flex;align-items:center;gap:10px}
+.dn-kcheck-mark{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--brass);color:#1b1500;font-weight:800;font-size:16px}
+.dn-kcheck-list{margin:0 0 10px;padding-left:20px}
+.dn-kcheck-list li{margin:4px 0}
+.dn-kcheck .dn-confirm-btns{flex-wrap:wrap}
+.dn-kcheck .dn-confirm-btns button{flex:1 1 140px;min-height:44px}
+.dn-az-exp{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}
+.dn-az-exp li{display:inline-flex;align-items:center;gap:6px}
+.dn-az-fold{margin-top:14px}
+.dn-az-fold>summary{font-size:14px;font-weight:700;cursor:pointer;min-height:36px;display:flex;align-items:center;gap:8px}
+.dn-az-fold .dn-az-exp{padding:6px 0 2px}
+.dn-az-fold>summary{list-style:none;justify-content:space-between;padding:6px 0;border-top:1px solid var(--line)}
+.dn-az-fold>summary::-webkit-details-marker{display:none}
+.dn-az-fold>summary::after{content:"";flex:none;width:8px;height:8px;margin:0 4px 3px 8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .18s ease}
+.dn-az-fold[open]>summary::after{transform:rotate(-135deg);margin-bottom:-3px}
+.dn-az-fold>summary:hover::after,.dn-az-fold>summary:focus-visible::after{border-color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.dn-az-fold>summary::after{transition:none}}
+.dn-undobar{top:auto}
+.dn-undo-btns{display:flex;gap:8px;flex:none}
+.dn-undo-btns button{min-height:36px;padding:4px 16px}
+@media (pointer:coarse){.dn-undo-btns button,.dn-fixbar .ghost{min-height:44px}}
+.dn-az-names a{cursor:pointer;transition:color .12s ease,text-decoration-color .12s ease}
+.dn-az-names a:hover,.dn-az-names a:focus-visible{color:var(--ink);text-decoration-color:currentColor;text-decoration-thickness:2px}

@@ -112,19 +112,19 @@ describe('duels (config.elo.duelScale)', () => {
     const D = Eng2.compute({ ...cfg, elo, players: names, seasons: [] }, [...warm, row(12, finish)], '2026-02-01');
     const g = D.games[D.games.length - 1]; return Object.fromEntries(g.names.map(n => [n, g.elo[n].after - g.elo[n].before]));
   };
-  it('ships at 0.75, and the duel moves ratings that share of what it would otherwise', () => {
-    expect(cfg.elo.duelScale).toBe(0.75);
+  it('ships at 0.6, and the duel moves ratings that share of what it would otherwise', () => {
+    expect(cfg.elo.duelScale).toBe(0.6);
     const a = swing({ ...cfg.elo, duelScale: 1 }, ['A', 'B', 'C', 'D'], 'A > B'), b = swing(cfg.elo, ['A', 'B', 'C', 'D'], 'A > B');
-    expect(b.A / a.A).toBeCloseTo(0.75, 5); expect(b.B / a.B).toBeCloseTo(0.75, 5);
+    expect(b.A / a.A).toBeCloseTo(0.6, 5); expect(b.B / a.B).toBeCloseTo(0.6, 5);
   });
   it('leaves a table of four alone', () => {
     const a = swing({ ...cfg.elo, duelScale: 1 }, ['A', 'B', 'C', 'D'], 'A > B > C > D'), b = swing(cfg.elo, ['A', 'B', 'C', 'D'], 'A > B > C > D');
     expect(b).toEqual(a);
   });
-  it('ships with both dials: a duel at even ratings pays about +52 / -47', () => {
+  it('ships with both dials: a duel at even ratings pays about +41 / -37', () => {
     expect(cfg.elo.duelTopHalf).toBe(0.5);
     const [w, l] = steadyPayout(2, cfg.elo).map(v => v * cfg.elo.duelScale);
-    expect(Math.round(w)).toBe(52); expect(Math.round(l)).toBe(-47);
+    expect(Math.round(w)).toBe(41); expect(Math.round(l)).toBe(-37);
   });
   it('the optional duelTopHalf dial (option 1) lowers a duel winner\'s pay further', () => {
     const base = finishScores([1, 2], { ...cfg.elo, duelTopHalf: 1 }), cut = finishScores([1, 2], { ...cfg.elo, duelTopHalf: 0.5 });

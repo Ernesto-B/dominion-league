@@ -30,10 +30,13 @@ export function sinceLastVisit(prev, ranked, games, me = null, max = 4) {
 
   if (mine) {
     const d = moved(me);
+    const total = fresh.length > 1 ? ' overall' : '';
+    // several new games: the net move can hide the last one (up two, then down one). The ladder's arrow shows the last game alone, so say it too.
+    const last = fresh.length > 1 && mine.rankDelta ? ` The latest game took you ${mine.rankDelta > 0 ? 'up' : 'down'} ${Math.abs(mine.rankDelta)}.` : '';
     if (prev.ranks[me] == null) lines.push({ kind: 'me', text: `You’re on the ladder now, in ${mine.rank}${suffix(mine.rank)} place.` });
-    else if (d > 0) lines.push({ kind: 'me', text: `You moved up ${d} place${d === 1 ? '' : 's'}, to ${mine.rank}${suffix(mine.rank)}.` });
-    else if (d < 0) lines.push({ kind: 'me', text: `You slipped ${-d} place${d === -1 ? '' : 's'}, to ${mine.rank}${suffix(mine.rank)}.` });
-    else lines.push({ kind: 'me', text: `You held ${mine.rank}${suffix(mine.rank)} place.` });
+    else if (d > 0) lines.push({ kind: 'me', text: `You moved up ${d} place${d === 1 ? '' : 's'}${total}, to ${mine.rank}${suffix(mine.rank)}.${mine.rankDelta === d ? '' : last}` });
+    else if (d < 0) lines.push({ kind: 'me', text: `You slipped ${-d} place${d === -1 ? '' : 's'}${total}, to ${mine.rank}${suffix(mine.rank)}.${mine.rankDelta === d ? '' : last}` });
+    else lines.push({ kind: 'me', text: `You held ${mine.rank}${suffix(mine.rank)} place${total}.${last}` });
     if (prev.tiers[me] && prev.tiers[me] !== mine.tier.id) lines.push({ kind: 'tier', text: `You’re now a ${mine.tier.name}.` });
     else if (mine.nextTier && mine.nextTier.need <= 60) lines.push({ kind: 'next', text: `${mine.nextTier.need} Elo from ${mine.nextTier.tier.name}.` });
   }

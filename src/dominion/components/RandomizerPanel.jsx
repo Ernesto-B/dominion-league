@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MAX_CARDS, MAX_LANDSCAPES, displayName, impliedSets, primaryType, resolveKingdom } from '../kingdom.js';
 import { decodeKingdom, encodeKingdom, looksLikeCode } from '../kingdomCode.js';
 import { startKingdomPick, takeKingdomPick } from '../kingdomPick.js';
-import { DEFAULT_OPTIONS, formatSeed, newSeed, parseSeed, playsFor, rerollLandscape, rerollSlot, rollSeeded, slotCardId, toGameItems, withAvoid } from '../randomizer.js';
+import { DEFAULT_OPTIONS, applyFix, fixChoices, fixPlan, formatSeed, newSeed, parseSeed, playsFor, rerollLandscape, rerollSlot, rollSeeded, slotCardId, toGameItems, withAvoid } from '../randomizer.js';
 import { cardHref, dominionHref, landscapeHref } from '../links.js';
 import { CardText, ExpansionBadge, LandscapePill, ShowTextButton, TypePills } from './bits.jsx';
 import CostIcons from './Cost.jsx';
@@ -13,6 +13,8 @@ import { KingdomChip } from './KingdomChips.jsx';
 import { openPeek } from './CardPeek.jsx';
 import CardFace from './CardFace.jsx';
 import { slotFaceId, useCardImages } from '../cardImages.js';
+import Analyze from './AnalyzePanel.jsx';
+import { FixBar, UndoBar } from './FixPicker.jsx';
 
 /* The Kingdom randomizer's working part: the options, the roll, the tiles with Lock and Re-roll, the landscapes and the setup notes.
    It is CONTROLLED, so the same panel serves two homes:
@@ -112,6 +114,49 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
   useEffect(() => { if (onKeep) onKeep({ cards: [...locked], lands: [...lockedL], seed: seedText }); }, [locked, lockedL, seedText]);   // eslint-disable-line react-hooks/exhaustive-deps
   const reset = () => { seenRef.current = new Set(); setMessage(''); setLocked(new Set()); setLockedL(new Set()); onReset(); };
 
+  // the Analyze panel's Fix, in the open: point at the card to replace (the rest dimmed) and a random card that closes the gap takes its place, with Undo for a few seconds.
+  const [fix, setFix] = useState(null);   // { issue, plan, note }: while a card to replace is being picked
+  const startFix = issue => {
+    const plan = fixPlan(catalog, drawOpts, state, issue, { locked: [...locked] });
+    if (!plan.ok) return { ok: false, message: plan.message };
+    setFix({ issue, plan, slotKey: null, note: null });
+    return { ok: true };
+  };
+  const cancelFix = () => setFix(null);
+  // tapping the card to replace swaps it for a random card that closes the gap under the options' rules, and offers Undo
+  const choosePick = key => {
+    const choices = fixChoices(catalog, drawOpts, state, fix.issue, key, { locked: [...locked], recent: [...seenRef.current] });
+    if (!choices.length) { setFix(f => ({ ...f, note: `Nothing fits the rules for ${fix.plan.cards.find(c => c.key === key)?.name ?? 'that card'}. Pick another card, or relax a rule.` })); return; }
+    const res = applyFix(catalog, drawOpts, state, key, choices[0].key);
+    if (!res.ok) { setMessage(res.message); setFix(null); return; }
+    seenRef.current.add(res.removed.key); if (res.added) seenRef.current.add(res.added.key);
+    const before = state;
+    setMessage(''); setFix(null); setFresh(res.added?.key ?? null); onState(res); skipReset.current = true;
+    setUndo({ text: `Swapped ${res.removed.name} for ${res.added?.name ?? 'another card'}.`, before });
+    if (res.added) pointAt(res.added.key);
+  };
+  const [undo, setUndo] = useState(null);
+  const skipReset = useRef(false);
+  useEffect(() => { if (!undo) return; const t = setTimeout(() => setUndo(null), 9000); return () => clearTimeout(t); }, [undo]);
+  const doUndo = () => { const u = undo; setUndo(null); if (u) { seenRef.current = new Set(); setFresh(null); onState(u.before); } };
+  useEffect(() => { setFix(null); if (skipReset.current) skipReset.current = false; else setUndo(null); }, [state]);   // the kingdom changed some other way: a half-made choice, and an Undo for an older swap, are out of date   // the kingdom changed some other way (a roll, a swap, a pick): a half-made choice is out of date
+  // how a tile looks and acts while a card to replace is being picked
+  const fixing = !!fix;
+  const fx = key => {
+    if (!fix) return {};
+    const c = fix.plan.cards.find(x => x.key === key);
+    if (!c) return {};
+    if (!c.ok) return { cls: 'fix-no', attrs: { 'data-why': c.why } };
+    const sug = key === fix.plan.suggested;
+    return { cls: sug ? 'fix-ok fix-sug' : 'fix-ok', attrs: { role: 'button', tabIndex: 0, 'aria-label': `Replace ${c.name}`, 'data-why': sug ? 'Suggested' : undefined, onClick: () => choosePick(key), onKeyDown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choosePick(key); } } } };
+  };
+  // the Analyze panel points at a card: scroll to it and ring it for a few seconds
+  const [ping, setPing] = useState(null);
+  const pointAt = key => {
+    setPing(key);
+    requestAnimationFrame(() => document.querySelector(`[data-pile="${CSS.escape(key)}"]`)?.scrollIntoView?.({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+  };
+  useEffect(() => { if (ping == null) return; const t = setTimeout(() => setPing(null), 3500); return () => clearTimeout(t); }, [ping]);
   useEffect(() => { if (fresh == null) return; const t = setTimeout(() => setFresh(null), 1800); return () => clearTimeout(t); }, [fresh]);
 
   const changed = JSON.stringify(opts) !== JSON.stringify(DEFAULT_OPTIONS);
@@ -137,17 +182,20 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
           {!bare && <div className="dn-rz-bar">
             <div className="dn-rz-actions">
               {!(faces && shown.slots.every(faceOf) && shown.landscapes.every(l => picture(l.landscape.id))) && <ShowTextButton on={showText} onClick={() => setShowText(t => !t)} />}
+              {shown.slots.length > 0 && <Analyze catalog={catalog} slots={shown.slots} onPick={pointAt} onFix={editable ? null : startFix} />}
               {shown.seed != null ? <SeedButton text={formatSeed(shown.seed)} copy={encodeKingdom(catalog, shown)} /> : shown.slots.length > 0 && <SeedButton code text={encodeKingdom(catalog, shown)} />}
             </div>
             {actions && <div className="dn-rz-actions">{actions}</div>}
           </div>}
 
-          <ul className={'dn-rzgrid' + (faces ? ' faces' : '')} aria-label="Kingdom cards">
+          {fixing && <FixBar plan={fix.plan} note={fix.note} onCancel={cancelFix} />}
+          {undo && !fix && <UndoBar text={undo.text} onUndo={doUndo} onClose={() => setUndo(null)} />}
+          <ul className={'dn-rzgrid' + (faces ? ' faces' : '') + (fix ? ' fixmode' : '')} aria-label="Kingdom cards">
             {shown.slots.map((s, i) => (faces && faceOf(s) ? (
-              <FaceTile editing={editable} onReplace={() => choose('card', i)} onRemove={() => removeCard(i)} key={s.key} id={faceOf(s).id} name={s.name} caption={null} fresh={fresh === s.key} locked={locked.has(s.key)}
+              <FaceTile editing={editable} onReplace={() => choose('card', i)} onRemove={() => removeCard(i)} key={s.key} pile={s.key} ping={ping === s.key} fx={fx(s.key)} id={faceOf(s).id} name={s.name} caption={null} fresh={fresh === s.key} locked={locked.has(s.key)}
                 onLock={() => setLocked(l => { const n = new Set(l); n.has(s.key) ? n.delete(s.key) : n.add(s.key); return n; })} onReroll={() => swapSlot(i)} onPeek={() => openPeek(catalog, { kind: 'card', s, face: faceOf(s).id })} />
             ) : (
-              <Tile editing={editable} onReplace={() => choose('card', i)} onRemove={() => removeCard(i)} key={s.key} fresh={fresh === s.key} tone={primaryType(s.cards.find(c => primaryType(c) === 'Attack') || s.cards[0])}
+              <Tile editing={editable} onReplace={() => choose('card', i)} onRemove={() => removeCard(i)} key={s.key} pile={s.key} ping={ping === s.key} fx={fx(s.key)} fresh={fresh === s.key} tone={primaryType(s.cards.find(c => primaryType(c) === 'Attack') || s.cards[0])}
                 locked={locked.has(s.key)} onLock={() => setLocked(l => { const n = new Set(l); n.has(s.key) ? n.delete(s.key) : n.add(s.key); return n; })} onReroll={() => swapSlot(i)} onPeek={() => openPeek(catalog, { kind: 'card', s })} what={s.name}>
                 <div className="dn-rz-cost"><CostIcons coins={s.cards[0].coins} debt={s.cards[0].debt} overpay={s.cards[0].overpay} size={30} /></div>
                 <div className="dn-rz-main">
@@ -195,9 +243,9 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
 }
 
 // a card or landscape drawn as itself: the picture (tap to enlarge), with Lock and Re-roll under it
-function FaceTile({ id, name, caption, fresh, locked, onLock, onReroll, onPeek, editing, onReplace, onRemove }) {
+function FaceTile({ id, name, caption, pile, ping, fx = {}, fresh, locked, onLock, onReroll, onPeek, editing, onReplace, onRemove }) {
   return (
-    <li className={'dn-rzface' + (fresh ? ' fresh' : '') + (locked ? ' locked' : '')}>
+    <li data-pile={pile} className={'dn-rzface' + (fresh ? ' fresh' : '') + (ping ? ' ping' : '') + (fx.cls ? ' ' + fx.cls : '') + (locked ? ' locked' : '')} {...fx.attrs}>
       <CardFace id={id} name={name} onOpen={onPeek} />
       <div className="dn-rztile-btns">{editing ? <EditButtons name={name} onReplace={onReplace} onRemove={onRemove} /> : <>
         <button type="button" className="ghost" aria-pressed={locked} onClick={onLock} title={locked ? `Unlock ${name}` : `Keep ${name} when you roll again`}>{locked ? 'Locked' : 'Lock'}</button>
@@ -209,9 +257,9 @@ function FaceTile({ id, name, caption, fresh, locked, onLock, onReroll, onPeek, 
 }
 
 // one card or landscape of the roll, with its Lock and Re-roll buttons
-function Tile({ children, tone, fresh, locked, onLock, onReroll, onPeek, what, editing, onReplace, onRemove }) {
+function Tile({ children, tone, pile, ping, fx = {}, fresh, locked, onLock, onReroll, onPeek, what, editing, onReplace, onRemove }) {
   return (
-    <li className={'dn-rztile' + (tone ? ' t-' + tone.toLowerCase() : '') + (fresh ? ' fresh' : '') + (locked ? ' locked' : '')}>
+    <li data-pile={pile} className={'dn-rztile' + (tone ? ' t-' + tone.toLowerCase() : '') + (fresh ? ' fresh' : '') + (ping ? ' ping' : '') + (fx.cls ? ' ' + fx.cls : '') + (locked ? ' locked' : '')} {...fx.attrs}>
       <div className="dn-rztile-body">{children}</div>
       <div className="dn-rztile-btns">{editing ? <EditButtons name={what} onReplace={onReplace} onRemove={onRemove} /> : <>
         <button type="button" className="ghost" aria-pressed={locked} onClick={onLock} title={locked ? `Unlock ${what}` : `Keep ${what} when you roll again`}>{locked ? 'Locked' : 'Lock'}</button>

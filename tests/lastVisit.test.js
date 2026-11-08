@@ -18,13 +18,18 @@ describe('since you last looked', () => {
     expect(sinceLastVisit(null, ranked0, games0, 'Ann')).toBeNull();
     expect(sinceLastVisit(prev, ranked0, games0, 'Ann')).toBeNull();
   });
+  it('says the latest game too when several games hide it (held overall, down one last game)', () => {
+    const now = [P('Ann', 1, 1100, { rankDelta: -1 }), P('Bob', 2, 1050), P('Cy', 3, 1000)], games = [...games0, game(3), game(4)];
+    expect(sinceLastVisit(prev, now, games, 'Ann').lines[0].text).toBe('You held 1st place overall. The latest game took you down 1.');
+    expect(sinceLastVisit(prev, now, [...games0, game(3)], 'Ann').lines[0].text).toBe('You held 1st place.');
+  });
   it('counts new games and nights, and tells the viewer how they moved', () => {
     const now = [P('Cy', 1, 1130), P('Ann', 2, 1100), P('Bob', 3, 1020)], games = [...games0, game(3, 5), game(4, 6)];
     const s = sinceLastVisit(prev, now, games, 'Ann');
     expect(s.games).toBe(2); expect(s.nights).toBe(2);
-    expect(s.lines[0].text).toBe('You slipped 1 place, to 2nd.');
+    expect(s.lines[0].text).toBe('You slipped 1 place overall, to 2nd.');
     expect(s.lines.some(l => /Cy climbed 2 to 1st/.test(l.text))).toBe(true);
-    expect(sinceLastVisit(prev, now, games, 'Cy').lines[0].text).toBe('You moved up 2 places, to 1st.');
+    expect(sinceLastVisit(prev, now, games, 'Cy').lines[0].text).toBe('You moved up 2 places overall, to 1st.');
     expect(sinceLastVisit(prev, now, games, 'Cy').lines.some(l => l.kind === 'tier')).toBe(true);   // Cy crossed into Knight
   });
   it('says who is on a streak, says how close the viewer is to a tier, and never more than four lines', () => {

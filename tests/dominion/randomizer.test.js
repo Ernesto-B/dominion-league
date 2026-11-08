@@ -200,8 +200,15 @@ describe('a trasher when an Attack gives junk', () => {
     expect(withJunk.length).toBeGreaterThan(10);   // the test would mean nothing if no kingdom had a junking Attack
     for (const r of withJunk) expect(has(r, 'trash')).toBe(true);
   });
+  it('is on by default, and in a link only "off" is written', () => {
+    expect(DEFAULT_OPTIONS.junkTrash).toBe(true);
+    expect(optionsToParams({ ...DEFAULT_OPTIONS, junkTrash: false }).get('jt')).toBe('0');
+    expect(optionsToParams(DEFAULT_OPTIONS).has('jt')).toBe(false);
+    expect(optionsFromParams(new URLSearchParams('jt=0')).junkTrash).toBe(false);
+    expect(optionsFromParams(new URLSearchParams('')).junkTrash).toBe(true);
+  });
   it('does nothing when the rule is off', () => {
-    expect(rolls({}, 200).filter(junking).some(r => !has(r, 'trash'))).toBe(true);
+    expect(rolls({ junkTrash: false }, 200).filter(junking).some(r => !has(r, 'trash'))).toBe(true);
   });
 });
 
