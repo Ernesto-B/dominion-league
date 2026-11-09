@@ -73,7 +73,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
     if (r && (r.index == null || (r.kind === 'card' ? state?.slots[r.index] : state?.landscapes[r.index]))) put(r);
   }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   const canFavor = !!plays && plays.size > 0;
-  const isNew = key => !!(opts.favor && plays && !plays.get(key));   // "New cards" is on: a card nobody has played gets the New corner, as in a game report
+  const isNew = key => !!((opts.favor || opts.favorPlayed) && plays && !plays.get(key));   // "Played cards" or "New cards" is on: a card nobody has played gets the New corner, as in a game report
   const setOpts = patch => { setMessage(''); setOptsProp(patch); };
 
   const drawOpts = withAvoid(opts, avoid);   // what the draw uses: the options, with another table's cards and landscapes kept out (the options on screen are left as they are)
