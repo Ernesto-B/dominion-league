@@ -6,9 +6,8 @@
    or chart state included — is exactly the one the position was recorded on. */
 let mem = null;   // { key: the origin's hash, origin: its path, y }
 
-const OVERVIEW = '#/dominion';
 const pathOf = hash => hash.split('?')[0];
-const isOrigin = hash => /^#\/dominion\/(cards|landscapes)$/.test(pathOf(hash)) || pathOf(hash) === OVERVIEW;
+const isOrigin = hash => /^#\/dominion\/(cards|landscapes|overview)$/.test(pathOf(hash)) || pathOf(hash) === '#/dominion' || pathOf(hash) === '#/dominion/overview';   // the bare address is an old Overview link
 const isDetail = hash => /^#\/dominion\/(cards|landscapes|artifacts)\/[^/?]+$/.test(pathOf(hash));
 
 // called on every hash change with the hash we came from, the one we are going to, and the current scroll position

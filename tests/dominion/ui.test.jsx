@@ -24,7 +24,7 @@ const rows = html => (html.match(/<tbody>[\s\S]*?<\/tbody>/)?.[0].match(/<tr[ >]
 const N = n => new RegExp(String(n).replace(/(\d)(?=(\d{3})+$)/g, '$1[,.   ]?'));   // tolerate locale digit grouping
 
 describe('Overview', () => {
-  const html = render(''), t = text(html);
+  const html = render('overview'), t = text(html);
   it('shows the six headline numbers, each with its own label', () => {
     for (const [n, label] of [[331, 'Kingdom card names'], [310, 'Kingdom supply piles'], [3132, 'Physical Kingdom cards'], [11, 'Owned expansions'], [124, 'Landscape designs'], [5, 'Artifacts']])
       expect(html).toMatch(new RegExp(`<b>${N(n).source}</b><span>${label}</span>`));
@@ -173,7 +173,7 @@ describe('sortable landscape headers', () => {
 });
 
 describe('the Overview charts', () => {
-  const html = render(''), t = text(html);
+  const html = render('overview'), t = text(html);
   it('lets you click through: every expansion name, and every coin-cost column, opens the filtered Kingdom cards', () => {
     const phys = html.match(/<ol class="dn-lol"[^>]*aria-label="Physical Kingdom cards per expansion">[\s\S]*?<\/ol>/)[0];
     expect((phys.match(/href="#\/dominion\/cards\?[^"]*exp=/g) || []).length).toBe(11);
@@ -203,7 +203,7 @@ describe('the Overview charts', () => {
 describe('the plain Debt icon', () => {
   it('marks "Any Debt" in the cost filter and the "Debt only" bar in the statistics', () => {
     expect(render('cards')).toMatch(/aria-label="Any Debt cost"[^>]*><img[^>]*src="icons\/costs\/debt\.png"/);
-    expect(render('')).toMatch(/aria-label="Debt only: cards that cost only Debt"[^>]*><img[^>]*src="icons\/costs\/debt\.png"/);
+    expect(render('overview')).toMatch(/aria-label="Debt only: cards that cost only Debt"[^>]*><img[^>]*src="icons\/costs\/debt\.png"/);
     expect(existsSync(path.join(ROOT, 'public/icons/costs/debt.png'))).toBe(true);
   });
 });
@@ -454,7 +454,7 @@ describe('clickable table rows', () => {
 describe('Artifacts', () => {
   const art = catalog.artifacts.find(a => a.name === 'Horn');
   it('are listed on the Landscapes page (each linking to its own page) and no longer as a section of the Overview', () => {
-    const land = render('landscapes'), overview = render('');
+    const land = render('landscapes'), overview = render('overview');
     for (const a of catalog.artifacts) { expect(land, a.name).toContain(`href="#/dominion/artifacts/${encodeURIComponent(a.id)}"`); expect(overview, a.name).not.toContain(`href="#/dominion/artifacts/${encodeURIComponent(a.id)}"`); }
     expect(text(overview)).not.toMatch(/Artifacts are tracked on their own/);
   });
@@ -496,20 +496,20 @@ describe('Landscapes', () => {
 
 describe('Physical cards by expansion (Overview)', () => {
   it('keeps the chart but not the explanation under it', () => {
-    const t = text(render(''));
+    const t = text(render('overview'));
     expect(t).toMatch(/Physical cards by expansion/); expect(t).not.toMatch(/Every copy in the boxes/); expect(t).not.toMatch(/charted above/);
   });
 });
 
 describe('Printed card types (Overview)', () => {
   it('shows the chart without the multi-type explanation under it', () => {
-    const t = text(render(''));
+    const t = text(render('overview'));
     expect(t).toMatch(/Printed card types/); expect(t).not.toMatch(/A card can have several printed types/); expect(t).not.toMatch(/these bars add up to/);
   });
 });
 
 describe('Statistics', () => {
-  const html = render(''), t = text(html);
+  const html = render('overview'), t = text(html);
   it('states the denominator of the mechanics chart, without a provisional banner or a review-status table', () => {
     expect(t).toMatch(/denominator: 331 names/);
     expect(t).not.toMatch(/Provisional|lower bounds, not totals|not an exhaustive list/);
@@ -527,7 +527,7 @@ describe('Statistics', () => {
 });
 
 describe('the card-types-by-expansion table on Statistics', () => {
-  const html = render('');
+  const html = render('overview');
   const sec = html.slice(html.indexOf('id="st-matrix"'), html.indexOf('id="st-mech"'));
   const head = sec.match(/<thead>[\s\S]*?<\/thead>/)[0], body = sec.match(/<tbody>[\s\S]*?<\/tbody>/)[0];
   it('has a heading, 11 expansion rows and a totals row', () => {
@@ -561,7 +561,10 @@ describe('the card-types-by-expansion table on Statistics', () => {
 
 describe('routing inside the section', () => {
   it('parses every Dominion URL', () => {
-    expect(parseDominionArg('')).toEqual({ view: 'overview', id: null, query: '' });
+    expect(parseDominionArg('')).toEqual({ view: 'randomizer', id: null, query: '' });   // the Collection opens on the Randomizer
+    expect(parseDominionArg('overview')).toEqual({ view: 'overview', id: null, query: '' });
+    expect(parseDominionArg('?chart=sunburst')).toEqual({ view: 'overview', id: null, query: '?chart=sunburst' });   // an old chart link
+    expect(parseDominionArg('?exp=Seaside')).toEqual({ view: 'randomizer', id: null, query: '?exp=Seaside' });
     expect(parseDominionArg('cards')).toEqual({ view: 'cards', id: null, query: '' });
     expect(parseDominionArg('cards/intrigue%3Acourtyard')).toEqual({ view: 'card', id: 'intrigue:courtyard', query: '' });
     expect(parseDominionArg('landscapes')).toEqual({ view: 'landscapes', id: null, query: '' });
@@ -660,8 +663,8 @@ describe('the page is called "Collection"', () => {
     expect(ROUTE_TITLES.dominion).toBe('Collection');
   });
   it('says Collection in the heading, the loading and not-found messages and the section label', () => {
-    expect(render('')).toContain('<h1>Collection</h1>');
-    expect(text(render(''))).not.toMatch(/Dominion collection/);
+    expect(render('overview')).toContain('<h1>Collection</h1>');
+    expect(text(render('overview'))).not.toMatch(/Dominion collection/);
     expect(text(render('bogus'))).toMatch(/no such page in the collection/);
     expect(renderToStaticMarkup(<DominionPage arg="" />)).toContain('aria-label="Collection sections"');
     expect(text(renderToStaticMarkup(<ErrorState error={{ code: 'PGRST205' }} />))).toMatch(/The collection isn.t available yet/);
@@ -711,7 +714,7 @@ describe('the randomizer\'s Advanced options', () => {
 
 describe('the Landscapes charts on the Overview', () => {
   it('say what they count when nothing is pointed at, and every part carries its list', () => {
-    const html = render('');
+    const html = render('overview');
     expect(html).toContain('dn-chart-read'); expect(html).toContain('124 landscapes');
     expect(html).toContain('dn-waffle'); expect(html).toContain('dn-seg-bar');
     expect(html).toContain('href="#/dominion/landscapes?exp=');   // the expansions bar's legend links to that expansion's landscapes

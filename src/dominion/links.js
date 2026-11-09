@@ -25,10 +25,10 @@ export const cardsFilterHref = patch => dominionHref('cards', null, cardFiltersT
 export const landscapesFilterHref = patch => dominionHref('landscapes', null, landscapeFiltersToQuery({ ...DEFAULT_LANDSCAPE_FILTERS, ...patch }));
 
 export const VIEWS = [
-  { view: 'overview', label: 'Overview', hint: 'At a glance', href: dominionHref() },
+  { view: 'randomizer', label: 'Randomizer', hint: 'Roll a kingdom', href: dominionHref('randomizer') },   // the most used tab, so the bare #/dominion opens it too
   { view: 'cards', label: 'Kingdom cards', hint: 'Browse every card', href: dominionHref('cards') },
   { view: 'landscapes', label: 'Landscapes', hint: 'Events, Ways, Projects…', href: dominionHref('landscapes') },
-  { view: 'randomizer', label: 'Randomizer', hint: 'Roll a kingdom', href: dominionHref('randomizer') },
+  { view: 'overview', label: 'Overview', hint: 'At a glance', href: dominionHref('overview') },
   { view: 'insights', label: 'Insights', hint: 'What we play most', href: dominionHref('insights') },
 ];
 
@@ -36,11 +36,13 @@ export const VIEWS = [
 export function parseDominionArg(arg) {
   const [path, ...rest] = String(arg || '').split('?');   // an id never contains a raw '?', it is encoded
   const query = rest.length ? '?' + rest.join('?') : '';
-  return { ...parsePath(path), query };
+  const r = parsePath(path, query);
+  return { ...r, query };
 }
-function parsePath(path) {
+function parsePath(path, query = '') {
   const parts = path.split('/');
-  const view = parts[0] || 'overview';
+  // a bare #/dominion opens the Randomizer (its roll may sit in the query); only the old chart links (#/dominion?chart=sunburst) were the Overview
+  const view = parts[0] || (/[?&]chart=/.test(query) ? 'overview' : 'randomizer');
   let id = null;
   if (parts.length > 1 && parts.slice(1).join('/')) {
     try { id = decodeURIComponent(parts.slice(1).join('/')); } catch { return { view: 'notfound', id: null }; }
