@@ -27,7 +27,7 @@ export function pendingToForm(row, nameById) {
     picked.push(n); if (r.vp != null) vp[n] = String(r.vp);
   });
   const kingdom = (row.kingdom || []).map(k => ({ kind: k.kind, id: k.id, ...(k.on ? { on: k.on } : {}) }));
-  return { date: row.date, type: row.type === 'Regular' ? '' : row.type || '', picked, tie, sets: row.sets ? row.sets.split('; ') : [], landscapes: row.landscapes ? row.landscapes.split('; ') : [], kingdom, kingdomTouched: kingdom.length > 0, startedAt: row.started_at ? Date.parse(row.started_at) : null, endedAt: row.ended_at ? Date.parse(row.ended_at) : null, vp, notes: row.notes || '', minutes: row.minutes ?? '', editId: null, pendingId: row.id };
+  return { date: row.date, type: row.type === 'Regular' ? '' : row.type || '', picked, tie, sets: row.sets ? row.sets.split('; ') : [], landscapes: row.landscapes ? row.landscapes.split('; ') : [], kingdom, kingdomTouched: kingdom.length > 0, startedAt: row.started_at ? Date.parse(row.started_at) : null, endedAt: row.ended_at ? Date.parse(row.ended_at) : null, recommendedSet: row.recommended_set || null, vp, notes: row.notes || '', minutes: row.minutes ?? '', editId: null, pendingId: row.id };
 }
 
 /* A pending game as the league would record it, run through the engine with the group's real games before it: the result is the game with Elo before and after, season points and tiers, exactly as it will be

@@ -95,4 +95,17 @@ describe('the Length box of the Add / Edit dialog', () => {
   it('the Save step\'s Match time still wins over everything', () => {
     expect(minutesFor({ editId: null, minutesEdit: 20, minutes: 99, startedAt: start }, start + 60 * 60000)).toBe(20);
   });
+  it('sends the recommended set\'s name for a new game, and retries without it on a database that does not know it yet', async () => {
+    expect(buildGameArgs(bs({ picked: ['Ann'], recommendedSet: 'First Game' }), 'g1', ids).p_recommended_set).toBe('First Game');
+    expect('p_recommended_set' in buildGameArgs(bs({ picked: ['Ann'] }), 'g1', ids)).toBe(false);                           // none used
+    expect('p_recommended_set' in buildGameArgs(bs({ editId: 3, recommendedSet: 'First Game' }), 'g1', ids)).toBe(false);  // an edit leaves it as it is
+    const calls = []; const miss = { code: 'PGRST202', message: 'Could not find the function public.add_game(...)' };
+    const sb = errs => ({ rpc: async (name, args) => { calls.push(args); const e = errs.shift(); return e ? { data: null, error: e } : { data: 9, error: null }; } });
+    const args = { p_date: 'x', p_started_at: 'a', p_ended_at: 'b', p_recommended_set: 'First Game' };
+    expect(await callGameRpc(sb([miss]), 'add_game', args)).toEqual({ data: 9, error: null });
+    expect('p_recommended_set' in calls[1]).toBe(false); expect(calls[1].p_started_at).toBe('a');   // the clock is kept when only the set was unknown
+    calls.length = 0;
+    expect(await callGameRpc(sb([miss, miss]), 'add_game', args)).toEqual({ data: 9, error: null });
+    expect(calls).toHaveLength(3); expect('p_started_at' in calls[2]).toBe(false);                  // an older database still: neither
+  });
 });

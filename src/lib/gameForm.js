@@ -52,18 +52,23 @@ export function buildGameArgs(bs, gid, playerIdByName, now = Date.now()) {
     p_group_id: gid, p_results: buildResults(bs, playerIdByName),
     ...(bs.kingdomTouched || (!bs.editId && bs.kingdom.length) ? { p_kingdom: toPayload(bs.kingdom) } : {}),
     // the match's own clock, only for a NEW game that ran on Game night's timer (an edit leaves the saved times as they are)
+    ...(!bs.editId && bs.recommendedSet ? { p_recommended_set: bs.recommendedSet } : {}),   // the recommended kingdom used as it came (a new game only: an edit leaves it as it is)
     ...(!bs.editId && bs.startedAt != null && bs.endedAt != null ? { p_started_at: new Date(bs.startedAt).toISOString(), p_ended_at: new Date(bs.endedAt).toISOString() } : {}),
   };
 }
 
-/* add_game / edit_game, tolerating a database that predates the timing columns: if it does not know p_started_at / p_ended_at (PostgREST cannot find a function
-   with those arguments), the same call is made without them, so logging a game never fails for want of a migration. */
+/* add_game / edit_game / submit_pending_game, tolerating a database that predates the optional columns (the timing columns, the recommended set): if it does not know those arguments (PostgREST cannot find a function
+   with them), the same call is made without them, so logging a game never fails for want of a migration. */
 export async function callGameRpc(sb, name, args) {
   const res = await sb.rpc(name, args);
-  const timed = 'p_started_at' in args || 'p_ended_at' in args;
-  if (res.error && timed && /PGRST202|could not find the function/i.test(`${res.error.code || ''} ${res.error.message || ''}`)) {
-    const { p_started_at, p_ended_at, ...rest } = args;
-    return sb.rpc(name, rest);
+  const notFound = r => !!r.error && /PGRST202|could not find the function/i.test(`${r.error.code || ''} ${r.error.message || ''}`);
+  // an older database: the same call without the optional arguments it does not know yet (first the recommended set, then the match's clock as well)
+  if (notFound(res) && 'p_recommended_set' in args) {
+    const { p_recommended_set, ...rest } = args;
+    const again = await sb.rpc(name, rest);
+    if (notFound(again) && ('p_started_at' in rest || 'p_ended_at' in rest)) { const { p_started_at, p_ended_at, ...bare } = rest; return sb.rpc(name, bare); }
+    return again;
   }
+  if (notFound(res) && ('p_started_at' in args || 'p_ended_at' in args)) { const { p_started_at, p_ended_at, ...rest } = args; return sb.rpc(name, rest); }
   return res;
 }

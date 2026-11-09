@@ -22,6 +22,7 @@ import { useCatalogLoad } from '../dominion/CatalogContext.jsx';
 import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
 import { CardText, ShowTextButton } from '../dominion/components/bits.jsx';
 import { PlaysScopeContext } from '../dominion/components/RandomizerOptions.jsx';
+import { RECOMMENDED, itemsOfSet } from '../dominion/recommended.js';
 import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, newSeed, setupForHand, stateFromItems, withAvoid } from '../dominion/randomizer.js';
 import { analyseKingdom, concernsOf } from '../dominion/analysis.js';
 import { requestAnalyze } from '../dominion/analyzeBus.js';
@@ -181,6 +182,23 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
 
   // a change by hand re-works the setup notes from the cards now in the kingdom (the Bane a roll had is remembered while it still applies)
   const pickByHand = (kingdom, implied) => setSt(s => ({ ...s, kingdom, handEdited: true, handBane: s.handEdited ? s.handBane : rolled?.setup?.bane?.cards[0]?.id ?? null, rolled: null, rolledQ: null, kingdomTouched: true, sets: [...new Set([...s.sets, ...implied.sets])], landscapes: [...new Set([...s.landscapes, ...implied.landscapes])] }));
+  // a recommended set: its cards and landscapes as the kingdom (a hand-made one, so the setup notes are worked out from the cards), with the Bane the set names.
+  // The game's expansions and landscape types are exactly what the set uses (not added to whatever was ticked before), as for a rolled kingdom
+  const recommend = (kingdom, baneId, set = null, scroll = true) => {
+    const implied = catalog ? impliedSets(resolveKingdom(catalog, kingdom)) : { sets: [], landscapes: [] };
+    // choosing a set brings the top of the Kingdom box into view, so its cards are seen from the first one (not after Reset: the table is already looking at them)
+    if (scroll) requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector('.night-card')?.scrollIntoView?.({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })));
+    setSt(s => ({ ...s, kingdom, recPicking: false, recSet: set ? set.id : s.recSet, handEdited: true, handBane: baneId || null, randomDone: false, randomOriginal: null, rolled: null, rolledQ: null, kingdomTouched: true, sets: [...implied.sets], landscapes: [...implied.landscapes] }));
+  };
+  // "Reset" on a chosen recommended set: its own cards and landscapes again, after edits
+  const recDef = st.recSet ? RECOMMENDED.find(r => r.id === st.recSet) : null;
+  const recBase = catalog && recDef ? itemsOfSet(catalog, recDef) : null;
+  // the recommended set to record with the game: only when the kingdom's cards are exactly the set's (none changed, removed or added; landscapes are not compared)
+  const cardKey = list => list.filter(i => i.kind === 'card').map(i => i.id).sort().join('|');
+  const usedRecommended = recBase && !recBase.missing.length && cardKey(recBase.items) === cardKey(st.kingdom) ? recDef.name : null;
+  const itemKey = list => list.map(i => `${i.kind}:${i.id}:${i.on || ''}`).sort().join('|');
+  const recChanged = !!recBase && !recBase.missing.length && itemKey(recBase.items) !== itemKey(st.kingdom);
+  const resetRecommended = () => { if (recBase) recommend(recBase.items, recBase.baneId, recDef, false); };
   // the snake draft: Start rolls the pool (the options page's button is the bar at the bottom), Restart goes back to the options page and drops the kingdom
   const startDraft = () => {
     const v = draftState(st.draftSave, st.picked), res = rollPool(catalog, withAvoid(roll, avoid), newSeed(), { plays, n: DRAFT_PICKS, size: v.poolSize ?? poolSizeFor(v.seats.length) });
@@ -189,7 +207,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
   const restartDraft = () => setSt(s => ({ ...s, kingdom: [], rolled: null, rolledQ: null, handOpen: false, handEdited: false, handBane: null, draftSave: { ...draftState(s.draftSave, s.picked), draft: null, picks: [], banned: [], finished: false, error: '' } }));
   // "Restart Drafting": the same pool, every pick and ban taken back, the first seat to go again (and no kingdom, if the draft had finished)
   const redoDraft = () => setSt(s => ({ ...s, kingdom: [], rolled: null, rolledQ: null, handOpen: false, handEdited: false, handBane: null, draftSave: { ...draftState(s.draftSave, s.picked), picks: [], banned: [], finished: false, error: '' } }));
-  const setMode = kingdomMode => setSt(s => ({ ...s, kingdomMode }));
+  const setMode = kingdomMode => setSt(s => ({ ...s, kingdomMode, recPicking: kingdomMode === 'recommended' }));   // opening Recommended starts on the list of sets
   const next = () => { setMsg(''); setSt(s => advance(s)); };
   // before a kingdom is used: if the Analyze panel would flag something, ask once (per kingdom) whether to look or go on
   const withCheck = go => {
@@ -215,9 +233,10 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
     setSaving(true); setMsg('Saving…');
     // a player's table is sent to the admin to approve: nothing about it touches a rating until then. The clock is only trusted when it ran about as long as a game does.
     let call;
-    if (isAdmin) call = callGameRpc(sb, 'add_game', buildGameArgs({ ...st, editId: null, type: '' }, gid, playerIdByName));
+    const form = { ...st, editId: null, type: '', recommendedSet: usedRecommended };   // the recommended set's name goes with the game when its cards were kept as they came
+    if (isAdmin) call = callGameRpc(sb, 'add_game', buildGameArgs(form, gid, playerIdByName));
     else {
-      const args = buildGameArgs({ ...st, editId: null, type: '' }, gid, playerIdByName), t = trustedMinutes(st.startedAt, st.endedAt ?? Date.now(), usualMinutes(D.games));
+      const args = buildGameArgs(form, gid, playerIdByName), t = trustedMinutes(st.startedAt, st.endedAt ?? Date.now(), usualMinutes(D.games));
       const typed = st.minutesEdit != null ? cleanMinutes(st.minutesEdit) : null;
       args.p_minutes = typed ?? t.minutes; args.p_clock_minutes = t.clock;
       if (typed == null && t.minutes == null) { delete args.p_started_at; delete args.p_ended_at; }   // a clock left running says nothing true
@@ -234,7 +253,8 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
   // on the first step Back leaves the flow: to the page the viewer came from, or the rankings when there is none (a fresh tab)
   const goBack = () => {
     if (st.step === 'kingdom' && st.kingdomMode === 'draft' && st.draftSave?.draft) { restartDraft(); return; }   // a draft under way: back to its options page
-    if (st.step === 'kingdom' && st.kingdomMode === 'random' && st.randomDone) { setSt(s => ({ ...s, randomDone: false, randomOriginal: null })); return; }   // the summary: back to the roll
+    if (st.step === 'kingdom' && (st.kingdomMode === 'random' || st.kingdomMode === 'recommended') && st.randomDone) { setSt(s => ({ ...s, randomDone: false, randomOriginal: null })); return; }   // the summary: back to the roll
+    if (st.step === 'kingdom' && st.kingdomMode === 'recommended' && !st.recPicking && st.kingdom.length) { setSt(s => ({ ...s, recPicking: true })); return; }   // a set is chosen: Back returns to the list of sets
     if (st.step === 'kingdom' && st.kingdomMode) { setMode(null); return; }   // inside a way of choosing, Back returns to the question
     if (st.step !== 'players') { setSt(s => back(s)); return; }
     if (window.history.length > 1) window.history.back(); else window.location.hash = hashFor('', gid);
@@ -294,10 +314,12 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
   const step = STEPS.find(s => s.id === st.step);
   const drafting = st.kingdomMode === 'draft' && !!st.draftSave?.draft && !st.draftSave.finished;   // a draft under way: no starting the game until it is done
   const atRandomRoll = st.step === 'kingdom' && !!catalog && st.kingdomMode === 'random' && !st.randomDone;   // the Random screen: its button turns the roll into the summary
+  const atRecChosen = st.step === 'kingdom' && !!catalog && st.kingdomMode === 'recommended' && !st.recPicking && st.kingdom.length > 0 && !st.randomDone;   // a chosen set: its button turns it into the summary, as the Random screen's does
   // why the main button is greyed out (nothing when it can be pressed): fewer than 2 players, or no kingdom yet (skip it with its link) or a draft still on
   const holdOn = st.step === 'players' && st.picked.length < 2 ? 'Pick at least 2 players first'
     : st.step === 'players' && st.picked.length > MAX_PLAYERS ? `A table seats at most ${MAX_PLAYERS} players`
     : st.step === 'scores' && st.picked.some(n => !/^\s*-?\d+\s*$/.test(st.vp[n] ?? '')) ? 'Enter every player’s VP first'
+    : st.step === 'kingdom' && st.kingdomMode === 'recommended' && st.recPicking ? 'Pick a set first'
     : atRandomRoll && !items.length ? 'Roll a kingdom first' : st.step === 'kingdom' && drafting ? 'Finish the draft first' : st.step === 'kingdom' && !items.length ? 'Set up a kingdom first, or skip it' : '';
   const atDraftOptions = st.step === 'kingdom' && !!catalog && st.kingdomMode === 'draft' && !st.draftSave?.draft;   // the draft's options page: its button replaces Start Game & Timer
   // shown at the table and on the last check in shelf order (expansion, then A to Z) with each expansion's icon, so a card is found in its box at a glance
@@ -312,7 +334,19 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
       </ol>
 
       <section className="night-card" aria-labelledby="night-h">
-        <h2 id="night-h" style={{ marginTop: 0 }}>{step.title}</h2>
+        {/* a chosen recommended set: the heading, then the set's name with its expansions' icons, then its two actions (Reset, and carrying the kingdom over to the Random screen) */}
+        {st.step === 'kingdom' && st.kingdomMode === 'recommended' && !st.recPicking && !st.randomDone && st.kingdom.length > 0 ? (<>
+          <h2 id="night-h" style={{ marginTop: 0 }}>{step.title}</h2>
+          <div className="night-recrow">
+          {recDef && <p className="night-recname" aria-label={`Recommended set: ${recDef.name}`}><b>{recDef.name}</b><span className="night-recicons">{recDef.sets.map(n => <SetIcon key={n} name={n} size={20} />)}</span></p>}
+          <div className="night-recacts">
+            <span className="night-headact">
+              <button type="button" className="ghost" onClick={resetRecommended} disabled={!recChanged} title={recChanged ? `Put ${recDef.name} back as the rulebook has it` : 'Nothing has been changed yet'}>Reset</button>
+              <button type="button" className="ghost" onClick={() => setMode('random')} title="Open this kingdom in the Random screen to lock cards, re-roll the rest, or roll again from it">Use in Random →</button>
+            </span>
+          </div>
+          </div>
+        </>) : <h2 id="night-h" style={{ marginTop: 0 }}>{step.title}</h2>}
 
         {st.step === 'players' && (
           <>
@@ -336,7 +370,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
           !catalog ? (cat.status === 'error' ? <p className="meta">The card list isn’t available right now. You can skip the kingdom and still save the game. <button type="button" className="ghost" onClick={cat.retry}>Try again</button> <button type="button" className="linkish" onClick={() => setSt(s => advance({ ...s, kingdom: [] }))}>Skip the kingdom</button></p> : <p className="meta">Loading the card list…</p>) : (
             <PlaysScopeContext.Provider value><KingdomStep avoid={avoid} catalog={catalog} mode={st.kingdomMode} setMode={setMode} players={st.picked} roll={roll} setRollOpts={setRollOpts} resetRoll={() => setSt(s => ({ ...s, rollOpts: null, kept: null }))} kept={st.kept} onKeep={kept => setSt(s => ({ ...s, kept }))}
               hand={st.handOpen} setHand={handOpen => setSt(s => ({ ...s, handOpen }))} draftSave={st.draftSave} onDraft={draftSave => setSt(s => ({ ...s, draftSave }))} onRestartDraft={redoDraft}
-              plays={plays} items={items} rolled={rolled} setupNow={setupNow} handEdited={st.handEdited} handBane={st.handBane} resolved={resolved} randomDone={st.randomDone} randomOriginal={st.randomOriginal} setRandomDone={randomDone => setSt(s => ({ ...s, randomDone, handOpen: randomDone ? false : s.handOpen, randomOriginal: randomDone ? s.kingdom.filter(i => i.kind === 'card').map(i => i.id) : null }))} applyKingdom={applyKingdom} onPick={pickByHand} onSkip={() => setSt(s => advance({ ...s, kingdom: [], kingdomMode: null }))}
+              plays={plays} items={items} rolled={rolled} setupNow={setupNow} handEdited={st.handEdited} handBane={st.handBane} resolved={resolved} recDef={recDef} recChanged={recChanged} randomDone={st.randomDone} randomOriginal={st.randomOriginal} setRandomDone={randomDone => setSt(s => ({ ...s, randomDone, handOpen: randomDone ? false : s.handOpen, randomOriginal: randomDone ? s.kingdom.filter(i => i.kind === 'card').map(i => i.id) : null }))} applyKingdom={applyKingdom} onPick={pickByHand} onRecommend={recommend} picking={st.recPicking} onSkip={() => setSt(s => advance({ ...s, kingdom: [], kingdomMode: null }))}
               text={<KingdomText resolved={resolved} catalog={catalog} show={showText} setShow={setShowText} />} /></PlaysScopeContext.Provider>
           )
         )}
@@ -389,7 +423,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
         {st.step === 'review'
           ? <button type="button" onClick={save} disabled={saving}>{saving ? 'Saving…' : isAdmin ? 'Save game' : 'Send for approval'}</button>
           : atDraftOptions ? <button type="button" onClick={startDraft}>Start the draft →</button>
-          : atRandomRoll ? <button type="button" onClick={() => withCheck(() => setSt(s => ({ ...s, randomDone: true, handOpen: false, randomOriginal: s.kingdom.filter(i => i.kind === 'card').map(i => i.id) })))} disabled={!!holdOn} title={holdOn || undefined}>Use this kingdom →</button>
+          : atRandomRoll || atRecChosen ? <button type="button" onClick={() => withCheck(() => setSt(s => ({ ...s, randomDone: true, handOpen: false, randomOriginal: (atRecChosen && recBase && !recBase.missing.length ? recBase.items : s.kingdom).filter(i => i.kind === 'card').map(i => i.id) })))} disabled={!!holdOn} title={holdOn || undefined}>Use this kingdom →</button>
           : <button type="button" onClick={st.step === 'kingdom' ? () => withCheck(next) : next} disabled={!!holdOn} title={holdOn || undefined}>{st.step === 'kingdom' ? 'Start Game & Timer →' : st.step === 'play' ? 'Game over — scores →' : 'Next →'}</button>}
       </div>
       <p className="night-reset"><button type="button" className="ghost" onClick={startOver}>Restart Game Night</button></p>

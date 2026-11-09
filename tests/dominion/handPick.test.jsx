@@ -49,9 +49,9 @@ import { DEFAULT_OPTIONS } from '../../src/dominion/randomizer.js';
 describe('hand-editing on the tiles', () => {
   const panel = (state, editing) => renderToStaticMarkup(<CatalogProvider catalog={catalog}><RandomizerPanel catalog={catalog} opts={DEFAULT_OPTIONS} setOpts={() => {}} state={state} onState={() => {}} onReset={() => {}} editing={editing} onEdit={() => {}} /></CatalogProvider>);
   const st = stateFromItems(catalog, ['Village', 'Smithy'].map(n => ({ kind: 'card', id: card(n) })));
-  it('bare tiles swap Lock / Re-roll for Replace / Remove and end each grid with an Add tile', () => {
+  it('bare tiles have no Lock / Re-roll, show the Replace / Remove corner icons, and end each grid with an Add tile', () => {
     const h = renderToStaticMarkup(<CatalogProvider catalog={catalog}><RandomizerPanel bare editing catalog={catalog} opts={DEFAULT_OPTIONS} setOpts={() => {}} state={st} onState={() => {}} onReset={() => {}} onEdit={() => {}} /></CatalogProvider>);
-    expect(h).toContain('Replace'); expect(h).toContain('Remove'); expect(h).not.toContain('Re-roll'); expect((h.match(/dn-rzadd/g) || []).length).toBe(2);
+    expect((h.match(/aria-label="Replace /g) || []).length).toBe(2); expect((h.match(/aria-label="Remove /g) || []).length).toBe(2); expect(h).not.toContain('Re-roll'); expect(h).not.toContain('dn-rztile-btns'); expect((h.match(/dn-rzadd/g) || []).length).toBe(2);
   });
   it('the working panel shows Lock and Re-roll plus a Replace and a Remove icon on every tile, and always ends each grid with an Add tile', () => {
     const h = panel(st, false);
