@@ -9,7 +9,7 @@ import { EmptyState } from '../components/States.jsx';
 import { ExpansionBadge, LandscapePill, Section, TypePills } from '../components/bits.jsx';
 import CostIcons from '../components/Cost.jsx';
 import { usePager } from '../components/Pager.jsx';
-import SortHeaders from '../components/SortHeaders.jsx';
+import PlayedByExpansion from '../components/PlayedByExpansion.jsx';
 import { hoverHandlers } from '../components/CardHover.jsx';
 import { slotFaceId } from '../cardImages.js';
 
@@ -49,17 +49,7 @@ function Loaded({ head, lg, query }) {
   const lands = useMemo(() => [...stats.landscapes].map(([id, e]) => ({ l: catalog.landscapesById.get(id), games: e.games, last: e.list[e.list.length - 1] })).filter(x => x.l)
     .sort((a, b) => b.games - a.games || b.last.day - a.last.day || a.l.name.localeCompare(b.l.name)), [catalog, stats]);
   const { pg: lpg, pager: lpager } = usePager(lands, 'landscapes');
-  // the "Not played yet" table sorts like the other tables: a click on the open column flips it, another column starts ascending (Expansion is the box order)
-  const [nsort, setNsort] = useState({ key: 'expansion', dir: 'asc' });
-  const onSort = key => setNsort(o => (o.key === key ? { key, dir: o.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
   const ins = useMemo(() => insights(catalog, stats, { top: Infinity }), [catalog, stats]);
-  const neverRows = useMemo(() => {
-    const val = x => (nsort.key === 'played' ? x.total - x.never : x[nsort.key]);
-    const rows = ins.neverByExpansion.map((x, i) => ({ x, i }));
-    if (nsort.key !== 'expansion') rows.sort((a, b) => val(a.x) - val(b.x) || a.i - b.i);   // ties keep the box order
-    if (nsort.dir === 'desc') rows.reverse();
-    return rows.map(r => r.x);
-  }, [ins, nsort]);
   const { pg, pager } = usePager(ins.mostPlayed, 'cards');
   const repCard = key => catalog.pilesByKey.get(key).cardIds[0];
   // the picture that stands for a pile: its own pile card (Knights, Castles, split piles) or its first card that has one
@@ -113,39 +103,9 @@ function Loaded({ head, lg, query }) {
         {catalog.landscapes.length > lands.length && <p className="note"><a href={landscapesFilterHref({ played: 'no', by: who })}>{catalog.landscapes.length - lands.length} of {catalog.landscapes.length} landscapes</a> {who ? `haven’t been played by ${who}` : 'haven’t been played yet'}.</p>}
       </Section>
 
-      <Section title={who ? `Not played yet by ${who}` : 'Not played yet'} id="in-never">
-        <div className="tablewrap"><table className="plain dn-table dn-pcttable">
-          <caption className="dn-sr">Kingdom supply piles played and not played yet, by expansion</caption>
-          <SortHeaders columns={[['expansion', 'Expansion', 'l'], ['total', 'Piles', 'dn-hide-sm'], ['played', 'Played', ''], ['never', 'Not played', '']]} sort={nsort.key} dir={nsort.dir} onSort={onSort} />
-          <tbody>{neverRows.map(x => (
-            <tr key={x.expansion}>
-              <td className="l"><a href={cardsFilterHref({ expansions: [x.expansion], by: who })}><ExpansionBadge name={x.expansion} /></a></td>
-              <Counts total={x.total} played={x.total - x.never} patch={{ expansions: [x.expansion], by: who }} />
-            </tr>
-          ))}</tbody>
-          <tfoot><tr>
-            <th className="l" scope="row">Total</th>
-            <Counts total={catalog.piles.length} played={catalog.piles.length - ins.neverTotal} patch={{ by: who }} />
-          </tr></tfoot>
-        </table></div>
+      <Section title={who ? `Cards played by ${who}, by expansion` : 'Cards played by expansion'} id="in-never">
+        <PlayedByExpansion catalog={catalog} stats={stats} who={who} />
       </Section>
-    </>
-  );
-}
-
-// Piles / Played / Not played cells: each number opens the Kingdom cards table with that expansion (or all) and that play history filtered
-function Counts({ total, played, patch }) {
-  const never = total - played;
-  // the number and its percentage are one link, so the whole cell is the target
-  const cell = (n, extra, showShare = true) => {
-    const inner = <><span className="dn-num">{n}</span>{showShare && <span className="dn-pct">{total ? Math.round(n / total * 100) : 0}%</span>}</>;
-    return n ? <a className="dn-cell-link" href={cardsFilterHref({ ...patch, ...extra })}>{inner}</a> : <span className="dn-cell-link off">{inner}</span>;
-  };
-  return (
-    <>
-      <td className="dn-hide-sm">{cell(total, {}, false)}</td>
-      <td>{cell(played, { played: 'yes' })}</td>
-      <td>{cell(never, { played: 'no' })}</td>
     </>
   );
 }

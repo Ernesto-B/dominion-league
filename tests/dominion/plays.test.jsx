@@ -143,7 +143,7 @@ describe('the Insights page', () => {
     const h = view('insights'), t = text(h);
     expect(t).toMatch(/Based on 4 of 5 games in Friends/); expect(t).toMatch(/Most played cards/); expect(t).toMatch(/Village/);
     expect(h).toMatch(/href="#\/games\/g1\?game=\d+"/); expect(h).not.toMatch(/href="#\/games\/g1\/\d+"/);   // the Last played dates highlight the game in the Games list
-    expect(t).toMatch(/Not played yet/); expect(h).toContain('played=no'); expect(t).not.toMatch(/Your record with cards/); expect(t).toMatch(/Whose games\?/); expect(t).toMatch(/Whole group/);
+    expect(t).toMatch(/Cards played by expansion/); expect(h).toContain('played=no'); expect(t).not.toMatch(/Your record with cards/); expect(t).toMatch(/Whose games\?/); expect(t).toMatch(/Whole group/);
   });
   it('reads one player\'s games from ?who= in the address, and ignores a name that is not a player', () => {
     expect(text(view('insights?who=Ann'))).toMatch(/Based on \d+ of \d+ games Ann played in the group that/);
@@ -165,7 +165,7 @@ describe('the Insights page', () => {
     const t = text(view('randomizer?fav=1'));
     expect(t).toContain('Count games'); expect(t).toContain('Whole group'); expect(t).toContain('A player');
   });
-  it('the Not played yet table has sortable headers', () => {
+  it('the Cards played by expansion table has sortable headers', () => {
     const h = view('insights');
     const never = h.slice(h.indexOf('id="in-never"'), h.indexOf('<tfoot'));
     expect((never.match(/class="[^"]*sortable[^"]*"/g) || []).length).toBe(4); expect(never).toContain('aria-sort="ascending"');
@@ -189,5 +189,14 @@ describe('the Randomizer\'s hand-off buttons', () => {
   });
   it('a kingdom with no seed (a locked or re-rolled one) has nothing to share', () => {
     expect(view('randomizer?c=dominion-base-game:village&c=dominion-base-game:smithy', { me: null })).not.toContain('Share seed');
+  });
+});
+
+import PlayerCards from '../../src/components/PlayerCards.jsx';
+describe('the Player page\'s Cards tab', () => {
+  it('ends with the Cards played by expansion table, counted from that player\'s games and linked with ?by=', () => {
+    const h = renderToStaticMarkup(<PlayerCards p={{ name: 'Ann' }} D={{ games }} catalog={catalog} insightsHref="#/dominion/insights" gamesHref={l => '#/games/g1?game=' + l} />);
+    const i = h.indexOf('Cards played by expansion'), j = h.indexOf('Most played landscapes');
+    expect(i).toBeGreaterThan(j); expect(h).toContain('<tfoot'); expect(h).toContain('by=Ann'); expect((h.match(/sortable/g) || []).length).toBe(4);
   });
 });
