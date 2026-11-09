@@ -13,6 +13,7 @@ import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import { hoverHandlers } from '../components/CardHover.jsx';
 import FilterSummary from '../components/FilterSummary.jsx';
+import DrawnPick from '../components/DrawnPick.jsx';
 import FacetBar from '../components/FacetBar.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
 import { PageShortcuts } from '../../components/Shortcuts.jsx';
@@ -39,12 +40,18 @@ export default function Cards({ query = '' }) {
   // a header click uses the same sort state as the "Sort by" menu: the active column flips direction, another column starts ascending
   const sortBy = key => update(f.sort === key ? { dir: f.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: 'asc' });
   const clear = () => { clearFilters(); setMq(''); };
-  const random = () => { const c = pickRandom(choosing ? rows.filter(x => !blocked.has(x.pileKey)) : rows); if (!c) return; if (choosing) choosePick(c.id); else window.location.hash = cardHref(c.id, qs); };   // choosing: a random one of the cards the filters still show goes straight into the kingdom
+  const [drawn, setDrawn] = useState(null);   // while choosing for a kingdom: the id Random drew, shown here to use or redraw (see DrawnPick)
+  const random = () => {
+    const pool = choosing ? rows.filter(x => !blocked.has(x.pileKey) && x.id !== drawn) : rows, c = pickRandom(pool.length ? pool : rows);
+    if (!c) return;
+    if (choosing) setDrawn(c.id); else window.location.hash = cardHref(c.id, qs);
+  };
 
   const taken = useMemo(() => new Set(choosing ? kp.taken.map(id => catalog.cardsById.get(id)?.pileKey).filter(Boolean) : []), [catalog, choosing, kp]);
   const rows = useMemo(() => browseCards(catalog.cards, f, { plays }).filter(c => !taken.has(c.pileKey)), [catalog, f, plays, taken]);   // a pile already in the kingdom is not offered
   const blocked = useMemo(() => new Set(choosing ? (kp.blocked || []).map(id => catalog.cardsById.get(id)?.pileKey).filter(Boolean) : []), [catalog, choosing, kp]);   // in play at the other table: shown greyed, not pickable
   const active = activeCardFilters(f);
+  const drawnItem = drawn && rows.find(r => r.id === drawn);   // gone from the list (a filter changed): nothing is shown
   const debts = [...new Set(catalog.cards.map(c => c.debt).filter(d => d > 0))].sort((a, b) => a - b);
   // the small number on every chip follows the other filters (see facetCount): "how many would show if I picked this"
   const fc = useMemo(() => {
@@ -146,6 +153,8 @@ export default function Cards({ query = '' }) {
           <span className="meta" role="status" aria-live="polite">Showing <b>{rows.length}</b> of {catalog.cards.length} card names{active ? ' (filtered)' : ''}</span>
         </div>
       </form>
+
+      {choosing && drawnItem && <DrawnPick item={drawnItem} kind="card" replacing={!!kp.label} onAgain={random} times={plays ? (plays.get(drawnItem.pileKey)?.games || 0) : null} who={lg && lg.who} />}
 
       {rows.length ? (
         <div className="tablewrap">

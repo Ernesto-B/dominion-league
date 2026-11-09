@@ -73,6 +73,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
     if (r && (r.index == null || (r.kind === 'card' ? state?.slots[r.index] : state?.landscapes[r.index]))) put(r);
   }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   const canFavor = !!plays && plays.size > 0;
+  const isNew = key => !!(opts.favor && plays && !plays.get(key));   // "New cards" is on: a card nobody has played gets the New corner, as in a game report
   const setOpts = patch => { setMessage(''); setOptsProp(patch); };
 
   const drawOpts = withAvoid(opts, avoid);   // what the draw uses: the options, with another table's cards and landscapes kept out (the options on screen are left as they are)
@@ -192,14 +193,14 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
           {undo && !fix && <UndoBar text={undo.text} onUndo={doUndo} onClose={() => setUndo(null)} />}
           <ul className={'dn-rzgrid' + (faces ? ' faces' : '') + (fix ? ' fixmode' : '')} aria-label="Kingdom cards">
             {shown.slots.map((s, i) => (faces && faceOf(s) ? (
-              <FaceTile editing={editable} onReplace={() => choose('card', i)} onRemove={() => removeCard(i)} key={s.key} pile={s.key} ping={ping === s.key} fx={fx(s.key)} id={faceOf(s).id} name={s.name} caption={null} fresh={fresh === s.key} locked={locked.has(s.key)}
+              <FaceTile editing={editable} onReplace={() => choose('card', i)} onRemove={() => removeCard(i)} key={s.key} pile={s.key} ping={ping === s.key} fx={fx(s.key)} id={faceOf(s).id} name={s.name} isNew={isNew(s.key)} caption={null} fresh={fresh === s.key} locked={locked.has(s.key)}
                 onLock={() => setLocked(l => { const n = new Set(l); n.has(s.key) ? n.delete(s.key) : n.add(s.key); return n; })} onReroll={() => swapSlot(i)} onPeek={() => openPeek(catalog, { kind: 'card', s, face: faceOf(s).id })} />
             ) : (
               <Tile editing={editable} onReplace={() => choose('card', i)} onRemove={() => removeCard(i)} key={s.key} pile={s.key} ping={ping === s.key} fx={fx(s.key)} fresh={fresh === s.key} tone={primaryType(s.cards.find(c => primaryType(c) === 'Attack') || s.cards[0])}
                 locked={locked.has(s.key)} onLock={() => setLocked(l => { const n = new Set(l); n.has(s.key) ? n.delete(s.key) : n.add(s.key); return n; })} onReroll={() => swapSlot(i)} onPeek={() => openPeek(catalog, { kind: 'card', s })} what={s.name}>
                 <div className="dn-rz-cost"><CostIcons coins={s.cards[0].coins} debt={s.cards[0].debt} overpay={s.cards[0].overpay} size={30} /></div>
                 <div className="dn-rz-main">
-                  <p className="dn-rz-name">{s.cards.length === 1 ? <a href={cardHref(s.cards[0].id)}>{s.name}</a> : s.name}</p>
+                  <p className="dn-rz-name">{s.cards.length === 1 ? <a href={cardHref(s.cards[0].id)}>{s.name}</a> : s.name}{isNew(s.key) && <span className="pill dn-rz-new">New</span>}</p>
                   {s.cards.length > 1 && <p className="dn-rz-members meta">{s.cards.map((c, k) => <span key={c.id}>{k > 0 && ' · '}<a href={cardHref(c.id)}>{c.name}</a></span>)}</p>}
                   <TypePills types={[...new Set(s.cards.flatMap(c => c.types))]} />
                   <p className="meta dn-rz-exp"><ExpansionBadge name={s.expansion} size={14} /></p>
@@ -243,10 +244,11 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
 }
 
 // a card or landscape drawn as itself: the picture (tap to enlarge), with Lock and Re-roll under it
-function FaceTile({ id, name, caption, pile, ping, fx = {}, fresh, locked, onLock, onReroll, onPeek, editing, onReplace, onRemove }) {
+function FaceTile({ id, name, isNew, caption, pile, ping, fx = {}, fresh, locked, onLock, onReroll, onPeek, editing, onReplace, onRemove }) {
   return (
     <li data-pile={pile} className={'dn-rzface' + (fresh ? ' fresh' : '') + (ping ? ' ping' : '') + (fx.cls ? ' ' + fx.cls : '') + (locked ? ' locked' : '')} {...fx.attrs}>
       <CardFace id={id} name={name} onOpen={onPeek} />
+      {isNew && <span className="gr-newtag left">New</span>}
       <div className="dn-rztile-btns">{editing ? <EditButtons name={name} onReplace={onReplace} onRemove={onRemove} /> : <>
         <button type="button" className="ghost" aria-pressed={locked} onClick={onLock} title={locked ? `Unlock ${name}` : `Keep ${name} when you roll again`}>{locked ? 'Locked' : 'Lock'}</button>
         <button type="button" className="ghost" onClick={onReroll} disabled={locked} title={locked ? 'Unlock it to re-roll' : `Swap ${name} for another card`}>Re-roll</button>

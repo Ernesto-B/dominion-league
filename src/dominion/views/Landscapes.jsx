@@ -11,6 +11,7 @@ import { artifactHref, landscapeHref } from '../links.js';
 import { PLURAL, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import { hoverHandlers } from '../components/CardHover.jsx';
+import DrawnPick from '../components/DrawnPick.jsx';
 import FacetBar from '../components/FacetBar.jsx';
 import FilterSummary from '../components/FilterSummary.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
@@ -33,12 +34,18 @@ export default function Landscapes({ query = '' }) {
   // header clicks share state with the "Sort by" menu: the active column flips direction, another column starts ascending
   const sortBy = key => update(f.sort === key ? { dir: f.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: 'asc' });
   const clear = () => { clearFilters(); setMq(''); };
-  const random = () => { const l = pickRandom(choosing ? rows.filter(x => !blockedL.has(x.id)) : rows); if (!l) return; if (choosing) choosePick(l.id); else window.location.hash = landscapeHref(l.id, qs); };   // choosing: a random one of the landscapes the filters still show goes straight into the kingdom
+  const [drawn, setDrawn] = useState(null);   // while choosing for a kingdom: the id Random drew, shown here to use or redraw (see DrawnPick)
+  const random = () => {
+    const pool = choosing ? rows.filter(x => !blockedL.has(x.id) && x.id !== drawn) : rows, l = pickRandom(pool.length ? pool : rows);
+    if (!l) return;
+    if (choosing) setDrawn(l.id); else window.location.hash = landscapeHref(l.id, qs);
+  };
 
   const kp = useKingdomPick(), choosing = !!kp && kp.kind === 'landscape';   // choosing a landscape FOR a kingdom, not browsing
   const blockedL = useMemo(() => new Set(choosing ? kp.blocked || [] : []), [choosing, kp]);   // in play at the other table: greyed, not pickable
   const rows = useMemo(() => browseLandscapes(catalog.landscapes, f, { plays }).filter(l => !(choosing && kp.taken.includes(l.id))), [catalog, f, plays, choosing, kp]);
   const active = activeLandscapeFilters(f);
+  const drawnItem = drawn && rows.find(r => r.id === drawn);   // gone from the list (a filter changed): nothing is shown
   const expansions = catalog.ownedExpansions.filter(e => catalog.landscapes.some(l => l.expansion === e.name));
   // tags are the landscapes' OWN vocabulary (most are not Kingdom taxonomy ids), so they get no Kingdom definitions
   // the costs the landscapes actually have (Events and Projects; the rest have none), and the Debt amounts
@@ -133,6 +140,8 @@ export default function Landscapes({ query = '' }) {
           <span className="meta" role="status" aria-live="polite">Showing <b>{rows.length}</b> of {catalog.landscapes.length} landscapes{active ? ' (filtered)' : ''}</span>
         </div>
       </form>
+
+      {choosing && drawnItem && <DrawnPick item={drawnItem} kind="landscape" replacing={!!kp.label} onAgain={random} times={plays ? (plays.get(drawnItem.id)?.games || 0) : null} who={lg && lg.who} />}
 
       {rows.length ? (
         <div className="tablewrap">

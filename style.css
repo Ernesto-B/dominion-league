@@ -422,7 +422,8 @@ a.dn-kchip:hover{border-color:var(--muted)}
 .dn-rz-go button[type=submit]{min-height:44px;padding:10px 22px;font-size:16px}
 .dn-rz-msg{margin:12px 0 0;padding:10px 12px;border:1px solid var(--line);border-left:4px solid rgb(var(--t-attack));border-radius:8px;background:var(--panel)}
 .dn-rz-empty{margin:28px 0;color:var(--muted)}
-.dn-rz-result{margin-top:28px;scroll-margin-top:84px}
+.dn-rz-result{margin-top:28px;scroll-margin-top:8px}
+@media (min-width:721px){.dn-rz-result{scroll-margin-top:84px}}   /* a computer has the sticky Collection tab bar to clear; a phone's tab bar scrolls away with the page */
 .dn-rz-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 18px;margin-bottom:12px}
 .dn-rz-bar h2{margin:0}
 .dn-rz-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
@@ -2408,9 +2409,9 @@ details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
 .dn-facet .n{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--felt);color:#fff;font-size:12px;font-weight:700;display:inline-grid;place-items:center}
 .dn-facet-caret{width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s}
 .dn-facet[aria-expanded=true] .dn-facet-caret{transform:rotate(-135deg) translate(-2px,-2px)}
-.dn-facet-panel{margin-top:10px;padding:14px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--panel) 92%,transparent)}
+.dn-facet-panel{margin-top:10px;box-sizing:border-box;padding:14px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--panel) 92%,transparent)}
 .dn-facet-panel .dn-mode{margin-top:12px}
-.dn-facet-panel .dn-mech-list{max-height:300px}
+.dn-facet-panel .dn-mech-list{max-height:300px}   /* the mechanics / tags list is the one panel allowed to be taller */
 .dn-facet-panel[hidden]{display:none}
 
 /* the Analyze dot breathes: a soft ring that grows and fades (transform and opacity only) */
@@ -2418,3 +2419,23 @@ details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
 @keyframes dnazpulse{0%{transform:scale(1);opacity:.65}70%,100%{transform:scale(3);opacity:0}}
 @media (prefers-reduced-motion:no-preference){.dn-az-dot{animation:dnazdot 2.2s ease-in-out infinite}.dn-az-dot::after{animation:dnazpulse 2.2s ease-out infinite}}
 @keyframes dnazdot{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+.dn-facet-panel .dn-facet-note{margin:0 0 10px}   /* the line above the chips starts level with the first row of chips in the other panels */
+
+/* what Random drew while choosing a card for a kingdom (components/DrawnPick.jsx) */
+.dn-drawn{display:flex;flex-wrap:wrap;gap:16px 22px;align-items:center;justify-content:center;width:fit-content;max-width:100%;margin:14px 0;padding:16px;border:2px solid var(--brass,var(--ink));border-radius:12px;background:color-mix(in srgb,var(--panel) 94%,transparent)}
+.dn-drawn-face{flex:0 0 auto;width:min(200px,100%);position:relative}   /* no clipping: the "New" corner overhangs the card, as in the report */
+.dn-drawn-face .dn-face{width:100%}
+.dn-drawn-body{flex:1 1 220px;min-width:0}
+.dn-drawn-k{margin:0 0 4px}
+.dn-drawn-n{margin:0 0 8px;font-size:24px}
+.dn-drawn-m{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
+.dn-drawn-btns{display:flex;flex-wrap:nowrap;gap:8px;min-width:0}   /* one row always: a long name is cut short with an ellipsis instead of pushing Draw another below */
+.dn-drawn-btns>button{min-width:0}
+.dn-drawn-btns>button:first-child{flex:0 1 auto}
+.dn-drawn-btns>.ghost{flex:none;white-space:nowrap}
+.dn-drawn-lbl{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+@media (max-width:720px){.dn-drawn{justify-content:center;text-align:center}.dn-drawn-face{margin:0 auto}.dn-drawn-body{flex-basis:100%}.dn-drawn-m,.dn-drawn-btns{justify-content:center}}
+
+.dn-rzface{position:relative}   /* the New corner (gr-newtag) hangs off the picture's top-left, outside its clipped frame */
+.dn-rz-new{margin-left:8px;background:var(--brass);color:#140d02;font-weight:700}
