@@ -4,6 +4,7 @@ import { analyseKingdom, verdictOf } from '../analysis.js';
 import { cardHref } from '../links.js';
 import { ExpansionBadge } from './bits.jsx';
 import Fold from './Fold.jsx';
+import { PageShortcuts } from '../../components/Shortcuts.jsx';
 import { onAnalyzeRequest, takeAnalyzeRequest } from '../analyzeBus.js';
 
 // a card's name: on the kingdom shown, a tap points at its picture for a moment; with nowhere to point (no kingdom on screen) it opens the card's page
@@ -23,6 +24,16 @@ export default function Analyze({ catalog, slots, onPick = null, onFix = null })
   const [open, setOpen] = useState(() => wide() && remembered());   // a phone always starts closed; a computer reopens as it was left
   const set = v => { setOpen(v); try { if (wide()) window.localStorage.setItem(KEY, v ? '1' : '0'); } catch { /* not remembered */ } };
   const btn = useRef(null);
+  // the button sits in the bar above the cards, so it scrolls away with it. While the kingdom is on screen but that button is not, a small floating copy keeps Analyze one tap away.
+  const [seen, setSeen] = useState({ btn: true, kingdom: false });
+  useEffect(() => {
+    const el = btn.current, sec = el && el.closest('.dn-rz-result');
+    if (!el || !sec || typeof IntersectionObserver === 'undefined') return undefined;
+    const io = new IntersectionObserver(es => setSeen(s => { const n = { ...s }; es.forEach(e => { n[e.target === el ? 'btn' : 'kingdom'] = e.isIntersecting; }); return n; }));
+    io.observe(el); io.observe(sec);
+    return () => io.disconnect();
+  }, []);
+  const floating = !open && !seen.btn && seen.kingdom;
   useEffect(() => {   // Game night's "Fix it" asks for the panel
     const ask = () => { if (takeAnalyzeRequest()) setOpen(true); };
     ask();
@@ -30,9 +41,14 @@ export default function Analyze({ catalog, slots, onPick = null, onFix = null })
   }, []);
   return (
     <>
+      <PageShortcuts bindings={[{ key: 'a', label: 'Analyze the kingdom (open or close)', run: () => set(!open) }]} />
       <button type="button" ref={btn} className={'ghost dn-az-btn' + (open ? ' on' : '')} aria-expanded={open} aria-controls="kingdom-analysis" onClick={() => set(!open)} title="What this kingdom is made of: drawing, villages, trashing and more">
         Analyze{a.flags > 0 && <i className="dn-az-dot" aria-label={`${a.flags} thing${a.flags === 1 ? '' : 's'} to look at`} />}
       </button>
+      {typeof document !== 'undefined' && floating && createPortal(
+        <button type="button" className={'dn-az-fab' + (document.querySelector('.night-actions') ? ' above-bar' : '')} aria-controls="kingdom-analysis" onClick={() => set(true)} title="What this kingdom is made of: drawing, villages, trashing and more">
+          {a.flags > 0 && <i className="dn-az-dot" aria-label={`${a.flags} thing${a.flags === 1 ? '' : 's'} to look at`} />}Analyze
+        </button>, document.body)}
       {typeof document !== 'undefined' && createPortal(<Sheet a={a} open={open} onFix={onFix} onPick={pile => { if (!onPick) return; if (!wide()) set(false); onPick(pile); }} onClose={() => { set(false); btn.current?.focus({ preventScroll: true }); }} />, document.body)}
     </>
   );

@@ -126,6 +126,13 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [check, setCheck] = useState(null);   // the kingdom check: { concerns, analyse, go } while it is asked
+  // every move forward or back in the flow (a step, a way of choosing a kingdom, a summary opening or closing, the list of recommended sets, a draft starting or ending) brings the top of the
+  // content box into view, so the new screen is read from its first line and not from wherever the last one was scrolled to (most of all on a phone)
+  const viewKey = [st.step, st.kingdomMode, st.randomDone, st.recPicking, st.draftSave?.draft ? 1 : 0, st.draftSave?.finished ? 1 : 0].join('|'), lastView = useRef(viewKey);
+  useEffect(() => {
+    if (viewKey !== lastView.current) requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector('.night-card')?.scrollIntoView?.({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })));
+    lastView.current = viewKey;
+  }, [viewKey]);
   const okSig = useRef(null);               // the kingdom the table already said "start anyway" to
   const savedSt = useRef(null);                          // the form as it was when saved, for Undo
   const [undoing, setUndoing] = useState(false);
@@ -184,10 +191,8 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
   const pickByHand = (kingdom, implied) => setSt(s => ({ ...s, kingdom, handEdited: true, handBane: s.handEdited ? s.handBane : rolled?.setup?.bane?.cards[0]?.id ?? null, rolled: null, rolledQ: null, kingdomTouched: true, sets: [...new Set([...s.sets, ...implied.sets])], landscapes: [...new Set([...s.landscapes, ...implied.landscapes])] }));
   // a recommended set: its cards and landscapes as the kingdom (a hand-made one, so the setup notes are worked out from the cards), with the Bane the set names.
   // The game's expansions and landscape types are exactly what the set uses (not added to whatever was ticked before), as for a rolled kingdom
-  const recommend = (kingdom, baneId, set = null, scroll = true) => {
+  const recommend = (kingdom, baneId, set = null) => {
     const implied = catalog ? impliedSets(resolveKingdom(catalog, kingdom)) : { sets: [], landscapes: [] };
-    // choosing a set brings the top of the Kingdom box into view, so its cards are seen from the first one (not after Reset: the table is already looking at them)
-    if (scroll) requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector('.night-card')?.scrollIntoView?.({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })));
     setSt(s => ({ ...s, kingdom, recPicking: false, recSet: set ? set.id : s.recSet, handEdited: true, handBane: baneId || null, randomDone: false, randomOriginal: null, rolled: null, rolledQ: null, kingdomTouched: true, sets: [...implied.sets], landscapes: [...implied.landscapes] }));
   };
   // "Reset" on a chosen recommended set: its own cards and landscapes again, after edits
@@ -198,7 +203,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
   const usedRecommended = recBase && !recBase.missing.length && cardKey(recBase.items) === cardKey(st.kingdom) ? recDef.name : null;
   const itemKey = list => list.map(i => `${i.kind}:${i.id}:${i.on || ''}`).sort().join('|');
   const recChanged = !!recBase && !recBase.missing.length && itemKey(recBase.items) !== itemKey(st.kingdom);
-  const resetRecommended = () => { if (recBase) recommend(recBase.items, recBase.baneId, recDef, false); };
+  const resetRecommended = () => { if (recBase) recommend(recBase.items, recBase.baneId, recDef); };
   // the snake draft: Start rolls the pool (the options page's button is the bar at the bottom), Restart goes back to the options page and drops the kingdom
   const startDraft = () => {
     const v = draftState(st.draftSave, st.picked), res = rollPool(catalog, withAvoid(roll, avoid), newSeed(), { plays, n: DRAFT_PICKS, size: v.poolSize ?? poolSizeFor(v.seats.length) });

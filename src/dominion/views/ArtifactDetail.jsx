@@ -1,3 +1,4 @@
+import { useSelectable } from '../useSelectable.js';
 import { useCatalog } from '../CatalogContext.jsx';
 import { dominionHref } from '../links.js';
 import { humanize } from '../constants.js';
@@ -7,6 +8,7 @@ import { CardText, ExpansionBadge, Section, Stat } from '../components/bits.jsx'
 // A Renaissance Artifact: not a Kingdom card and not a landscape, so it has its own small page (reached from the
 // Artifacts lists on the Overview and the Landscapes page).
 export default function ArtifactDetail({ id }) {
+  useSelectable();
   const { catalog } = useCatalog();
   const a = catalog.artifactsById.get(id);
   if (!a) return (

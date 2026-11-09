@@ -1,3 +1,4 @@
+import { useSelectable } from '../useSelectable.js';
 import { useCatalog } from '../CatalogContext.jsx';
 import { dominionHref, landscapeHref, landscapesFilterHref } from '../links.js';
 import { DEFAULT_LANDSCAPE_FILTERS, browseLandscapes, landscapeFiltersFromQuery, landscapeFiltersToQuery, neighbors, pickRandom } from '../filters.js';
@@ -20,6 +21,7 @@ import CostIcons from '../components/Cost.jsx';
 import { formatCost } from '../model.js';
 
 export default function LandscapeDetail({ id, query = '' }) {
+  useSelectable();
   const { catalog } = useCatalog();
   const by = landscapeFiltersFromQuery(query).by;   // whose games "In our games" reads (carried in the address with the list's filters)
   const lg = useLeagueGames(by);

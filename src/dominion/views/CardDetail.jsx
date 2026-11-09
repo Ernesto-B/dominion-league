@@ -1,3 +1,4 @@
+import { useSelectable } from '../useSelectable.js';
 import { useCatalog } from '../CatalogContext.jsx';
 import { cardHref, dominionHref, cardsFilterHref, compareHref } from '../links.js';
 import { DEFAULT_CARD_FILTERS, browseCards, cardFiltersFromQuery, cardFiltersToQuery, neighbors, pickRandom } from '../filters.js';
@@ -22,6 +23,7 @@ import { EmptyState } from '../components/States.jsx';
 import { ExpansionBadge, TypePills, Section, Stat, CardText, rowLink } from '../components/bits.jsx';
 
 export default function CardDetail({ id, query = '' }) {
+  useSelectable();
   const { catalog } = useCatalog();
   const by = cardFiltersFromQuery(query).by;   // whose games "In our games" reads (carried in the address with the list's filters)
   const lg = useLeagueGames(by);

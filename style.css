@@ -2520,3 +2520,30 @@ details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
 @media (min-width:721px){.night-recrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px}.night-recrow .night-recname,.night-recrow .night-recacts{margin:0}}
 .dn-rec-chosen{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px;font-size:16px}   /* Kingdom Chosen > the recommended set it came from */
 .gr-recset{margin:0 0 10px}
+
+/* Analyze stands out: a brass outline and a faint brass fill at rest (it was an ordinary ghost button), full brass when open */
+.dn-az-btn{border-color:var(--brass);color:var(--brass);background:color-mix(in srgb,var(--brass) 12%,transparent);font-weight:700}
+.dn-az-btn.on{background:var(--brass);color:#1b1405}
+/* while the kingdom is on screen and the Analyze button above it is not, a floating one stays at the bottom-right, clear of the phone's tab bar and Game night's Back / Start bar */
+.dn-az-fab{position:fixed;z-index:60;right:14px;bottom:calc(16px + env(safe-area-inset-bottom));display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 18px;border-radius:999px;border:1px solid var(--brass);background:var(--brass);color:#1b1405;font:700 15px var(--text);box-shadow:0 6px 18px rgba(0,0,0,.4);cursor:pointer}
+.dn-az-fab.above-bar{bottom:calc(84px + env(safe-area-inset-bottom))}
+@media (max-width:720px){.dn-az-fab{bottom:calc(70px + env(safe-area-inset-bottom))}.dn-az-fab.above-bar{bottom:calc(138px + env(safe-area-inset-bottom))}}
+@media (prefers-reduced-motion:no-preference){.dn-az-fab{animation:dnazfab .2s ease-out both}@keyframes dnazfab{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}}
+.dn-az-fab .dn-az-dot{position:static;background:#1b1405;box-shadow:none}.dn-az-fab .dn-az-dot::after{background:#1b1405}   /* the "something stands out" dot, dark on the brass pill */
+/* the floating Analyze sits directly above the back-to-top arrow (same right edge, 12px clear), on every page and in Game night, so it never covers that button */
+.dn-az-fab{right:18px;bottom:calc(74px + env(safe-area-inset-bottom))}
+.dn-az-fab.above-bar{bottom:calc(144px + env(safe-area-inset-bottom))}
+@media (max-width:720px){.dn-az-fab{bottom:calc(130px + env(safe-area-inset-bottom))}.dn-az-fab.above-bar{bottom:calc(196px + env(safe-area-inset-bottom))}}
+.dn-rec-note{margin:8px 0 12px;font-size:14px}
+.dn-rec-note.warn{color:#ffb4a8;background:rgba(255,107,95,.12);border:1px solid rgba(255,107,95,.45);border-radius:8px;padding:8px 12px}
+@media (prefers-reduced-motion:no-preference){.dn-rec-note.warn{animation:dnnudge .35s ease-in-out}@keyframes dnnudge{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}}
+
+/* expansion icons (and the chips that hold them) can't be selected, long-pressed into a copy menu or dragged: a stray touch on a phone must not start a text selection */
+img.seticon,.dn-exp-icon,.dn-chip,.dn-facet,.ss-btn,.dn-rec-sets{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+img.seticon{-webkit-user-drag:none;user-drag:none}
+
+/* Nothing on the site can be selected for copying (a stray touch on a phone must not start it), except what you type in, a card's picture, and a card's, landscape's or Artifact's own page (useSelectable puts body.selectable there) */
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,select,[contenteditable="true"],[contenteditable=""]{-webkit-user-select:text;user-select:text}
+.dn-face,.dn-face img{-webkit-user-select:auto;user-select:auto;-webkit-touch-callout:default}
+body.selectable{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
