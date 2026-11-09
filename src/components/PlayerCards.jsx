@@ -5,6 +5,7 @@ import { usePager } from '../dominion/components/Pager.jsx';
 import { ExpansionBadge, LandscapePill, TypePills } from '../dominion/components/bits.jsx';
 import CostIcons from '../dominion/components/Cost.jsx';
 import { hoverHandlers } from '../dominion/components/CardHover.jsx';
+import PlayedByExpansion from '../dominion/components/PlayedByExpansion.jsx';
 import { slotFaceId } from '../dominion/cardImages.js';
 
 /* The Player page's Cards tab: which Kingdom cards and landscapes this player has sat down with, and how they did when each was out.
@@ -30,7 +31,7 @@ export default function PlayerCards({ p, D, catalog, insightsHref, gamesHref }) 
     <>
       <p className="note dn-based" style={{ marginTop: 0 }}>
         {p.name} has sat down with <b>{seen}</b> of the {total} Kingdom piles and <b>{lands.length}</b> of the {catalog.landscapes.length} landscapes, across <b>{stats.withKingdom}</b> {stats.withKingdom === 1 ? 'game' : 'games'} with a kingdom logged.{' '}
-        {left > 0 && <a href={cardsFilterHref({ played: 'no', by: p.name })}>See the {left} cards left to try →</a>}{' '}
+        {left > 0 && <><a href={cardsFilterHref({ played: 'no', by: p.name })}>See the {left} cards left to try →</a>.&emsp;</>}
         <a href={insightsHref}>More in Kingdom insights →</a>
       </p>
 
@@ -71,6 +72,9 @@ export default function PlayerCards({ p, D, catalog, insightsHref, gamesHref }) 
         {lpager}
         {lands.length < catalog.landscapes.length && <p className="note"><a href={landscapesFilterHref({ played: 'no', by: p.name })}>{catalog.landscapes.length - lands.length} landscapes</a> not played yet.</p>}
       </>}
+
+      <h2>Cards played by expansion</h2>
+      <PlayedByExpansion catalog={catalog} stats={stats} who={p.name} />
     </>
   );
 }

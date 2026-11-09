@@ -2439,3 +2439,54 @@ details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
 
 .dn-rzface{position:relative}   /* the New corner (gr-newtag) hangs off the picture's top-left, outside its clipped frame */
 .dn-rz-new{margin-left:8px;background:var(--brass);color:#140d02;font-weight:700}
+
+/* Replace and Remove: two round icon buttons always visible on the tile's top-right corner, half hanging outside it (the New corner is on the left). A 44px hit area on touch. */
+.dn-rztile{position:relative}
+.dn-rzface .dn-rztile-btns button{font-size:13px}
+.dn-corner{position:absolute;z-index:3;top:-8px;right:-6px;display:flex;flex-direction:column;gap:6px}
+.dn-corner-b{position:relative;display:grid;place-items:center;width:30px;height:30px;min-height:0;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer}
+.dn-corner-b::after{content:"";position:absolute;inset:-7px}
+.dn-corner-b:hover,.dn-corner-b:focus-visible{border-color:var(--muted)}
+.dn-corner-b.dn-remove:hover,.dn-corner-b.dn-remove:focus-visible{color:#ff8a80;border-color:rgba(255,107,95,.7)}
+.fixmode .dn-corner{opacity:.3;pointer-events:none}
+.dn-rz-empty .linkish{background:none;border:0;padding:0;min-height:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer}
+
+/* the sheet's handle AND title bar are the drag area (the handle alone was a 14px target, so a swipe there scrolled the page behind instead) */
+.dn-az-top{display:contents}
+@media (max-width:720px){
+  .dn-az-top{display:block;touch-action:none;flex:none}
+  .dn-az-grab{padding:12px 0 4px}
+}
+
+/* the corner buttons stand out from the card art: filled in colour (brass to replace, brick to remove) with a ring of the page colour round them; same size */
+.dn-corner-b{background:var(--brass);border-color:var(--brass);color:#1b1405;box-shadow:0 0 0 2px var(--bg),0 3px 8px rgba(0,0,0,.45)}
+.dn-corner-b.dn-remove{background:var(--brick);border-color:var(--brick);color:#fff}
+.dn-corner-b:hover,.dn-corner-b:focus-visible{filter:brightness(1.12);border-color:var(--ink)}
+.dn-corner-b.dn-remove:hover,.dn-corner-b.dn-remove:focus-visible{color:#fff;border-color:var(--ink)}
+.dn-corner-b svg{stroke-width:2}
+
+/* a little quieter: the fill is mixed toward the panel colour, the ring and shadow are lighter. Hover lifts the button (transform and opacity only, never under reduced motion). */
+.dn-corner-b{background:color-mix(in srgb,var(--brass) 72%,var(--panel));border-color:color-mix(in srgb,var(--brass) 85%,var(--panel));box-shadow:0 0 0 1.5px var(--bg),0 2px 6px rgba(0,0,0,.35)}
+.dn-corner-b.dn-remove{background:color-mix(in srgb,var(--brick) 78%,var(--panel));border-color:color-mix(in srgb,var(--brick) 88%,var(--panel))}
+.dn-corner-b:hover,.dn-corner-b:focus-visible{filter:none;background:var(--brass);border-color:var(--brass)}
+.dn-corner-b.dn-remove:hover,.dn-corner-b.dn-remove:focus-visible{background:var(--brick);border-color:var(--brick)}
+@media (prefers-reduced-motion:no-preference){
+  .dn-corner-b{transition:transform .15s ease,background-color .15s ease,border-color .15s ease,box-shadow .15s ease}
+  .dn-corner-b:hover,.dn-corner-b:focus-visible{transform:scale(1.12);box-shadow:0 0 0 1.5px var(--bg),0 4px 10px rgba(0,0,0,.45)}
+  .dn-corner-b:active{transform:scale(.94)}
+}
+
+/* a facet button that shows what is chosen (the Games page: "Player Ashley"), kept short */
+.dn-facet-val{margin-left:6px;max-width:11ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--brass);font-weight:700}
+
+/* the Games page's Player facet is a dropdown under its own button, styled as the Player page's picker (tier icon and name, six rows, a fade where it scrolls) */
+.dn-facet-wrap{position:relative;display:inline-block}
+.dn-facets.menu-open{position:relative;z-index:25}
+.dn-facet-wrap .pp-menu{left:0;right:auto;min-width:220px}
+.pp-menu button.pp-opt{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.pp-menu button.pp-opt:hover{background:color-mix(in srgb, var(--ink) 10%, transparent)}
+.pp-menu button.pp-opt[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.pp-menu .pp-all{width:18px;height:18px;flex:none}
+@media (pointer:coarse){.pp-menu button.pp-opt{min-height:44px}}
+/* room between the Games filters and the Cards / Kingdoms switch (it nearly touched the open panel on a phone) */
+.dn-facets+.gview-bar,.dn-facets~.gview-bar{margin-top:20px}

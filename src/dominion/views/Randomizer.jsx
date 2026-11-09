@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { clearResumeEditing, peekResumeEditing } from '../kingdomPick.js';
+import { clearResumeEditing } from '../kingdomPick.js';
 import { useCatalog } from '../CatalogContext.jsx';
 import { usePage } from '../../PageContext.js';
 import { writeQuery } from '../urlState.js';
@@ -27,7 +27,6 @@ export default function Randomizer({ query = '' }) {
   const [ask, confirmDialog] = useConfirm();
   const [flash, setFlash] = useState({});   // which button just confirmed itself: { link | seed: 'ok' | 'fail' }
   const flashFor = (key, status) => { setFlash({ [key]: status }); setTimeout(() => setFlash(f => (f[key] === status ? {} : f)), status === 'ok' ? 1800 : 3500); };
-  const [hand, setHand] = useState(peekResumeEditing);   // back from choosing a card in the full list: still editing   // hand-editing: the tiles get Replace / Remove and an Add tile (the same editing Game night's Random way has)
 
   useEffect(() => { clearResumeEditing(); }, []);
   const lg = useLeagueGames(opts.favorBy);   // "Prioritize" can count one player's games only (opts.favorBy)
@@ -77,8 +76,7 @@ export default function Randomizer({ query = '' }) {
       <PlaysScopeContext.Provider value={lg && lg.stats ? { players: lg.players } : false}>
       <RandomizerPanel catalog={catalog} opts={opts} setOpts={patch => write({ ...opts, ...patch }, state)} state={state}
         onState={next => write(opts, next)} onReset={() => write(DEFAULT_OPTIONS, state)} plays={plays} actions={actions}
-        editing={hand} onEdit={edit}
-        extraControls={<button type="button" className="ghost dn-toggle" aria-pressed={hand} onClick={() => setHand(h => !h)}>{hand ? 'Done editing' : 'Pick cards by hand'}</button>} />
+        onEdit={edit} />
       </PlaysScopeContext.Provider>
     </>
   );

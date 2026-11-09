@@ -38,8 +38,8 @@ describe('a kingdom picked by hand', () => {
 
 describe('the Randomizer page', () => {
   const html = q => renderToStaticMarkup(<CatalogProvider catalog={catalog}><DominionView arg={'randomizer' + q} /></CatalogProvider>);
-  it('offers hand-picking, closed to begin with', () => {
-    const h = html(''); expect(h).toContain('Pick cards by hand'); expect(h).not.toContain('Add a card or landscape');
+  it('has no Pick cards by hand button: with nothing rolled it offers to start from your own cards', () => {
+    const h = html(''); expect(h).not.toContain('Pick cards by hand'); expect(h).toContain('start from your own cards');
   });
 });
 
@@ -49,12 +49,16 @@ import { DEFAULT_OPTIONS } from '../../src/dominion/randomizer.js';
 describe('hand-editing on the tiles', () => {
   const panel = (state, editing) => renderToStaticMarkup(<CatalogProvider catalog={catalog}><RandomizerPanel catalog={catalog} opts={DEFAULT_OPTIONS} setOpts={() => {}} state={state} onState={() => {}} onReset={() => {}} editing={editing} onEdit={() => {}} /></CatalogProvider>);
   const st = stateFromItems(catalog, ['Village', 'Smithy'].map(n => ({ kind: 'card', id: card(n) })));
-  it('swaps Lock / Re-roll for Replace / Remove and ends each grid with an Add tile', () => {
-    const h = panel(st, true);
+  it('bare tiles swap Lock / Re-roll for Replace / Remove and end each grid with an Add tile', () => {
+    const h = renderToStaticMarkup(<CatalogProvider catalog={catalog}><RandomizerPanel bare editing catalog={catalog} opts={DEFAULT_OPTIONS} setOpts={() => {}} state={st} onState={() => {}} onReset={() => {}} onEdit={() => {}} /></CatalogProvider>);
     expect(h).toContain('Replace'); expect(h).toContain('Remove'); expect(h).not.toContain('Re-roll'); expect((h.match(/dn-rzadd/g) || []).length).toBe(2);
-    const off = panel(st, false); expect(off).toContain('Re-roll'); expect(off).not.toContain('dn-rzadd');
   });
-  it('starts from an empty kingdom, and shows a seed button only for a roll', () => {
+  it('the working panel shows Lock and Re-roll plus a Replace and a Remove icon on every tile, and always ends each grid with an Add tile', () => {
+    const h = panel(st, false);
+    expect(h).toContain('Re-roll'); expect(h).toContain('Lock'); expect((h.match(/aria-label="Replace /g) || []).length).toBe(2); expect((h.match(/aria-label="Remove /g) || []).length).toBe(2); expect((h.match(/dn-rzadd/g) || []).length).toBe(2);
+    expect(h).not.toContain('dn-more');
+  });
+  it('starts from an empty kingdom when asked, and shows a seed button only for a roll', () => {
     expect(panel(null, true)).toContain('dn-rzadd'); expect(panel(null, false)).not.toContain('dn-rzadd');
     expect(panel({ ...st, seed: 123456 }, false)).toMatch(/<button[^>]*dn-seed/);
   });
@@ -121,10 +125,3 @@ describe('the bare tiles used after a snake draft', () => {
   });
 });
 
-describe('toggle buttons say when they are on', () => {
-  it('the Randomizer\'s Pick cards by hand button is a pressed-state toggle', () => {
-    clearResumeEditing();   // an earlier test's Cancel leaves "come back editing" set
-    const h = renderToStaticMarkup(<CatalogProvider catalog={catalog}><DominionView arg="randomizer" /></CatalogProvider>);
-    expect(h).toMatch(/dn-toggle[^>]*aria-pressed="false"[^>]*>Pick cards by hand/);
-  });
-});

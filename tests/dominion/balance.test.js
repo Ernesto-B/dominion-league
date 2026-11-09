@@ -8,7 +8,7 @@ const worst = (rs, role) => Math.max(...rs.map(r => r.slots.filter(s => speciali
 
 describe('Balance: no two cards with the same single job', () => {
   it('holds each role to its limit in every roll, where an ordinary roll goes over', () => {
-    const plain = rolls({ balance: false }), bal = rolls({});
+    const plain = rolls({ balance: false }), bal = rolls({ balance: true });
     expect(bal.every(r => r.ok)).toBe(true);
     for (const [role, n] of Object.entries(BALANCE_LIMIT)) expect(worst(bal, role)).toBeLessThanOrEqual(n);
     expect(Object.entries(BALANCE_LIMIT).some(([role, n]) => worst(plain, role) > n)).toBe(true);   // otherwise the option would prove nothing

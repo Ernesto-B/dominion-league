@@ -84,7 +84,7 @@ function SeedLoader({ catalog, roll, plays, avoid, onLoad }) {
   );
 }
 
-// the Random screen: the options and Roll row, with "Pick cards by hand" beside Reset (it opens the hand-picker under the options)
+// the Random screen: the options and Roll row, then the kingdom with Lock / Re-roll / Replace / Remove on each tile
 function RandomRoll({ catalog, roll, setRollOpts, resetRoll, kept, onKeep, hand, setHand, setupNow, handEdited, randomDone, randomOriginal, setRandomDone, plays, items, resolved, rolled, applyKingdom, onPick, text, avoid, handBane }) {
   // "Use this kingdom" (the bottom bar's button on this screen) closes the roll into a summary of what was chosen, like a finished draft: the cards, the landscapes, the setup, and a way back
   if (randomDone && items.length) {
@@ -115,11 +115,10 @@ function RandomRoll({ catalog, roll, setRollOpts, resetRoll, kept, onKeep, hand,
   const shown = handEdited ? stateFromItems(catalog, items, handBane) : rolled;
   return (
     <>
-      {handEdited && items.length > 0 && !hand && <p className="meta">This kingdom is as chosen before. <b>Re-roll</b> a card to swap just that one, or <b>Lock</b> the ones to keep and roll again.</p>}
+      {handEdited && items.length > 0 && <p className="meta">This kingdom is as chosen before. <b>Re-roll</b> a card to swap just that one, or <b>Lock</b> the ones to keep and roll again.</p>}
       <RandomizerPanel catalog={catalog} opts={roll} setOpts={setRollOpts} state={shown} plays={plays} emptyHint={false} avoid={avoid}
         onState={res => applyKingdom(toGameItems(res), res)} onReset={resetRoll} kept={kept} onKeep={onKeep}
-        editing={hand} onEdit={(next, implied) => onPick(next, implied)}
-        extraControls={<button type="button" className="ghost dn-toggle" aria-pressed={hand} onClick={() => setHand(!hand)}>{hand ? 'Done editing' : 'Pick cards by hand'}</button>} />
+        onEdit={(next, implied) => onPick(next, implied)} />
       {items.length > 0 && !shown && text}
     </>
   );

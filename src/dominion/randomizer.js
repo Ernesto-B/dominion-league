@@ -98,7 +98,7 @@ export const DEFAULT_OPTIONS = Object.freeze({
   landscapeTypes: [],      // empty = all five types
   maxAttacks: null,        // null = any number of Attack piles
   minAttacks: null,        // at least this many Attack piles; null = automatic: one once the most is 1 or more (so "at most 2" also means "at least 1"), until someone sets it
-  balance: true,           // no two specialists of the same role (BALANCE_LIMIT); on unless turned off
+  balance: false,          // "No overlap": no two specialists of the same role (BALANCE_LIMIT); off unless turned on
   gives: [],               // keys of GIVES: at least GIVES_MIN cards that give each
   maxOf: Object.freeze({ draw: 3, trash: 3, village: 3, buy: 3 }),   // at most this many piles with that mechanic (CAP_RULES); a kind left out has no cap
   maxCost: null,           // null = any, else no card costs more than this many coins (and none costs Debt)
@@ -568,7 +568,7 @@ export function optionsToParams(opts, p = new URLSearchParams()) {
   if (o.favorBy) p.set('fb', o.favorBy);
   if (!o.junkTrash) p.set('jt', '0');   // on is the default, so only "off" is written
   o.gives.forEach(v => p.append('gv', v));
-  if (!o.balance) p.set('bal', '0');   // on is the default, so only "off" is written
+  if (o.balance) p.set('bal', '1');   // off is the default, so only "on" is written
   if (o.costSpread !== d.costSpread) p.set('cs', o.costSpread ?? 'off');
   o.themes.forEach(v => p.append('th', v));
   return p;
@@ -583,7 +583,7 @@ export function optionsFromParams(p) {
     maxAttacks: intIn(p.get('atk'), 0, 12, null), minAttacks: intIn(p.get('atkmin'), 0, 12, null), maxCost: intIn(p.get('maxc'), 2, 10, null), reaction: p.get('rx') === '1',
     require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: [], exclude: [],   /* the old always / never lists are gone from the screen, so an old link's inc= / exc= is not applied unseen */ excludeLandscapes: [], favor: p.get('fav') === '1',
     favorPlayed: p.get('fp') === '1', favorTable: p.get('ft') === '1', favorBy: (p.get('fb') || '').slice(0, 60), junkTrash: p.get('jt') !== '0', costSpread: p.get('cs') === 'off' ? null : COST_SPREADS[p.get('cs')] ? p.get('cs') : d.costSpread,
-    themes: [...new Set(many(p, 'th').filter(t => THEMES[t]))], gives: [...new Set(many(p, 'gv').filter(k => GIVES[k]))], balance: p.get('bal') !== '0',
+    themes: [...new Set(many(p, 'th').filter(t => THEMES[t]))], gives: [...new Set(many(p, 'gv').filter(k => GIVES[k]))], balance: p.get('bal') === '1',
     maxOf: many(p, 'mx').map(v => v.split(':')).filter(([r, n]) => CAP_RULES.includes(r) && /^(\d|x)$/.test(n || '')).reduce((m, [r, n]) => { if (n === 'x') delete m[r]; else m[r] = Math.min(MAX_CAP, +n); return m; }, { ...d.maxOf }),
   };
 }
