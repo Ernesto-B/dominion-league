@@ -2549,3 +2549,5 @@ input,textarea,select,[contenteditable="true"],[contenteditable=""]{-webkit-user
 body.selectable{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 /* the floating Analyze pill is for phones only: a computer has the A key, and its bar of buttons stays near the cards */
 @media (min-width:721px){.dn-az-fab{display:none}}
+/* a phone has no Analyze button beside the seed: the floating one is there while the kingdom's cards are on screen */
+@media (max-width:720px){.dn-az-btn{display:none}}

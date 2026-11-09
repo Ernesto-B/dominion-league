@@ -24,16 +24,18 @@ export default function Analyze({ catalog, slots, onPick = null, onFix = null })
   const [open, setOpen] = useState(() => wide() && remembered());   // a phone always starts closed; a computer reopens as it was left
   const set = v => { setOpen(v); try { if (wide()) window.localStorage.setItem(KEY, v ? '1' : '0'); } catch { /* not remembered */ } };
   const btn = useRef(null);
-  // the button sits in the bar above the cards, so it scrolls away with it. While the kingdom is on screen but that button is not, a small floating copy keeps Analyze one tap away.
-  const [seen, setSeen] = useState({ btn: true, kingdom: false });
+  // On a phone the in-bar button is not shown (style.css); the floating one is there while the kingdom's CARDS are on screen: from the moment the first card shows, not before, to the last.
+  const [onScreen, setOnScreen] = useState(false);
   useEffect(() => {
-    const el = btn.current, sec = el && el.closest('.dn-rz-result');
-    if (!el || !sec || typeof IntersectionObserver === 'undefined') return undefined;
-    const io = new IntersectionObserver(es => setSeen(s => { const n = { ...s }; es.forEach(e => { n[e.target === el ? 'btn' : 'kingdom'] = e.isIntersecting; }); return n; }));
-    io.observe(el); io.observe(sec);
+    const sec = btn.current && btn.current.closest('.dn-rz-result');
+    const grids = sec ? [...sec.querySelectorAll('.dn-rzgrid')] : [];
+    if (!grids.length || typeof IntersectionObserver === 'undefined') return undefined;
+    const seen = new Set();
+    const io = new IntersectionObserver(es => { es.forEach(e => (e.isIntersecting ? seen.add(e.target) : seen.delete(e.target))); setOnScreen(seen.size > 0); });
+    grids.forEach(g => io.observe(g));
     return () => io.disconnect();
-  }, []);
-  const floating = !open && !seen.btn && seen.kingdom;
+  }, [slots]);   // a new roll can bring a landscape grid with it
+  const floating = !open && onScreen;
   useEffect(() => {   // Game night's "Fix it" asks for the panel
     const ask = () => { if (takeAnalyzeRequest()) setOpen(true); };
     ask();
