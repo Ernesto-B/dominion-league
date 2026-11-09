@@ -14,7 +14,7 @@ const ids = STEPS.map(s => s.id);
 export const todayISO = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export const blankNight = (today = todayISO()) => ({
-  step: 'players', picked: [], tie: {}, vp: {}, kingdomMode: null, randomDone: false, randomOriginal: null, handEdited: false, handBane: null, rollOpts: null, kept: null, handOpen: false, draftSave: null, kingdom: [], kingdomTouched: false, rolled: null, rolledQ: null, sets: [], landscapes: [],
+  step: 'players', picked: [], tie: {}, vp: {}, kingdomMode: null, recPicking: false, recSet: null, randomDone: false, randomOriginal: null, handEdited: false, handBane: null, rollOpts: null, kept: null, handOpen: false, draftSave: null, kingdom: [], kingdomTouched: false, rolled: null, rolledQ: null, sets: [], landscapes: [],
   date: today, type: '', notes: '', startedAt: null, endedAt: null, minutesEdit: null, editId: null,
 });
 
@@ -82,7 +82,7 @@ const orNull = ok => v => v === null || ok(v);
 const isDraft = v => isObj(v) && isStrs(v.seats) && isStrs(v.picks) && (v.banned === undefined || (Array.isArray(v.banned) && v.banned.every(k => k === null || typeof k === 'string')))
   && (v.draft === null || (isObj(v.draft) && isNum(v.draft.seed) && isObj(v.draft.options) && (v.draft.n == null || isNum(v.draft.n)) && (v.draft.size == null || isNum(v.draft.size))));
 const FIELDS = {
-  step: v => ids.includes(v), picked: isStrs, tie: isObj, vp: isObj, kingdomMode: orNull(v => ['random', 'manual', 'draft'].includes(v)), randomDone: v => typeof v === 'boolean',
+  step: v => ids.includes(v), picked: isStrs, tie: isObj, vp: isObj, kingdomMode: orNull(v => ['random', 'manual', 'recommended', 'draft'].includes(v)), randomDone: v => typeof v === 'boolean', recPicking: v => typeof v === 'boolean', recSet: orNull(v => typeof v === 'string'),
   randomOriginal: orNull(isStrs), handEdited: v => typeof v === 'boolean', handBane: orNull(v => typeof v === 'string'), rollOpts: orNull(isObj), kept: orNull(isObj),
   handOpen: v => typeof v === 'boolean', draftSave: orNull(isDraft), kingdom: isItems, kingdomTouched: v => typeof v === 'boolean', rolledQ: orNull(v => typeof v === 'string'),
   sets: isStrs, landscapes: isStrs, date: v => typeof v === 'string', type: v => typeof v === 'string', notes: v => typeof v === 'string',

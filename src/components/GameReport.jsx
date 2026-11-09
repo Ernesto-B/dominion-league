@@ -210,6 +210,7 @@ export function Kingdom({ rep, game, loaded }) {
   const priceNote = pctile == null ? '' : pctile >= 100 ? ' · the priciest so far' : pctile <= 0 ? ' · the cheapest so far' : ` · pricier than ${pctile}% of kingdoms`;
   return (
     <>
+      {game.recommendedSet && <p className="gr-recset">Recommended set: <b>{game.recommendedSet}</b></p>}
       <ul className="gr-tiles">
         <li><b>{k.avgCost != null ? one(k.avgCost) : '—'}</b><span>average cost</span><small>{vs.avgCost != null ? `group usual ${one(vs.avgCost)}${priceNote}` : 'Debt cards are not counted'}</small></li>
         <li><b>{k.attacks}</b><span>Attack{k.attacks === 1 ? '' : 's'}</span><small>{vs.avgAttacks != null ? `usual ${one(vs.avgAttacks)}` : ' '}</small></li>

@@ -7,12 +7,15 @@ import { impliedSets, resolveKingdom, shelfOrder } from '../dominion/kingdom.js'
 import { decodeKingdom, looksLikeCode } from '../dominion/kingdomCode.js';
 import { Setup } from '../dominion/components/RandomizerPanel.jsx';
 import { KingdomChip, ShelfGroups } from '../dominion/components/KingdomChips.jsx';
+import SetIcon from './SetIcon.jsx';
+import RecommendedPicker from '../dominion/components/RecommendedPicker.jsx';
 import { formatSeed, parseSeed, playsFor, rollSeeded, stateFromItems, toGameItems, withAvoid } from '../dominion/randomizer.js';
 
 const CHOICES = [
   { id: 'random', title: 'Random', text: 'Roll a kingdom with your own rules. Lock the cards you like and re-roll the rest.' },
-  { id: 'manual', title: 'Manual', text: 'Type in and pick every card yourself.' },
+  { id: 'recommended', title: 'Recommended Sets', text: 'Start from a kingdom the rulebooks suggest, such as First Game.' },
   { id: 'draft', title: 'Snake draft', text: 'Take turns choosing from a pool of cards, the last seat picking twice.' },
+  { id: 'manual', title: 'Manual', text: 'Type in and pick every card yourself.' },
 ];
 
 /* Game night step 2. It opens on one question, "How do you want to decide your kingdom?", and each answer is its own screen and Night's Back button returns
@@ -23,7 +26,7 @@ const CHOICES = [
    (in progress or finished): all kept in the saved night, so they survive going back to the question or a look at a card
    applyKingdom(items, rolled)      stores a roll, a draft or a hand-picked list as the game's kingdom
    onSkip()              leave the kingdom out and go on to the scores (a game can be saved without one) */
-export default function KingdomStep({ catalog, mode, setMode, players, roll, setRollOpts, resetRoll, kept, onKeep, hand, setHand, draftSave, onDraft, onRestartDraft, plays, items, resolved, rolled, setupNow, handEdited, randomDone, randomOriginal, setRandomDone, applyKingdom, onPick, onSkip, text, avoid = [], handBane = null }) {
+export default function KingdomStep({ recDef = null, recChanged = false, catalog, mode, setMode, players, roll, setRollOpts, resetRoll, kept, onKeep, hand, setHand, draftSave, onDraft, onRestartDraft, plays, items, resolved, rolled, setupNow, handEdited, randomDone, randomOriginal, setRandomDone, applyKingdom, onPick, onRecommend, picking, onSkip, text, avoid = [], handBane = null }) {
   const [ask, setAsk] = useState(false);   // the Manual screen's "Remove everything?" question is open
   if (!mode) return (
     <>
@@ -44,6 +47,7 @@ export default function KingdomStep({ catalog, mode, setMode, players, roll, set
         hand={hand} setHand={setHand} handPanel={<RandomizerPanel bare editing catalog={catalog} opts={roll} setOpts={setRollOpts} state={stateFromItems(catalog, items, handBane)} onState={() => {}} onReset={() => {}} onEdit={(next, implied) => onPick(next, implied)} avoid={avoid} />} />
     </>
   );
+  if (mode === 'recommended') return <RecommendedRoll {...{ catalog, roll, setRollOpts, items, handBane, avoid, setupNow, handEdited, onPick, onChoose: onRecommend, picking: picking || items.length === 0, randomDone, randomOriginal, resolved, rolled, recDef, recChanged }} />;
   if (mode === 'manual') return (
     <>
       <div className="dn-manual-head">
@@ -86,8 +90,35 @@ function SeedLoader({ catalog, roll, plays, avoid, onLoad }) {
 
 // the Random screen: the options and Roll row, then the kingdom with Lock / Re-roll / Replace / Remove on each tile
 function RandomRoll({ catalog, roll, setRollOpts, resetRoll, kept, onKeep, hand, setHand, setupNow, handEdited, randomDone, randomOriginal, setRandomDone, plays, items, resolved, rolled, applyKingdom, onPick, text, avoid, handBane }) {
-  // "Use this kingdom" (the bottom bar's button on this screen) closes the roll into a summary of what was chosen, like a finished draft: the cards, the landscapes, the setup, and a way back
-  if (randomDone && items.length) {
+  if (randomDone && items.length) return <ChosenSummary {...{ catalog, items, resolved, rolled, randomOriginal, setupNow }} />;
+  // once cards are changed by hand the roll is gone (it is no longer what the seed makes), but the kingdom is still shown as the same tiles
+  const shown = handEdited ? stateFromItems(catalog, items, handBane) : rolled;
+  return (
+    <>
+      {handEdited && items.length > 0 && <p className="meta">This kingdom is as chosen before. <b>Re-roll</b> a card to swap just that one, or <b>Lock</b> the ones to keep and roll again.</p>}
+      <RandomizerPanel catalog={catalog} opts={roll} setOpts={setRollOpts} state={shown} plays={plays} emptyHint={false} avoid={avoid}
+        onState={res => applyKingdom(toGameItems(res), res)} onReset={resetRoll} kept={kept} onKeep={onKeep}
+        onEdit={(next, implied) => onPick(next, implied)} />
+      {items.length > 0 && !shown && text}
+    </>
+  );
+}
+
+// the Recommended screen: the list of sets until one is chosen, then the kingdom as tiles (hand-editable like Manual) with its setup notes. Night's Back returns to the list,
+// and "Use in Random" (beside the step's heading in Night) carries the kingdom over to the Random screen as a starting point
+function RecommendedRoll({ catalog, roll, setRollOpts, items, handBane, avoid, setupNow, handEdited, onPick, onChoose, picking, randomDone, randomOriginal, resolved, rolled, recDef, recChanged }) {
+  if (randomDone && items.length && !picking) return <ChosenSummary {...{ catalog, items, resolved, rolled, randomOriginal, setupNow, recDef, recChanged }} />;   // after "Use this kingdom"
+  if (picking) return <RecommendedPicker catalog={catalog} avoid={avoid} onChoose={onChoose} />;
+  return (
+    <>
+      <RandomizerPanel bare editing catalog={catalog} opts={roll} setOpts={setRollOpts} state={stateFromItems(catalog, items, handBane)} onState={() => {}} onReset={() => {}} onEdit={(next, implied) => onPick(next, implied)} avoid={avoid} />
+      {handEdited && items.length > 0 && setupNow && <Setup catalog={catalog} setup={setupNow} />}
+    </>
+  );
+}
+
+// "Use this kingdom" (the bottom bar's button, on the Random and the Recommended Sets screens) closes the kingdom into a summary of what was chosen, like a finished draft: the cards, the landscapes, the setup, and a way back
+function ChosenSummary({ catalog, items, resolved, rolled, randomOriginal, setupNow, recDef = null, recChanged = false }) {
     // on the summary the cards are laid out like the boxes (a row per expansion, A to Z in it) with each one's expansion icon: the table finds them that way
     const cards = resolved.filter(r => r.kind === 'card' && !r.missing).sort(shelfOrder), lands = resolved.filter(r => r.kind === 'landscape' && !r.missing).sort(shelfOrder);
     // cards taken out by hand stay where they were rolled, struck through, with the card typed in beside them (as on a finished draft)
@@ -104,22 +135,11 @@ function RandomRoll({ catalog, roll, setRollOpts, resetRoll, kept, onKeep, hand,
     return (
       <section className="builder dn-draft" aria-label="Kingdom chosen">
         <p className="dn-draft-done"><b>Kingdom Chosen</b>{rolled && rolled.seed != null && <span className="meta"> · Seed {formatSeed(rolled.seed)}</span>}</p>
+        {recDef && <p className="dn-rec-chosen"><b>{recDef.name}</b><span className="dn-rec-sets">{recDef.sets.map(n => <SetIcon key={n} name={n} size={18} />)}</span>{recChanged && <span className="meta">with your changes</span>}</p>}
         <p className="meta" style={{ margin: '0 0 6px' }}>{cards.length} Kingdom card{cards.length === 1 ? '' : 's'}</p>
         <ShelfGroups entries={entries} />
         {lands.length > 0 && <><p className="meta" style={{ margin: '12px 0 6px' }}>Landscapes</p><ShelfGroups entries={lands.map(r => ({ r, node: <KingdomChip key={r.id} r={r} plain expansion catalog={catalog} /> }))} /></>}
         {setupNow && <Setup catalog={catalog} setup={setupNow} />}
       </section>
     );
-  }
-  // once cards are changed by hand the roll is gone (it is no longer what the seed makes), but the kingdom is still shown as the same tiles
-  const shown = handEdited ? stateFromItems(catalog, items, handBane) : rolled;
-  return (
-    <>
-      {handEdited && items.length > 0 && <p className="meta">This kingdom is as chosen before. <b>Re-roll</b> a card to swap just that one, or <b>Lock</b> the ones to keep and roll again.</p>}
-      <RandomizerPanel catalog={catalog} opts={roll} setOpts={setRollOpts} state={shown} plays={plays} emptyHint={false} avoid={avoid}
-        onState={res => applyKingdom(toGameItems(res), res)} onReset={resetRoll} kept={kept} onKeep={onKeep}
-        onEdit={(next, implied) => onPick(next, implied)} />
-      {items.length > 0 && !shown && text}
-    </>
-  );
 }

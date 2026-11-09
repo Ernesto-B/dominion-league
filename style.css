@@ -2490,3 +2490,33 @@ details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
 @media (pointer:coarse){.pp-menu button.pp-opt{min-height:44px}}
 /* room between the Games filters and the Cards / Kingdoms switch (it nearly touched the open panel on a phone) */
 .dn-facets+.gview-bar,.dn-facets~.gview-bar{margin-top:20px}
+
+/* Game night > Recommended: a short list of the rulebooks' kingdoms under a row of expansion buttons */
+.dn-rec .dn-chips{margin:0 0 12px}
+.dn-rec-list{list-style:none;margin:0;padding:0;display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.dn-rec-item{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;height:100%;box-sizing:border-box;padding:12px 14px;text-align:left;background:var(--panel);color:inherit;border:1px solid var(--line);border-radius:12px;font:inherit;cursor:pointer}
+.dn-rec-item:hover:not(:disabled){border-color:var(--brass)}
+.dn-rec-item:disabled{opacity:.45;cursor:default}
+.dn-rec-name{font-weight:700;font-size:16px}
+.dn-rec-sets{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.dn-rec-extra{font-size:13px}
+
+/* four ways to decide a kingdom: one row on a wide screen, two by two on a middling one, stacked on a phone (the max-width:720px rule above) */
+.night-choices{grid-template-columns:repeat(4,minmax(0,1fr))}
+.night-choice{padding:14px}
+@media (min-width:721px) and (max-width:980px){.night-choices{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:720px){.night-choices{grid-template-columns:1fr}}
+
+/* Game night: the step's heading with one action on its right (a chosen recommended set's "Use in Random") */
+.night-headrow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+.night-headrow h2{margin:0}
+.night-headact{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.night-headact button:disabled{opacity:.45;cursor:not-allowed}   /* Reset with nothing to undo: plainly off */
+.night-recname{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:17px}   /* the chosen recommended set: its name, then its expansions' icons on one row */
+.night-recicons{display:inline-flex;align-items:center;gap:6px;flex-wrap:nowrap}
+.night-recacts{margin:0 0 14px}
+.night-recname{padding-left:18px}   /* the heading's diamond takes 8px + 10px, so the set's name starts where "The Kingdom" does */
+/* a computer: the set's name and icons on the left, Reset and Use in Random on the right of the same row (a phone keeps them stacked) */
+@media (min-width:721px){.night-recrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px}.night-recrow .night-recname,.night-recrow .night-recacts{margin:0}}
+.dn-rec-chosen{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px;font-size:16px}   /* Kingdom Chosen > the recommended set it came from */
+.gr-recset{margin:0 0 10px}

@@ -289,7 +289,7 @@ function SeedButton({ text, copy: toCopy = null, code = false }) {
 
 // a tile's buttons: Lock and Re-roll under it (the bare draft tiles swap them for Replace / Remove)
 function TileButtons({ name, editing, locked, onLock, onReroll, onReplace, onRemove }) {
-  if (editing) return <div className="dn-rztile-btns"><EditButtons name={name} onReplace={onReplace} onRemove={onRemove} /></div>;
+  if (editing) return null;   // hand-picking (Manual, Recommended, a finished draft): Replace and Remove are the icons on the tile's corner, so nothing sits under it
   return (
     <div className="dn-rztile-btns">
       <button type="button" className="ghost" aria-pressed={locked} onClick={onLock} title={locked ? `Unlock ${name}` : `Keep ${name} when you roll again`}>{locked ? 'Locked' : 'Lock'}</button>
@@ -298,9 +298,9 @@ function TileButtons({ name, editing, locked, onLock, onReroll, onReplace, onRem
   );
 }
 
-// Replace (choose another card) and Remove, always in view as two round icon buttons hanging off the top-right corner of a tile
+// Replace (choose another card) and Remove, always in view (on every way of editing a kingdom) as two round icon buttons hanging off the top-right corner of a tile
 function CornerActions({ name, editing, onReplace, onRemove }) {
-  if (editing || !onReplace) return null;
+  if (!onReplace) return null;
   return (
     <div className="dn-corner">
       <button type="button" className="dn-corner-b" onClick={onReplace} aria-label={`Replace ${name} with a card you pick`} title={`Replace ${name} with a card you pick`}>
@@ -311,14 +311,6 @@ function CornerActions({ name, editing, onReplace, onRemove }) {
       </button>
     </div>
   );
-}
-
-// while editing by hand a tile's two buttons are Replace (search for another) and Remove
-function EditButtons({ name, onReplace, onRemove }) {
-  return <>
-    <button type="button" className="ghost" onClick={onReplace} title={`Swap ${name} for a card you pick`}>Replace</button>
-    <button type="button" className="ghost dn-remove" onClick={onRemove} title={`Take ${name} out of the kingdom`}>Remove</button>
-  </>;
 }
 
 // the dashed place at the end of a grid that adds one more

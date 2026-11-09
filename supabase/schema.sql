@@ -45,6 +45,7 @@ alter table games add column if not exists group_id text;
 -- When the match itself began and ended (the Game night timer), as opposed to created_at, which is when it was logged. Both are optional: games logged
 -- before the timer, or from the Add Game dialog, have neither. The Games page's report shows them as times of day.
 alter table games add column if not exists started_at timestamptz;
+alter table games add column if not exists recommended_set text;   -- the name of the rulebook's recommended kingdom this game used unchanged (Game night's Recommended Sets), or null
 alter table games add column if not exists ended_at timestamptz;
 -- Landscape card types in play (Events/Projects/Traits/Landmarks), '; '-separated like sets.
 alter table games add column if not exists landscapes text;
@@ -345,13 +346,17 @@ begin
 end;
 $$;
 
+-- the versions before recommended_set was added (the new one takes it as one more optional trailing argument)
+drop function if exists add_game(date, text, text, text, text, int, int, text, text, jsonb, jsonb, timestamptz, timestamptz);
+
 create or replace function add_game(
   p_date date, p_type text, p_sets text, p_landscapes text, p_strategy text,
   p_winner_vp int, p_minutes int, p_notes text,
   p_group_id text, -- null only valid when no groups are configured at all
   p_results jsonb, -- [{"player_id": "...", "place": 1}, ...]
   p_kingdom jsonb default null, -- [{"kind": "card"|"landscape", "id": "<catalog id>", "on": "<card id, for a Trait>"}, ...]; null = none given
-  p_started_at timestamptz default null, p_ended_at timestamptz default null -- the match's own clock (Game night's timer); null = not recorded
+  p_started_at timestamptz default null, p_ended_at timestamptz default null, -- the match's own clock (Game night's timer); null = not recorded
+  p_recommended_set text default null -- the recommended kingdom used as it came, by name; null = none
 ) returns bigint
 language plpgsql
 security definer
@@ -378,8 +383,8 @@ begin
     end if;
   end if;
 
-  insert into games (date, type, sets, landscapes, strategy, winner_vp, minutes, notes, group_id, created_by, started_at, ended_at)
-  values (p_date, coalesce(p_type, ''), p_sets, p_landscapes, p_strategy, p_winner_vp, p_minutes, p_notes, p_group_id, auth.uid(), p_started_at, p_ended_at)
+  insert into games (date, type, sets, landscapes, strategy, winner_vp, minutes, notes, group_id, created_by, started_at, ended_at, recommended_set)
+  values (p_date, coalesce(p_type, ''), p_sets, p_landscapes, p_strategy, p_winner_vp, p_minutes, p_notes, p_group_id, auth.uid(), p_started_at, p_ended_at, nullif(left(btrim(coalesce(p_recommended_set, '')), 80), ''))
   returning id into v_game_id;
 
   insert into game_results (game_id, player_id, place, vp)
@@ -473,7 +478,7 @@ begin
 end;
 $$;
 
-revoke execute on function add_game(date, text, text, text, text, int, int, text, text, jsonb, jsonb, timestamptz, timestamptz) from anon;
+revoke execute on function add_game(date, text, text, text, text, int, int, text, text, jsonb, jsonb, timestamptz, timestamptz, text) from anon;
 revoke execute on function edit_game(bigint, date, text, text, text, text, int, int, text, text, jsonb, jsonb, timestamptz, timestamptz) from anon;
 revoke execute on function write_game_kingdom(bigint, jsonb) from public, anon, authenticated;
 revoke execute on function delete_game(bigint) from anon;
@@ -503,15 +508,19 @@ create table if not exists pending_games (
   ended_at timestamptz,
   created_at timestamptz not null default now()
 );
+alter table pending_games add column if not exists recommended_set text;   -- as on games: handed to add_game when the admin accepts it
 alter table pending_games enable row level security;
 drop policy if exists pending_select on pending_games;
 create policy pending_select on pending_games for select to authenticated using (is_admin() or created_by = auth.uid());
+
+-- the version before recommended_set was added
+drop function if exists submit_pending_game(date, text, text, text, text, int, int, text, text, jsonb, jsonb, timestamptz, timestamptz, int);
 
 create or replace function submit_pending_game(
   p_date date, p_type text, p_sets text, p_landscapes text, p_strategy text,
   p_winner_vp int, p_minutes int, p_notes text, p_group_id text, p_results jsonb,
   p_kingdom jsonb default null, p_started_at timestamptz default null, p_ended_at timestamptz default null,
-  p_clock_minutes int default null
+  p_clock_minutes int default null, p_recommended_set text default null
 ) returns bigint
 language plpgsql
 security definer
@@ -532,8 +541,8 @@ begin
   -- at most six games wait for approval in a group at a time, so the admin is never buried: approve or reject some, then send more
   if (select count(*) from pending_games where group_id = p_group_id) >= 6 then raise exception 'There are already 6 games waiting for approval. Ask the admin to approve some first.'; end if;
 
-  insert into pending_games (group_id, created_by, date, type, sets, landscapes, notes, results, kingdom, minutes, clock_minutes, started_at, ended_at)
-  values (p_group_id, auth.uid(), p_date, coalesce(p_type, ''), p_sets, p_landscapes, p_notes, p_results, p_kingdom, p_minutes, p_clock_minutes, p_started_at, p_ended_at)
+  insert into pending_games (group_id, created_by, date, type, sets, landscapes, notes, results, kingdom, minutes, clock_minutes, started_at, ended_at, recommended_set)
+  values (p_group_id, auth.uid(), p_date, coalesce(p_type, ''), p_sets, p_landscapes, p_notes, p_results, p_kingdom, p_minutes, p_clock_minutes, p_started_at, p_ended_at, nullif(left(btrim(coalesce(p_recommended_set, '')), 80), ''))
   returning id into v_id;
   return v_id;
 end;
@@ -563,5 +572,5 @@ end;
 $$;
 
 revoke execute on function set_game_logged_at(bigint, timestamptz) from anon;
-revoke execute on function submit_pending_game(date, text, text, text, text, int, int, text, text, jsonb, jsonb, timestamptz, timestamptz, int) from anon;
+revoke execute on function submit_pending_game(date, text, text, text, text, int, int, text, text, jsonb, jsonb, timestamptz, timestamptz, int, text) from anon;
 revoke execute on function discard_pending_game(bigint) from anon;
