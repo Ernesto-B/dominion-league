@@ -96,8 +96,8 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
             options={[...attackChoices.map(n => ({ value: n, label: n === 0 ? 'None' : String(n), aria: n === 0 ? 'No Attacks' : `At most ${n} Attack${n === 1 ? '' : 's'}`, title: n === 0 ? 'No Attacks' : `At most ${n}` })), { value: 'any', label: 'Any' }]} />
           {attacksOn && (
             <div className="dn-chips rzo-in" role="group" aria-label="When an Attack is rolled">
-              <Chip hint="At least one Reaction in the kingdom (not one per Attack)" pressed={opts.reaction} onClick={() => setOpts({ reaction: !opts.reaction })}>Add a Reaction</Chip>
-              <Chip pressed={opts.junkTrash} onClick={() => setOpts({ junkTrash: !opts.junkTrash })}>Add a trasher if Attacks give junk</Chip>
+              <Chip hint="At least one Reaction in the kingdom (not one per Attack)" pressed={opts.reaction} onClick={() => setOpts({ reaction: !opts.reaction })}>Add Reaction</Chip>
+              <Chip pressed={opts.junkTrash} onClick={() => setOpts({ junkTrash: !opts.junkTrash })}>Add trasher if Attacks give junk</Chip>
             </div>
           )}
         </Row>

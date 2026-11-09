@@ -31,6 +31,7 @@ import { pilesPlayed, playStats } from '../dominion/playStats.js';
 import { impliedSets, primaryType, resolveKingdom, shelfOrder } from '../dominion/kingdom.js';
 
 // the options a Game night roll starts from, and Reset goes back to: Attacks allowed, at most two
+const KINGDOM_SIZE = 10;   // Kingdom cards in a full kingdom (the check before a kingdom is used says so when there are fewer)
 const NIGHT_ROLL = { ...DEFAULT_OPTIONS, maxAttacks: 2 };
 
 const storage = () => { try { return window.localStorage; } catch { return null; } };
@@ -123,7 +124,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
   const [st, setSt] = useState(() => (storage() ? loadNight(storage(), gid, undefined, undefined, slot) : blankNight()));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
-  const [check, setCheck] = useState(null);   // the kingdom check: { concerns, go } while it is asked
+  const [check, setCheck] = useState(null);   // the kingdom check: { concerns, analyse, go } while it is asked
   const okSig = useRef(null);               // the kingdom the table already said "start anyway" to
   const savedSt = useRef(null);                          // the form as it was when saved, for Undo
   const [undoing, setUndoing] = useState(false);
@@ -193,13 +194,15 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
   // before a kingdom is used: if the Analyze panel would flag something, ask once (per kingdom) whether to look or go on
   const withCheck = go => {
     if (!catalog || !items.length) { go(); return; }
-    const concerns = concernsOf(analyseKingdom(catalog, stateFromItems(catalog, items, st.handBane).slots)), sig = items.map(i => i.id).join(',');
+    const slots = stateFromItems(catalog, items, st.handBane).slots, found = concernsOf(analyseKingdom(catalog, slots)), sig = items.map(i => i.id).join(',');
+    // a short kingdom is worth a word too (a full one is 10 Kingdom cards)
+    const concerns = slots.length < KINGDOM_SIZE ? [`Only ${slots.length} Kingdom card${slots.length === 1 ? '' : 's'}. A full kingdom has ${KINGDOM_SIZE}.`, ...found] : found;
     if (!concerns.length || okSig.current === sig) { go(); return; }
-    setCheck({ concerns, go: () => { okSig.current = sig; setCheck(null); go(); } });
+    setCheck({ concerns, analyse: found.length > 0, go: () => { okSig.current = sig; setCheck(null); go(); } });
   };
   const reviewKingdom = () => {
-    setCheck(null);
-    if (st.kingdomMode === 'random' || !st.kingdomMode) { if (st.randomDone) setSt(s => ({ ...s, randomDone: false })); requestAnalyze(); }
+    const analyse = check?.analyse; setCheck(null);
+    if (st.kingdomMode === 'random' || !st.kingdomMode) { if (st.randomDone) setSt(s => ({ ...s, randomDone: false })); if (analyse) requestAnalyze(); }   // the Analyze panel only when it has something to say
   };
 
   // ---- saving
@@ -212,9 +215,9 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
     setSaving(true); setMsg('Saving…');
     // a player's table is sent to the admin to approve: nothing about it touches a rating until then. The clock is only trusted when it ran about as long as a game does.
     let call;
-    if (isAdmin) call = callGameRpc(sb, 'add_game', buildGameArgs({ ...st, editId: null }, gid, playerIdByName));
+    if (isAdmin) call = callGameRpc(sb, 'add_game', buildGameArgs({ ...st, editId: null, type: '' }, gid, playerIdByName));
     else {
-      const args = buildGameArgs({ ...st, editId: null }, gid, playerIdByName), t = trustedMinutes(st.startedAt, st.endedAt ?? Date.now(), usualMinutes(D.games));
+      const args = buildGameArgs({ ...st, editId: null, type: '' }, gid, playerIdByName), t = trustedMinutes(st.startedAt, st.endedAt ?? Date.now(), usualMinutes(D.games));
       const typed = st.minutesEdit != null ? cleanMinutes(st.minutesEdit) : null;
       args.p_minutes = typed ?? t.minutes; args.p_clock_minutes = t.clock;
       if (typed == null && t.minutes == null) { delete args.p_started_at; delete args.p_ended_at; }   // a clock left running says nothing true
@@ -366,7 +369,6 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
             {allGroups.length > 1 && <p className="night-savingto" style={{ '--gh': groupHue(allGroups, gid) }}><i aria-hidden="true" />Saving to <b>{groupName}</b></p>}
             <div className="controls">
               <label className="f">Date <input type="date" value={st.date} onChange={e => patch({ date: e.target.value })} /></label>
-              <label className="f">Type <select value={st.type} onChange={e => patch({ type: e.target.value })}>{['', 'Playoff', 'Friendly'].map(t => <option key={t} value={t}>{t || 'Regular'}</option>)}</select></label>
             </div>
             <MatchTime clock={clockMinutes} value={st.minutesEdit} onChange={v => patch({ minutesEdit: v })} />
             <ol className="night-result">{st.picked.map((n, i) => <li key={n}><b>{st.tie[n] ? '=' : i + 1}</b> {n}{st.vp[n] !== undefined && st.vp[n] !== '' && <span className="meta"> — {st.vp[n]} VP</span>}</li>)}</ol>

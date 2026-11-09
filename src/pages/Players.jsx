@@ -111,7 +111,7 @@ export default function Players() {
         <StatTile icon="icons/stats/peak-elo.png" big={f0(p.peak)} label="peak Elo"
           popup={<PopText text="The highest Elo you've ever reached — it never goes down." extra={peakGap > 0.5 ? `${f0(peakGap)} below your peak right now` : "You're at your all-time peak right now"} />} />
         <StatTile icon="icons/stats/rated-games.png" big={p.rated} label={'rated games' + (p.status === 'Provisional' ? ' (provisional)' : '')}
-          popup={<PopText text={`Games that count toward Elo — everything except Friendly games. Your first ${D.E.provisionalGames} are Provisional, with bigger rating swings while the system is still learning your skill.`} />} />
+          popup={<PopText text={`Games that count toward Elo. Your first ${D.E.provisionalGames} are Provisional, with bigger rating swings while the system is still learning your skill.`} />} />
         <StatTile icon="icons/stats/wins.png" big={p.wins} label={`wins (${pc(p.winPct)})`}
           popup={<PopText text="Tables you've won outright — sole 1st place, no ties." extra={`W/L ratio ${ratioTxt}`} />} />
         <StatTile icon="icons/stats/average-points.png" big={vp.avg != null ? f0(vp.avg) : '—'} label="avg VP"

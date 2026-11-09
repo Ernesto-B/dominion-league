@@ -22,7 +22,7 @@ const GameReport = lazy(() => import('../components/GameReport.jsx'));
 const readView = () => { try { const v = localStorage.getItem('dl.gamesview'); return v === 'table' || v === 'kingdoms' ? v : 'cards'; } catch { return 'cards'; } };
 
 // Filters live at module level so they survive navigating away and back, as they always have.
-let saved = { season: 'all', type: 'all', player: 'all', set: 'all' };
+let saved = { season: 'all', player: 'all', set: 'all' };
 
 export default function Games() {
   const { D, me, enabledSets, arg, gid, hashFor, allGroups } = usePage();
@@ -40,7 +40,7 @@ export default function Games() {
   const set = k => e => { saved = { ...gf, [k]: e.target.value }; setGf(saved); };
   const canEdit = !!(me && me.is_admin);
 
-  const matches = (g, f) => (f.season === 'all' || String(g.season) === f.season) && (f.type === 'all' || g.type === f.type)
+  const matches = (g, f) => (f.season === 'all' || String(g.season) === f.season)
     && (f.player === 'all' || g.places[f.player] != null) && (f.set === 'all' || g.sets.includes(f.set));
   // #/games/<group>/<id> — a link to one game opens that game's report (components/GameReport.jsx), the deepest view there is. An id that isn't in this group
   // is ignored and the list shows as usual.
@@ -50,7 +50,7 @@ export default function Games() {
   const hlId = (/^\?game=(\d+)$/.exec(arg || '') || [])[1];
   const hl = hlId ? D.games.find(g => g.line === +hlId) : null;
   useLayoutEffect(() => {
-    if (hl && !matches(hl, saved)) { saved = { season: 'all', type: 'all', player: 'all', set: 'all' }; setGf(saved); }
+    if (hl && !matches(hl, saved)) { saved = { season: 'all', player: 'all', set: 'all' }; setGf(saved); }
   }, [arg]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const list = D.games.filter(g => matches(g, gf)).slice().reverse();
@@ -63,7 +63,6 @@ export default function Games() {
   const sets = SET_NAMES.filter(n => enabledSets.has(n) || D.records.sets[n]);
   const facets = [
     { id: 'season', label: 'Season', single: true, value: gf.season === 'all' ? null : (D.seasons.find(s => String(s.number) === gf.season) || {}).name, children: one('season', 'All seasons', D.seasons.map(s => [String(s.number), s.name])) },
-    { id: 'type', label: 'Type', single: true, value: gf.type === 'all' ? null : gf.type, children: one('type', 'All types', ['Regular', 'Playoff', 'Friendly'].map(t => [t, t])) },
     { id: 'player', label: 'Player', menu: true, value: gf.player === 'all' ? null : gf.player, children: (
       // the player list looks like the Player page's picker: each name with their tier icon, scrolling when long
       <nav className="pp-menu" ref={scrollFadeRef} aria-label="Choose a player">
@@ -93,7 +92,7 @@ export default function Games() {
         </div>
       </div>
       {modal && <Suspense fallback={null}><GameModal key={String(modal.editId)} editId={modal.editId} onClose={() => setModal(null)} /></Suspense>}
-      {list.length && shownView === 'kingdoms' ? <KingdomWall key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}`} games={list} /> : list.length ? <GamesTable paged key={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} stateKey={`${gf.season}|${gf.type}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} games={list} highlight={hl ? hl.line : undefined} mark={gf.player !== 'all' ? gf.player : null} view={shownView === 'table' ? 'table' : 'cards'} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
+      {list.length && shownView === 'kingdoms' ? <KingdomWall key={`${gf.season}|${gf.player}|${gf.set}`} games={list} /> : list.length ? <GamesTable paged key={`${gf.season}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} stateKey={`${gf.season}|${gf.player}|${gf.set}|${hl ? hl.line : ''}`} games={list} highlight={hl ? hl.line : undefined} mark={gf.player !== 'all' ? gf.player : null} view={shownView === 'table' ? 'table' : 'cards'} onEdit={canEdit ? id => setModal({ editId: id }) : undefined} /> : <p className="empty">Nothing matches those filters.</p>}
     </>
   );
 }

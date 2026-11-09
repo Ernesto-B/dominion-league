@@ -22,10 +22,10 @@ export default function Welcome() {
       <p>Dominion Night tracks each game your group plays: who finished where, how your rating moves, and what was on the table.</p>
       <p className="welcome-fact">{start && <TierIcon id={start.icon} size={28} alt="" />}<span>You start at <b>{E.start} Elo</b> as a <b>{start ? start.name : 'beginner'}</b>.{mineP && !mineP.rated ? ' Your first rated game puts you on the ladder.' : ''}</span></p></> },
     { title: 'How you climb', body: <>
-      <p><b>Finish in the top half and your Elo goes up;</b> win and it goes up a little more. Behind the middle of the table, it goes down. Friendly games never count.</p>
+      <p><b>Finish in the top half and your Elo goes up;</b> win and it goes up a little more. Behind the middle of the table, it goes down.</p>
       <p className="welcome-tiers" aria-label="Rank tiers">{(D.tiers || []).map(t => <span key={t.id}><TierIcon id={t.icon} size={22} alt="" />{t.name}</span>)}</p></> },
     { title: 'XP, levels and badges', body: <>
-      <p>Every game earns <b>XP</b>, even friendly ones, and XP builds your level. {total ? `There are ${total} badges` : 'There are dozens of badges'} to unlock, and a few are secret.</p>
+      <p>Every game earns <b>XP</b>, and XP builds your level. {total ? `There are ${total} badges` : 'There are dozens of badges'} to unlock, and a few are secret.</p>
       <p className="meta">Pin your favourite three under your name on your page.</p></> },
     { title: 'Around the site', body: <>
       <ul className="welcome-list">

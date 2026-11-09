@@ -112,7 +112,7 @@ export default function Rankings() {
     {D.E.promotionHold > 1 && <p className="note"><b>Promotion trial:</b> from {(D.tiers.find(t => t.id === D.E.promotionHoldFrom) || D.tiers[1]).name} upward, one big game does not promote you. You rise one rank after ending {D.E.promotionHold} rated games in a row at or over the next line, and a game that ends under it starts the count again. Win more than one rank's worth and the next trial starts straight after.</p>}
     {D.E.duelScale > 0 && D.E.duelScale < 1 && <p className="note"><b>Duels:</b> a game of two is a coin flip, so it moves your Elo much less than a bigger table does: about {Math.round(D.E.duelScale * 100)}% of the usual swing, and the winner isn’t paid twice for finishing top half and first.</p>}
     <p className="note">The trophy is for winning a season and never goes away.</p>
-    <p className="note">Everyone starts at {D.E.start} as a {D.startTier.name} and climbs from there. Elo carries across seasons; friendly games never count. New players move faster for their first {D.E.provisionalGames} games (provisional).</p>
+    <p className="note">Everyone starts at {D.E.start} as a {D.startTier.name} and climbs from there. Elo carries across seasons. New players move faster for their first {D.E.provisionalGames} games (provisional).</p>
     <p className="note">This ladder is Elo — a lifetime skill rating that never resets. It's not what decides a season's winner; that's points, on the <a href={hashFor('season', gid)}>Season page</a>.</p>
   </>;
   const chips = (

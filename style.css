@@ -2431,7 +2431,7 @@ details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
 .dn-drawn-m{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
 .dn-drawn-btns{display:flex;flex-wrap:nowrap;gap:8px;min-width:0}   /* one row always: a long name is cut short with an ellipsis instead of pushing Draw another below */
 .dn-drawn-btns>button{min-width:0}
-.dn-drawn-btns>button:first-child{flex:0 1 auto}
+.dn-drawn-btns>button:last-child{flex:0 1 auto}   /* Add / Use sits on the right and is the one that shrinks */
 .dn-drawn-btns>.ghost{flex:none;white-space:nowrap}
 .dn-drawn-lbl{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 

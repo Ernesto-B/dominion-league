@@ -19,8 +19,8 @@ export default function DrawnPick({ item, kind, replacing, onAgain, times = null
         <h2 className="dn-drawn-n">{name}</h2>
         <p className="dn-drawn-m"><ExpansionBadge name={item.expansion} size={18} /> {card ? <TypePills types={item.types} /> : <LandscapePill type={item.type} />} {(card || item.coins != null) && <CostIcons coins={item.coins} debt={item.debt} overpay={item.overpay} size={24} />}</p>
         <div className="dn-drawn-btns">
-          <button type="button" onClick={() => finishKingdomPick(item.id)}><span className="dn-drawn-lbl">{replacing ? `Use ${name}` : `Add ${name}`}</span></button>
           <button type="button" className="ghost" onClick={onAgain}>Draw another</button>
+          <button type="button" onClick={() => finishKingdomPick(item.id)}><span className="dn-drawn-lbl">{replacing ? `Use ${name}` : `Add ${name}`}</span></button>
         </div>
       </div>
     </section>
