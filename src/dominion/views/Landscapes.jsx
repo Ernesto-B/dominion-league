@@ -11,11 +11,13 @@ import { artifactHref, landscapeHref } from '../links.js';
 import { PLURAL, humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import { hoverHandlers } from '../components/CardHover.jsx';
+import DrawnPick from '../components/DrawnPick.jsx';
+import FacetBar from '../components/FacetBar.jsx';
 import FilterSummary from '../components/FilterSummary.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
 import { PageShortcuts } from '../../components/Shortcuts.jsx';
 import CostIcons, { CoinIcon, DebtIcon, PlainDebtIcon } from '../components/Cost.jsx';
-import { Chip, ExpansionBadge, FilterFold, ModeRow, Section, ExternalLink, LandscapePill, statusLabel, rowLink } from '../components/bits.jsx';
+import { Chip, ExpansionBadge, ModeRow, Section, ExternalLink, LandscapePill, statusLabel, rowLink } from '../components/bits.jsx';
 
 const SORTS = [['name', 'Name'], ['type', 'Type'], ['expansion', 'Expansion'], ['cost', 'Cost'], ['trigger', 'When it applies']];
 // table columns that sort: [sort key, heading, th class]
@@ -32,12 +34,18 @@ export default function Landscapes({ query = '' }) {
   // header clicks share state with the "Sort by" menu: the active column flips direction, another column starts ascending
   const sortBy = key => update(f.sort === key ? { dir: f.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: 'asc' });
   const clear = () => { clearFilters(); setMq(''); };
-  const random = () => { const l = pickRandom(choosing ? rows.filter(x => !blockedL.has(x.id)) : rows); if (!l) return; if (choosing) choosePick(l.id); else window.location.hash = landscapeHref(l.id, qs); };   // choosing: a random one of the landscapes the filters still show goes straight into the kingdom
+  const [drawn, setDrawn] = useState(null);   // while choosing for a kingdom: the id Random drew, shown here to use or redraw (see DrawnPick)
+  const random = () => {
+    const pool = choosing ? rows.filter(x => !blockedL.has(x.id) && x.id !== drawn) : rows, l = pickRandom(pool.length ? pool : rows);
+    if (!l) return;
+    if (choosing) setDrawn(l.id); else window.location.hash = landscapeHref(l.id, qs);
+  };
 
   const kp = useKingdomPick(), choosing = !!kp && kp.kind === 'landscape';   // choosing a landscape FOR a kingdom, not browsing
   const blockedL = useMemo(() => new Set(choosing ? kp.blocked || [] : []), [choosing, kp]);   // in play at the other table: greyed, not pickable
   const rows = useMemo(() => browseLandscapes(catalog.landscapes, f, { plays }).filter(l => !(choosing && kp.taken.includes(l.id))), [catalog, f, plays, choosing, kp]);
   const active = activeLandscapeFilters(f);
+  const drawnItem = drawn && rows.find(r => r.id === drawn);   // gone from the list (a filter changed): nothing is shown
   const expansions = catalog.ownedExpansions.filter(e => catalog.landscapes.some(l => l.expansion === e.name));
   // tags are the landscapes' OWN vocabulary (most are not Kingdom taxonomy ids), so they get no Kingdom definitions
   // the costs the landscapes actually have (Events and Projects; the rest have none), and the Debt amounts
@@ -58,6 +66,11 @@ export default function Landscapes({ query = '' }) {
   }, [catalog, f, plays, tagCounts, coinCosts, debts]);   // eslint-disable-line react-hooks/exhaustive-deps
   const tags = tagCounts.filter(t => !mq.trim() || norm(`${humanize(t.id)} ${t.id}`).includes(norm(mq)));
 
+  const modeRow = <>
+    <ModeRow show={f.types.length + f.expansions.length + f.costs.length + (f.debt !== 'any' ? 1 : 0) > 0} ariaLabel="How to match the selected filters" value={landscapeMatchOf(f)} options={[['all'], ['any'], ['none']]} onChange={m => update(landscapeMatchPatch(m))} />
+    {f.typeMode === 'none' && f.mechanics.length > 0 && <p className="meta dn-mode-note">Recorded tags stay “any of”: a missing tag doesn’t prove a landscape lacks it.</p>}
+  </>;
+
   return (
     <>
       <PageShortcuts bindings={rows.length ? [{ key: 'r', label: 'Open a random landscape', run: random }] : []} />
@@ -68,17 +81,15 @@ export default function Landscapes({ query = '' }) {
         <div className="controls">
           <label className="f">Search <SearchInput value={qText} onChange={onQ} placeholder="e.g. Way of the" autoComplete="off" /></label>
           <label className="f dn-check"><input type="checkbox" checked={f.text} onChange={e => update({ text: e.target.checked })} /> Include card text</label>
-          <label className="f">Sort by <select value={f.sort} onChange={e => update({ sort: e.target.value })}>{SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
-          <button type="button" className="ghost" onClick={() => update({ dir: f.dir === 'asc' ? 'desc' : 'asc' })} aria-label={`Sort direction: ${f.dir === 'asc' ? 'ascending' : 'descending'}. Activate to reverse.`}>{f.dir === 'asc' ? '↑ Ascending' : '↓ Descending'}</button>
         </div>
-        <FilterFold active={active - (f.q.trim() ? 1 : 0)}>
-        <fieldset className="dn-fieldset"><legend>Type</legend>
-          <div className="dn-chips">{catalog.landscapeTypes.map(t => <Chip key={t} tone={t.toLowerCase()} pressed={f.types.includes(t)} count={fc.types[t]} onClick={() => update({ types: toggle(f.types, t) })}>{PLURAL[t] || t}</Chip>)}</div>
-        </fieldset>
-        <fieldset className="dn-fieldset"><legend>Expansion</legend>
+        <FacetBar facets={[
+          { id: 'exp', label: 'Expansion', n: f.expansions.length, children: <>
           <div className="dn-chips">{expansions.map(e => <Chip key={e.name} pressed={f.expansions.includes(e.name)} count={fc.exp[e.name]} onClick={() => update({ expansions: toggle(f.expansions, e.name) })}><ExpansionBadge name={e.name} /></Chip>)}</div>
-        </fieldset>
-        <fieldset className="dn-fieldset"><legend>Cost</legend>
+        </> },
+          { id: 'type', label: 'Type', n: f.types.length, children: <>
+          <div className="dn-chips">{catalog.landscapeTypes.map(t => <Chip key={t} tone={t.toLowerCase()} pressed={f.types.includes(t)} count={fc.types[t]} onClick={() => update({ types: toggle(f.types, t) })}>{PLURAL[t] || t}</Chip>)}</div>
+        </> },
+          { id: 'cost', label: 'Cost', n: f.costs.length + (f.debt !== 'any' ? 1 : 0), children: <>
           <div className="dn-costrow">
             <div className="dn-chips" role="group" aria-label="Cost (pick one or more)">
               {coinCosts.map(c => (
@@ -101,19 +112,9 @@ export default function Landscapes({ query = '' }) {
               </div>
             </div>
           )}
-        </fieldset>
-        <ModeRow show ariaLabel="How to match the selected filters" value={landscapeMatchOf(f)} options={[['all'], ['any'], ['none']]} onChange={m => update(landscapeMatchPatch(m))} />
-        {f.typeMode === 'none' && f.mechanics.length > 0 && <p className="meta dn-mode-note">Recorded tags stay “any of”: a missing tag doesn’t prove a landscape lacks it.</p>}
-        {plays && <fieldset className="dn-fieldset"><legend>Play history</legend>
-          <ScopePicker who={lg.who} players={lg.players} onPick={n => update({ by: n })} label="Counted for" />
-          <div className="dn-chips">
-            <Chip pressed={f.played === 'yes'} count={fc.yes} onClick={() => update({ played: f.played === 'yes' ? 'any' : 'yes' })}>Played</Chip>
-            <Chip pressed={f.played === 'no'} count={fc.no} onClick={() => update({ played: f.played === 'no' ? 'any' : 'no' })}>Not played yet</Chip>
-          </div>
-        </fieldset>}
-        <fieldset className="dn-fieldset"><legend>Recorded tags</legend>
-          <details className="dn-mech" open={f.mechanics.length > 0 || undefined}>
-            <summary>{f.mechanics.length ? `${f.mechanics.length} selected` : 'Choose tags'} · {tagCounts.length} tags recorded</summary>
+        </> },
+          { id: 'tags', label: 'Tags', n: f.mechanics.length, children: <>
+          <div className="dn-mech">
             <label className="f" style={{ margin: '8px 0' }}>Find a tag <SearchInput value={mq} onChange={setMq} placeholder="e.g. draw" autoComplete="off" /></label>
             <ul className="dn-mech-list">
               {tags.map(t => (
@@ -121,9 +122,17 @@ export default function Landscapes({ query = '' }) {
               ))}
               {!tags.length && <li className="meta">No recorded tag matches “{mq}”.</li>}
             </ul>
-          </details>
-        </fieldset>
-        </FilterFold>
+          </div>
+        </> },
+          ...(plays ? [{ id: 'played', label: 'Play history', n: f.played !== 'any' ? 1 : 0, children: <>
+          <ScopePicker who={lg.who} players={lg.players} onPick={n => update({ by: n })} label="Counted for" />
+          <div className="dn-chips">
+            <Chip pressed={f.played === 'yes'} count={fc.yes} onClick={() => update({ played: f.played === 'yes' ? 'any' : 'yes' })}>Played</Chip>
+            <Chip pressed={f.played === 'no'} count={fc.no} onClick={() => update({ played: f.played === 'no' ? 'any' : 'no' })}>Not played yet</Chip>
+          </div>
+        </> }] : []),
+        ]} />
+        {modeRow}
         <FilterSummary f={f} update={update} />
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>
           <button type="button" className="ghost" onClick={clear} disabled={!active}>Clear filters{active ? ` (${active})` : ''}</button>
@@ -131,6 +140,8 @@ export default function Landscapes({ query = '' }) {
           <span className="meta" role="status" aria-live="polite">Showing <b>{rows.length}</b> of {catalog.landscapes.length} landscapes{active ? ' (filtered)' : ''}</span>
         </div>
       </form>
+
+      {choosing && drawnItem && <DrawnPick item={drawnItem} kind="landscape" replacing={!!kp.label} onAgain={random} times={plays ? (plays.get(drawnItem.id)?.games || 0) : null} who={lg && lg.who} />}
 
       {rows.length ? (
         <div className="tablewrap">

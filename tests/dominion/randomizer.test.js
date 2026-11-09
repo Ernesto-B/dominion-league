@@ -302,10 +302,13 @@ describe('the automatic fewest Attacks', () => {
 
 describe('the link', () => {
   it('round-trips the options', () => {
-    const o = { expansions: ['Seaside', 'Dark Ages'], cards: 8, landscapes: 2, landscapeTypes: ['Way'], maxAttacks: 3, minAttacks: 2, maxCost: 4, reaction: true, require: ['village', 'buy'], include: ['a:b'], exclude: ['c:d'], excludeLandscapes: [], favor: true, favorPlayed: false, favorTable: true, favorBy: 'Ann', junkTrash: true, costSpread: 'high', themes: ['treasure', 'trash'], maxOf: { draw: 2, trash: 0 }, gives: [], balance: false };
+    const o = { expansions: ['Seaside', 'Dark Ages'], cards: 8, landscapes: 2, landscapeTypes: ['Way'], maxAttacks: 3, minAttacks: 2, maxCost: 4, reaction: true, require: ['village', 'buy'], include: [], exclude: [], excludeLandscapes: [], favor: true, favorPlayed: false, favorTable: true, favorBy: 'Ann', junkTrash: true, costSpread: 'high', themes: ['treasure', 'trash'], maxOf: { draw: 2, trash: 0 }, gives: [], balance: false };
     expect(optionsFromParams(new URLSearchParams(optionsToParams(o).toString()))).toEqual(o);
     expect(optionsToParams(DEFAULT_OPTIONS).toString()).toBe('');
     expect(optionsFromParams(new URLSearchParams(''))).toEqual(DEFAULT_OPTIONS);
+  });
+  it('no longer applies an old link\'s always / never include lists (they have no control on screen)', () => {
+    const o = optionsFromParams(new URLSearchParams('inc=a:b&exc=c:d')); expect(o.include).toEqual([]); expect(o.exclude).toEqual([]);
   });
   it('ignores junk options', () => {
     expect(optionsFromParams(new URLSearchParams('n=99&nl=x&atk=-1&req=nonsense&lt=Spell&th=nonsense'))).toEqual(DEFAULT_OPTIONS);

@@ -581,7 +581,7 @@ export function optionsFromParams(p) {
     expansions: many(p, 'exp'), cards: intIn(p.get('n'), 1, 12, d.cards), landscapes: intIn(p.get('nl'), 0, 6, d.landscapes),
     landscapeTypes: many(p, 'lt').filter(t => LANDSCAPE_TYPES.includes(t)),
     maxAttacks: intIn(p.get('atk'), 0, 12, null), minAttacks: intIn(p.get('atkmin'), 0, 12, null), maxCost: intIn(p.get('maxc'), 2, 10, null), reaction: p.get('rx') === '1',
-    require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: many(p, 'inc'), exclude: many(p, 'exc'), excludeLandscapes: [], favor: p.get('fav') === '1',
+    require: many(p, 'req').filter(r => REQUIRE_RULES[r]), include: [], exclude: [],   /* the old always / never lists are gone from the screen, so an old link's inc= / exc= is not applied unseen */ excludeLandscapes: [], favor: p.get('fav') === '1',
     favorPlayed: p.get('fp') === '1', favorTable: p.get('ft') === '1', favorBy: (p.get('fb') || '').slice(0, 60), junkTrash: p.get('jt') !== '0', costSpread: p.get('cs') === 'off' ? null : COST_SPREADS[p.get('cs')] ? p.get('cs') : d.costSpread,
     themes: [...new Set(many(p, 'th').filter(t => THEMES[t]))], gives: [...new Set(many(p, 'gv').filter(k => GIVES[k]))], balance: p.get('bal') !== '0',
     maxOf: many(p, 'mx').map(v => v.split(':')).filter(([r, n]) => CAP_RULES.includes(r) && /^(\d|x)$/.test(n || '')).reduce((m, [r, n]) => { if (n === 'x') delete m[r]; else m[r] = Math.min(MAX_CAP, +n); return m; }, { ...d.maxOf }),

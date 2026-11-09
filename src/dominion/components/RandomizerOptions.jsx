@@ -2,19 +2,15 @@ import { createContext, useContext } from 'react';
 import { CAP_DEFAULT, CAP_RULES, GIVES, GIVES_KEYS, GIVES_MIN, CARD_COUNTS, COST_SPREADS, REQUIRE_RULES, THEMES, THEME_KEYS, ruleIsExact } from '../randomizer.js';
 import { toggle } from '../filters.js';
 import { PLURAL } from '../constants.js';
-import { resolveKingdom } from '../kingdom.js';
 import { Chip, ExpansionBadge } from './bits.jsx';
 import { CoinIcon } from './Cost.jsx';
-import ItemSearch from './ItemSearch.jsx';
 import ScopePicker from './ScopePicker.jsx';
-import { KingdomChip } from './KingdomChips.jsx';
 import Fold from './Fold.jsx';
 
 /* Whose games "Prioritize" can count. Game night provides `true` (the seated players are known: count only the games THIS table has sat at);
    the Collection's Randomizer provides { players } (count one player's games, chosen from them). Nothing provided: always the whole group's. */
 export const PlaysScopeContext = createContext(false);
 
-const itemsOf = ids => ids.map(id => ({ kind: 'card', id }));
 
 /* Everything that shapes a roll: expansions, how many cards and landscapes, the rules, always/never include. Shared by the Randomizer
    page (options live in the URL) and the Game night kingdom step (options live in the step), so both offer exactly the same rules.
@@ -55,7 +51,6 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
   const themes = opts.themes || [];
   const gives = opts.gives || [];   // a night saved before themes existed has none
   const capsChanged = CAP_RULES.filter(r => (opts.maxOf || {})[r] !== CAP_DEFAULT).length;   // caps are on by default: only a change counts
-  const listsOn = opts.include.length + opts.exclude.length;
   const tagRules = Object.entries(REQUIRE_RULES).filter(([k]) => !ruleIsExact(k)), costRules = Object.entries(REQUIRE_RULES).filter(([k]) => ruleIsExact(k));
   const ruleChip = ([k, r]) => <Chip key={k} cls={r.coins != null || r.atLeast != null ? 'rzo-coin' : ''} pressed={opts.require.includes(k)} label={r.coins != null ? `A card costing ${r.coins} coins` : r.atLeast != null ? `A card costing ${r.atLeast} coins or more` : undefined} onClick={() => setOpts({ require: toggle(opts.require, k) })}>{r.coins != null ? <CoinIcon coins={r.coins} size={24} /> : r.atLeast != null ? <><CoinIcon coins={r.atLeast} size={24} /><b className="rzo-plus">+</b></> : r.chip || r.box || r.label}</Chip>;
   const advOn = themes.length + gives.length + capsChanged + (opts.minAttacks != null ? 1 : 0) + (opts.maxCost != null ? 1 : 0) + opts.require.filter(ruleIsExact).length;
@@ -147,20 +142,6 @@ export default function RandomizerOptions({ catalog, opts, setOpts, canFavor = f
           <Row label="No card above" note="The most any card may cost (none picked: any)">
             <div className="dn-chips">{[3, 4, 5, 6].map(c => <Chip key={c} cls="rzo-coin" label={`No card above ${c} coins`} pressed={opts.maxCost === c} onClick={() => setOpts({ maxCost: opts.maxCost === c ? null : c })}><CoinIcon coins={c} size={24} /></Chip>)}</div>
           </Row>
-        </div>
-      </Fold>
-      <Fold summary={<>Always include / never include{listsOn ? <span className="meta"> · {listsOn} chosen</span> : null}</>}>
-        <div className="dn-rz-lists">
-          <div>
-            <p className="meta dn-rz-listh">Always include</p>
-            <div className="dn-kchips">{resolveKingdom(catalog, itemsOf(opts.include)).map(r => <KingdomChip key={r.id} r={r} onRemove={() => setOpts({ include: opts.include.filter(id => id !== r.id) })} />)}</div>
-            <ItemSearch catalog={catalog} kind="card" taken={[...itemsOf(opts.include), ...itemsOf(opts.exclude)]} label="Add a card" onAdd={x => { if (opts.include.length >= opts.cards) return `That’s already ${opts.cards} cards.`; setOpts({ include: [...opts.include, x.obj.id] }); }} />
-          </div>
-          <div>
-            <p className="meta dn-rz-listh">Never include</p>
-            <div className="dn-kchips">{resolveKingdom(catalog, itemsOf(opts.exclude)).map(r => <KingdomChip key={r.id} r={r} onRemove={() => setOpts({ exclude: opts.exclude.filter(id => id !== r.id) })} />)}</div>
-            <ItemSearch catalog={catalog} kind="card" taken={[...itemsOf(opts.include), ...itemsOf(opts.exclude)]} label="Add a card" onAdd={x => setOpts({ exclude: [...opts.exclude, x.obj.id] })} />
-          </div>
         </div>
       </Fold>
 
