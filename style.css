@@ -2439,3 +2439,21 @@ details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
 
 .dn-rzface{position:relative}   /* the New corner (gr-newtag) hangs off the picture's top-left, outside its clipped frame */
 .dn-rz-new{margin-left:8px;background:var(--brass);color:#140d02;font-weight:700}
+
+/* Replace and Remove: two round icon buttons always visible on the tile's top-right corner, half hanging outside it (the New corner is on the left). A 44px hit area on touch. */
+.dn-rztile{position:relative}
+.dn-rzface .dn-rztile-btns button{font-size:13px}
+.dn-corner{position:absolute;z-index:3;top:-8px;right:-6px;display:flex;flex-direction:column;gap:6px}
+.dn-corner-b{position:relative;display:grid;place-items:center;width:30px;height:30px;min-height:0;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer}
+.dn-corner-b::after{content:"";position:absolute;inset:-7px}
+.dn-corner-b:hover,.dn-corner-b:focus-visible{border-color:var(--muted)}
+.dn-corner-b.dn-remove:hover,.dn-corner-b.dn-remove:focus-visible{color:#ff8a80;border-color:rgba(255,107,95,.7)}
+.fixmode .dn-corner{opacity:.3;pointer-events:none}
+.dn-rz-empty .linkish{background:none;border:0;padding:0;min-height:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer}
+
+/* the sheet's handle AND title bar are the drag area (the handle alone was a 14px target, so a swipe there scrolled the page behind instead) */
+.dn-az-top{display:contents}
+@media (max-width:720px){
+  .dn-az-top{display:block;touch-action:none;flex:none}
+  .dn-az-grab{padding:12px 0 4px}
+}

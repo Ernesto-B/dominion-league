@@ -49,7 +49,7 @@ function Sheet({ a, open, onClose, onPick, onFix }) {
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
   useEffect(() => { if (open) setDrag(0); else setSaid(null); }, [open]);
-  // dragging the handle down closes the sheet on a phone
+  // dragging the handle or the title bar down closes the sheet on a phone
   const down = e => { start.current = e.touches[0].clientY; };
   const move = e => { if (start.current != null) setDrag(Math.max(0, e.touches[0].clientY - start.current)); };
   const up = () => { if (drag > 90) onClose(); setDrag(0); start.current = null; };
@@ -58,11 +58,13 @@ function Sheet({ a, open, onClose, onPick, onFix }) {
     <>
       <div className={'dn-az-scrim' + (open ? ' open' : '')} onClick={onClose} aria-hidden="true" />
       <aside id="kingdom-analysis" className={'dn-az' + (open ? ' open' : '')} aria-label="Kingdom analysis" aria-hidden={!open} inert={!open} style={drag ? { transform: `translateY(${drag}px)`, transition: 'none' } : undefined}>
-        <div className="dn-az-grab" onTouchStart={down} onTouchMove={move} onTouchEnd={up} aria-hidden="true"><span /></div>
-        <header className="dn-az-head">
-          <h3>Kingdom analysis</h3>
-          <button type="button" className="ghost dn-az-x" onClick={onClose} aria-label="Close the analysis">Close</button>
-        </header>
+        <div className="dn-az-top" onTouchStart={down} onTouchMove={move} onTouchEnd={up} onTouchCancel={up}>
+          <div className="dn-az-grab" aria-hidden="true"><span /></div>
+          <header className="dn-az-head">
+            <h3>Kingdom analysis</h3>
+            <button type="button" className="ghost dn-az-x" onClick={onClose} aria-label="Close the analysis">Close</button>
+          </header>
+        </div>
         <div className="dn-az-body">
           <p className={'dn-az-verdict' + (a.flags ? ' warn' : '')} role="status">{verdictOf(a)}</p>
           {said && <p className={'dn-az-said no'} role="status">{said.message}</p>}

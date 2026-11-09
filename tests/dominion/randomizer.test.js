@@ -287,7 +287,7 @@ describe('include cards that give...', () => {
 });
 
 describe('Balance (option)', () => {
-  it('is on by default, and only "off" is written to the link', () => { expect(DEFAULT_OPTIONS.balance).toBe(true); expect(optionsToParams({ ...DEFAULT_OPTIONS, balance: false }).toString()).toBe('bal=0'); });
+  it('is off by default, and only "on" is written to the link', () => { expect(DEFAULT_OPTIONS.balance).toBe(false); expect(optionsToParams({ ...DEFAULT_OPTIONS, balance: true }).toString()).toBe('bal=1'); expect(optionsToParams(DEFAULT_OPTIONS).toString()).toBe(''); });
 });
 
 describe('the automatic fewest Attacks', () => {

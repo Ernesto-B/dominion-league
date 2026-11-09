@@ -40,8 +40,10 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
   const faceOf = s => { const id = slotFaceId(s); return id ? { id } : null; };
   const [fresh, setFresh] = useState(null);                     // the tile that just changed, briefly highlighted
   const resultRef = useRef(null);
-  const editable = editing && !!onEdit;
-  const shown = state || (editable ? { slots: [], landscapes: [], seed: null, setup: {} } : null);   // hand-editing can start from nothing
+  const canEdit = !!onEdit;                 // every tile can be replaced or removed, and each grid ends with an Add tile
+  const editable = editing && canEdit;      // the bare tiles of a finished draft: Replace / Remove stand in for Lock / Re-roll
+  const [blank, setBlank] = useState(false);   // "start from your own cards": an empty kingdom to add to
+  const shown = state || ((editable || (blank && canEdit)) ? { slots: [], landscapes: [], seed: null, setup: {} } : null);   // hand-picking can start from nothing
   // turning hand-editing on scrolls down to the tiles, as a roll does (not when the page simply comes back already editing: the scroll is restored there)
   const wasEditing = useRef(editable);
   useEffect(() => {
@@ -193,10 +195,10 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
           {undo && !fix && <UndoBar text={undo.text} onUndo={doUndo} onClose={() => setUndo(null)} />}
           <ul className={'dn-rzgrid' + (faces ? ' faces' : '') + (fix ? ' fixmode' : '')} aria-label="Kingdom cards">
             {shown.slots.map((s, i) => (faces && faceOf(s) ? (
-              <FaceTile editing={editable} onReplace={() => choose('card', i)} onRemove={() => removeCard(i)} key={s.key} pile={s.key} ping={ping === s.key} fx={fx(s.key)} id={faceOf(s).id} name={s.name} isNew={isNew(s.key)} caption={null} fresh={fresh === s.key} locked={locked.has(s.key)}
+              <FaceTile editing={editable} onReplace={canEdit ? () => choose('card', i) : null} onRemove={canEdit ? () => removeCard(i) : null} key={s.key} pile={s.key} ping={ping === s.key} fx={fx(s.key)} id={faceOf(s).id} name={s.name} isNew={isNew(s.key)} caption={null} fresh={fresh === s.key} locked={locked.has(s.key)}
                 onLock={() => setLocked(l => { const n = new Set(l); n.has(s.key) ? n.delete(s.key) : n.add(s.key); return n; })} onReroll={() => swapSlot(i)} onPeek={() => openPeek(catalog, { kind: 'card', s, face: faceOf(s).id })} />
             ) : (
-              <Tile editing={editable} onReplace={() => choose('card', i)} onRemove={() => removeCard(i)} key={s.key} pile={s.key} ping={ping === s.key} fx={fx(s.key)} fresh={fresh === s.key} tone={primaryType(s.cards.find(c => primaryType(c) === 'Attack') || s.cards[0])}
+              <Tile editing={editable} onReplace={canEdit ? () => choose('card', i) : null} onRemove={canEdit ? () => removeCard(i) : null} key={s.key} pile={s.key} ping={ping === s.key} fx={fx(s.key)} fresh={fresh === s.key} tone={primaryType(s.cards.find(c => primaryType(c) === 'Attack') || s.cards[0])}
                 locked={locked.has(s.key)} onLock={() => setLocked(l => { const n = new Set(l); n.has(s.key) ? n.delete(s.key) : n.add(s.key); return n; })} onReroll={() => swapSlot(i)} onPeek={() => openPeek(catalog, { kind: 'card', s })} what={s.name}>
                 <div className="dn-rz-cost"><CostIcons coins={s.cards[0].coins} debt={s.cards[0].debt} overpay={s.cards[0].overpay} size={30} /></div>
                 <div className="dn-rz-main">
@@ -208,18 +210,18 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
                 </div>
               </Tile>
             )))}
-            {editable && shown.slots.length < MAX_CARDS && <AddTile faces={faces} label="Add a card" onClick={() => choose('card', null)} />}
+            {canEdit && shown.slots.length < MAX_CARDS && <AddTile faces={faces} label="Add a card" onClick={() => choose('card', null)} />}
           </ul>
 
-          {(shown.landscapes.length > 0 || editable) && (
+          {(shown.landscapes.length > 0 || canEdit) && (
             <>
               <h3 className="dn-rz-sub">Landscapes</h3>
               <ul className={'dn-rzgrid' + (faces ? ' faces land' : '')} aria-label="Landscapes">
                 {shown.landscapes.map((l, i) => (faces && picture(l.landscape.id) ? (
-                  <FaceTile editing={editable} onReplace={() => choose('landscape', i)} onRemove={() => removeLand(i)} key={l.landscape.id} id={l.landscape.id} name={l.landscape.name} caption={l.on ? `on ${displayName(catalog.cardsById.get(l.on) || { name: l.on })}` : null} fresh={fresh === l.landscape.id} locked={lockedL.has(l.landscape.id)}
+                  <FaceTile editing={editable} onReplace={canEdit ? () => choose('landscape', i) : null} onRemove={canEdit ? () => removeLand(i) : null} key={l.landscape.id} id={l.landscape.id} name={l.landscape.name} caption={l.on ? `on ${displayName(catalog.cardsById.get(l.on) || { name: l.on })}` : null} fresh={fresh === l.landscape.id} locked={lockedL.has(l.landscape.id)}
                     onLock={() => setLockedL(s => { const n = new Set(s); n.has(l.landscape.id) ? n.delete(l.landscape.id) : n.add(l.landscape.id); return n; })} onReroll={() => swapLandscape(i)} onPeek={() => openPeek(catalog, { kind: 'landscape', l, face: l.landscape.id })} />
                 ) : (
-                  <Tile editing={editable} onReplace={() => choose('landscape', i)} onRemove={() => removeLand(i)} key={l.landscape.id} fresh={fresh === l.landscape.id} tone={l.landscape.type} locked={lockedL.has(l.landscape.id)} what={l.landscape.name}
+                  <Tile editing={editable} onReplace={canEdit ? () => choose('landscape', i) : null} onRemove={canEdit ? () => removeLand(i) : null} key={l.landscape.id} fresh={fresh === l.landscape.id} tone={l.landscape.type} locked={lockedL.has(l.landscape.id)} what={l.landscape.name}
                     onLock={() => setLockedL(s => { const n = new Set(s); n.has(l.landscape.id) ? n.delete(l.landscape.id) : n.add(l.landscape.id); return n; })} onReroll={() => swapLandscape(i)} onPeek={() => openPeek(catalog, { kind: 'landscape', l })}>
                     <div className="dn-rz-main">
                       <p className="dn-rz-name"><a href={landscapeHref(l.landscape.id)}>{l.landscape.name}</a></p>
@@ -229,7 +231,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
                     </div>
                   </Tile>
                 )))}
-                {editable && shown.landscapes.length < MAX_LANDSCAPES && <AddTile faces={faces} land label="Add a landscape" onClick={() => choose('landscape', null)} />}
+                {canEdit && shown.landscapes.length < MAX_LANDSCAPES && <AddTile faces={faces} land label="Add a landscape" onClick={() => choose('landscape', null)} />}
               </ul>
             </>
           )}
@@ -237,7 +239,7 @@ export default function RandomizerPanel({ catalog, opts, setOpts: setOptsProp, s
           {!bare && <Setup catalog={catalog} setup={shown.setup} />}
         </section>
       ) : (
-        emptyHint ? <p className="dn-rz-empty">Nothing rolled yet. Choose your options above, then <b>Roll a kingdom</b>.</p> : null
+        emptyHint ? <p className="dn-rz-empty">Nothing rolled yet. Choose your options above, then <b>Roll a kingdom</b>.{canEdit && <> Or <button type="button" className="linkish" onClick={() => setBlank(true)}>start from your own cards</button>.</>}</p> : null
       )}
     </>
   );
@@ -248,11 +250,9 @@ function FaceTile({ id, name, isNew, caption, pile, ping, fx = {}, fresh, locked
   return (
     <li data-pile={pile} className={'dn-rzface' + (fresh ? ' fresh' : '') + (ping ? ' ping' : '') + (fx.cls ? ' ' + fx.cls : '') + (locked ? ' locked' : '')} {...fx.attrs}>
       <CardFace id={id} name={name} onOpen={onPeek} />
+      <CornerActions name={name} editing={editing} onReplace={onReplace} onRemove={onRemove} />
       {isNew && <span className="gr-newtag left">New</span>}
-      <div className="dn-rztile-btns">{editing ? <EditButtons name={name} onReplace={onReplace} onRemove={onRemove} /> : <>
-        <button type="button" className="ghost" aria-pressed={locked} onClick={onLock} title={locked ? `Unlock ${name}` : `Keep ${name} when you roll again`}>{locked ? 'Locked' : 'Lock'}</button>
-        <button type="button" className="ghost" onClick={onReroll} disabled={locked} title={locked ? 'Unlock it to re-roll' : `Swap ${name} for another card`}>Re-roll</button>
-      </>}</div>
+      <TileButtons name={name} editing={editing} locked={locked} onLock={onLock} onReroll={onReroll} onReplace={onReplace} onRemove={onRemove} />
       {caption && <p className="dn-rzface-cap meta">{caption}</p>}   {/* under the buttons, so every card's buttons line up (only a Trait's "on <card>" has one) */}
     </li>
   );
@@ -262,11 +262,9 @@ function FaceTile({ id, name, isNew, caption, pile, ping, fx = {}, fresh, locked
 function Tile({ children, tone, pile, ping, fx = {}, fresh, locked, onLock, onReroll, onPeek, what, editing, onReplace, onRemove }) {
   return (
     <li data-pile={pile} className={'dn-rztile' + (tone ? ' t-' + tone.toLowerCase() : '') + (fresh ? ' fresh' : '') + (ping ? ' ping' : '') + (fx.cls ? ' ' + fx.cls : '') + (locked ? ' locked' : '')} {...fx.attrs}>
+      <CornerActions name={what} editing={editing} onReplace={onReplace} onRemove={onRemove} />
       <div className="dn-rztile-body">{children}</div>
-      <div className="dn-rztile-btns">{editing ? <EditButtons name={what} onReplace={onReplace} onRemove={onRemove} /> : <>
-        <button type="button" className="ghost" aria-pressed={locked} onClick={onLock} title={locked ? `Unlock ${what}` : `Keep ${what} when you roll again`}>{locked ? 'Locked' : 'Lock'}</button>
-        <button type="button" className="ghost" onClick={onReroll} disabled={locked} title={locked ? 'Unlock it to re-roll' : `Swap ${what} for another card`}>Re-roll</button>
-      </>}</div>
+      <TileButtons name={what} editing={editing} locked={locked} onLock={onLock} onReroll={onReroll} onReplace={onReplace} onRemove={onRemove} />
       <button type="button" className="dn-rztile-more" aria-label={`Show the text of ${what}`} onClick={onPeek}>⌄</button>
     </li>
   );
@@ -287,6 +285,32 @@ function SeedButton({ text, copy: toCopy = null, code = false }) {
     setTimeout(() => setDone(null), 1800);
   };
   return <button type="button" className="dn-seed" onClick={copy} title={code || toCopy ? 'Copy this kingdom\'s code. Paste it where a seed goes (here or on Game night) to get exactly this kingdom, whatever options are set there. The number alone only repeats the roll under the same options.' : 'Copy this roll\'s seed. Roll again with this seed and the same options to get this exact kingdom.'}>{code ? 'Code' : 'Seed'} <b>{text}</b><CopyGlyph />{done && <span className="meta" role="status"> · {done}</span>}</button>;
+}
+
+// a tile's buttons: Lock and Re-roll under it (the bare draft tiles swap them for Replace / Remove)
+function TileButtons({ name, editing, locked, onLock, onReroll, onReplace, onRemove }) {
+  if (editing) return <div className="dn-rztile-btns"><EditButtons name={name} onReplace={onReplace} onRemove={onRemove} /></div>;
+  return (
+    <div className="dn-rztile-btns">
+      <button type="button" className="ghost" aria-pressed={locked} onClick={onLock} title={locked ? `Unlock ${name}` : `Keep ${name} when you roll again`}>{locked ? 'Locked' : 'Lock'}</button>
+      <button type="button" className="ghost" onClick={onReroll} disabled={locked} title={locked ? 'Unlock it to re-roll' : `Swap ${name} for another card`}>Re-roll</button>
+    </div>
+  );
+}
+
+// Replace (choose another card) and Remove, always in view as two round icon buttons hanging off the top-right corner of a tile
+function CornerActions({ name, editing, onReplace, onRemove }) {
+  if (editing || !onReplace) return null;
+  return (
+    <div className="dn-corner">
+      <button type="button" className="dn-corner-b" onClick={onReplace} aria-label={`Replace ${name} with a card you pick`} title={`Replace ${name} with a card you pick`}>
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 6h10M10 3l3 3-3 3M13.5 10h-10M6 7l-3 3 3 3" /></svg>
+      </button>
+      <button type="button" className="dn-corner-b dn-remove" onClick={onRemove} aria-label={`Remove ${name} from the kingdom`} title={`Remove ${name} from the kingdom`}>
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" /></svg>
+      </button>
+    </div>
+  );
 }
 
 // while editing by hand a tile's two buttons are Replace (search for another) and Remove
