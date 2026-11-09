@@ -2547,3 +2547,5 @@ body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,select,[contenteditable="true"],[contenteditable=""]{-webkit-user-select:text;user-select:text}
 .dn-face,.dn-face img{-webkit-user-select:auto;user-select:auto;-webkit-touch-callout:default}
 body.selectable{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+/* the floating Analyze pill is for phones only: a computer has the A key, and its bar of buttons stays near the cards */
+@media (min-width:721px){.dn-az-fab{display:none}}

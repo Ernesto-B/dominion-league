@@ -22,6 +22,7 @@ import { useCatalogLoad } from '../dominion/CatalogContext.jsx';
 import { KingdomChip } from '../dominion/components/KingdomChips.jsx';
 import { CardText, ShowTextButton } from '../dominion/components/bits.jsx';
 import { PlaysScopeContext } from '../dominion/components/RandomizerOptions.jsx';
+import { createNightHistory, viewOf } from '../lib/nightHistory.js';
 import { RECOMMENDED, itemsOfSet } from '../dominion/recommended.js';
 import { DEFAULT_OPTIONS, kingdomFromParams, kingdomToParams, newSeed, setupForHand, stateFromItems, withAvoid } from '../dominion/randomizer.js';
 import { analyseKingdom, concernsOf } from '../dominion/analysis.js';
@@ -93,7 +94,7 @@ function Tables() {
         </div>
       )}
       {Array.from({ length: open }, (_, i) => (
-        <div key={i} hidden={active !== i}><NightFlow slot={i} busy={busyAt(i)} avoid={avoidAt(i)} onReport={report[i]} seatReq={seatReq} canSeat={otherFree(i)} onSeat={(a, b) => seat(i, a, b)} /></div>
+        <div key={i} hidden={active !== i}><NightFlow active={active === i} slot={i} busy={busyAt(i)} avoid={avoidAt(i)} onReport={report[i]} seatReq={seatReq} canSeat={otherFree(i)} onSeat={(a, b) => seat(i, a, b)} /></div>
       ))}
     </>
   );
@@ -119,12 +120,29 @@ class NightBoundary extends Component {
   }
 }
 
-function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, canSeat = true, onSeat = () => {} }) {
+function NightFlow({ active = true, slot = 0, busy = [], avoid = [], onReport, seatReq = null, canSeat = true, onSeat = () => {} }) {
   const { me, gid, D, allGroups, enabledSets, playerIdByName, hashFor, reload } = usePage();
   const cat = useCatalogLoad();
   const [st, setSt] = useState(() => (storage() ? loadNight(storage(), gid, undefined, undefined, slot) : blankNight()));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  // the browser's Back / Forward arrows (lib/nightHistory.js): this screen's address, and what the arrows do. Only the table on screen takes part.
+  const viewNow = viewOf(st), latest = useRef({}), hist = useRef(null), backing = useRef(false);
+  latest.current.viewNow = viewNow;
+  useEffect(() => {
+    if (!active) return undefined;
+    const h = hist.current = createNightHistory();
+    h.start(latest.current.viewNow);
+    const onPop = e => {
+      const dir = h.popped(e.state);
+      if (!dir || latest.current.done) return;   // not ours, or the game is already saved
+      if (dir === 'back') latest.current.goBack(); else latest.current.goForward();
+      setTimeout(() => h.settle(latest.current.viewNow), 80);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => { window.removeEventListener('popstate', onPop); hist.current = null; };
+  }, [active]);
+  useEffect(() => { if (hist.current) hist.current.changed(viewNow, { back: backing.current }); backing.current = false; }, [viewNow]);
   const [check, setCheck] = useState(null);   // the kingdom check: { concerns, analyse, go } while it is asked
   // every move forward or back in the flow (a step, a way of choosing a kingdom, a summary opening or closing, the list of recommended sets, a draft starting or ending) brings the top of the
   // content box into view, so the new screen is read from its first line and not from wherever the last one was scrolled to (most of all on a phone)
@@ -264,6 +282,7 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
     if (st.step !== 'players') { setSt(s => back(s)); return; }
     if (window.history.length > 1) window.history.back(); else window.location.hash = hashFor('', gid);
   };
+  latest.current.goBack = goBack; latest.current.done = done;
   // Undo: delete the game just saved and put the form back exactly as it was, so a wrong finish order or VP is one tap to fix
   const undo = async () => {
     if (done.id == null) return;
@@ -326,7 +345,17 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
     : st.step === 'scores' && st.picked.some(n => !/^\s*-?\d+\s*$/.test(st.vp[n] ?? '')) ? 'Enter every player’s VP first'
     : st.step === 'kingdom' && st.kingdomMode === 'recommended' && st.recPicking ? 'Pick a set first'
     : atRandomRoll && !items.length ? 'Roll a kingdom first' : st.step === 'kingdom' && drafting ? 'Finish the draft first' : st.step === 'kingdom' && !items.length ? 'Set up a kingdom first, or skip it' : '';
+  // "Use this kingdom": the Random or Recommended Sets screen closes into its summary (after the short-kingdom / Analyze check)
+  const useKingdom = () => withCheck(() => setSt(s => ({ ...s, randomDone: true, handOpen: false, randomOriginal: (atRecChosen && recBase && !recBase.missing.length ? recBase.items : s.kingdom).filter(i => i.kind === 'card').map(i => i.id) })));
   const atDraftOptions = st.step === 'kingdom' && !!catalog && st.kingdomMode === 'draft' && !st.draftSave?.draft;   // the draft's options page: its button replaces Start Game & Timer
+  // the page's own Back goes through the browser history when there is an earlier screen of this flow in it (so the arrows and the button stay one list), else it just goes back
+  const pressBack = () => { if (hist.current && hist.current.index() > 0) window.history.back(); else { backing.current = true; goBack(); } };
+  // a history Forward does what the main button does (never the final Save: an arrow must not save a game)
+  const goForward = () => {
+    if (st.step === 'review' || holdOn) return;
+    if (atDraftOptions) startDraft(); else if (atRandomRoll || atRecChosen) useKingdom(); else if (st.step === 'kingdom') withCheck(next); else next();
+  };
+  latest.current.goForward = goForward;
   // shown at the table and on the last check in shelf order (expansion, then A to Z) with each expansion's icon, so a card is found in its box at a glance
   const shelved = list => list.slice().sort((a, b) => (a.missing ? 1 : 0) - (b.missing ? 1 : 0) || (a.missing || b.missing ? 0 : shelfOrder(a, b)));
   const kingdomCards = shelved(resolved.filter(r => r.kind === 'card')), kingdomLands = shelved(resolved.filter(r => r.kind === 'landscape'));
@@ -424,11 +453,11 @@ function NightFlow({ slot = 0, busy = [], avoid = [], onReport, seatReq = null, 
 
       {check && <KingdomCheck concerns={check.concerns} canReview={st.kingdomMode === 'random' || !st.kingdomMode} onReview={reviewKingdom} onGo={check.go} onClose={() => setCheck(null)} />}
       <div className="night-actions">
-        <button type="button" className="ghost" onClick={goBack}>← Back</button>
+        <button type="button" className="ghost" onClick={pressBack}>← Back</button>
         {st.step === 'review'
           ? <button type="button" onClick={save} disabled={saving}>{saving ? 'Saving…' : isAdmin ? 'Save game' : 'Send for approval'}</button>
           : atDraftOptions ? <button type="button" onClick={startDraft}>Start the draft →</button>
-          : atRandomRoll || atRecChosen ? <button type="button" onClick={() => withCheck(() => setSt(s => ({ ...s, randomDone: true, handOpen: false, randomOriginal: (atRecChosen && recBase && !recBase.missing.length ? recBase.items : s.kingdom).filter(i => i.kind === 'card').map(i => i.id) })))} disabled={!!holdOn} title={holdOn || undefined}>Use this kingdom →</button>
+          : atRandomRoll || atRecChosen ? <button type="button" onClick={useKingdom} disabled={!!holdOn} title={holdOn || undefined}>Use this kingdom →</button>
           : <button type="button" onClick={st.step === 'kingdom' ? () => withCheck(next) : next} disabled={!!holdOn} title={holdOn || undefined}>{st.step === 'kingdom' ? 'Start Game & Timer →' : st.step === 'play' ? 'Game over — scores →' : 'Next →'}</button>}
       </div>
       <p className="night-reset"><button type="button" className="ghost" onClick={startOver}>Restart Game Night</button></p>
