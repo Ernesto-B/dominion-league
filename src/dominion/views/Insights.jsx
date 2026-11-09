@@ -99,7 +99,7 @@ function Loaded({ head, lg, query }) {
               <thead><tr><th className="l" scope="col">Landscape</th><th className="l dn-hide-sm" scope="col">Type</th><th className="l" scope="col"><span className="th-full">Expansion</span><span className="th-short" aria-hidden="true">Set</span></th><th className="edge" scope="col">Games</th><th className="l dn-hide-sm" scope="col">Last played</th></tr></thead>
               <tbody>{lpg.items.map(r => (
                 <tr key={r.l.id} {...hoverHandlers(r.l.id)}>
-                  <td className="l name"><span className="dn-namecost">{r.l.coins != null && <CostIcons coins={r.l.coins} debt={r.l.debt} size={22} />}<a href={landscapeHref(r.l.id)}>{r.l.name}</a></span></td>
+                  <td className="l name"><span className="dn-namecost">{r.l.coins != null ? <CostIcons coins={r.l.coins} debt={r.l.debt} size={22} /> : <span className="dn-nocost" role="img" aria-label="No cost" />}<a href={landscapeHref(r.l.id)}>{r.l.name}</a></span></td>
                   <td className="l dn-hide-sm"><LandscapePill type={r.l.type} /></td>
                   <td className="l"><ExpansionBadge name={r.l.expansion} size={16} /></td>
                   <td className="edge">{r.games}</td>

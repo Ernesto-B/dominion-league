@@ -2396,3 +2396,5 @@ details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
 @media (pointer:coarse){.dn-undo-btns button,.dn-fixbar .ghost{min-height:44px}}
 .dn-az-names a{cursor:pointer;transition:color .12s ease,text-decoration-color .12s ease}
 .dn-az-names a:hover,.dn-az-names a:focus-visible{color:var(--ink);text-decoration-color:currentColor;text-decoration-thickness:2px}
+
+.dn-namecost .dn-nocost{width:22px}   /* a landscape without a cost: the dash takes the coin's place beside its name */

@@ -60,7 +60,7 @@ export default function PlayerCards({ p, D, catalog, insightsHref, gamesHref }) 
           <thead><tr><th className="l" scope="col">Landscape</th><th className="l dn-hide-sm" scope="col">Type</th><th className="l" scope="col"><span className="th-full">Expansion</span><span className="th-short" aria-hidden="true">Set</span></th><th className="edge" scope="col">Games</th><th className="edge" scope="col">Won</th><th className="l dn-hide-sm" scope="col">Last played</th></tr></thead>
           <tbody>{lpg.items.map(({ l, e }) => (
             <tr key={l.id} {...hoverHandlers(l.id)}>
-              <td className="l name"><span className="dn-namecost">{l.coins != null && <CostIcons coins={l.coins} debt={l.debt} size={22} />}<a href={landscapeHref(l.id, '?by=' + encodeURIComponent(p.name))}>{l.name}</a></span></td>
+              <td className="l name"><span className="dn-namecost">{l.coins != null ? <CostIcons coins={l.coins} debt={l.debt} size={22} /> : <span className="dn-nocost" role="img" aria-label="No cost" />}<a href={landscapeHref(l.id, '?by=' + encodeURIComponent(p.name))}>{l.name}</a></span></td>
               <td className="l dn-hide-sm"><LandscapePill type={l.type} /></td>
               <td className="l"><ExpansionBadge name={l.expansion} size={16} /></td>
               <td className="edge">{e.games}</td><td className="edge">{e.mine.wins}</td>
