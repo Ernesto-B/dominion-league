@@ -64,7 +64,7 @@ describe('Kingdom cards browser', () => {
   it('lists all 331 names with a live result count', () => { expect(rows(html)).toBe(331); expect(t).toMatch(/Showing 331 of 331 card names/); });
   it('has the filters asked for: search, expansion, type, coin + Debt cost, mechanics, sort, clear', () => {
     expect(html).toContain('type="search"');
-    for (const l of ['Expansion', 'Printed type', 'Cost', 'Recorded mechanics', 'Sort by', 'Debt', 'Clear filters']) expect(t).toContain(l);
+    for (const l of ['Expansion', 'Type', 'Cost', 'Mechanics', 'Role', 'Debt', 'Clear filters']) expect(t).toContain(l);
     expect(html).toMatch(/aria-pressed="false"/);   // expansion/type toggles announce their state
   });
   it('offers no "without"/"exclude" mechanic control, and no longer carries the long disclaimer under the filter', () => {
@@ -74,14 +74,13 @@ describe('Kingdom cards browser', () => {
     expect(controls.length).toBeGreaterThan(200);
     expect(controls).not.toMatch(/\b(without|exclude|excluding|except|not have|lacks?|missing)\b/i);   // "none of" is allowed for printed types, expansions and costs (complete data), never for mechanics: see the next test
   });
-  it('has ONE "Match: all of / any of / none of" row, right under the Debt buttons, and never offers "none of" inside Recorded mechanics', () => {
-    const h = render('cards');
+  it('has ONE "Match: all of / any of / none of" row, shown once something is chosen, and never offers "none of" inside the mechanics panel', () => {
+    const h = render('cards?type=Attack');
     expect(h.match(/aria-label="How to match the selected filters"/g)).toHaveLength(1);
-    const cost = h.split('<fieldset').find(x => x.includes('<legend>Cost</legend>')) || '';
-    const tail = text(cost.slice(cost.indexOf('aria-label="Debt cost"')));
-    expect(tail).toMatch(/Match all of any of none of/);
-    const mech = h.split('<fieldset').find(x => x.includes('<legend>Recorded mechanics</legend>')) || '';
-    expect(text(mech)).not.toMatch(/none of|without|exclude/i);
+    expect(text(h.slice(h.indexOf('aria-label="How to match the selected filters"')))).toMatch(/Match all of any of none of/);
+    expect(render('cards').match(/aria-label="How to match the selected filters"/g)).toBeNull();   // nothing chosen: nothing to match
+    const mech = h.slice(h.indexOf('id="dn-facet-mech"'), h.indexOf('id="dn-facet-played"') > 0 ? h.indexOf('id="dn-facet-played"') : undefined);
+    expect(text(mech.split('</div></div>')[0])).not.toMatch(/none of|without|exclude/i);
   });
   it('shows each card\'s printed types (several for a multi-type card), cost, and a shared pile where there is one', () => {
     const lurk = catalog.cards.find(c => c.types.length === 3);
@@ -138,10 +137,7 @@ describe('sortable table headers', () => {
     const cost = ths(h.match(/<thead>[\s\S]*?<\/thead>/)[0]).find(c => c.label === 'Cost');
     expect(cost.attrs).toMatch(/aria-sort="descending"/); expect(dir(cost)).toBe('desc');
   });
-  it('the "Sort by" menu offers every sortable column, so a phone (where some columns are hidden) can sort by them too', () => {
-    const sel = html.match(/Sort by <select[\s\S]*?<\/select>/)[0];
-    for (const l of ['Name', 'Expansion', 'Printed type', 'Cost', 'Shared pile']) expect(text(sel)).toContain(l);
-  });
+  it('has no separate "Sort by" menu: the column headings sort', () => { expect(html).not.toContain('Sort by <select'); });
 });
 
 describe('sortable landscape headers', () => {
@@ -159,10 +155,7 @@ describe('sortable landscape headers', () => {
     expect(rows.filter(r => r.includes('aria-label="No cost"'))).toHaveLength(rows.length - 68);   // a line, not the words
     expect(rows.filter(r => r.includes('class="dn-cost"'))).toHaveLength(68);
   });
-  it('the "Sort by" menu offers the same columns (so a phone, which hides one, can use them too)', () => {
-    const sel = html.match(/Sort by <select[\s\S]*?<\/select>/)[0];
-    for (const l of ['Name', 'Type', 'Expansion', 'Cost', 'When it applies']) expect(text(sel)).toContain(l);
-  });
+  it('has no separate "Sort by" menu either', () => { expect(html).not.toContain('Sort by <select'); });
   it('does not make the Artifacts table sortable (it is not a landscape list)', () => {
     expect((html.match(/class="[^"]*\bsortable\b/g) || []).length).toBe(5);   // the five landscape headings only
   });

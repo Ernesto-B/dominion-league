@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import SearchInput from '../../components/SearchInput.jsx';
 import { useCatalog } from '../CatalogContext.jsx';
-import { browseCards, filterCards, facetCount, cardMatchOf, cardMatchPatch, activeCardFilters, DEFAULT_CARD_FILTERS, cardFiltersFromQuery, cardFiltersToQuery, nameMatches, textSnippet, pickRandom, toggle, norm } from '../filters.js';
+import { browseCards, filterCards, facetCount, cardMatchOf, cardMatchPatch, activeCardFilters, DEFAULT_CARD_FILTERS, cardFiltersFromQuery, cardFiltersToQuery, nameMatches, textSnippet, pickRandom, toggle, norm, ROLE_KEYS, roleLabel } from '../filters.js';
 import { useUrlFilters, useListScroll } from '../useUrlFilters.js';
 import { useLeagueGames } from '../useLeagueGames.js';
 import ScopePicker from '../components/ScopePicker.jsx';
@@ -13,9 +13,10 @@ import { humanize } from '../constants.js';
 import { EmptyState } from '../components/States.jsx';
 import { hoverHandlers } from '../components/CardHover.jsx';
 import FilterSummary from '../components/FilterSummary.jsx';
+import FacetBar from '../components/FacetBar.jsx';
 import SortHeaders from '../components/SortHeaders.jsx';
 import { PageShortcuts } from '../../components/Shortcuts.jsx';
-import { Chip, ExpansionBadge, FilterFold, ModeRow, TypePills, rowLink } from '../components/bits.jsx';
+import { Chip, ExpansionBadge, ModeRow, TypePills, rowLink } from '../components/bits.jsx';
 import CostIcons, { CoinIcon, DebtIcon, PlainDebtIcon } from '../components/Cost.jsx';
 
 const SORTS = [['name', 'Name'], ['expansion', 'Expansion'], ['types', 'Printed type'], ['cost', 'Cost'], ['pile', 'Shared pile']];
@@ -53,11 +54,17 @@ export default function Cards({ query = '' }) {
       types: Object.fromEntries(s.byType.map(t => [t.key, n('types', t.key, f.typeMode)])),
       costs: Object.fromEntries(s.coinCosts.map(c => [c.key, n('costs', c.key, f.costMode)])),
       debt: Object.fromEntries(debts.map(d => [d, n('debt', String(d))])),
+      role: Object.fromEntries(ROLE_KEYS.map(k => [k, n('roles', k)])),
       yes: n('played', 'yes'), no: n('played', 'no'),
       mech: Object.fromEntries(s.mechanics.frequency.map(m => [m.id, n('mechanics', m.id, f.mechanicMode)])),
     };
   }, [catalog, f, plays, s]);   // eslint-disable-line react-hooks/exhaustive-deps
   const mechs = s.mechanics.frequency.filter(m => !mq.trim() || norm(`${humanize(m.id)} ${m.id} ${m.definition || ''}`).includes(norm(mq)));
+
+  const modeRow = <>
+    <ModeRow show={f.expansions.length + f.types.length + f.costs.length + (f.debt !== 'any' ? 1 : 0) > 0} ariaLabel="How to match the selected filters" value={cardMatchOf(f)} options={[['all'], ['any'], ['none'], ...(cardMatchOf(f) === 'exact' ? [['exact', 'only these types']] : [])]} onChange={m => update(cardMatchPatch(m))} />
+    {f.typeMode === 'none' && f.mechanics.length > 0 && <p className="meta dn-mode-note">Recorded mechanics stay “any of”: a missing tag doesn’t prove a card lacks the mechanic.</p>}
+  </>;
 
   return (
     <>
@@ -70,32 +77,20 @@ export default function Cards({ query = '' }) {
         <div className="controls">
           <label className="f">Search <SearchInput value={qText} onChange={onQ} placeholder="e.g. Village" autoComplete="off" /></label>
           <label className="f dn-check"><input type="checkbox" checked={f.text} onChange={e => update({ text: e.target.checked })} /> Include card text</label>
-          <label className="f">Sort by <select value={f.sort} onChange={e => update({ sort: e.target.value })}>{(plays ? [...SORTS, PLAYED_SORT] : SORTS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
-          <button type="button" className="ghost" onClick={() => update({ dir: f.dir === 'asc' ? 'desc' : 'asc' })} aria-label={`Sort direction: ${f.dir === 'asc' ? 'ascending' : 'descending'}. Activate to reverse.`}>{f.dir === 'asc' ? '↑ Ascending' : '↓ Descending'}</button>
         </div>
 
-        <FilterFold active={active - (f.q.trim() ? 1 : 0)}>
-        <fieldset className="dn-fieldset"><legend>Expansion</legend>
+        <FacetBar facets={[
+          { id: 'exp', label: 'Expansion', n: f.expansions.length, children: <>
           <div className="dn-chips">{catalog.ownedExpansions.map(e => (
             <Chip key={e.name} pressed={f.expansions.includes(e.name)} count={fc.exp[e.name]} onClick={() => update({ expansions: toggle(f.expansions, e.name) })}><ExpansionBadge name={e.name} /></Chip>
           ))}</div>
-        </fieldset>
-
-        {plays && <fieldset className="dn-fieldset"><legend>Play history</legend>
-          <ScopePicker who={lg.who} players={lg.players} onPick={n => update({ by: n })} label="Counted for" />
-          <div className="dn-chips">
-            <Chip pressed={f.played === 'yes'} count={fc.yes} onClick={() => update({ played: f.played === 'yes' ? 'any' : 'yes' })}>Played</Chip>
-            <Chip pressed={f.played === 'no'} count={fc.no} onClick={() => update({ played: f.played === 'no' ? 'any' : 'no' })}>Not played yet</Chip>
-          </div>
-        </fieldset>}
-
-        <fieldset className="dn-fieldset"><legend>Printed type</legend>
+        </> },
+          { id: 'type', label: 'Type', n: f.types.length, children: <>
           <div className="dn-chips">{s.byType.map(t => (
             <Chip key={t.key} tone={t.key.toLowerCase()} pressed={f.types.includes(t.key)} count={fc.types[t.key]} onClick={() => update({ types: toggle(f.types, t.key) })}>{t.key}</Chip>
           ))}</div>
-        </fieldset>
-
-        <fieldset className="dn-fieldset"><legend>Cost</legend>
+        </> },
+          { id: 'cost', label: 'Cost', n: f.costs.length + (f.debt !== 'any' ? 1 : 0), children: <>
           <div className="dn-costrow">
             <div className="dn-chips" role="group" aria-label="Coin cost (pick one or more)">
               {s.coinCosts.map(c => (
@@ -115,13 +110,12 @@ export default function Cards({ query = '' }) {
               ))}
             </div>
           </div>
-          <ModeRow show ariaLabel="How to match the selected filters" value={cardMatchOf(f)} options={[['all'], ['any'], ['none'], ...(cardMatchOf(f) === 'exact' ? [['exact', 'only these types']] : [])]} onChange={m => update(cardMatchPatch(m))} />
-          {f.typeMode === 'none' && f.mechanics.length > 0 && <p className="meta dn-mode-note">Recorded mechanics stay “any of”: a missing tag doesn’t prove a card lacks the mechanic.</p>}
-        </fieldset>
-
-        <fieldset className="dn-fieldset"><legend>Recorded mechanics</legend>
-          <details className="dn-mech" open={f.mechanics.length > 0 || undefined}>
-            <summary>{f.mechanics.length ? `${f.mechanics.length} selected` : 'Choose mechanics'} · {s.mechanics.distinct} tags recorded</summary>
+          </> },
+          { id: 'role', label: 'Role', n: f.roles.length, children: <>
+          <p className="meta dn-facet-note">What the Randomizer's rules look for. A card with any of these jobs shows.</p>
+          <div className="dn-chips">{ROLE_KEYS.map(k => <Chip key={k} pressed={f.roles.includes(k)} count={fc.role[k]} onClick={() => update({ roles: toggle(f.roles, k) })}>{roleLabel(k)}</Chip>)}</div></> },
+          { id: 'mech', label: 'Mechanics', n: f.mechanics.length, children: <>
+          <div className="dn-mech">
             <label className="f" style={{ margin: '8px 0' }}>Find a mechanic <SearchInput value={mq} onChange={setMq} placeholder="e.g. trashing" autoComplete="off" /></label>
             <ul className="dn-mech-list">
               {mechs.map(m => (
@@ -132,9 +126,17 @@ export default function Cards({ query = '' }) {
               ))}
               {!mechs.length && <li className="meta">No recorded mechanic matches “{mq}”.</li>}
             </ul>
-          </details>
-        </fieldset>
-        </FilterFold>
+          </div>
+        </> },
+          ...(plays ? [{ id: 'played', label: 'Play history', n: f.played !== 'any' ? 1 : 0, children: <>
+          <ScopePicker who={lg.who} players={lg.players} onPick={n => update({ by: n })} label="Counted for" />
+          <div className="dn-chips">
+            <Chip pressed={f.played === 'yes'} count={fc.yes} onClick={() => update({ played: f.played === 'yes' ? 'any' : 'yes' })}>Played</Chip>
+            <Chip pressed={f.played === 'no'} count={fc.no} onClick={() => update({ played: f.played === 'no' ? 'any' : 'no' })}>Not played yet</Chip>
+          </div>
+        </> }] : []),
+        ]} />
+        {modeRow}
 
         <FilterSummary f={f} update={update} />
         <div className="controls" style={{ marginBottom: 0, marginTop: 6 }}>

@@ -422,7 +422,7 @@ a.dn-kchip:hover{border-color:var(--muted)}
 .dn-rz-go button[type=submit]{min-height:44px;padding:10px 22px;font-size:16px}
 .dn-rz-msg{margin:12px 0 0;padding:10px 12px;border:1px solid var(--line);border-left:4px solid rgb(var(--t-attack));border-radius:8px;background:var(--panel)}
 .dn-rz-empty{margin:28px 0;color:var(--muted)}
-.dn-rz-result{margin-top:28px;scroll-margin-top:12px}
+.dn-rz-result{margin-top:28px;scroll-margin-top:84px}
 .dn-rz-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 18px;margin-bottom:12px}
 .dn-rz-bar h2{margin:0}
 .dn-rz-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
@@ -2398,3 +2398,23 @@ details.rzo-fold~*,.dn-rz-details .rzo-rows{margin-top:8px}
 .dn-az-names a:hover,.dn-az-names a:focus-visible{color:var(--ink);text-decoration-color:currentColor;text-decoration-thickness:2px}
 
 .dn-namecost .dn-nocost{width:22px}   /* a landscape without a cost: the dash takes the coin's place beside its name */
+
+/* Collection browsers' filters: a row of facet buttons, one open panel under it (components/FacetBar.jsx) */
+.dn-facets{margin:10px 0 0}
+.dn-facet-row{display:flex;flex-wrap:wrap;gap:8px}
+.dn-facet{display:inline-flex;align-items:center;gap:8px;font:inherit;font-size:14px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 14px;min-height:38px;cursor:pointer}
+.dn-facet:hover{border-color:var(--muted)}
+.dn-facet.on{border-color:color-mix(in srgb,var(--felt) 70%,var(--line));background:color-mix(in srgb,var(--felt) 14%,var(--panel))}
+.dn-facet .n{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--felt);color:#fff;font-size:12px;font-weight:700;display:inline-grid;place-items:center}
+.dn-facet-caret{width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s}
+.dn-facet[aria-expanded=true] .dn-facet-caret{transform:rotate(-135deg) translate(-2px,-2px)}
+.dn-facet-panel{margin-top:10px;padding:14px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--panel) 92%,transparent)}
+.dn-facet-panel .dn-mode{margin-top:12px}
+.dn-facet-panel .dn-mech-list{max-height:300px}
+.dn-facet-panel[hidden]{display:none}
+
+/* the Analyze dot breathes: a soft ring that grows and fades (transform and opacity only) */
+.dn-az-dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--brass);opacity:0}
+@keyframes dnazpulse{0%{transform:scale(1);opacity:.65}70%,100%{transform:scale(3);opacity:0}}
+@media (prefers-reduced-motion:no-preference){.dn-az-dot{animation:dnazdot 2.2s ease-in-out infinite}.dn-az-dot::after{animation:dnazpulse 2.2s ease-out infinite}}
+@keyframes dnazdot{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}

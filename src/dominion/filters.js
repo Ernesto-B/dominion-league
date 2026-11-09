@@ -6,9 +6,15 @@
    something the data cannot support. */
 import { expansionMeta, humanize } from './constants.js';
 import { hasCoin } from './model.js';
+import { REQUIRE_RULES } from './randomizer.js';
+
+/* The Randomizer's own mechanic rules (+2 Actions, Drawer, Trashing, +Buy, Variable scoring) as a filter: a card passes when it carries any of the recorded tags of any chosen role. Positive-only like every mechanic filter. */
+export const ROLE_KEYS = Object.keys(REQUIRE_RULES).filter(k => REQUIRE_RULES[k].tags);
+export const roleLabel = k => (REQUIRE_RULES[k] ? REQUIRE_RULES[k].chip : k);
+const hasRole = (c, roles) => !roles || !roles.length || roles.some(r => REQUIRE_RULES[r] && REQUIRE_RULES[r].tags && REQUIRE_RULES[r].tags.some(t => c.mechanicIds.includes(t)));
 
 export const DEFAULT_CARD_FILTERS = Object.freeze({
-  q: '', text: false, expansions: [], expMode: 'any', types: [], typeMode: 'all', mechanics: [], mechanicMode: 'all',
+  q: '', text: false, expansions: [], expMode: 'any', types: [], typeMode: 'all', mechanics: [], mechanicMode: 'all', roles: [],
   costs: [], costMode: 'any', debt: 'any', played: 'any', by: '', sort: 'name', dir: 'asc',
 });
 export const DEFAULT_LANDSCAPE_FILTERS = Object.freeze({
@@ -42,6 +48,7 @@ export function filterCards(cards, f, ctx = {}) {
     && hitsOne(c.expansion, f.expansions, f.expMode)
     && hits(c.types, f.types, f.typeMode)
     && hits(c.mechanicIds, f.mechanics, f.mechanicMode)
+    && hasRole(c, f.roles)
     // coin cost: any of the chosen exact costs. A Debt-only card has no coin cost, so it never matches one.
     && (!f.costs.length || (hasCoin(c) && f.costs.includes(c.coins)) === (f.costMode !== 'none'))
     && debtMatches(c.debt, f.debt)
@@ -150,7 +157,7 @@ export const landscapeMatchPatch = m => ({ typeMode: m === 'none' ? 'none' : 'an
 
 // how many filters are narrowing the list (sorting doesn't count)
 export function activeCardFilters(f) {
-  return (f.q.trim() ? 1 : 0) + (f.expansions.length ? 1 : 0) + (f.types.length ? 1 : 0) + (f.mechanics.length ? 1 : 0)
+  return (f.q.trim() ? 1 : 0) + (f.expansions.length ? 1 : 0) + (f.types.length ? 1 : 0) + (f.mechanics.length ? 1 : 0) + (f.roles && f.roles.length ? 1 : 0)
     + (f.costs.length ? 1 : 0) + (f.debt !== 'any' ? 1 : 0) + (f.played !== 'any' ? 1 : 0);
 }
 export const activeLandscapeFilters = f => (f.q.trim() ? 1 : 0) + (f.types.length ? 1 : 0) + (f.expansions.length ? 1 : 0) + (f.mechanics.length ? 1 : 0) + (f.costs.length ? 1 : 0) + (f.debt !== 'any' ? 1 : 0) + (f.played !== 'any' ? 1 : 0);
@@ -164,6 +171,7 @@ export function describeFilters(f, label = v => String(v)) {
     out.push({ key, text: `${none ? 'Not ' : ''}${name}: ${f[key].map(label).join(', ')}`, clear: { [key]: [] } });
   };
   list('types', 'Type', 'typeMode'); list('expansions', 'Set', 'expMode'); list('mechanics', 'Tag', 'mechanicMode');
+  if (f.roles && f.roles.length) out.push({ key: 'roles', text: `Role: ${f.roles.map(roleLabel).join(', ')}`, clear: { roles: [] } });
   if (f.costs && f.costs.length) out.push({ key: 'costs', text: `${f.costMode === 'none' ? 'Not ' : ''}Cost: ${f.costs.map(c => (c === NO_COST ? 'none' : '$' + c)).join(', ')}`, clear: { costs: [] } });
   if (f.debt && f.debt !== 'any') out.push({ key: 'debt', text: f.debt === 'none' ? 'No debt' : f.debt === 'has' ? 'Has debt' : `${f.debt} debt`, clear: { debt: 'any' } });
   if (f.played && f.played !== 'any') out.push({ key: 'played', text: f.played === 'yes' ? 'Played' : 'Not played yet', clear: { played: 'any' } });
@@ -190,6 +198,7 @@ export function cardFiltersToQuery(f) {
   if (f.typeMode !== d.typeMode) p.set('tmode', f.typeMode);
   f.mechanics.forEach(v => p.append('mech', v));
   if (f.mechanicMode !== d.mechanicMode) p.set('mmode', f.mechanicMode);
+  (f.roles || []).forEach(v => p.append('role', v));
   f.costs.forEach(v => p.append('cost', String(v)));
   if (f.costMode !== d.costMode) p.set('cmode', f.costMode);
   if (f.debt !== d.debt) p.set('debt', f.debt);
@@ -204,7 +213,7 @@ export function cardFiltersFromQuery(qs) {
   return {
     q: p.get('q') || '', text: p.get('text') === '1',
     expansions: many(p, 'exp'), expMode: oneOf(p.get('emode'), ['any', 'none'], d.expMode), types: many(p, 'type'), typeMode: oneOf(p.get('tmode'), ['all', 'any', 'none', 'exact'], d.typeMode),
-    mechanics: many(p, 'mech'), mechanicMode: oneOf(p.get('mmode'), ['all', 'any'], d.mechanicMode),
+    mechanics: many(p, 'mech'), mechanicMode: oneOf(p.get('mmode'), ['all', 'any'], d.mechanicMode), roles: many(p, 'role').filter(r => ROLE_KEYS.includes(r)),
     costs: many(p, 'cost').filter(v => /^\d{1,2}$/.test(v)).map(Number), costMode: oneOf(p.get('cmode'), ['any', 'none'], d.costMode),
     debt: debt && (['any', 'none', 'has'].includes(debt) || /^\d{1,2}$/.test(debt)) ? debt : d.debt,
     played: oneOf(p.get('played'), ['yes', 'no'], p.get('unplayed') === '1' ? 'no' : d.played), by: (p.get('by') || '').slice(0, 60),   // ?unplayed=1 is the older spelling of ?played=no
