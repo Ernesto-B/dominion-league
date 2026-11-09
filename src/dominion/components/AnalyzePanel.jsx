@@ -57,7 +57,6 @@ export default function Analyze({ catalog, slots, onPick = null, onFix = null })
 function Sheet({ a, open, onClose, onPick, onFix }) {
   const [drag, setDrag] = useState(0);
   const [said, setSaid] = useState(null);   // what the last Fix did: { ok, message, pile }
-  const start = useRef(null);
   useEffect(() => {
     if (!open) return;
     const onKey = e => { if (e.key === 'Escape') onClose(); };
@@ -65,16 +64,40 @@ function Sheet({ a, open, onClose, onPick, onFix }) {
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
   useEffect(() => { if (open) setDrag(0); else setSaid(null); }, [open]);
-  // dragging the handle or the title bar down closes the sheet on a phone
-  const down = e => { start.current = e.touches[0].clientY; };
-  const move = e => { if (start.current != null) setDrag(Math.max(0, e.touches[0].clientY - start.current)); };
-  const up = () => { if (drag > 90) onClose(); setDrag(0); start.current = null; };
+  // on a phone the whole sheet is pulled down to close it: from the handle or the title bar at any time, and from the list as soon as it is scrolled to its top (a pull on the list while
+  // it can still scroll up just scrolls it). Native, non-passive listeners: the pull must stop the page behind from scrolling too.
+  const sheet = useRef(null), closeRef = useRef(onClose);
+  closeRef.current = onClose;   // the listeners below live as long as the sheet is open, so they must not be rebuilt (and lose a pull in progress) each time the page redraws
+  useEffect(() => {
+    const el = sheet.current;
+    if (!open || !el) return undefined;
+    let last = null, from = 0, pulling = false, moved = 0;
+    const phone = () => !wide();
+    const body = () => el.querySelector('.dn-az-body');
+    const down = e => { if (!phone()) return; last = e.touches[0].clientY; pulling = false; moved = 0; };
+    const move = e => {
+      if (last == null || !phone()) return;
+      const y = e.touches[0].clientY, b = body();
+      if (!pulling) {
+        const inList = b && b.contains(e.target);
+        if (y > last && (!inList || b.scrollTop <= 0)) { pulling = true; from = y; }   // moving down, and the list (if that is where the finger is) has nothing left above
+        else { last = y; return; }
+      }
+      e.preventDefault();
+      moved = Math.max(0, y - from); setDrag(moved);
+    };
+    const end = () => { if (pulling && moved > 90) closeRef.current(); pulling = false; last = null; setDrag(0); };
+    el.addEventListener('touchstart', down, { passive: true });
+    el.addEventListener('touchmove', move, { passive: false });
+    el.addEventListener('touchend', end); el.addEventListener('touchcancel', end);
+    return () => { el.removeEventListener('touchstart', down); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', end); };
+  }, [open]);
   const maxBin = Math.max(1, ...a.cost.bins.map(b => b.count));
   return (
     <>
       <div className={'dn-az-scrim' + (open ? ' open' : '')} onClick={onClose} aria-hidden="true" />
-      <aside id="kingdom-analysis" className={'dn-az' + (open ? ' open' : '')} aria-label="Kingdom analysis" aria-hidden={!open} inert={!open} style={drag ? { transform: `translateY(${drag}px)`, transition: 'none' } : undefined}>
-        <div className="dn-az-top" onTouchStart={down} onTouchMove={move} onTouchEnd={up} onTouchCancel={up}>
+      <aside id="kingdom-analysis" ref={sheet} className={'dn-az' + (open ? ' open' : '')} aria-label="Kingdom analysis" aria-hidden={!open} inert={!open} style={drag ? { transform: `translateY(${drag}px)`, transition: 'none' } : undefined}>
+        <div className="dn-az-top">
           <div className="dn-az-grab" aria-hidden="true"><span /></div>
           <header className="dn-az-head">
             <h3>Kingdom analysis</h3>
