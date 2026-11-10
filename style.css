@@ -2551,3 +2551,17 @@ body.selectable{-webkit-user-select:text;user-select:text;-webkit-touch-callout:
 @media (min-width:721px){.dn-az-fab{display:none}}
 /* a phone has no Analyze button beside the seed: the floating one is there while the kingdom's cards are on screen */
 @media (max-width:720px){.dn-az-btn{display:none}}
+
+/* a game's kingdom as pictures (dominion/components/GameKingdom.jsx) */
+.dn-kview{margin-left:12px;font-size:13px}
+.dn-kgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;max-width:480px;margin:6px 0 8px}
+.dn-klands .dn-kcell{grid-column:span 2}
+.dn-kcell{position:relative;min-width:0;display:flex;align-items:center;justify-content:center}
+.dn-kcell>.dn-face{width:100%}
+.dn-ktag{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);max-width:94%;padding:1px 7px;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--ink);font-size:11px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+/* the top of each card (its name, cost and artwork) at a size the name can be read at; a tap shows the whole card */
+.dn-kcell>.dn-face{aspect-ratio:1/.6;overflow:hidden;display:block}
+.dn-klands .dn-kcell>.dn-face{aspect-ratio:2/.6}
+.dn-kcell .dn-face-img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.dn-ktag{bottom:3px}
+@media (max-width:720px){.dn-kgrid{max-width:none}}

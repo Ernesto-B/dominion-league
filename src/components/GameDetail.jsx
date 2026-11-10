@@ -40,7 +40,7 @@ export default function GameDetail({ game: g, onEdit, me = null, editShown = fal
       </table></div>
       {(g.kingdom || []).length > 0 && <Suspense fallback={<p className="meta dn-kingdom">Loading the kingdom…</p>}><GameKingdom items={g.kingdom} /></Suspense>}
       {g.sets.length > 0 && <p className="note dn-only-sm">Sets: {g.sets.map((s, i) => <Fragment key={s}>{i > 0 && ' '}{setIconPath(s) ? <><SetIcon name={s} size={20} /> {s}</> : s}</Fragment>)}</p>}
-      {(g.landscapes || []).length > 0 && <p className="note">Landscapes in play: <LandscapePills game={g} /></p>}
+      {(g.landscapes || []).length > 0 && !(g.kingdom || []).some(k => k.kind === 'landscape') && <p className="note">Landscapes in play: <LandscapePills game={g} /></p>}
       {g.notes && <p className="note">{g.notes}</p>}
       <p className="gr-actions">
         <a className="btn" href={hashFor('games', gid, g.line)} onClick={e => e.stopPropagation()}>Full game report →</a>

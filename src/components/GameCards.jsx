@@ -57,7 +57,7 @@ export default function GameCards({ games, open, toggle, onEdit, showDate = fals
             {isOpen && (
               <div className="gcard-more" onClick={e => e.stopPropagation()}>
                 {(g.kingdom || []).length > 0 && <Suspense fallback={<p className="meta dn-kingdom">Loading the kingdom…</p>}><GameKingdom items={g.kingdom} /></Suspense>}
-                {(g.landscapes || []).length > 0 && <p className="note">Landscapes in play: <LandscapePills game={g} /></p>}
+                {(g.landscapes || []).length > 0 && !(g.kingdom || []).some(k => k.kind === 'landscape') && <p className="note">Landscapes in play: <LandscapePills game={g} /></p>}
                 {g.notes && <p className="note">{g.notes}</p>}
                 {actions ? <div className="pending-more">{actions(g)}</div> : <p className="gr-actions">
                   <a className="btn" href={hashFor('games', gid, g.line)}>Full game report →</a>
